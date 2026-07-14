@@ -52,30 +52,7 @@
   let setPoseMode = false; // armado: próximo click-arrasta define a pose real (relocaliza)
   let setPoseDrag = null;  // {canvasX, canvasY, curX, curY, world} durante o drag
 
-  // Portas marcadas (travessia door_crossing)
-  let doorMode = false;          // modo "marcar porta"
-  let doorDrag = null;           // arraste atual: {ax,ay,cx,cy,curX,curY,curWorld,shift}
-  let doors = [];                // [{id, a:[x,y], b:[x,y]}]
-  let doorZone = null;           // {state, door_id} vindo do robô
-
-  // Trava anti-torto: gruda a linha no múltiplo de 45° mais próximo (em coords do
-  // mapa) quando o arraste está a menos de ~12° dele. Porta torta não existe — o
-  // erro é de mão na hora de clicar. Shift segura -> ângulo livre (porta diagonal).
-  function snapDoorEnd(ax, ay, bx, by, freeAngle) {
-    const dx = bx - ax, dy = by - ay;
-    const len = Math.hypot(dx, dy);
-    if (freeAngle || len < 1e-6) return { x: bx, y: by };
-    let ang = Math.atan2(dy, dx);
-    const step = Math.PI / 4;                 // 45°
-    const snapped = Math.round(ang / step) * step;
-    let diff = ang - snapped;
-    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-    if (Math.abs(diff) < (12 * Math.PI / 180)) ang = snapped;
-    return { x: ax + len * Math.cos(ang), y: ay + len * Math.sin(ang) };
-  }
-  const btnDoor = document.getElementById('map-btn-door');
   const btnGoal = document.getElementById('map-btn-goal');
-  const doorChip = document.getElementById('map-door-chip');
   const btnCostmap = document.getElementById('map-btn-costmap');
   const btnScan = document.getElementById('map-btn-scan');
 
@@ -157,8 +134,6 @@
     if (on) {
       setWpMode(false);
       if (setPoseMode) setSetPoseMode(false);
-      doorMode = false; doorDrag = null;
-      if (btnDoor) btnDoor.classList.remove('active');
     }
     if (btnGoal) btnGoal.classList.toggle('active', on);
     canvas.style.cursor = on ? 'crosshair' : '';
@@ -429,41 +404,6 @@
       statusEl.textContent = 'salvando...';
     });
 
-    // --- Portas (travessia door_crossing) ---
-    if (btnDoor) btnDoor.addEventListener('click', () => {
-      doorMode = !doorMode;
-      doorDrag = null;
-      if (doorMode && goalMode) setGoalMode(false);
-      btnDoor.classList.toggle('active', doorMode);
-      statusEl.textContent = doorMode
-        ? 'modo porta: arraste de um batente até o outro (clique numa porta p/ apagar)'
-        : '';
-      render();
-    });
-
-    socket.on('doors_update', (payload) => {
-      try { doors = JSON.parse(payload).doors || []; } catch (e) { doors = []; }
-      render();
-    });
-
-    socket.on('door_ack', (r) => {
-      if (!r.ok) statusEl.textContent = `porta: ${r.error}`;
-    });
-
-    socket.on('door_zone', (payload) => {
-      try { doorZone = JSON.parse(payload); } catch (e) { doorZone = null; }
-      const active = doorZone && doorZone.state !== 'idle';
-      if (doorChip) {
-        doorChip.style.display = active ? '' : 'none';
-        if (active) {
-          const nome = {staging: 'indo pro eixo', rotating: 'alinhando',
-                        crossing: 'ATRAVESSANDO'}[doorZone.state] || doorZone.state;
-          doorChip.textContent = `🚪 porta ${doorZone.door_id}: ${nome}`;
-        }
-      }
-      render();
-    });
-
     // --- Interação com o canvas (goal único + waypoints) ---
     const DRAG_THRESHOLD = 8; // pixels para considerar drag
 
@@ -472,7 +412,7 @@
       // Sem nenhum modo armado, QUALQUER arrasto (esquerdo, meio ou dedo)
       // move o mapa. Goal/waypoint/porta/pose só com o botão respectivo.
       const armed = setPoseMode ||
-        (currentMode === 'nav2' && (wpMode || doorMode || goalMode));
+        (currentMode === 'nav2' && (wpMode || goalMode));
       if (ev.button === 1 || !armed) {
         ev.preventDefault();
         const p = eventToCanvasPx(ev);
@@ -488,10 +428,6 @@
         return;
       }
       wpMouseDown = { cx, cy, world };
-      if (doorMode) {
-        doorDrag = { ax: world.x, ay: world.y, cx, cy, curX: cx, curY: cy,
-                     curWorld: world, shift: ev.shiftKey };
-      }
       if (wpMode) {
         wpDrag = { worldX: world.x, worldY: world.y, canvasX: cx, canvasY: cy, curX: cx, curY: cy };
       }
@@ -510,15 +446,6 @@
         const p = eventToCanvasPx(ev);
         setPoseDrag.curX = p.cx;
         setPoseDrag.curY = p.cy;
-        render();
-        return;
-      }
-      if (doorMode && doorDrag) {
-        const { cx, cy } = eventToCanvasPx(ev);
-        const world = canvasToWorld(cx, cy);
-        doorDrag.curX = cx; doorDrag.curY = cy;
-        if (world) doorDrag.curWorld = world;
-        doorDrag.shift = ev.shiftKey;
         render();
         return;
       }
@@ -545,34 +472,6 @@
         if (statusEl) statusEl.textContent = `pose definida: (${w.x.toFixed(2)}, ${w.y.toFixed(2)})`;
         setPoseDrag = null;
         setSetPoseMode(false);
-        render();
-        return;
-      }
-
-      // Modo porta: ARRASTA de um batente até o outro (linha reta com snap
-      // anti-torto). Clique curtinho em cima de porta existente = apagar. Tem
-      // precedência sobre waypoint/goal.
-      if (doorMode && doorDrag) {
-        const start = { x: doorDrag.ax, y: doorDrag.ay };
-        const endRaw = canvasToWorld(cx, cy) || doorDrag.curWorld;
-        const movedPx = Math.hypot(cx - doorDrag.cx, cy - doorDrag.cy);
-        const NEAR = 0.35;
-        const hit = doors.find(d => {
-          const mx = (d.a[0] + d.b[0]) / 2, my = (d.a[1] + d.b[1]) / 2;
-          return Math.hypot(start.x - mx, start.y - my) < NEAR;
-        });
-        if (movedPx <= DRAG_THRESHOLD && hit) {
-          socket.emit('door_cmd', { del: hit.id });
-          statusEl.textContent = `porta ${hit.id} apagada`;
-        } else if (movedPx > DRAG_THRESHOLD) {
-          const end = snapDoorEnd(start.x, start.y, endRaw.x, endRaw.y, ev.shiftKey);
-          socket.emit('door_cmd', {
-            add: { a: [start.x, start.y], b: [end.x, end.y] } });
-          statusEl.textContent = 'porta marcada';
-        } else {
-          statusEl.textContent = 'arraste de um batente até o outro (Shift = ângulo livre)';
-        }
-        doorDrag = null; wpDrag = null; wpMouseDown = null;
         render();
         return;
       }
@@ -632,7 +531,7 @@
       if (ev.touches.length === 2) {
         ev.preventDefault();
         // aborta interações de 1 dedo que já tinham começado
-        wpDrag = null; wpMouseDown = null; doorDrag = null; setPoseDrag = null;
+        wpDrag = null; wpMouseDown = null; setPoseDrag = null;
         suppressTouchClick = true;
         const a = touchToCanvas(ev.touches[0]), b = touchToCanvas(ev.touches[1]);
         const r = getDrawRect();
@@ -865,44 +764,6 @@
       ctx.stroke();
     }
 
-    // Portas marcadas: segmento entre batentes + discos; ativa = destacada
-    doors.forEach(d => {
-      const a = worldToCanvas(d.a[0], d.a[1]);
-      const b = worldToCanvas(d.b[0], d.b[1]);
-      if (!a || !b) return;
-      const active = doorZone && doorZone.door_id === d.id
-                     && doorZone.state !== 'idle';
-      ctx.strokeStyle = active ? '#0f0' : '#0aa';
-      ctx.lineWidth = active ? 3 : 2;
-      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
-      const rPix = (0.30 / mapInfo.resolution) * getDrawRect().scale;
-      [a, b].forEach(p => {
-        ctx.beginPath(); ctx.arc(p.x, p.y, rPix, 0, 2 * Math.PI); ctx.stroke();
-      });
-      ctx.fillStyle = ctx.strokeStyle;
-      ctx.font = '12px sans-serif';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'alphabetic';
-      ctx.fillText(`🚪${d.id}`, (a.x + b.x) / 2 + 6, (a.y + b.y) / 2 - 6);
-    });
-    if (doorMode && doorDrag) {
-      const aPx = worldToCanvas(doorDrag.ax, doorDrag.ay);
-      const end = snapDoorEnd(doorDrag.ax, doorDrag.ay,
-                              doorDrag.curWorld.x, doorDrag.curWorld.y,
-                              doorDrag.shift);
-      const bPx = worldToCanvas(end.x, end.y);
-      if (aPx && bPx) {
-        ctx.strokeStyle = '#0aa'; ctx.lineWidth = 2;
-        ctx.setLineDash([6, 4]);
-        ctx.beginPath(); ctx.moveTo(aPx.x, aPx.y); ctx.lineTo(bPx.x, bPx.y); ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.fillStyle = '#0aa';
-        [aPx, bPx].forEach(p => {
-          ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, 2 * Math.PI); ctx.fill();
-        });
-      }
-    }
-
     // Último alvo goal único (bolinha vermelha) — esconde se waypoints ativos
     if (lastGoal && waypoints.length === 0) {
       const c = worldToCanvas(lastGoal.x, lastGoal.y);
@@ -1064,9 +925,7 @@
       const lines = [
         `v ${velEst.v.toFixed(2)} m/s   ω ${(velEst.w * 180 / Math.PI).toFixed(0)}°/s`,
       ];
-      if (doorZone && doorZone.state !== 'idle') {
-        lines.push(`porta ${doorZone.door_id}: ${doorZone.state}`);
-      } else if (wpActive && waypoints.length) {
+      if (wpActive && waypoints.length) {
         const wp = waypoints[Math.min(wpActiveIdx, waypoints.length - 1)];
         const d = Math.hypot(wp.x - robotPose.x, wp.y - robotPose.y);
         lines.push(`waypoint ${wpActiveIdx + 1}/${waypoints.length} — ${d.toFixed(2)} m`);

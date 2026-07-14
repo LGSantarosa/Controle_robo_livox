@@ -37,11 +37,7 @@ from rclpy.qos import QoSDurabilityPolicy, QoSHistoryPolicy, QoSProfile, QoSReli
 
 from action_msgs.msg import GoalStatus
 from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped
-from nav2_msgs.action import (
-    ComputePathToPose,
-    NavigateToPose,
-    NavigateThroughPoses,
-)
+from nav2_msgs.action import NavigateToPose
 from nav2_msgs.srv import GetCostmap
 from nav_msgs.msg import OccupancyGrid, Path
 from sensor_msgs.msg import LaserScan
@@ -49,13 +45,6 @@ from rclpy.qos import qos_profile_sensor_data
 from std_msgs.msg import Float64, String
 from std_srvs.srv import Empty
 from tf2_ros import Buffer, TransformException, TransformListener
-
-from door_geom import (
-    door_on_path,
-    door_on_segment,
-    pre_door_waypoint,
-)
-
 
 log = logging.getLogger(__name__)
 
@@ -208,68 +197,11 @@ def yaw_delta(desired, current):
     return math.atan2(math.sin(d), math.cos(d))
 
 
-class DoorStore:
-    """Portas marcadas pelo usuário (2 batentes por porta), persistidas em
-    maps/<mapa>.doors.json. Consumidas pelo door_crossing/scan_sanitizer via
-    /doors. Spec: docs/superpowers/specs/2026-06-12-zonas-de-porta-design.md
-    """
-    MIN_W, MAX_W = 0.4, 2.0
-
-    def __init__(self, path: str):
-        self.path = path
-        self.doors = []
-        try:
-            with open(path, encoding='utf-8') as f:
-                self.doors = json.load(f).get('doors', [])
-        except (OSError, ValueError):
-            self.doors = []
-
-    def _save(self):
-        with open(self.path, 'w', encoding='utf-8') as f:
-            json.dump({'doors': self.doors}, f, indent=1)
-
-    def add(self, a, b) -> dict:
-        ax, ay = float(a[0]), float(a[1])
-        bx, by = float(b[0]), float(b[1])
-        w = math.hypot(bx - ax, by - ay)
-        if not (self.MIN_W <= w <= self.MAX_W):
-            raise ValueError(
-                f'vão de {w:.2f} m fora da faixa {self.MIN_W}-{self.MAX_W} m')
-        new_id = max((d['id'] for d in self.doors), default=0) + 1
-        door = {'id': new_id, 'a': [ax, ay], 'b': [bx, by]}
-        self.doors.append(door)
-        self._save()
-        return door
-
-    def remove(self, door_id) -> bool:
-        n = len(self.doors)
-        self.doors = [d for d in self.doors if d['id'] != door_id]
-        if len(self.doors) != n:
-            self._save()
-            return True
-        return False
-
-    def payload(self) -> str:
-        return json.dumps({'doors': self.doors})
-
-
 class MapBridge:
     """Gerencia todos os tópicos ROS2 relacionados a mapa/navegação."""
 
     POSE_PUBLISH_HZ = 10.0
     SCAN_PUBLISH_HZ = 10.0
-    PRE_DOOR_CLEARANCE = 0.50   # m — folga mínima do ponto-pré-porta até parede.
-                                # > inflation_radius GLOBAL (0.45) senão o ponto
-                                # cai no halo de inflação = inalcançável e o robô
-                                # não chega. 2026-06-26: 0.30 -> 0.50 (a inflação
-                                # subiu p/ 0.45; o ponto pré-porta colava na parede
-                                # lateral). A busca 2D abaixo acha esse ponto.
-    PRE_DOOR_ZONE_CAP = 1.00    # m — o ponto deslocado tem que ficar a <= isto do
-                                # CENTRO da porta, senão sai da zona de arme do
-                                # door_crossing (zone_radius=1.1) e a porta NÃO ARMA
-                                # quando o robô chega (campo 2026-06-26: a busca 2D
-                                # jogava o ponto p/ ~1.1-1.17m e o door demorava/não
-                                # ativava). Mantém < zone_radius com folga.
 
     def __init__(self, socketio, mode: str, maps_dir: str):
         self._sock = socketio
@@ -337,22 +269,6 @@ class MapBridge:
             PoseWithCovarianceStamped, '/initialpose', 10
         )
 
-        # Portas marcadas (travessia): arquivo ao lado do mapa carregado.
-        # /doors é latched (transient_local) — door_crossing/scan_sanitizer
-        # recebem o estado atual mesmo subindo depois do app.
-        map_file = os.environ.get('ROBOT_MAP_FILE', '')
-        stem = os.path.splitext(os.path.basename(map_file))[0] or 'doors'
-        self._doors = DoorStore(os.path.join(maps_dir, f'{stem}.doors.json'))
-        doors_qos = QoSProfile(
-            depth=1, reliability=QoSReliabilityPolicy.RELIABLE,
-            durability=QoSDurabilityPolicy.TRANSIENT_LOCAL)
-        self._doors_pub = self._node.create_publisher(String, '/doors',
-                                                      doors_qos)
-        self._doors_pub.publish(String(data=self._doors.payload()))
-        # Estado da travessia -> chip na UI
-        self._node.create_subscription(String, '/door_zone',
-                                       self._on_door_zone, doors_qos)
-
         # Correção manual de DIREÇÃO no SLAM (robô sem IMU): o slam_toolbox em
         # mapeamento não relocaliza por /initialpose, e mexer no pose-graph
         # deforma o mapa. Em vez disso, publicamos um delta de yaw em
@@ -381,19 +297,6 @@ class MapBridge:
         # em vez de inferir chegada por distância/yaw.
         self._nav_action = ActionClient(
             self._node, NavigateToPose, 'navigate_to_pose'
-        )
-        # 2026-06-18: rota com ponto-pré-porta. Quando o destino fica do outro
-        # lado de uma porta marcada, manda [ponto-pré-porta, destino] -> o nav2 já
-        # entrega o robô reto e longe na frente da porta, e o door só cruza.
-        self._nav_through = ActionClient(
-            self._node, NavigateThroughPoses, 'navigate_through_poses'
-        )
-        # 2026-06-19: calcula o caminho do nav2 SEM mover o robô. Usado pra
-        # decidir se a rota cruza uma porta marcada (o /plan REAL curva até a
-        # abertura; a reta robô->destino pode passar longe do vão) e, se cruzar,
-        # inserir o ponto-pré-porta ANTES de mandar executar.
-        self._compute_path = ActionClient(
-            self._node, ComputePathToPose, 'compute_path_to_pose'
         )
         self._last_robot_xy: Optional[tuple] = None   # (x, y) do robô em map
 
@@ -650,131 +553,10 @@ class MapBridge:
         self._sock.emit('scan_update', {'xs': xs, 'ys': ys, **pose},
                         namespace='/')
 
-    # ---- Folga do ponto-pré-porta (option A 2026-06-23) -------------------
-    def _point_clear(self, x: float, y: float, clearance: float) -> bool:
-        """True se não há célula OCUPADA a menos de `clearance` m de (x,y).
-        Sem grade ou ponto fora do mapa -> True (não bloqueia)."""
-        if self._grid is None:
-            return True
-        res, ox, oy, w, h = self._grid_meta
-        col = int((x - ox) / res)
-        row = int((y - oy) / res)
-        rad = int(math.ceil(clearance / res))
-        r0, r1 = max(0, row - rad), min(h, row + rad + 1)
-        c0, c1 = max(0, col - rad), min(w, col + rad + 1)
-        if r0 >= r1 or c0 >= c1:
-            return True
-        occ = self._grid[r0:r1, c0:c1] >= 50      # 100=ocupado; -1/0 não
-        if not occ.any():
-            return True
-        rr, cc = np.nonzero(occ)
-        dr = (rr + r0 - row) * res
-        dc = (cc + c0 - col) * res
-        return bool(np.all(dr * dr + dc * dc > clearance * clearance))
-
-    def _point_clearance(self, x: float, y: float, cap: float) -> float:
-        """Distância (m) até a célula OCUPADA mais próxima, limitada a `cap`
-        (retorna `cap` se nada ocupado dentro de `cap`). Pra ranquear o ponto
-        'mais livre' quando nenhum atinge a folga ideal."""
-        if self._grid is None:
-            return cap
-        res, ox, oy, w, h = self._grid_meta
-        col = int((x - ox) / res)
-        row = int((y - oy) / res)
-        rad = int(math.ceil(cap / res))
-        r0, r1 = max(0, row - rad), min(h, row + rad + 1)
-        c0, c1 = max(0, col - rad), min(w, col + rad + 1)
-        if r0 >= r1 or c0 >= c1:
-            return cap
-        occ = self._grid[r0:r1, c0:c1] >= 50
-        if not occ.any():
-            return cap
-        rr, cc = np.nonzero(occ)
-        dr = (rr + r0 - row) * res
-        dc = (cc + c0 - col) * res
-        return float(min(cap, math.sqrt(float((dr * dr + dc * dc).min()))))
-
-    def _clear_pre_door_point(self, door, wx, wy):
-        """Se o ponto-pré-porta caiu colado em parede (parede LATERAL aperta o
-        skid-steer), procura o ponto livre mais PRÓXIMO do ideal — busca 2D (anéis
-        crescentes), não só no eixo da porta, pra escapar pro lado ABERTO. Fica do
-        lado do robô (não cruza a porta). Mantém o original se nada servir."""
-        cl = self.PRE_DOOR_CLEARANCE
-        if self._point_clear(wx, wy, cl):
-            return wx, wy
-        ax, ay = door['a']
-        bx, by = door['b']
-        cx, cy = (ax + bx) / 2.0, (ay + by) / 2.0
-        # normal centro-da-porta -> ponto ideal = "lado do robô" (candidato tem
-        # que ficar deste lado, senão pularia pra dentro/através do vão).
-        sx, sy = wx - cx, wy - cy
-        snorm = math.hypot(sx, sy)
-        if snorm < 1e-6:
-            return wx, wy
-        sx, sy = sx / snorm, sy / snorm
-        step, max_r, cap = 0.05, 0.60, 0.90
-        free_best, free_cl = None, -1.0      # ponto de MAIOR folga (fallback)
-        r_i = 1
-        while r_i * step <= max_r:
-            r = r_i * step
-            meet, meet_d2 = None, None        # ponto que ATINGE cl, mais perto do ideal
-            n = max(8, int(2 * math.pi * r / step))
-            for k in range(n):
-                th = 2 * math.pi * k / n
-                nx, ny = wx + r * math.cos(th), wy + r * math.sin(th)
-                if (nx - cx) * sx + (ny - cy) * sy <= 0.1:   # mantém no lado do robô
-                    continue
-                if math.hypot(nx - cx, ny - cy) > self.PRE_DOOR_ZONE_CAP:
-                    continue                                 # fora da zona de arme
-                clr = self._point_clearance(nx, ny, cap)
-                if clr > free_cl:
-                    free_best, free_cl = (nx, ny), clr
-                if clr > cl:        # estrito, casa com _point_clear (> cl²)
-                    d2 = (nx - wx) ** 2 + (ny - wy) ** 2
-                    if meet_d2 is None or d2 < meet_d2:
-                        meet, meet_d2 = (nx, ny), d2
-            if meet is not None:                # achou folga ideal -> usa o mais perto
-                log.info(f"[MapBridge] ponto-pré-porta colado -> deslocado {r:.2f}m "
-                         f"p/ o lado aberto ({meet[0]:.2f},{meet[1]:.2f})")
-                return meet
-            r_i += 1
-        # nenhum ponto atinge a folga ideal em 0.6m -> cai no MAIS LIVRE achado
-        # (NUNCA volta pro original colado, que já sabemos dar errado).
-        if free_best is not None:
-            log.warning(f"[MapBridge] ponto-pré-porta sem folga {cl:.2f} em 0.6m -> "
-                        f"caiu no mais livre ({free_best[0]:.2f},{free_best[1]:.2f}), "
-                        f"folga {free_cl:.2f}m")
-            return free_best
-        return wx, wy
-
     # ---- API pública ----
     def get_last_map_payload(self) -> Optional[dict]:
         """Retorna o último {info, png_b64} recebido, ou None se nada ainda."""
         return self._last_map_payload
-
-    # ---- Portas (travessia door_crossing) ----
-
-    def door_cmd(self, data: dict) -> dict:
-        try:
-            if 'add' in data:
-                d = self._doors.add(data['add']['a'], data['add']['b'])
-            elif 'del' in data:
-                if not self._doors.remove(int(data['del'])):
-                    return {'ok': False, 'error': 'porta não encontrada'}
-                d = None
-            else:
-                return {'ok': False, 'error': 'cmd desconhecido'}
-        except (ValueError, KeyError, TypeError) as e:
-            return {'ok': False, 'error': str(e)}
-        self._doors_pub.publish(String(data=self._doors.payload()))
-        self._sock.emit('doors_update', self._doors.payload())
-        return {'ok': True, 'door': d}
-
-    def get_doors_payload(self) -> str:
-        return self._doors.payload()
-
-    def _on_door_zone(self, msg):
-        self._sock.emit('door_zone', msg.data)
 
     # ---- Waypoint navigation ----
 
@@ -789,88 +571,10 @@ class MapBridge:
                 'total':     len(self._wp_list),
             }
 
-    def _plan_path_xy(self, start_xy, goal_xy, timeout=4.0):
-        """Pede ao nav2 o caminho (ComputePathToPose) de start_xy a goal_xy SEM
-        executar. Devolve lista de (x,y) ou None (indisponível/timeout/vazio)."""
-        if not self._compute_path.wait_for_server(timeout_sec=1.0):
-            log.warning("[MapBridge] compute_path_to_pose indisponível")
-            return None
-        goal = ComputePathToPose.Goal()
-        goal.use_start = True
-        goal.start = self._pose_stamped(start_xy[0], start_xy[1], 0.0)
-        goal.goal = self._pose_stamped(goal_xy[0], goal_xy[1], 0.0)
-        done = threading.Event()
-        box = {'path': None}
-
-        def _on_result(fut):
-            try:
-                box['path'] = fut.result().result.path
-            except Exception as e:
-                log.warning(f"[MapBridge] erro no compute_path result: {e}")
-            done.set()
-
-        def _on_resp(fut):
-            try:
-                h = fut.result()
-            except Exception as e:
-                log.warning(f"[MapBridge] erro no compute_path: {e}")
-                done.set()
-                return
-            if not h.accepted:
-                log.warning("[MapBridge] compute_path rejeitado pelo Nav2")
-                done.set()
-                return
-            h.get_result_async().add_done_callback(_on_result)
-
-        self._compute_path.send_goal_async(goal).add_done_callback(_on_resp)
-        if not done.wait(timeout=timeout):
-            log.warning("[MapBridge] compute_path timeout")
-            return None
-        path = box['path']
-        if path is None or not path.poses:
-            return None
-        return [(p.pose.position.x, p.pose.position.y) for p in path.poses]
-
-    def _expand_route_via_plan(self, start_xy, waypoints):
-        """Insere o ponto-PRÉ-PORTA antes de cada trecho cujo CAMINHO do nav2
-        cruza uma porta marcada -> o nav2 entrega o robô reto/longe na frente da
-        porta e o door_crossing só alinha+cruza. Usa o /plan real
-        (compute_path_to_pose); se o cálculo falhar num trecho, cai no teste de
-        reta como rede de segurança. Web é a ÚNICA que manda goal (sem preempção:
-        decide ANTES de executar)."""
-        doors = self._doors.doors
-        if start_xy is None or not doors:
-            return list(waypoints)
-        out = []
-        prev = tuple(start_xy)
-        for wp in waypoints:
-            to = (wp['x'], wp['y'])
-            path = self._plan_path_xy(prev, to)
-            door = (door_on_path(path, doors) if path is not None
-                    else door_on_segment(prev, to, doors))
-            if door is not None:
-                wx, wy, wyaw = pre_door_waypoint(door['a'], door['b'], prev)
-                wx, wy = self._clear_pre_door_point(door, wx, wy)
-                out.append({'x': wx, 'y': wy, 'yaw': wyaw})
-                log.info(f"[MapBridge] porta {door['id']} no caminho "
-                         f"{prev}->{to} -> ponto-pré-porta "
-                         f"({wx:.2f},{wy:.2f}) inserido")
-            out.append(dict(wp))
-            prev = to
-        return out
-
     def start_waypoints(self, waypoints: list, loop: bool = False) -> dict:
         if not waypoints:
             return {'ok': False, 'error': 'lista de waypoints vazia'}
         self.stop_waypoints()
-        # Se o CAMINHO do nav2 cruza uma porta marcada, insere o ponto-PRÉ-PORTA
-        # antes do destino daquele trecho (decidido pelo /plan real, ANTES de
-        # executar -> sem guerra de preempção).
-        n_in = len(waypoints)
-        waypoints = self._expand_route_via_plan(self._last_robot_xy, waypoints)
-        if len(waypoints) != n_in:
-            log.info(f"[MapBridge] rota expandida {n_in} -> {len(waypoints)} "
-                     f"pontos (ponto-pré-porta inserido); robot={self._last_robot_xy}")
         with self._wp_lock:
             self._wp_list = waypoints
             self._wp_loop = loop
@@ -1154,32 +858,7 @@ class MapBridge:
         return msg
 
     def send_goal(self, x: float, y: float, yaw: float = 0.0) -> dict:
-        """Manda o robô pro destino. Se o trajeto RETO cruza uma porta marcada,
-        põe o ponto-PRÉ-PORTA na rota (navigate_through_poses [pré-porta, destino])
-        -> o nav2 entrega o robô reto e longe na frente da porta, e o door só
-        alinha+cruza. Senão, publica /goal_pose normal (clique-pra-ir)."""
-        robot = self._last_robot_xy
-        door = (door_on_segment(robot, (x, y), self._doors.doors)
-                if robot is not None else None)
-        log.info(f"[MapBridge] send_goal dest=({x:.2f},{y:.2f}) robot={robot} "
-                 f"portas={len(self._doors.doors)} "
-                 f"-> door={door['id'] if door else None}")
-        if door is not None:
-            wx, wy, wyaw = pre_door_waypoint(door['a'], door['b'], robot)
-            wx, wy = self._clear_pre_door_point(door, wx, wy)
-            poses = [self._pose_stamped(wx, wy, wyaw),
-                     self._pose_stamped(x, y, yaw)]
-            if not self._nav_through.wait_for_server(timeout_sec=2.0):
-                log.warning("[MapBridge] navigate_through_poses indisponível "
-                            "-> caindo no /goal_pose direto")
-            else:
-                g = NavigateThroughPoses.Goal()
-                g.poses = poses
-                self._nav_through.send_goal_async(g)
-                log.info(f"[MapBridge] porta {door['id']} no caminho -> rota "
-                         f"[pré-porta ({wx:.2f},{wy:.2f}), destino ({x:.2f},{y:.2f})]")
-                return {'ok': True, 'x': x, 'y': y, 'yaw': yaw, 'via_door': door['id']}
-        # caminho livre (ou sem pose/porta): destino direto
+        """Manda o robô pro destino via /goal_pose (clique-pra-ir)."""
         self._goal_pub.publish(self._pose_stamped(x, y, yaw))
         log.info(f"[MapBridge] /goal_pose → ({x:.2f}, {y:.2f}, yaw={yaw:.2f})")
         return {'ok': True, 'x': x, 'y': y, 'yaw': yaw}

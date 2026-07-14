@@ -225,7 +225,6 @@ KNOWN_NODE_PATTERNS=(
     "robot_nav/pose_estimator"
     "robot_nav/unstuck_supervisor"
     "robot_nav/scan_sanitizer"
-    "robot_nav/door_crossing"
     "twist_mux"
     "joy_node"
     "teleop_node"
