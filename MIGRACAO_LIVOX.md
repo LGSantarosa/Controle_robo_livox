@@ -68,9 +68,12 @@
 - **Rede do robô 2**: hotspot próprio? IP fixo? (repete-se a receita do robô 1).
 - **Hostname/ssh da NUC** (workflow dev→git→pull continua igual ao da Pi).
 
-## Ordem de execução proposta
+## Ordem de execução
 
-1. Commit deste plano → revisão do dono.
-2. Demolição (RASGA) em 1 commit — grande mas só deleta, fácil de revisar.
-3. Adaptações 1-3 (bridge 2 motores + cinemática + pose) com testes.
-4. Launch/Livox quando a NUC estiver acessível.
+1. ✅ Plano revisado e aprovado pelo dono (07-14).
+2. ✅ Demolição executada em 3 fatias (07-14): A `f406bed` (deletes puros),
+   B `fe48a86` (trekking/cone), C `2945725` (porta). 274 testes verdes.
+   Fósseis conscientes anotados no ESTADO (unstuck door-standdown,
+   cone_pose_fix).
+3. ⏳ Adaptações 1-3 (bridge 2 motores + cinemática + pose) com testes.
+4. ⏳ Launch/Livox quando a NUC estiver acessível.
