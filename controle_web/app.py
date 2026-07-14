@@ -14,7 +14,7 @@ import atexit
 from logging.handlers import RotatingFileHandler
 
 # Modo de operação — setado pelo launch.sh via env var. Valores: 'teleop',
-# 'slam', 'nav2' ou 'trekking'. Controla quais componentes do SocketIO ficam ativos.
+# 'slam' ou 'nav2'. Controla quais componentes do SocketIO ficam ativos.
 ROBOT_MODE = os.environ.get('ROBOT_MODE', 'teleop').lower()
 MAPS_DIR = os.environ.get('ROBOT_MAPS_DIR', os.path.abspath(
     os.path.join(os.path.dirname(__file__), '..', 'maps')
@@ -52,8 +52,6 @@ map_bridge = None
 # Coletor de métricas Nav2 — grava CSV por tentativa pra servir de base
 # quando formos ajustar parâmetros do stack de navegação.
 nav_metrics = None
-# Ponte ROS↔Web do modo TREKKING (pose fundida, waypoints, cones, comandos)
-trekking_bridge = None
 # Monitor de tensão das placas hoverboard — CSV contínuo + chip ao vivo na
 # UI. Roda em qualquer modo com ROS.
 power_monitor = None
@@ -89,11 +87,6 @@ def _shutdown_all():
     try:
         if map_bridge is not None:
             map_bridge.shutdown()
-    except Exception:
-        pass
-    try:
-        if trekking_bridge is not None:
-            trekking_bridge.shutdown()
     except Exception:
         pass
     try:
@@ -192,17 +185,6 @@ if ROBOT_MODE in ('slam', 'nav2'):
             f"[app] Falha ao iniciar MapBridge: {e}. Mapa e navegação desabilitados."
         )
         map_bridge = None
-
-# Ponte de trekking — só sobe no modo dedicado.
-if ROBOT_MODE == 'trekking':
-    try:
-        from trekking_service import TrekkingBridge
-        trekking_bridge = TrekkingBridge(socketio=socketio, maps_dir=MAPS_DIR)
-    except Exception as e:
-        logging.getLogger(__name__).warning(
-            f"[app] Falha ao iniciar TrekkingBridge: {e}. Modo trekking desabilitado."
-        )
-        trekking_bridge = None
 
 # Câmera POV — sobe em qualquer modo (live view sempre útil); a gravação
 # automática só é disparada pelos handlers/hoooks de navegação (NAV2).
@@ -353,7 +335,6 @@ def handle_connect():
     emit('mode_info', {
         'mode': ROBOT_MODE,
         'has_map': map_bridge is not None,
-        'has_trekking': trekking_bridge is not None,
         'web_teleop': WEB_TELEOP,
         'has_camera': camera_service is not None,
     })
@@ -754,63 +735,6 @@ def handle_client_hello(payload):
         'sid': request.sid,
         'msg': 'hello from server',
     })
-
-# ---------------- Trekking (ponto-a-ponto) ----------------
-
-# Espelha o `_on_cmd` do trekking_runner.py — qualquer mudança lá precisa vir
-# pra cá, senão app aceita comandos que o runner ignora silenciosamente.
-_TREKKING_CMDS = {
-    'reset', 'record', 'save_point', 'play', 'stop',
-    'load_waypoints', 'clear', 'set_cone',
-}
-# Apenas estes kwargs passam para o runner — rejeita o resto pra não acabar
-# como vetor de injeção (`os.system` numa lib futura, etc.). v_max/kp_heading/
-# kd_heading SAÍRAM: o _on_cmd nunca os tratou (tuning só via launch) e tuning
-# ao vivo por websocket é convite a acidente (B6 da AUDITORIA_2026-06-11).
-_TREKKING_KWARGS = {'waypoints', 'idx', 'cone_x', 'cone_y', 'clear'}
-
-@socketio.on('trekking_cmd')
-def handle_trekking_cmd(data):
-    """Comandos do painel trekking → /trekking/cmd."""
-    if trekking_bridge is None:
-        emit('trekking_ack', {'ok': False, 'error': 'trekking indisponível neste modo'})
-        return
-    cmd = str((data or {}).get('cmd', '')).lower()
-    if cmd not in _TREKKING_CMDS:
-        emit('trekking_ack', {'ok': False, 'error': f'cmd desconhecido: {cmd}'})
-        return
-    kwargs = {k: v for k, v in (data or {}).items() if k in _TREKKING_KWARGS}
-    result = trekking_bridge.send_cmd(cmd, **kwargs)
-    app.logger.info(f"trekking_cmd from {request.remote_addr}: {cmd} {list(kwargs)}")
-    emit('trekking_ack', {'cmd': cmd, **result})
-
-
-@socketio.on('trekking_save_route')
-def handle_trekking_save_route(data):
-    if trekking_bridge is None:
-        emit('trekking_save_ack', {'ok': False, 'error': 'indisponível'})
-        return
-    name = (data or {}).get('name', 'rota')
-    waypoints = (data or {}).get('waypoints')  # opcional — se ausente, usa último estado
-    emit('trekking_save_ack', trekking_bridge.save_route(name, waypoints))
-
-
-@socketio.on('trekking_load_route')
-def handle_trekking_load_route(data):
-    if trekking_bridge is None:
-        emit('trekking_load_ack', {'ok': False, 'error': 'indisponível'})
-        return
-    name = (data or {}).get('name', '')
-    emit('trekking_load_ack', trekking_bridge.load_route(name))
-
-
-@socketio.on('trekking_list_routes')
-def handle_trekking_list_routes():
-    if trekking_bridge is None:
-        emit('trekking_routes', {'ok': True, 'routes': []})
-        return
-    emit('trekking_routes', trekking_bridge.list_routes())
-
 
 if __name__ == '__main__':
     # Sobe o servidor acessível na rede local (0.0.0.0:5000)

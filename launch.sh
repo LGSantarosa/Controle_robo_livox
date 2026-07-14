@@ -6,7 +6,6 @@
 #   ./launch.sh --slam                            # SLAM — mapeia o ambiente em tempo real
 #   ./launch.sh --nav2                            # NAV2 — navegação autônoma (mapa padrão)
 #   ./launch.sh --nav2 --map=/caminho/sala.yaml   # NAV2 — mapa específico
-#   ./launch.sh --trekking                        # TREKKING — ponto-a-ponto com PID (sem Nav2)
 #   ./launch.sh --sim                             # SIM — Gazebo Harmonic + robô diff-drive
 #   ./launch.sh --sim --slam                      # SIM + SLAM (mapeia a sala no Gazebo)
 #   ./launch.sh --sim --nav2                      # SIM + NAV2 (navega com mapa salvo)
@@ -29,7 +28,7 @@ ROS2_SETUP="$SCRIPT_DIR/install/setup.bash"
 # --- Argumentos ---
 NO_LIDAR=false
 LIDAR_PORT="/dev/lidar"
-MODE="teleop"                     # teleop | slam | nav2 | trekking
+MODE="teleop"                     # teleop | slam | nav2
 WEB_TELEOP="off"                  # off = web só visualização; --web-teleop reativa
 MAP_FILE="$SCRIPT_DIR/maps/hotmilk_portas.yaml"
 PI_PROFILE=false
@@ -47,7 +46,6 @@ for arg in "$@"; do
         --teleop)          MODE="teleop" ;;
         --slam)            MODE="slam" ;;
         --nav2)            MODE="nav2" ;;
-        --trekking)        MODE="trekking" ;;
         --web-teleop)      WEB_TELEOP="on" ;;
         --sim)             SIM=true ;;
         --world=*)         WORLD_FILE="${arg#*=}" ;;
@@ -62,7 +60,7 @@ for arg in "$@"; do
         --flash-mega)      FLASH_MEGA="force" ;;
         --no-flash-mega)   FLASH_MEGA="off" ;;
         --help|-h)
-            echo "Uso: $0 [--teleop|--slam|--nav2|--trekking] [--sim] [--web-teleop] [--no-lidar] [--lidar-port=/dev/...] [--map=...] [--world=...] [--pi|--no-pi] [--flash-mega|--no-flash-mega]"
+            echo "Uso: $0 [--teleop|--slam|--nav2] [--sim] [--web-teleop] [--no-lidar] [--lidar-port=/dev/...] [--map=...] [--world=...] [--pi|--no-pi] [--flash-mega|--no-flash-mega]"
             echo ""
             echo "  --web-teleop     reativa o controle de movimento pela web (default: off — use PS4/WASD)"
             echo "  --flash-mega     força \`pio run -t upload\` mesmo sem mudança"
@@ -103,7 +101,7 @@ fi
 if [ "$SIM" = true ] && [ "$MODE" = "teleop" ] && [ "$WEB_TELEOP" = "off" ]; then
     echo "[AVISO] --sim --teleop sem --web-teleop: nenhum publisher de movimento será iniciado"
     echo "        no SIM (não tem PS4/WASD nativos lá). Adicione --web-teleop pra dirigir pelo browser,"
-    echo "        ou use --sim --slam/--nav2/--trekking pra ter um publisher autônomo."
+    echo "        ou use --sim --slam/--nav2 pra ter um publisher autônomo."
 fi
 
 # Em NAV2 o arquivo de mapa precisa existir antes de subir.
@@ -225,8 +223,6 @@ KNOWN_NODE_PATTERNS=(
     "robot_nav/cmd_vel_to_wheels"
     "robot_nav/mega_bridge"
     "robot_nav/pose_estimator"
-    "robot_nav/cone_detector"
-    "robot_nav/trekking_runner"
     "robot_nav/unstuck_supervisor"
     "robot_nav/scan_sanitizer"
     "robot_nav/door_crossing"
@@ -551,14 +547,6 @@ case "$MODE" in
         # Nav2 demora pra ativar todos os lifecycle nodes; espera o costmap global.
         wait_for_topic /global_costmap/costmap 30 || echo "  AVISO: Nav2 ainda não publicou /global_costmap/costmap — seguindo."
         ;;
-    trekking)
-        echo "[3/4] Modo TREKKING — subindo cone_detector + trekking_runner (pose_estimator já vem do robot.launch)..."
-        NAV2_LOG="$LOG_DIR/trekking.log"
-        ros2 launch robot_nav trekking.launch.py > "$NAV2_LOG" 2>&1 &
-        NAV2_PID=$!
-        echo "      PID: $NAV2_PID  |  Log: $NAV2_LOG"
-        wait_for_topic /trekking/pose 15 || echo "  AVISO: trekking_runner ainda não publicou /trekking/pose — seguindo."
-        ;;
     teleop)
         echo "[3/4] Modo TELEOP — dirija manualmente (sem camada extra de segurança)."
         ;;
@@ -580,11 +568,6 @@ case "$MODE" in
         echo "  MODO NAV2$SIM_TAG — clique no mapa web para enviar o robô a um destino."
         echo "  Mapa: $MAP_FILE"
         echo "  AMCL publicando map→odom. bt_navigator consome /goal_pose."
-        ;;
-    trekking)
-        echo "  MODO TREKKING$SIM_TAG — ponto-a-ponto com PID e snap-to-cone."
-        echo "  1) Aperte ● Gravar  2) dirija até cada ponto e + Ponto"
-        echo "  3) volte ao início  4) ▶ Play"
         ;;
     teleop)
         echo "  MODO TELEOP$SIM_TAG — Web → /cmd_vel → robô"

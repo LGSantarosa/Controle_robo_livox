@@ -180,9 +180,9 @@
       currentMode = (data && data.mode) || 'teleop';
       modeBadge.textContent = currentMode.toUpperCase();
       modeBadge.className = 'mode-badge mode-' + currentMode;
-      // Layout 2 colunas só quando existe painel na direita (mapa/trekking)
+      // Layout 2 colunas só quando existe painel na direita (mapa)
       document.body.classList.toggle('layout-wide',
-        currentMode === 'slam' || currentMode === 'nav2' || currentMode === 'trekking');
+        currentMode === 'slam' || currentMode === 'nav2');
 
       if (currentMode === 'slam' || currentMode === 'nav2') {
         panel.style.display = '';

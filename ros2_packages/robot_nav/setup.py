@@ -28,8 +28,6 @@ setup(
             'cmd_vel_to_wheels = robot_nav.cmd_vel_to_wheels:main',
             'mega_bridge = robot_nav.mega_bridge:main',
             'pose_estimator = robot_nav.pose_estimator:main',
-            'cone_detector = robot_nav.cone_detector:main',
-            'trekking_runner = robot_nav.trekking_runner:main',
             'unstuck_supervisor = robot_nav.unstuck_supervisor:main',
             'scan_sanitizer = robot_nav.scan_sanitizer:main',
             'door_crossing = robot_nav.door_crossing:main',
