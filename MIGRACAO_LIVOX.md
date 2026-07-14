@@ -2,10 +2,13 @@
 
 > Robô 2: diferencial (2 rodas hover + boba), Livox Mid-360 (único sensor,
 > IMU embutida), Intel NUC, ambiente novo. Base = clone do repo do robô 1
-> em `df76a47`. **Revisar este plano ANTES de eu deletar qualquer coisa.**
+> em `df76a47`.
 >
-> Fase 1 = "clone barato": Livox → pointcloud_to_laserscan → `/scan` 2D →
-> stack atual roda quase inalterada. Fase 2 = FAST-LIO/Point-LIO 3D.
+> ⚠️ **Arquitetura-alvo redefinida 07-14 (decisão 001)**: GUI 2D pro humano +
+> localização/navegação 3D pro robô, pensadas DO ZERO com literatura. A
+> "fase 1 clone barato" (stack 2D + AMCL) foi DESCARTADA como alvo — a stack
+> Nav2/AMCL herdada fica como referência/componente candidato, não caminho
+> assumido. Reuso garantido: GUI, ponte de rodas, instrumentação CSV.
 
 ---
 
@@ -75,5 +78,9 @@
    B `fe48a86` (trekking/cone), C `2945725` (porta). 274 testes verdes.
    Fósseis conscientes anotados no ESTADO (unstuck door-standdown,
    cone_pose_fix).
-3. ⏳ Adaptações 1-3 (bridge 2 motores + cinemática + pose) com testes.
-4. ⏳ Launch/Livox quando a NUC estiver acessível.
+3. ✅ Varredura LD06 (07-14): test_lidar.sh, lidar.launch.py, retry/watchdog
+   serial do launch.sh (virou placeholder Livox), passo LiDAR do
+   setup_udev.sh (Mid-360 é Ethernet), teleop-pernas, README reescrito.
+4. ⏳ Adaptações 1-3 (bridge 2 motores + cinemática + pose) com testes.
+5. ⏳ Integração Livox (driver Ethernet) quando a NUC estiver acessível —
+   forma final orientada pela decisão 001.

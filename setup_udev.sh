@@ -1,14 +1,13 @@
 #!/bin/bash
 # Configura nomes USB estáveis via IDENTIDADE do dispositivo (serial / VID:PID).
-# 2026-07-01: era por PORTA FÍSICA (KERNELS) e INVERTEU mega<->lidar quando os
-# cabos trocaram de porta USB. Agora casa a MEGA pelo SERIAL (imune a troca de
-# porta) e o LiDAR pelo VID:PID (fallback pra porta física só se faltar serial).
+# 2026-07-01 (robô 1): era por PORTA FÍSICA (KERNELS) e invertia quando os
+# cabos trocavam de porta USB. Agora casa a MEGA pelo SERIAL (imune a troca
+# de porta; fallback pra porta física só se faltar serial).
 # Uso: sudo ./setup_udev.sh
 #
 # Identifica:
-#   /dev/mega   — Arduino MEGA 2560 (ponte para as 2 placas de hoverboard
-#                 e sensores BNO055 + PMW3901)
-#   /dev/lidar  — FHL-LD20
+#   /dev/mega   — Arduino MEGA 2560 (ponte pra placa de hoverboard)
+# (O Livox Mid-360 é Ethernet — não passa por udev serial.)
 
 set -e
 
@@ -87,7 +86,7 @@ settle_udev() {
 }
 
 echo "========================================================"
-echo "  Configuração de portas USB fixas — MEGA + LiDAR"
+echo "  Configuração de porta USB fixa — MEGA"
 echo "========================================================"
 echo ""
 
@@ -95,46 +94,9 @@ echo ""
 # Desligo o 'set -e' pra não morrer silencioso em substituição de comando.
 set +e
 
-# ---- Passo 1: identificar porta do LIDAR (opcional) ----
-# A MEGA é obrigatória, o LiDAR é opcional — por isso o LiDAR vem primeiro:
-# se o usuário não tiver LiDAR, ele passa direto e a MEGA é detectada no passo 2.
-echo "PASSO 1: LiDAR FHL-LD20 (opcional)"
-echo "  Se TEM LiDAR: plugue SÓ o LiDAR (a MEGA fica desplugada por enquanto)."
-echo "  Se NÃO TEM LiDAR: deixe tudo desplugado e siga adiante."
-read -r -p "  Pressione ENTER quando estiver pronto... " _DUMMY
-
-echo "  Aguardando 1s e estabilizando eventos udev..."
-sleep 1
-settle_udev
-
-PORTS_LIDAR=$(list_tty_ports)
-LIDAR_PORT=""
-LIDAR_PATH=""
-
-if [ -z "$PORTS_LIDAR" ]; then
-    echo "  Nenhum dispositivo detectado — assumindo que não há LiDAR."
-else
-    echo "  Dispositivos detectados:"
-    for p in $PORTS_LIDAR; do
-        vidpid=$(get_vidpid "$p")
-        path=$(get_devpath "$p")
-        echo "    $p  [VID:PID=$vidpid  USB path=$path]"
-    done
-    if [ "$(echo "$PORTS_LIDAR" | wc -l)" -eq 1 ]; then
-        LIDAR_PORT="$PORTS_LIDAR"
-    else
-        read -r -p "  Qual é a porta do LiDAR? (ex: /dev/ttyUSB0): " LIDAR_PORT
-    fi
-    LIDAR_PATH=$(get_devpath "$LIDAR_PORT")
-    LIDAR_VIDPID=$(get_vidpid "$LIDAR_PORT")
-    LIDAR_SERIAL=$(get_serial "$LIDAR_PORT")
-    echo "  LiDAR identificado: $LIDAR_PORT → VID:PID=$LIDAR_VIDPID serial=${LIDAR_SERIAL:-<nenhum>} path=$LIDAR_PATH"
-fi
-echo ""
-
-# ---- Passo 2: identificar porta da MEGA (obrigatória) ----
-echo "PASSO 2: Arduino MEGA 2560 (obrigatória)"
-echo "  Plugue a MEGA agora (o LiDAR pode permanecer plugado)."
+# ---- Identificar porta da MEGA (obrigatória) ----
+echo "Arduino MEGA 2560 (obrigatória)"
+echo "  Plugue a MEGA agora."
 read -r -p "  Pressione ENTER quando estiver pronto... " _DUMMY
 
 echo "  Aguardando 1s e estabilizando eventos udev..."
@@ -147,20 +109,13 @@ if [ -z "$PORTS_ALL" ]; then
     exit 1
 fi
 
-# Lista portas candidatas (todas exceto LiDAR). Se houver mais de uma
-# (modem 3G/4G, debugger, etc.) pergunta interativamente em vez de
-# pegar a primeira "qualquer porta diferente do LiDAR".
-CAND_MEGA=""
-for p in $PORTS_ALL; do
-    if [ "$p" != "$LIDAR_PORT" ]; then
-        CAND_MEGA="$CAND_MEGA $p"
-    fi
-done
-CAND_MEGA=$(echo "$CAND_MEGA" | xargs)  # trim
+# Lista portas candidatas. Se houver mais de uma (modem 3G/4G, debugger,
+# etc.) pergunta interativamente em vez de pegar a primeira.
+CAND_MEGA=$(echo "$PORTS_ALL" | xargs)  # trim
 CAND_COUNT=$(echo "$CAND_MEGA" | wc -w)
 
 if [ "$CAND_COUNT" -eq 0 ]; then
-    echo "ERRO: Não detectei nenhuma porta nova além do LiDAR. A MEGA está plugada?"
+    echo "ERRO: Não detectei nenhuma porta serial. A MEGA está plugada?"
     exit 1
 elif [ "$CAND_COUNT" -eq 1 ]; then
     MEGA_PORT="$CAND_MEGA"
@@ -187,27 +142,15 @@ if [ -z "$MEGA_PATH" ]; then
     echo "ERRO: não consegui extrair o USB path da MEGA ($MEGA_PORT). Aborto."
     exit 1
 fi
-if [ -n "$LIDAR_PORT" ] && [ -z "$LIDAR_PATH" ]; then
-    echo "ERRO: não consegui extrair o USB path do LiDAR ($LIDAR_PORT). Aborto."
-    exit 1
-fi
-
 # Reativa set -e pra escrita do arquivo / udevadm reload (essas devem dar certo).
 set -e
-
-# ---- Validação ----
-if [ -n "$LIDAR_PATH" ] && [ "$MEGA_PATH" = "$LIDAR_PATH" ]; then
-    echo "ERRO: MEGA e LiDAR têm o mesmo caminho USB ($MEGA_PATH)."
-    echo "  Isso não deveria acontecer. Verifique as conexões e tente novamente."
-    exit 1
-fi
 
 # ---- Cria as regras udev ----
 echo "Criando $RULES_FILE ..."
 
 {
     cat << EOF
-# Regras udev para nomes estáveis — Arduino MEGA + LiDAR.
+# Regras udev para nomes estáveis — Arduino MEGA.
 # Casa por IDENTIDADE do dispositivo (serial / VID:PID) — imune a troca de
 # porta USB. Só cai pra porta física (KERNELS) se faltar serial E VID:PID.
 # Gerado por setup_udev.sh em $(date).
@@ -219,13 +162,6 @@ echo "Criando $RULES_FILE ..."
 $(emit_rule mega "$MEGA_VIDPID" "$MEGA_SERIAL" "$MEGA_PATH")
 EOF
 
-    if [ -n "$LIDAR_PATH" ]; then
-        cat << EOF
-
-# LiDAR FHL-LD20 — VID:PID=$LIDAR_VIDPID serial=${LIDAR_SERIAL:-<nenhum>} (porta física era $LIDAR_PATH)
-$(emit_rule lidar "$LIDAR_VIDPID" "$LIDAR_SERIAL" "$LIDAR_PATH")
-EOF
-    fi
 } > "$RULES_FILE"
 
 echo ""
@@ -241,7 +177,6 @@ sleep 1
 echo ""
 echo "=== Verificando symlinks ==="
 EXPECTED_LINKS="/dev/mega"
-[ -n "$LIDAR_PATH" ] && EXPECTED_LINKS="$EXPECTED_LINKS /dev/lidar"
 if ! ls -la $EXPECTED_LINKS 2>/dev/null; then
     echo "AVISO: Symlinks não apareceram ainda — desplugue e replugue os dispositivos."
 fi
@@ -250,7 +185,7 @@ echo ""
 echo "=== Pronto! ==="
 echo ""
 echo "IMPORTANTE: symlinks agora casam por SERIAL/VID:PID — imunes a troca de"
-echo "porta USB. Só rode de novo se TROCAR a placa (MEGA/adaptador do LiDAR)."
+echo "porta USB. Só rode de novo se TROCAR a placa MEGA."
 echo ""
 echo "Próximo passo: ./launch.sh (rebuild incremental automático)."
 echo "Pra recompilar tudo do zero (raro), apague o install/ e rode ./setup_pi.sh ou ./setup.sh."

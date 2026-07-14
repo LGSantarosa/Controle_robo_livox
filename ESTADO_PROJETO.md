@@ -33,17 +33,30 @@
   unstuck_supervisor (inerte sem `/door_zone`); `cone_pose_fix.py` (o
   pose_estimator importa `apply_pose_fix`).
 
-## ⏳ Próximos passos (ordem do MIGRACAO_LIVOX.md)
+## 🧭 2026-07-14 (2ª leva) — Arquitetura-alvo definida + varredura LD06
 
-1. **ADAPTA 1-3**: mega_bridge 2 motores (sem IMU/flow no frame serial),
-   `cmd_vel_to_wheels` diferencial (SEM os knobs anti-skid do robô 1 —
-   zona-morta 1.7, autoridade 6.0, spin_calib NÃO se aplicam), pose_estimator
-   simplificado (só roda na fase 1).
-2. **Launch/Livox**: driver `livox_ros_driver2` (Ethernet, IP estático) +
-   `pointcloud_to_laserscan` → `/scan` 2D → stack herdada (fase 1).
-3. **NUC**: Ubuntu/ROS Jazzy + ssh — confirmar com o dono.
-4. **Fase 2 (depois de andar)**: odometria/localização 3D (FAST-LIO vs
-   Point-LIO vs LIO-SAM — decisão COM literatura, registro em docs/decisoes/).
+- **Decisão 001 (`docs/decisoes/001-gui-2d-localizacao-3d.md`)**: humano
+  opera em mapa 2D (GUI herdada); o robô se localiza/navega em 3D (LIO no
+  Mid-360). Nav2/localização/movimentação repensadas DO ZERO com literatura;
+  "fase 1 clone barato" (stack 2D+AMCL como alvo) DESCARTADA — stack herdada
+  vira referência/candidata, não caminho assumido.
+- **Varredura LD06**: fora test_lidar.sh, lidar.launch.py, retry+watchdog
+  serial do launch.sh (agora placeholder explícito do Livox em [3]), passo
+  LiDAR do setup_udev.sh (Mid-360 é Ethernet; udev segue só pra MEGA),
+  bin/teleop-pernas; README reescrito pro robô 2 (o antigo tinha 1406 linhas
+  do robô 1).
+
+## ⏳ Próximos passos
+
+1. **NUC**: confirmar Ubuntu/ROS Jazzy + ssh — pré-requisito de tudo.
+2. **ADAPTA 1-2**: mega_bridge 2 motores (sem IMU/flow no frame serial) +
+   `cmd_vel_to_wheels` diferencial (SEM knobs anti-skid do robô 1). É o
+   "reuso garantido" da decisão 001 — pode andar antes das decisões de nav.
+3. **Leitura da fase de localização 3D**: FAST-LIO2 vs Point-LIO vs LIO-SAM
+   (fila em docs/REFERENCIAS.md) → decisão 002 com literatura.
+4. **Driver Livox** (`livox_ros_driver2`, Ethernet/IP estático) no
+   placeholder do launch.sh — instalar e ver a nuvem chegar já valida o HW
+   sem comprometer arquitetura.
 
 ## BOs abertos
 

@@ -17,7 +17,6 @@
 #
 # Outras flags:
 #   --no-lidar             desabilita o LiDAR (só modo real)
-#   --lidar-port=/dev/X    sobrescreve a porta do LiDAR (padrão /dev/lidar)
 #   --pi                   usa nav2_params_pi.yaml (perfil leve pra Raspberry Pi)
 #
 # Ctrl+C encerra todos os processos.
@@ -27,7 +26,6 @@ ROS2_SETUP="$SCRIPT_DIR/install/setup.bash"
 
 # --- Argumentos ---
 NO_LIDAR=false
-LIDAR_PORT="/dev/lidar"
 MODE="teleop"                     # teleop | slam | nav2
 WEB_TELEOP="off"                  # off = web só visualização; --web-teleop reativa
 MAP_FILE="$SCRIPT_DIR/maps/hotmilk_portas.yaml"
@@ -54,13 +52,12 @@ for arg in "$@"; do
         --spawn-y=*)       SPAWN_Y="${arg#*=}" ;;
         --spawn-z=*)       SPAWN_Z="${arg#*=}" ;;
         --no-lidar)        NO_LIDAR=true ;;
-        --lidar-port=*)    LIDAR_PORT="${arg#*=}" ;;
         --pi)              PI_PROFILE=true ;;
         --no-pi)           PI_PROFILE=false ;;
         --flash-mega)      FLASH_MEGA="force" ;;
         --no-flash-mega)   FLASH_MEGA="off" ;;
         --help|-h)
-            echo "Uso: $0 [--teleop|--slam|--nav2] [--sim] [--web-teleop] [--no-lidar] [--lidar-port=/dev/...] [--map=...] [--world=...] [--pi|--no-pi] [--flash-mega|--no-flash-mega]"
+            echo "Uso: $0 [--teleop|--slam|--nav2] [--sim] [--web-teleop] [--no-lidar] [--map=...] [--world=...] [--pi|--no-pi] [--flash-mega|--no-flash-mega]"
             echo ""
             echo "  --web-teleop     reativa o controle de movimento pela web (default: off — use PS4/WASD)"
             echo "  --flash-mega     força \`pio run -t upload\` mesmo sem mudança"
@@ -230,7 +227,6 @@ KNOWN_NODE_PATTERNS=(
     "teleop_node"
     "collision_monitor"
     "robot_state_publisher"
-    "ldlidar_stl_ros2_node"
     "async_slam_toolbox_node"
     "nav2_map_server"
     "nav2_amcl"
@@ -313,9 +309,6 @@ fi
 
 SERVER_PID=""
 ROBOT_PID=""
-LIDAR_PID=""
-WATCHDOG_PID=""
-LIDAR_OK=false
 NAV2_PID=""
 SLAM_PID=""
 SIM_PID=""
@@ -339,18 +332,15 @@ cleanup() {
     trap '' EXIT INT TERM
     echo ""
     echo "Encerrando todos os processos..."
-    # PRIMEIRO o watchdog da LiDAR: senão ele relança o LD06 enquanto derrubamos.
-    kill_tree "$WATCHDOG_PID"
     [ -n "$TAIL_PID" ]     && kill "$TAIL_PID"     2>/dev/null
     kill_tree "$SERVER_PID"
     kill_tree "$SLAM_PID"
     kill_tree "$NAV2_PID"
-    kill_tree "$LIDAR_PID"
     kill_tree "$ROBOT_PID"
     kill_tree "$SIM_PID"
     sleep 1
     # Segunda passada: SIGKILL em qualquer filho que tenha sobrevivido
-    for pid in $WATCHDOG_PID $SERVER_PID $SLAM_PID $NAV2_PID $LIDAR_PID $ROBOT_PID $SIM_PID; do
+    for pid in $SERVER_PID $SLAM_PID $NAV2_PID $ROBOT_PID $SIM_PID; do
         for desc in $(pgrep -P "$pid" 2>/dev/null) $pid; do
             kill -9 "$desc" 2>/dev/null
         done
@@ -388,68 +378,6 @@ wait_for_topic() {
     return 1
 }
 
-# /scan publicando DE FATO (não só listado no discovery)? O LD06 cria o tópico
-# logo no start e só ~3s depois morre ("abnormal"), então a presença na lista
-# não basta — confirma dado fluindo via `topic hz`.
-lidar_scan_healthy() {
-    timeout 6 ros2 topic hz /scan 2>/dev/null | grep -q "average rate"
-}
-
-# Sobe o LD06 com retry. O sensor quase nunca vinga de 1ª: ~3s após o start solta
-# "ldlidar communication is abnormal" e o nó morre (exit 1). Lança, espera passar
-# da janela de morte, e se caiu / sem /scan, mata, deixa a serial assentar e
-# relança — até LIDAR_TRIES vezes. Seta LIDAR_PID. Retorna 0 se /scan vingou.
-# Usada no BOOT e pelo watchdog de runtime (lidar_watchdog).
-LIDAR_TRIES=5
-start_lidar() {
-    local try
-    for ((try = 1; try <= LIDAR_TRIES; try++)); do
-        echo "      [lidar] tentativa $try/$LIDAR_TRIES..."
-        ros2 launch robot_nav lidar.launch.py lidar_port:="$LIDAR_PORT" > "$LIDAR_LOG" 2>&1 &
-        LIDAR_PID=$!
-        sleep 5   # passa a janela do "abnormal" antes de julgar
-        if pgrep -f ldlidar_stl_ros2_node >/dev/null 2>&1 \
-           && wait_for_topic /scan 5 && lidar_scan_healthy; then
-            echo "      [lidar] OK — /scan publicando (PID $LIDAR_PID, tentativa $try)."
-            return 0
-        fi
-        echo "      [lidar] caiu / sem /scan — matando e repetindo."
-        kill_tree "$LIDAR_PID"
-        LIDAR_PID=""
-        sleep 2   # deixa a porta serial assentar antes de reabrir
-    done
-    return 1
-}
-
-# Watchdog de RUNTIME (o retry acima é só no BOOT). Visto 2026-06-09: o LD06 subiu,
-# o robô navegou, e o nó MORREU no meio da operação → /scan mudo → nav2 parou, sem
-# ninguém relançar. Aqui monitoramos a liveness do nó e relançamos. Checagem BARATA
-# por processo (pgrep): o "abnormal" MATA o nó (exit 1) — é o modo recuperável por
-# software. NÃO chamamos `ros2 topic hz` em loop (cria nó + 6s a cada ciclo = CPU
-# cara nesta Pi); o caso "nó vivo mas /scan mudo" é HW travado (precisa replug),
-# que relançar não resolve. Back-off quando o relance falha (não martelar física).
-LIDAR_WATCH_INTERVAL="${LIDAR_WATCH_INTERVAL:-15}"
-lidar_watchdog() {
-    local fails=0
-    while true; do
-        sleep "$LIDAR_WATCH_INTERVAL"
-        if pgrep -f ldlidar_stl_ros2_node >/dev/null 2>&1; then
-            fails=0
-            continue
-        fi
-        echo "  [lidar-watchdog] nó da LiDAR caiu em runtime — relançando..."
-        kill_tree "$LIDAR_PID"; LIDAR_PID=""
-        if start_lidar; then
-            echo "  [lidar-watchdog] LiDAR recuperada."
-            fails=0
-        else
-            fails=$((fails + 1))
-            echo "  [lidar-watchdog] não recuperou (falha #$fails) — provável HW (replug/power). Back-off."
-            sleep $((LIDAR_WATCH_INTERVAL * 4))
-        fi
-    done
-}
-
 if [ "$SIM" = true ]; then
     # --- [SIM] Gazebo Harmonic + robô diff-drive + bridges ROS↔GZ ---
     echo "[1/4] Modo SIM — subindo Gazebo com mundo: $WORLD_FILE"
@@ -477,23 +405,13 @@ else
 
     wait_for_topic /odom 15 || echo "  AVISO: pose_estimator ainda não publicou /odom — seguindo."
 
-    # --- [3] LiDAR LD06 + detector de obstáculos ---
+    # --- [3] LiDAR Livox Mid-360 (Ethernet) ---
+    # ⏳ INTEGRAÇÃO PENDENTE (ver docs/decisoes/001 e MIGRACAO_LIVOX.md): aqui
+    # entra o livox_ros_driver2 (+ a ponte que publicar /scan pro que restar
+    # da stack 2D). Sem driver, os modos slam/nav2 reais ficam sem /scan.
     if [ "$NO_LIDAR" = false ]; then
-        if [ -e "$LIDAR_PORT" ]; then
-            echo "[2/4] Iniciando LiDAR LD06 em $LIDAR_PORT..."
-            LIDAR_LOG="$LOG_DIR/lidar.log"
-            # Retry no BOOT via start_lidar(); o watchdog de runtime (lidar_watchdog,
-            # iniciado mais abaixo) cuida das mortes do LD06 DURANTE a operação.
-            if start_lidar; then
-                LIDAR_OK=true
-            else
-                echo "  AVISO: LiDAR não subiu após $LIDAR_TRIES tentativas — seguindo sem /scan."
-            fi
-        else
-            echo "[2/4] AVISO: Porta do LiDAR $LIDAR_PORT não encontrada. Pulando LiDAR."
-            echo "      Para especificar outra porta: ./launch.sh --lidar-port=/dev/ttyUSB2"
-            NO_LIDAR=true
-        fi
+        echo "[2/4] AVISO: driver do Livox Mid-360 ainda não integrado — sem /scan."
+        NO_LIDAR=true
     else
         echo "[2/4] LiDAR desativado (--no-lidar)"
     fi
@@ -575,20 +493,9 @@ esac
 if [ "$SIM" = true ]; then
     echo "  Mundo Gazebo: $WORLD_FILE"
     echo "  Robô simulado publicando /scan, /odom e TF odom→base_link"
-elif [ "$NO_LIDAR" = false ]; then
-    echo "  LiDAR LD06 publicando em: /scan"
 fi
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-
-# Watchdog de runtime da LiDAR: só se ela subiu no boot (LIDAR_OK) e é hardware
-# real. Roda em background; cleanup() o mata ANTES de derrubar a LiDAR (senão
-# ressuscita no shutdown). Se o LD06 não vingou no boot, não vigia (provável HW).
-if [ "$SIM" = false ] && [ "$NO_LIDAR" = false ] && [ "$LIDAR_OK" = true ]; then
-    lidar_watchdog &
-    WATCHDOG_PID=$!
-    echo "  [lidar-watchdog] ativo (PID $WATCHDOG_PID — checa o LD06 a cada ${LIDAR_WATCH_INTERVAL}s)."
-fi
 
 cd "$SCRIPT_DIR/controle_web"
 if [ -f ".venv/bin/activate" ]; then
