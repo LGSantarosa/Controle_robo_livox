@@ -1,7 +1,7 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-07-14**.
+> Versionado na `main`. Atualizado em **2026-07-15**.
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
@@ -13,9 +13,13 @@
 ## O robô
 
 - **Tração**: 2 rodas de hoverboard (diferencial) + roda boba na frente.
-  Mesma eletrônica do robô 1: placa hoverboard hackeada + ponte Arduino MEGA.
+  1 placa hoverboard hackeada ligada **DIRETO no PC** — ⚠️ NÃO tem Arduino
+  MEGA (o ESTADO anterior afirmava "mesma eletrônica do robô 1"; estava
+  errado — corrigido 07-15 após inventário com o dono). Forma exata da
+  conexão (adaptador? firmware da placa?) a confirmar na bancada.
 - **Sensor**: Livox Mid-360 (LiDAR 3D 360°, IMU embutida, conexão Ethernet).
   Único sensor externo — sem câmera, sem IMU externa, sem optical flow.
+  Também sem eletrônica auxiliar: sem relé de luz, LED de marco ou botão.
 - **Computador**: Intel NUC (x86). SO/versão: ⏳ a confirmar (Jazzy pede 24.04).
 - **Ambiente**: novo (não é o do robô 1) — mapa e rede a definir.
 - Estado físico: montado e pronto; **só falta o software**.
@@ -46,18 +50,40 @@
   bin/teleop-pernas; README reescrito pro robô 2 (o antigo tinha 1406 linhas
   do robô 1).
 
+## 2026-07-15 — Investigação ADAPTA 1-2: robô 2 NÃO tem MEGA
+
+- Inventário real com o dono: **1 placa hover direto no PC** + Livox + NUC +
+  baterias. Nada de MEGA/relé/LED/botão/IMU externa/flow — seção "O robô"
+  corrigida acima.
+- `cmd_vel_to_wheels.py` já é diferencial puro (knobs anti-skid já não
+  existiam) → ADAPTA 2 = só calibração de params com o robô.
+- Protocolo da placa (família EFeru/NiklasFauth, `0xABCD` @115200, feedback
+  18 B) mapeado de `firmware/mega_bridge/*/hoverboard.{h,cpp}` — base pronta
+  pra uma ponte direta em Python, se a bancada confirmar.
+- Detalhes + checklist de inspeção: entrada 07-15 do `docs/DIARIO.md`.
+
 ## ⏳ Próximos passos
 
-1. **NUC**: confirmar Ubuntu/ROS Jazzy + ssh — pré-requisito de tudo.
-2. **ADAPTA 1-2**: mega_bridge 2 motores (sem IMU/flow no frame serial) +
-   `cmd_vel_to_wheels` diferencial (SEM knobs anti-skid do robô 1). É o
-   "reuso garantido" da decisão 001 — pode andar antes das decisões de nav.
-3. **Leitura da fase de localização 3D**: FAST-LIO2 vs Point-LIO vs LIO-SAM
-   (fila em docs/REFERENCIAS.md) → decisão 002 com literatura.
-4. **Driver Livox** (`livox_ros_driver2`, Ethernet/IP estático) no
+1. **Inspeção de bancada** (com o dono, checklist na entrada 07-15 do
+   DIARIO): como as rodas chegam no PC + firmware da placa → destrava a
+   **decisão de arquitetura da ponte** (BO-1). De quebra: confirmar
+   Ubuntu/ROS Jazzy + ssh da NUC — pré-requisito de tudo.
+2. **Ponte PC↔placa hover** (ADAPTA 1 reformulado): implementar conforme a
+   arquitetura decidida em BO-1. Candidata do assistente: nó
+   `hoverboard_bridge.py` falando 0xABCD direto, substituindo o par
+   firmware/mega_bridge + `mega_bridge.py`.
+3. **ADAPTA 2 rebaixado a calibração**: `wheel_base`, `linear_scale`,
+   `left/right_wheel_sign` — precisa do robô andando, sem código novo.
+4. **Leitura da fase de localização 3D**: FAST-LIO2 vs Point-LIO vs LIO-SAM
+   (fila em docs/REFERENCIAS.md) → decisão com literatura.
+5. **Driver Livox** (`livox_ros_driver2`, Ethernet/IP estático) no
    placeholder do launch.sh — instalar e ver a nuvem chegar já valida o HW
    sem comprometer arquitetura.
 
 ## BOs abertos
 
-- (nenhum — projeto recém-nascido)
+- **BO-1 — Arquitetura da ponte PC↔placa hover** (aberto 07-15): direto via
+  USB-serial (candidata A) vs reintroduzir MEGA (B). Dono decidiu escolher
+  só com a bancada na frente. Vira `docs/decisoes/002` quando fechar.
+  Numeração de decisões: a leitura LIO (passo 4) usa o próximo número livre
+  na hora, sem reserva.
