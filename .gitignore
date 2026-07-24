@@ -19,6 +19,18 @@ build/
 install/
 log/
 
+# Drivers de terceiros da camada de localização — clonados por setup_livox.sh
+# em commits fixados. Ficam fora do git para não inchar o repo nem mascarar
+# qual versão do upstream está em uso. A config de rede do Mid-360 que importa
+# é versionada em ros2_packages/robot_base/config/.
+ros2_packages/livox_ros_driver2/
+ros2_packages/FAST_LIO/
+
+# Fonte do SDK nativo da Livox (compilado e instalado em /usr/local por
+# setup_livox.sh). Fica fora de ros2_packages/ para o colcon não tentar
+# construí-lo como pacote ROS.
+third_party/
+
 # PlatformIO build artifacts (firmware/mega_bridge)
 .pio/
 firmware/**/.pio/

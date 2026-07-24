@@ -83,3 +83,153 @@ pra inspeção física; LIGADO só se formos ler a serial):**
 4. Nível TTL da UART da placa (3.3 V vs 5 V) — define que adaptador é seguro.
 5. NUC: de quebra, confirmar SO (`lsb_release -a`) e habilitar ssh — destrava
    o resto do ESTADO.
+
+## 2026-07-15 (2ª leva) — Meta final, time de 3, rota 2D→LIO
+
+- Dono explicitou a **meta final do projeto**: robô 2 indo de ponto a ponto
+  sem bater, igual ao robô 1 — nada além disso. E o contexto novo: o
+  trabalho passa a ser de **3 pessoas** (dono ~6 meses de ROS; os outros
+  dois nunca mexeram).
+- Pergunta que abriu a sessão: "se eu der deploy hoje, o que temos?" —
+  resposta mapeada nó a nó: sobe GUI + cadeia de comando inteira, mas o
+  `mega_bridge` morre (sem `/dev/mega`) e o Livox é placeholder → painel
+  funcionando, robô surdo e paralítico. As duas pontas de HW (BO-1 e driver
+  Livox) são exatamente o que falta.
+- **Decisão 002** (registro próprio): clone 2D primeiro (receita comprovada
+  do robô 1), LIO 3D depois como evolução comparada. Revisa a ORDEM da 001
+  mantendo o conceito; racional: com time iniciante e robô inerte, o risco
+  dominante virou "nunca chegar ao LIO por falta de base", e o clone 2D é o
+  baseline experimental que o artigo precisa de qualquer jeito.
+- Escada de marcos M0–M5 registrada no ESTADO; frentes A (base/motores),
+  B (percepção/Livox), C (infra/GUI) esboçadas — divisão real e método de
+  trabalho a 3 (branches, revisão cruzada) a combinar com o time presente.
+- Recomendação pros 2 novatos antes de pegar frente: tutoriais oficiais de
+  ROS 2 Jazzy (CLI tools + client libraries, ~2 dias).
+
+## 2026-07-24 — A base sai do papel: tração e localização verificadas
+
+**O que mudou de verdade hoje:** o robô deixou de ser um projeto e passou a ser
+uma máquina com base funcionando. Tração e localização foram colocadas de pé e
+verificadas em hardware. Isso derrubou as duas incógnitas que travavam o
+projeto — registrado na **decisão 003**.
+
+### BO-1 fechado
+
+A placa hover fala **serial direta com o PC**, sem microcontrolador no meio
+(`0xABCD` @115200). A candidata B (reintroduzir um MEGA) morre: adicionaria
+firmware, latência e ponto de falha para resolver algo já resolvido.
+
+### O erro que mais custou tempo (anotar para não repetir)
+
+O quadro de realimentação da placa tem **18 bytes**, não 26. Com a estrutura
+errada o checksum nunca fecha → posição das juntas fica `NaN` → o controlador
+rejeita **todo** comando ("non-finite error value") → **as rodas não giram**.
+O sintoma é "não funciona" sem nenhum erro que aponte para a serial. O que
+isolou isso foi ler a serial crua, fora do ROS, e conferir o checksum no fio.
+
+**Lição de método:** quando a cadeia ROS inteira sobe sem erro e o hardware não
+reage, descer abaixo do ROS e olhar o byte. Vale instrumentar isso em CSV.
+
+### Zona-morta do motor
+
+Abaixo de ~`speed 100`/1000 a roda não vence o atrito. A compensação escala as
+**duas** rodas juntas até a de maior magnitude cruzar o piso. Escalar cada roda
+por si (o jeito óbvio) sobe também a roda interna da curva, destrói a razão
+entre elas e o robô **abre** a curva em vez de fechar — o "balão".
+
+### O que NÃO trouxemos, e por quê
+
+A camada de movimentação foi recusada. Não por ajuste ruim: ela empilhava
+ganhos multiplicativos em três nós antes do controlador, que tinha teto de
+velocidade. O mínimo produzido pela regra "desacelere quando desalinhado" já
+saía **acima do teto** — ou seja, o robô andava sempre a fundo, alinhado ou
+não, com o giro saturado. Reto a fundo + giro saturado = **anda em S** e não
+fecha curva. É exatamente o sintoma que o dono relatou.
+
+A geometria agrava: **motrizes na frente, roda boba atrás**. A traseira só
+acompanha por arrasto e amplifica oscilação de rumo (o inverso do carrinho de
+supermercado, estável porque a boba vai à frente). Isso passa a ser um dado de
+projeto do controlador, não um detalhe.
+
+**Regra que fica:** o controlador de movimentação publica em **SI real** direto
+no `diff_drive_controller`, sem escada de ganhos. Limite mora em um lugar só.
+
+### Feito nesta sessão (só arquivo, robô desligado)
+
+- `ros2_packages/hoverboard_driver/` — interface `ros2_control` + diferencial.
+  **Compila limpo no Jazzy** nesta máquina (só warnings de API depreciada).
+- `ros2_packages/robot_base/` — pacote novo que amarra a base:
+  `tracao.launch.py`, `localizacao.launch.py`, `base.launch.py`, e a config de
+  rede do Mid-360 versionada (`config/`, com README explicando o porquê).
+- `setup_livox.sh` — traz `livox_ros_driver2` e `FAST_LIO` em commits fixados,
+  faz o preparo pró-ROS2 do driver, instala a config de rede e compila.
+
+### Percalços do setup (ambos resolvidos e documentados no script)
+
+1. O `livox_ros_driver2` **não embute** o SDK nativo da Livox — exige
+   `liblivox_lidar_sdk_shared.so` em `/usr/local/lib`. Sem isso o colcon falha
+   com "Could not find LIVOX_LIDAR_SDK_LIBRARY", que não diz o que fazer.
+   O script passou a clonar e compilar o SDK.
+2. O SDK **não compila no Ubuntu 24.04** (GCC 13): vários headers usam
+   `std::uint8_t`/`uint64_t` sem incluir `<cstdint>`, que o GCC 13 deixou de
+   puxar transitivamente. Contornado com `-include cstdint` no CMAKE_CXX_FLAGS
+   — resolve todos os arquivos de uma vez, sem editar fonte de terceiro.
+
+### Pendências imediatas
+
+- **Instalar o SDK** (`sudo` em `/usr/local`) — único passo que exige o dono;
+  a compilação já está feita em `third_party/Livox-SDK2/build`.
+- **IP do lidar a confirmar**: já foram vistos dois valores neste robô
+  (`.169` e `.158`). Varredura da sub-rede procurando OUI `e4:7a:2c` é a fonte
+  da verdade. IP errado = `bind failed` = FAST-LIO sem nuvem = sem `/Odometry`,
+  falha silenciosa.
+- **Medir `wheel_separation` e `wheel_radius` com trena** — os valores no
+  controlador são herdados, não medidos. Erram odometria e conversão de comando.
+- **Escrever a movimentação**, que é o objetivo declarado do dono: fazer o robô
+  andar direito. Precisa de robô ligado para iterar.
+
+## 2026-07-24 (2ª leva) — Simulador do robô 2
+
+Sem o robô em mãos, montamos o robô 2 no Gazebo para poder ajustar movimentação.
+Decisão de projeto em **004**: o simulador só serve se **errar do mesmo jeito
+que o robô**. Simulador que anda perfeito faria a gente ajustar contra um robô
+que não existe.
+
+### Geometria (informada pelo dono, robô ainda não medido)
+
+Caixa de madeira 0,50 × 0,50 × 0,30, fundo a 0,10 do chão; motrizes de
+hoverboard **na frente** separadas por 0,20; boba **no centro da traseira**.
+Massa total 10 kg — "ele é leve".
+
+### As três coisas que fazem o simulador não mentir
+
+1. **Boba com trail e atrito no pivô.** O jeito fácil (esfera lisa) não tem
+   orientação, então nunca precisa dar meia volta pra acompanhar e nunca empurra
+   a traseira. O deslocamento de 4 cm entre eixo do pivô e contato é a **causa
+   física** de a traseira sair no giro. Tem teste que falha se isso for zerado.
+2. **Pose do chão, não das rodas.** `/Odometry` publica a pose verdadeira do
+   Gazebo — mesmo papel do LIO no robô. Odometria de roda reportaria o movimento
+   *comandado* e esconderia justamente a derrapada que queremos ver.
+3. **Mesma cadeia de controle.** Mesmo `diff_drive_controller`, mesmos tetos de
+   velocidade — foi um teto engolindo a modulação que causou o defeito original.
+   Só a camada de hardware muda (`gz_ros2_control` no lugar da placa serial).
+
+### Verificado
+
+- URDF válida; 11 testes travam geometria, massa e a concordância entre URDF e
+  YAML do controlador. Suíte total: **285 verdes** (274 + 11).
+- **Física conferida no Gazebo**: robô inserido no mundo assenta sobre as três
+  rodas em z≈0, estável, sem pular nem afundar.
+
+### Onde parou
+
+Não deu pra dirigir o robô ainda: falta `ros-jazzy-gz-ros2-control` (está no
+apt, precisa de sudo). Tentei validar a boba aplicando torque de guinada pelo
+serviço de wrench do Gazebo, mas o mundo não carrega o plugin que oferece esse
+serviço — e adicionar um plugin só pra teste seria muleta, já que o
+`gz_ros2_control` é necessário de qualquer forma para o trabalho real.
+
+**Próximo passo:** instalar o pacote, dirigir o robô e conferir se o S aparece.
+Se **não** aparecer, o simulador está otimista e os primeiros suspeitos são o
+atrito do pivô da boba (baixo demais) e o trail (curto demais) — ambos no bloco
+de propriedades no topo da URDF.

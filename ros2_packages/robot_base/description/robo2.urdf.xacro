@@ -1,0 +1,216 @@
+<?xml version="1.0"?>
+<!--
+  Robô 2 — caixa de madeira, 2 rodas de hoverboard na FRENTE, roda boba ATRÁS.
+
+  Serve para o robô real e para o simulador; o argumento `sim` troca só a camada
+  de hardware do ros2_control (placa serial ↔ Gazebo), mantendo as MESMAS juntas
+  e o MESMO diff_drive_controller. Isso é de propósito: o que se ajusta no
+  simulador só transfere para o robô se a cadeia de controle for a mesma.
+
+  ⚠️ As dimensões são ESTIMADAS — o robô real ainda não foi medido com trena.
+  Todos os números ajustáveis estão no bloco de propriedades abaixo, de propósito:
+  a calibração vai ser comparar o comportamento daqui com o do robô real e mexer
+  nestes valores, então eles têm que estar num lugar só.
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="robo2">
+
+  <xacro:arg name="sim" default="false"/>
+  <xacro:arg name="controllers_yaml" default=""/>
+
+  <!-- ==================== NÚMEROS AJUSTÁVEIS ==================== -->
+
+  <!-- Caixa de madeira. Fundo a `altura_solo` do chão: quem toca o chão são as
+       rodas, nunca a caixa. -->
+  <xacro:property name="caixa_x"     value="0.50"/>
+  <xacro:property name="caixa_y"     value="0.50"/>
+  <xacro:property name="caixa_z"     value="0.30"/>
+  <xacro:property name="altura_solo" value="0.10"/>
+
+  <!-- Rodas motrizes (hoverboard). A separação é o valor que o
+       diff_drive_controller usa para converter cmd_vel em rad/s de roda —
+       errar aqui erra TODO comando de giro. -->
+  <xacro:property name="roda_raio"      value="0.0825"/>
+  <xacro:property name="roda_largura"   value="0.05"/>
+  <xacro:property name="roda_separacao" value="0.20"/>
+  <!-- Eixo das motrizes adiantado: é o que faz a traseira ser a ponta solta. -->
+  <xacro:property name="roda_x"         value="0.15"/>
+
+  <!-- Roda boba. O `boba_trail` (avanço) é o deslocamento horizontal entre o
+       eixo do pivô e o contato da roda com o chão. É ELE que faz a boba ser
+       jogada pra fora quando o robô gira, e que a obriga a "dar meia volta"
+       antes de acompanhar. Trail zero = boba ideal = simulador que mente. -->
+  <xacro:property name="boba_raio"  value="0.05"/>
+  <xacro:property name="boba_x"     value="-0.18"/>
+  <xacro:property name="boba_trail" value="0.04"/>
+
+  <!-- Massas (total ~10 kg — o robô é leve).
+       A inércia de guinada que sai daqui é o que produz o sobrepasso: um robô
+       sem inércia corrige rumo instantaneamente e nunca faz S. -->
+  <xacro:property name="massa_chassi" value="5.8"/>
+  <xacro:property name="massa_roda"   value="2.0"/>
+  <xacro:property name="massa_garfo"  value="0.1"/>
+  <xacro:property name="massa_boba"   value="0.1"/>
+
+  <!-- Atrito do PIVÔ da boba. Boba real emperra um pouco; pivô livre demais
+       se alinha na hora e o problema que queremos reproduzir desaparece.
+       Este é o parâmetro mais importante para casar o simulador com o robô. -->
+  <xacro:property name="boba_pivo_atrito"    value="0.05"/>
+  <xacro:property name="boba_pivo_damping"   value="0.02"/>
+
+  <!-- ==================== DERIVADOS (não editar) ==================== -->
+  <xacro:property name="caixa_cz"  value="${altura_solo + caixa_z/2}"/>
+  <xacro:property name="boba_pivo_z" value="${altura_solo}"/>
+
+  <!-- Inércia de caixa sólida -->
+  <xacro:macro name="inercia_caixa" params="m x y z">
+    <inertial>
+      <mass value="${m}"/>
+      <inertia ixx="${m*(y*y+z*z)/12}" iyy="${m*(x*x+z*z)/12}" izz="${m*(x*x+y*y)/12}"
+               ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </xacro:macro>
+
+  <!-- Inércia de cilindro girando em torno de Y (eixo da roda) -->
+  <xacro:macro name="inercia_roda" params="m r h">
+    <inertial>
+      <mass value="${m}"/>
+      <inertia ixx="${m*(3*r*r+h*h)/12}" iyy="${m*r*r/2}" izz="${m*(3*r*r+h*h)/12}"
+               ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </xacro:macro>
+
+  <!-- ==================== CHASSI ==================== -->
+
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 ${caixa_cz}"/>
+      <geometry><box size="${caixa_x} ${caixa_y} ${caixa_z}"/></geometry>
+      <material name="madeira"><color rgba="0.72 0.53 0.30 1"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 ${caixa_cz}"/>
+      <geometry><box size="${caixa_x} ${caixa_y} ${caixa_z}"/></geometry>
+    </collision>
+    <xacro:inercia_caixa m="${massa_chassi}" x="${caixa_x}" y="${caixa_y}" z="${caixa_z}"/>
+  </link>
+
+  <!-- O centro de massa fica alto (caixa a 0,10–0,40 do chão) em relação à
+       bitola de 0,20. Isso é fiel ao robô e importa: alimenta a rolagem que
+       acompanha o giro brusco. -->
+
+  <!-- ==================== RODAS MOTRIZES ==================== -->
+
+  <xacro:macro name="roda_motriz" params="lado reflect">
+    <link name="${lado}_wheel">
+      <visual>
+        <origin rpy="${pi/2} 0 0"/>
+        <geometry><cylinder radius="${roda_raio}" length="${roda_largura}"/></geometry>
+        <material name="borracha"><color rgba="0.15 0.15 0.15 1"/></material>
+      </visual>
+      <collision>
+        <origin rpy="${pi/2} 0 0"/>
+        <geometry><cylinder radius="${roda_raio}" length="${roda_largura}"/></geometry>
+      </collision>
+      <xacro:inercia_roda m="${massa_roda}" r="${roda_raio}" h="${roda_largura}"/>
+    </link>
+
+    <joint name="${lado}_wheel_joint" type="continuous">
+      <parent link="base_link"/>
+      <child link="${lado}_wheel"/>
+      <origin xyz="${roda_x} ${reflect*roda_separacao/2} ${roda_raio}"/>
+      <axis xyz="0 1 0"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:roda_motriz lado="left"  reflect="1"/>
+  <xacro:roda_motriz lado="right" reflect="-1"/>
+
+  <!-- ==================== RODA BOBA ==================== -->
+  <!-- Duas juntas, não uma esfera: pivô vertical + roda que gira, com a roda
+       deslocada `boba_trail` ATRÁS do pivô. Sem esse deslocamento a boba não
+       tem por que ser jogada pra fora, e o simulador não reproduz o problema. -->
+
+  <link name="caster_fork">
+    <visual>
+      <origin xyz="${-boba_trail/2} 0 ${-boba_raio/2}"/>
+      <geometry><box size="${boba_trail} 0.03 ${boba_raio}"/></geometry>
+      <material name="metal"><color rgba="0.5 0.5 0.55 1"/></material>
+    </visual>
+    <xacro:inercia_caixa m="${massa_garfo}" x="${boba_trail}" y="0.03" z="${boba_raio}"/>
+  </link>
+
+  <joint name="caster_swivel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="caster_fork"/>
+    <origin xyz="${boba_x} 0 ${boba_pivo_z}"/>
+    <axis xyz="0 0 1"/>
+    <dynamics damping="${boba_pivo_damping}" friction="${boba_pivo_atrito}"/>
+  </joint>
+
+  <link name="caster_wheel">
+    <visual>
+      <origin rpy="${pi/2} 0 0"/>
+      <geometry><cylinder radius="${boba_raio}" length="0.03"/></geometry>
+      <material name="borracha"><color rgba="0.15 0.15 0.15 1"/></material>
+    </visual>
+    <collision>
+      <origin rpy="${pi/2} 0 0"/>
+      <geometry><cylinder radius="${boba_raio}" length="0.03"/></geometry>
+    </collision>
+    <xacro:inercia_roda m="${massa_boba}" r="${boba_raio}" h="0.03"/>
+  </link>
+
+  <joint name="caster_wheel_joint" type="continuous">
+    <parent link="caster_fork"/>
+    <child link="caster_wheel"/>
+    <origin xyz="${-boba_trail} 0 ${-(boba_pivo_z - boba_raio)}"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+
+  <!-- ==================== ros2_control ==================== -->
+  <!-- Mesmas juntas nos dois casos; só a camada de hardware muda. -->
+
+  <xacro:if value="$(arg sim)">
+    <ros2_control name="GazeboSimSystem" type="system">
+      <hardware>
+        <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+      </hardware>
+      <joint name="left_wheel_joint">
+        <command_interface name="velocity"/>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+      </joint>
+      <joint name="right_wheel_joint">
+        <command_interface name="velocity"/>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+      </joint>
+    </ros2_control>
+  </xacro:if>
+
+  <xacro:unless value="$(arg sim)">
+    <ros2_control name="HoverboardSystem" type="system">
+      <hardware>
+        <plugin>hoverboard_driver/hoverboard_driver</plugin>
+        <param name="wheel_radius">${roda_raio}</param>
+        <param name="max_velocity">1.0</param>
+        <param name="device">/dev/ttyUSB0</param>
+      </hardware>
+      <joint name="left_wheel_joint">
+        <command_interface name="velocity"/>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+      </joint>
+      <joint name="right_wheel_joint">
+        <command_interface name="velocity"/>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+      </joint>
+    </ros2_control>
+  </xacro:unless>
+
+  <xacro:if value="$(arg sim)">
+    <xacro:include filename="$(find robot_base)/description/robo2.gazebo.xacro"/>
+  </xacro:if>
+
+</robot>

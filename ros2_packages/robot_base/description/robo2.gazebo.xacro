@@ -1,0 +1,70 @@
+<?xml version="1.0"?>
+<!--
+  Parte só-Gazebo do robô 2: atrito de contato e plugins.
+
+  Duas decisões deste arquivo definem se o simulador é útil ou decorativo:
+
+  1) ATRITO DIFERENCIADO. As motrizes agarram (mu alto) e a boba escorrega
+     lateralmente com facilidade (mu baixo). É essa assimetria que faz a
+     traseira "sair de traseira" no giro. Se todas as rodas tiverem o mesmo
+     atrito alto, o robô gira sobre o próprio eixo como se estivesse em
+     trilhos, e o problema que queremos estudar não aparece.
+
+  2) POSE VINDA DO CHÃO, NÃO DAS RODAS. A pose publicada em /Odometry é a pose
+     VERDADEIRA do Gazebo, não odometria de roda. Isso espelha o robô real, onde
+     quem localiza é o LIO — que enxerga o movimento de fato, inclusive a
+     derrapada causada pela boba. Odometria de roda reportaria o movimento
+     COMANDADO e esconderia exatamente o erro que estamos caçando.
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- Motrizes: borracha em piso, agarra. -->
+  <xacro:macro name="atrito_motriz" params="link">
+    <gazebo reference="${link}">
+      <mu1>1.0</mu1>
+      <mu2>1.0</mu2>
+      <kp>1e6</kp>
+      <kd>100.0</kd>
+    </gazebo>
+  </xacro:macro>
+  <xacro:atrito_motriz link="left_wheel"/>
+  <xacro:atrito_motriz link="right_wheel"/>
+
+  <!-- Boba: rola fácil e escorrega de lado. mu2 (transversal) baixo é o que
+       permite a traseira ser arrastada lateralmente antes de o pivô alinhar. -->
+  <gazebo reference="caster_wheel">
+    <mu1>0.3</mu1>
+    <mu2>0.05</mu2>
+    <kp>1e6</kp>
+    <kd>100.0</kd>
+  </gazebo>
+
+  <gazebo reference="base_link">
+    <mu1>0.3</mu1>
+    <mu2>0.3</mu2>
+  </gazebo>
+
+  <!-- ros2_control dentro do Gazebo: sobe o MESMO controller_manager e o MESMO
+       diff_drive_controller do robô real, trocando só a interface de hardware. -->
+  <gazebo>
+    <plugin filename="gz_ros2_control-system"
+            name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+      <parameters>$(arg controllers_yaml)</parameters>
+    </plugin>
+  </gazebo>
+
+  <!-- Pose verdadeira publicada como /Odometry — o papel que o LIO cumpre no
+       robô real. `dimensions 3` para incluir o eixo Z e a orientação completa. -->
+  <gazebo>
+    <plugin filename="gz-sim-odometry-publisher-system"
+            name="gz::sim::systems::OdometryPublisher">
+      <odom_frame>odom</odom_frame>
+      <robot_base_frame>base_link</robot_base_frame>
+      <odom_topic>Odometry</odom_topic>
+      <tf_topic>tf_odom</tf_topic>
+      <dimensions>3</dimensions>
+      <odom_publish_frequency>50</odom_publish_frequency>
+    </plugin>
+  </gazebo>
+
+</robot>
