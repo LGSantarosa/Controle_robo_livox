@@ -37,6 +37,42 @@ giro; sem ele o defeito desaparece do simulador e continua no robô.
 O atrito do pivô é o segundo detalhe: pivô ideal se alinha instantaneamente.
 Boba real emperra, e é durante esse atraso que a traseira sai.
 
+### 1b. A placa também é fingida (acrescentado em 2026-07-27)
+
+O Gazebo obedece qualquer comando, por menor que seja. A placa do hoverboard
+**não**: abaixo de certa velocidade de roda ela ignora, e a roda não sai do
+lugar. Um simulador que obedece tudo mede um robô que não existe — e o buraco
+não é acadêmico: essa falha já deixou o robô plantado no chão sem erro nenhum
+no log, e é ela que decide se dá para girar no próprio eixo devagar.
+
+`robot_base/placa_simulada` fica **entre** o controlador e o simulador e
+reproduz o defeito, na roda, que é onde ele mora:
+
+    heading_controller -> /cmd_vel_bruto -> [placa_simulada] -> cmd_vel
+
+Foi pedido do dono, e corrige um erro anterior meu: eu havia rodado o
+simulador com `zona_morta = 0` por ser a verdade do Gazebo — o que é fiel ao
+simulador e infiel ao robô. Com a placa fingida, o controle é desenvolvido
+contra uma zona morta plausível, e quando a bancada medir a de verdade
+troca-se só o número, nos dois lados.
+
+O valor no launch é **chute** (`zona_morta:=0.10`). Deixar a crença do
+controlador diferente do valor da placa é um teste válido: é o caso "a medição
+estava errada".
+
+### 1c. Dois perfis de planta
+
+`sim.launch.py planta:=lenta` (padrão) usa `a_dec = 0,3 rad/s²`; `normal` usa
+1,5. O perfil lento é pessimista de propósito — o dono comparou o S do
+simulador padrão com o do robô real e disse que o real é muito maior (barrigas
+de ~50 cm contra ±10 cm). É nele que a movimentação e a navegação foram
+validadas.
+
+Antes disso o perfil lento existia só como arquivo solto na máquina de quem
+estava trabalhando; quem subisse o simulador pelo caminho oficial pegava a
+planta ágil e veria um robô melhor do que o real. Versionar foi fechar essa
+dívida de reprodutibilidade.
+
 ### 2. A pose vem do chão, não das rodas
 
 `/Odometry` publica a **pose verdadeira do Gazebo**, não odometria de roda.

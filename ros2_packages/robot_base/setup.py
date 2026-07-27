@@ -26,6 +26,8 @@ setup(
     license='MIT',
     tests_require=['pytest'],
     entry_points={
-        'console_scripts': [],
+        'console_scripts': [
+            'placa_simulada = robot_base.placa_simulada:main',
+        ],
     },
 )

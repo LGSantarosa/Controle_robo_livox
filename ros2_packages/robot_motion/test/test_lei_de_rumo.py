@@ -254,3 +254,21 @@ def test_raio_de_curva_encolhe_com_o_pivo_liberado():
     # zona morta pequena: pivota, raio ~zero. Grande: obrigado a arco largo.
     assert raio(0.05) < 0.05, 'com zona morta pequena tem que pivotar'
     assert raio(0.15) > 0.20, 'com zona morta grande o arco é inevitável'
+
+
+def test_pivo_disponivel_depende_da_bitola():
+    """A bitola decide se o robô consegue virar no próprio eixo.
+
+    Medido no simulador: bitola 0,20 com zona morta 0,10 exige 1,3 rad/s para
+    pivotar, contra um teto de 1,0 — impossível, e pontos próximos ficam
+    inalcançáveis (o robô os orbita). A bitola real (0,32) resolve o mesmo
+    caso. Daí medir a bitola com trena ser mais urgente que medir a zona
+    morta.
+    """
+    from robot_motion.lei_de_rumo import pivo_disponivel
+    assert not pivo_disponivel(zona_morta=0.10, bitola=0.20, margem=0.03,
+                               wz_max=1.0)
+    assert pivo_disponivel(zona_morta=0.10, bitola=0.32, margem=0.03,
+                           wz_max=1.0)
+    # sem zona morta, sempre disponível
+    assert pivo_disponivel(zona_morta=0.0, bitola=0.20, margem=0.0, wz_max=1.0)

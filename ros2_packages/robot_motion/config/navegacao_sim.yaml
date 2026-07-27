@@ -5,9 +5,10 @@ goal_navigator:
     v_max: 0.5
     a_lin: 0.5
 
-    # Sem zona morta o robô anda a qualquer velocidade; o piso aqui é só para
-    # a aproximação terminar em tempo finito, não uma defesa.
-    v_min_viavel: 0.05
+    # Tem que ficar acima da zona morta da placa fingida (0,10), senão a
+    # aproximação final é engolida e o robô para longe do ponto achando que
+    # chegou.
+    v_min_viavel: 0.15
 
     # Giro que a máquina sustenta numa curva [rad/s] — NÃO MEDIDO
     # (ensaio `curva` do banco). É ele que impede o robô de orbitar um ponto

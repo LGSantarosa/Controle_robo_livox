@@ -20,6 +20,7 @@ from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
     IncludeLaunchDescription,
+    OpaqueFunction,
     RegisterEventHandler,
 )
 from launch.conditions import IfCondition, UnlessCondition
@@ -34,23 +35,37 @@ def generate_launch_description():
     pkg_ros_gz_sim = get_package_share_directory('ros_gz_sim')
 
     mundo_padrao = os.path.join(pkg, 'worlds', 'pista_livre.sdf')
-    controllers_yaml = os.path.join(pkg, 'config', 'hoverboard_controllers_sim.yaml')
+    # Escolhido depois, em função do argumento `planta`.
     xacro_path = os.path.join(pkg, 'description', 'robo2.urdf.xacro')
 
     args = [
         DeclareLaunchArgument('mundo', default_value=mundo_padrao),
         DeclareLaunchArgument('gui', default_value='true',
                               description='false roda headless (útil para teste automatizado)'),
+        DeclareLaunchArgument(
+            'planta', default_value='lenta',
+            description='"lenta" (a_dec 0,3 — pessimista, onde a movimentação '
+                        'foi validada) ou "normal" (a_dec 1,5)'),
+        DeclareLaunchArgument(
+            'zona_morta', default_value='0.10',
+            description='zona morta de RODA da placa simulada [m/s]; 0 = fio. '
+                        'CHUTE — o valor real sai do tools/banco (BO-3)'),
     ]
     mundo = LaunchConfiguration('mundo')
     gui = LaunchConfiguration('gui')
 
-    # O xacro é processado aqui (e não por substitution) porque o caminho do
-    # controllers_yaml precisa entrar DENTRO do URDF, no plugin do gz_ros2_control.
-    robot_description = xacro.process_file(
-        xacro_path,
-        mappings={'sim': 'true', 'controllers_yaml': controllers_yaml},
-    ).toxml()
+    def descricao(contexto):
+        # O xacro é processado aqui (e não por substitution) porque o caminho do
+        # controllers_yaml precisa entrar DENTRO do URDF, no plugin do
+        # gz_ros2_control.
+        perfil = LaunchConfiguration('planta').perform(contexto).lower()
+        nome = ('hoverboard_controllers_sim_lento.yaml' if perfil == 'lenta'
+                else 'hoverboard_controllers_sim.yaml')
+        return xacro.process_file(
+            xacro_path,
+            mappings={'sim': 'true',
+                      'controllers_yaml': os.path.join(pkg, 'config', nome)},
+        ).toxml()
 
     gz_launch = os.path.join(pkg_ros_gz_sim, 'launch', 'gz_sim.launch.py')
 
@@ -67,11 +82,26 @@ def generate_launch_description():
         condition=UnlessCondition(gui),
     )
 
-    robot_state_pub = Node(
-        package='robot_state_publisher',
-        executable='robot_state_publisher',
+    def robot_state_pub(contexto, *_a, **_k):
+        return [Node(
+            package='robot_state_publisher',
+            executable='robot_state_publisher',
+            output='both',
+            parameters=[{'robot_description': descricao(contexto),
+                         'use_sim_time': True}],
+        )]
+
+    # A placa do hoverboard, fingida: engole comando de roda pequeno demais,
+    # como a de verdade. Sem ela o simulador obedece qualquer coisa e o
+    # controle é ajustado contra um atuador que não existe.
+    placa = Node(
+        package='robot_base',
+        executable='placa_simulada',
+        name='placa_simulada',
         output='both',
-        parameters=[{'robot_description': robot_description, 'use_sim_time': True}],
+        parameters=[{'zona_morta': LaunchConfiguration('zona_morta'),
+                     'bitola': 0.20,
+                     'use_sim_time': True}],
     )
 
     # Spawn com z acima do solo: o robô assenta nas rodas na primeira iteração
@@ -125,7 +155,8 @@ def generate_launch_description():
     return LaunchDescription(args + [
         gazebo_com_gui,
         gazebo_headless,
-        robot_state_pub,
+        OpaqueFunction(function=robot_state_pub),
+        placa,
         bridge,
         spawn,
         apos_spawn,

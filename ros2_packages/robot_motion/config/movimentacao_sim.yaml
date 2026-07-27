@@ -1,15 +1,13 @@
 # Movimentação no SIMULADOR — os números verdadeiros DE LÁ.
 #
-# O Gazebo não tem placa engolindo comando: a zona morta lá é ZERO. Alimentar
-# o simulador com o chute pessimista do robô real (0,15 m/s) fazia o robô se
-# defender de um perigo que não existe naquele ambiente — ele ficava proibido
-# de pivotar e descrevia arcos enormes, a ponto de orbitar pontos próximos sem
-# nunca alcançá-los.
+# O Gazebo obedece qualquer comando; a placa real não. Por isso o simulador
+# ganhou uma placa FINGIDA (`robot_base/placa_simulada`) que engole comando de
+# roda pequeno demais — e estes números são a crença do controlador sobre ela.
 #
-# ⚠️ Isso torna o simulador OTIMISTA em uma dimensão específica: aqui as
-# defesas contra zona morta não são exercitadas. Para testá-las, o banco
-# (`tools/banco/`) injeta zona morta de propósito. Ver decisão 004 —
-# simulador só vale enquanto a gente souber exatamente onde ele mente.
+# Mantenha `zona_morta` igual ao argumento `zona_morta` do `sim.launch.py`:
+# assim o controlador sabe exatamente o que o atuador faz. Deixá-los
+# DIFERENTES de propósito é um teste válido e interessante — é o caso "a
+# medição estava errada", e mostra o quanto o robô aguenta crença errada.
 
 heading_controller:
   ros__parameters:
@@ -17,8 +15,8 @@ heading_controller:
     wz_max: 1.0
     v_max: 0.5
 
-    zona_morta: 0.0     # verdade do Gazebo
-    margem_piso: 0.0
+    zona_morta: 0.10    # igual à da placa fingida no sim.launch.py
+    margem_piso: 0.03
     bitola: 0.20        # bitola REAL do modelo simulado (robo2.urdf.xacro)
 
     tolerancia_rumo: 0.02

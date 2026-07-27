@@ -212,9 +212,23 @@ ainda guarda os fósseis do robô 1.
   no próprio eixo** e só então arranca. Alvo à frente (2, 2): 9 mm. Alvo atrás
   (−1, 1): 8 mm em 9,8 s, com afastamento máximo de 1,67 m (era 2,15 m num
   laço andando). Parado no ponto: 9 mm de deriva em 30 s.
-- **O simulador ganhou config próprio** (`*_sim.yaml`): lá a zona morta é ZERO,
-  e alimentá-lo com o chute pessimista do robô real fazia o robô se defender de
-  um perigo inexistente naquele ambiente.
+- **O simulador ganhou uma PLACA FINGIDA** (`robot_base/placa_simulada`), a
+  pedido do dono: ela engole comando de roda pequeno demais, como a de verdade.
+  Antes eu rodava com zona morta zero — fiel ao Gazebo e infiel ao robô. Agora
+  o controle é desenvolvido contra uma zona morta plausível, e quando a bancada
+  medir a real troca-se só o número. `sim.launch.py zona_morta:=0.10`.
+- **A planta lenta virou perfil versionado** (`planta:=lenta`, padrão), fechando
+  uma dívida de reprodutibilidade: ela vivia num arquivo solto e quem subisse o
+  simulador pelo caminho oficial pegava a planta ágil e veria um robô melhor do
+  que o real.
+- **⚠️ Com a zona morta ligada, o pivô some — e a BITOLA é quem decide.**
+  O pivô exige `wz_max·bitola/2 ≥ zona_morta + margem`. Com a bitola do modelo
+  simulado (0,20) e zona morta 0,10, pivotar exigiria **1,3 rad/s** contra um
+  teto de 1,0: impossível, o robô volta a fazer só arcos e **orbita pontos
+  próximos** (chegou a 0,168 m de um alvo com raio de chegada de 0,15). Com a
+  bitola real presumida (0,32), o mesmo caso dá 0,62 rad/s e o pivô **existe**.
+  O nó diz qual dos dois é o caso, em voz alta, na subida.
+  **Isso torna medir a bitola com trena mais urgente que medir a zona morta.**
 - **Falta**: desviar de obstáculo (fatia B) — depende do Livox e de percepção
   que o repo ainda não tem.
 

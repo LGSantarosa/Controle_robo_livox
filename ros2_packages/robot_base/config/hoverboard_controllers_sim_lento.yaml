@@ -1,0 +1,88 @@
+# Controlador diferencial no SIMULADOR — PERFIL "LENTO".
+#
+# Igual ao `hoverboard_controllers_sim.yaml`, com UMA diferença: a
+# desaceleração angular cai de 1,5 para 0,3 rad/s².
+#
+# Por que este perfil existe: o dono olhou o S do simulador padrão e disse que
+# o do robô real é MUITO maior — barrigas de ~50 cm contra ±10 cm daqui. A
+# largura da barriga escala com a_dec^-1,43, o que coloca o a_dec real perto de
+# 0,5 rad/s². Este perfil usa 0,3: pessimista de propósito, para o controle ser
+# ajustado contra uma máquina mais lerda do que a real, e não mais ágil.
+#
+# É O PERFIL EM QUE A MOVIMENTAÇÃO E A NAVEGAÇÃO FORAM VALIDADAS (2026-07-27).
+# Usar com `sim.launch.py planta:=lenta`.
+#
+# Espelha de propósito o arquivo do robô real
+# (ros2_packages/hoverboard_driver/bringup/config/hoverboard_controllers.yaml).
+# Os limites de velocidade/aceleração são MANTIDOS IGUAIS aos do robô: foram
+# eles que estouraram no controlador antigo (a desaceleração por desalinhamento
+# saía acima do teto e era engolida), então precisam estar no laço aqui, senão
+# o simulador não reproduz o problema que viemos estudar.
+#
+# ⚠️ DIVERGÊNCIA CONHECIDA — wheel_separation
+#   aqui (simulador): 0.20   ← medida informada para o modelo
+#   robô real:        0.32   ← valor HERDADO, nunca medido com trena
+# Enquanto os dois não forem reconciliados, um controlador ajustado aqui vai
+# comandar giro diferente no robô: o diff_drive_controller usa esse número para
+# converter cmd_vel em rad/s de roda. Medir o robô e igualar os dois.
+
+controller_manager:
+  ros__parameters:
+    update_rate: 50  # Hz — mais alto que os 10 Hz do robô, porque no simulador
+                     # não custa nada e o contato da boba precisa de passo fino.
+    use_sim_time: true
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    hoverboard_base_controller:
+      type: diff_drive_controller/DiffDriveController
+
+hoverboard_base_controller:
+  ros__parameters:
+    use_sim_time: true
+
+    left_wheel_names: ["left_wheel_joint"]
+    right_wheel_names: ["right_wheel_joint"]
+
+    wheel_separation: 0.20
+    wheel_radius: 0.0825
+
+    wheel_separation_multiplier: 1.0
+    left_wheel_radius_multiplier: 1.0
+    right_wheel_radius_multiplier: 1.0
+
+    publish_rate: 50.0
+    odom_frame_id: odom
+    base_frame_id: base_link
+    pose_covariance_diagonal: [0.001, 0.001, 0.001, 0.001, 0.001, 0.01]
+    twist_covariance_diagonal: [0.001, 0.001, 0.001, 0.001, 0.001, 0.01]
+
+    # A odometria deste controlador NÃO é a fonte de pose do sistema — quem
+    # localiza é /Odometry (pose verdadeira do Gazebo, papel do LIO no robô
+    # real). Ela fica publicada só para comparação: a diferença entre as duas
+    # É a derrapada, e é justamente o que queremos medir.
+    open_loop: false
+    enable_odom_tf: false
+
+    cmd_vel_timeout: 0.5
+
+    # --- MESMOS TETOS DO ROBÔ REAL ---
+    linear.x.has_velocity_limits: true
+    linear.x.has_acceleration_limits: true
+    linear.x.has_jerk_limits: false
+    linear.x.max_velocity: 0.7
+    linear.x.min_velocity: -0.7
+    linear.x.max_acceleration: 0.8
+    linear.x.max_jerk: 0.0
+    linear.x.min_jerk: 0.0
+
+    angular.z.has_velocity_limits: true
+    angular.z.has_acceleration_limits: true
+    angular.z.has_jerk_limits: false
+    angular.z.max_velocity: 1.0
+    angular.z.min_velocity: -1.0
+    angular.z.max_acceleration: 0.3
+    angular.z.min_acceleration: -0.3
+    angular.z.max_jerk: 0.0
+    angular.z.min_jerk: 0.0

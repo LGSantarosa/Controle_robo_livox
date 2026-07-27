@@ -469,3 +469,43 @@ por estar escrito.
 325 testes verdes. Falta a fatia B (desviar de obstáculo, depende do Livox) e
 as medições do robô, agora atrás de um problema elétrico — o dono foi ao
 laboratório e voltou sem medir.
+
+## 2026-07-27 (4ª leva) — A placa fingida, e a bitola virando o item nº 1
+
+Pedido do dono, e ele estava certo: em vez de rodar o simulador com zona morta
+zero (fiel ao Gazebo, infiel ao robô), **colocar a zona morta dentro do
+simulador**. Assim o controle é desenvolvido contra ela, e quando a bancada
+medir a de verdade troca-se só o número.
+
+- `robot_base/placa_simulada` fica entre o controlador e o simulador e engole
+  comando de roda pequeno demais, na roda, que é onde o defeito mora.
+- A planta lenta (`a_dec = 0,3`) virou perfil versionado — antes vivia num
+  arquivo solto na máquina de quem trabalhava, e quem subisse o simulador pelo
+  caminho oficial pegava a planta ágil e veria um robô melhor do que o real.
+  Dívida de reprodutibilidade fechada.
+
+### O que a zona morta ligada revelou
+
+O ponto de 0,65 m voltou a ser inalcançável: o robô chega a 0,168 m e não fecha
+os últimos 2 cm. **E desta vez não é defeito de código — é física.**
+
+    pivô exige:  wz_max · bitola/2  >=  zona_morta + margem
+    bitola 0,20 + zona morta 0,10  ->  precisa de 1,3 rad/s, teto é 1,0  X
+    bitola 0,32 + zona morta 0,10  ->  precisa de 0,62 rad/s            OK
+
+**A bitola decide.** O modelo simulado tem 0,20 m, mais estreito que os 0,32
+presumidos do robô real — o simulador é mais pessimista que o robô neste ponto
+específico. E isso muda a prioridade da bancada: **medir a bitola com trena é
+mais urgente do que medir a zona morta**, porque é ela que define se o robô
+consegue virar no lugar.
+
+O nó agora anuncia na subida qual dos dois casos é o dele, com o número:
+
+    pivô INDISPONÍVEL: girar parado exigiria mais de 1.30 rad/s, e o teto é
+    1.00. O robô só faz arcos, e pontos perto dele ficam INALCANÇÁVEIS.
+
+### Tropeço
+
+`robot_base` não tinha `setup.cfg`, então o executável do nó novo não era
+instalado e o launch morria com "libexec directory does not exist". Três
+corridas abortadas até eu ler o log do launch em vez do log da corrida.

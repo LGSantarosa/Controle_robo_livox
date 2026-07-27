@@ -29,7 +29,12 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 from std_msgs.msg import Float64
 
-from robot_motion.lei_de_rumo import comando, norm_ang, wz_minimo_parado
+from robot_motion.lei_de_rumo import (
+    comando,
+    norm_ang,
+    pivo_disponivel,
+    wz_minimo_parado,
+)
 
 
 def yaw_de(q):
@@ -104,9 +109,18 @@ class HeadingController(Node):
             f"zona_morta={self.par['zona_morta']} m/s, "
             f"bitola={self.par['bitola']} m. "
             'Rodar tools/banco/ e corrigir (BO-3).')
-        self.get_logger().info(
-            f'com esses números, girar parado abaixo de {wz_min:.2f} rad/s é '
-            'impossível — as duas rodas caem na zona morta')
+        if pivo_disponivel(self.par['zona_morta'], self.par['bitola'],
+                           self.par['margem_piso'], self.par['wz_max']):
+            self.get_logger().info(
+                f'pivô DISPONÍVEL acima de {wz_min:.2f} rad/s — o robô '
+                'consegue virar no próprio eixo')
+        else:
+            self.get_logger().error(
+                f'pivô INDISPONÍVEL: girar parado exigiria mais de '
+                f"{2*(self.par['zona_morta']+self.par['margem_piso'])/self.par['bitola']:.2f}"
+                f" rad/s, e o teto é {self.par['wz_max']:.2f}. O robô só faz "
+                'arcos, e pontos perto dele ficam INALCANÇÁVEIS. '
+                'Bitola maior ou zona morta menor resolvem — medir com trena.')
 
     def cb_odom(self, msg):
         self.pose = msg

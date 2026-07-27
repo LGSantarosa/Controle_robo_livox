@@ -147,6 +147,24 @@ def comando(erro, v_max, a_dec, wz_max, zona_morta, bitola, margem_piso,
     return ajusta_para_zona_morta(v, wz, zona_morta, bitola, margem_piso, v_max)
 
 
+def pivo_disponivel(zona_morta, bitola, margem, wz_max):
+    """O robô consegue girar no próprio eixo, com estes números?
+
+    Girando parado a roda interna anda a `-|wz|·bitola/2`; ela só sai da banda
+    morta se esse valor superar `zona_morta + margem` em módulo. Logo o pivô
+    existe apenas se
+
+        wz_max · bitola/2  >=  zona_morta + margem
+
+    **A bitola decide.** Medido no simulador: com bitola 0,20 e zona morta
+    0,10, o pivô exigiria 1,3 rad/s contra um teto de 1,0 — impossível, e o
+    robô volta a orbitar pontos próximos. Com a bitola real (0,32) o mesmo
+    número dá 0,81 rad/s e o pivô existe. Por isso medir a bitola com trena é
+    mais urgente do que medir a zona morta.
+    """
+    return wz_max * bitola / 2.0 >= zona_morta + margem
+
+
 def wz_minimo_parado(zona_morta, bitola):
     """Menor giro possível com o robô PARADO.
 

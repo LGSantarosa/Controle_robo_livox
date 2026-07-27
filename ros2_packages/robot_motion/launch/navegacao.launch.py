@@ -52,6 +52,11 @@ def nos(contexto, *_args, **_kwargs):
             name='heading_controller',
             output='both',
             parameters=[movimentacao, {'use_sim_time': sim}],
+            # No simulador o comando passa antes pela placa fingida
+            # (robot_base/placa_simulada), que engole roda pequena demais como
+            # a placa de verdade. No robô, sai direto para o controlador.
+            remappings=([('/hoverboard_base_controller/cmd_vel',
+                          '/cmd_vel_bruto')] if no_sim else []),
         ),
         Node(
             package='robot_motion',
