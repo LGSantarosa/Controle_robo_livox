@@ -25,6 +25,7 @@ setup(
     entry_points={
         'console_scripts': [
             'heading_controller = robot_motion.heading_controller:main',
+            'goal_navigator = robot_motion.goal_navigator:main',
         ],
     },
 )

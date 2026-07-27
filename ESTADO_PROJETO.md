@@ -1,7 +1,7 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-07-24**.
+> Versionado na `main`. Atualizado em **2026-07-27**.
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
@@ -26,8 +26,10 @@
   lidar: `enp2s0` (IP `192.168.1.2`).
 - **Ambiente**: novo (não é o do robô 1). **Não precisa de mapa** — a
   localização é LIO, sem AMCL (decisão 003).
-- Estado físico: montado e pronto. **Base de software (tração + localização)
-  verificada em hardware**; falta a movimentação.
+- Estado físico: montado, mas **a elétrica está ruim** (07-27: tentativa de
+  medição no laboratório abortada por isso). **Base de software (tração +
+  localização) verificada em hardware**; movimentação e navegação ponto a
+  ponto escritas e verificadas em simulador, à espera dos números do robô.
 
 ### Medidas ainda NÃO conferidas (afetam tudo acima)
 
@@ -174,6 +176,35 @@ Roda igual no robô e no simulador (mesmos tópicos, mesmo CSV), o que torna os
 dois diretamente comparáveis. `README.md` traz o protocolo de caracterização:
 zona morta linear e de giro, degrau de giro (`a_dec`), curva sustentada em
 várias velocidades e aceleração linear.
+
+## 🧭 2026-07-27 (2ª leva) — Navegação ponto a ponto (decisão 006)
+
+A pilha de movimento própria do robô 2 fechou a fatia A: **ir a um ponto**, sem
+obstáculo. Vive em `ros2_packages/robot_motion/` — separada do `robot_nav`, que
+ainda guarda os fósseis do robô 1.
+
+- **Rumo alvo = direção até o ponto, recalculada todo ciclo.** Dissolve o erro
+  lateral sem controlador extra: se o robô sai da linha, a direção muda e ele
+  curva de volta. Resolve os 66 cm de desvio paralelo que o controlador de
+  rumo sozinho deixava.
+- **Aproximação = a lei de frenagem em distância**: `v = √(2·a_lin·dist)`.
+  Mesmo princípio da decisão 005, mesmo tipo de parâmetro físico.
+- **Chegada com piso e corte firme.** Não existe "chegar devagarinho": abaixo
+  do mínimo viável a placa engole o comando e o robô para longe do ponto
+  achando que chegou — o BO-3 disfarçado de sucesso. O nó recusa raio de
+  chegada menor que a distância de parada a partir do piso (senão orbita o
+  ponto) e avisa no log.
+- **Camadas conversam pelo tópico público** (`rumo_alvo`, `velocidade_alvo`):
+  a navegação decide *para onde*, a movimentação decide *o que o atuador
+  aguenta*.
+- **Verificado no simulador**, os dois nós reais empilhados: alvo em (2, 2) a
+  2,83 m — chegou e **parou a 7 mm do ponto**, 45 s sem orbitar; alvo em
+  (−1, 1), 135° atrás — chegou a **8 mm**.
+- **Custo medido**: para alvo atrás o robô sai por um **laço** (afastou-se até
+  2,15 m de um ponto a 1,41 m). É o preço de não pivotar, que existe para não
+  cair na zona morta. Encolhe quando a zona morta real for medida.
+- **Falta**: desviar de obstáculo (fatia B) — depende do Livox e de percepção
+  que o repo ainda não tem.
 
 ## ⏳ Próximos passos
 

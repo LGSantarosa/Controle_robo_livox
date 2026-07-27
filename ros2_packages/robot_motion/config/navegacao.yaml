@@ -1,0 +1,29 @@
+# Parâmetros da navegação ponto a ponto do robô 2 — SI, num lugar só.
+#
+# ⚠️ NENHUM MEDIDO NESTE ROBÔ. Conservadores de propósito; protocolo em
+# `tools/banco/README.md`, pendência no BO-3 do ESTADO_PROJETO.md.
+#
+# Racional: `docs/decisoes/006-navegacao-ponto-a-ponto.md`.
+
+goal_navigator:
+  ros__parameters:
+
+    v_max: 0.5
+
+    # Desaceleração LINEAR que a máquina entrega [m/s²].
+    #   medir com: ensaio `aceleracao_linear`
+    #   mesma regra de ouro da a_dec angular: subestimar só faz frear antes.
+    a_lin: 0.5
+
+    # Menor velocidade que tira a roda do lugar [m/s]. Sai da zona morta.
+    #   medir com: ensaios `zona_morta_*`
+    #   Abaixo disso não existe "chegar devagarinho": a placa engole o
+    #   comando e o robô para longe do ponto sem acusar nada.
+    v_min_viavel: 0.20
+
+    # Raio de chegada [m]. O nó recusa raio menor que a distância de parada
+    # a partir do piso (senão o robô orbita o ponto) e avisa no log.
+    raio_chegada: 0.15
+
+    taxa: 20.0
+    timeout_pose: 1.0

@@ -345,3 +345,59 @@ Banco de ensaios versionado em `tools/banco/` (roda igual no robô e no
 simulador). O dono foi ao laboratório medir o robô por completo — trena,
 zona morta, `a_dec`, curva por velocidade. Com esses números a movimentação
 deixa de ter parâmetro chutado dentro.
+
+## 2026-07-27 (2ª leva) — Navegação ponto a ponto
+
+Fatia A da navegação: ir a um ponto, sem obstáculo. Decisão 006.
+
+O dono foi ao laboratório medir o robô e voltou sem medida — a elétrica está
+ruim. Não é perda: os parâmetros da movimentação já eram conservadores de
+propósito, o nó avisa que não foram medidos, e a lei degrada em vez de
+quebrar quando o número está errado. Foi exatamente para este caso que a
+propriedade foi verificada de manhã.
+
+### O que a fatia A resolve, e como
+
+Duas ideias, as duas herdadas de coisa medida hoje:
+
+1. **Rumo alvo recalculado todo ciclo** como direção até o ponto. Isso dissolve
+   o erro lateral sem controlador extra — o desvio de 66 cm que o controlador
+   de rumo sozinho deixava depois de uma meia-volta some, porque não existe
+   mais "linha a seguir", existe ponto para o qual apontar.
+2. **Aproximação pela mesma lei de frenagem**, agora em distância:
+   `v = √(2·a_lin·dist)`. Um parâmetro físico, medível.
+
+E uma forma imposta pela zona morta: **não existe chegar devagarinho**. A
+desaceleração ideal manda velocidades cada vez menores, a placa engole as
+pequenas, e o robô para longe do ponto achando que chegou — o BO-3 disfarçado
+de sucesso. Então a aproximação tem piso e o corte é firme. Consequência que o
+nó verifica sozinho: raio de chegada menor que a distância de parada a partir
+do piso faria o robô **orbitar o ponto**; ele recusa e avisa.
+
+### Verificado (dois nós reais empilhados no simulador)
+
+| alvo | distância | resultado |
+|---|---|---|
+| (2, 2) | 2,83 m à frente | parou a **7 mm**, 45 s sem orbitar |
+| (−1, 1) | 1,41 m, 135° atrás | parou a **8 mm** |
+
+### O custo que apareceu no segundo caso
+
+Para o alvo atrás, o robô **se afastou até 2,15 m** de um ponto a 1,41 m antes
+de voltar: fez um laço. É consequência direta de não pivotar — política que
+existe porque girar parado devagar cai na zona morta. Fica registrado como
+comportamento conhecido, não como defeito. O laço encolhe quando a zona morta
+real for medida, porque é ela que dimensiona o piso, e o piso é o que abre o
+arco.
+
+### Fracasso da sessão
+
+A primeira validação mandou o segundo objetivo perto do fim da janela do
+observador e não deu tempo de verificar nada — reportei "enviado" sem ter
+dado. Refeito com o alvo de trás como primeiro objetivo, aí sim medido.
+
+### Onde parou
+
+Falta a fatia B: desviar de obstáculo. Depende do Livox e de percepção que o
+repo não tem. E continuam pendentes as medições do robô (BO-3), agora atrás de
+um problema elétrico.
