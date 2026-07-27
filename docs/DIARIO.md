@@ -233,3 +233,115 @@ serviço — e adicionar um plugin só pra teste seria muleta, já que o
 Se **não** aparecer, o simulador está otimista e os primeiros suspeitos são o
 atrito do pivô da boba (baixo demais) e o trail (curto demais) — ambos no bloco
 de propriedades no topo da URDF.
+
+## 2026-07-27 — O S deixa de ser sintoma e vira número
+
+Sessão inteira no simulador, usado como instrumento de medida e não como
+brinquedo. Entrou o `ros-jazzy-gz-ros2-control` (apt, com sudo), o que
+destravou dirigir o robô simulado.
+
+### O defeito reproduzido
+
+Manobra roteirizada: cruzeiro a 0,7 m/s, alvo de rumo 45° a partir de t=2 s,
+controlador velho (linear no teto, giro saturado no sinal do erro).
+
+Resultado: **ciclo-limite**, não sobrepasso que decai. Rumo oscilando entre
+0,48 e 1,11 rad em torno do alvo — ±18° — com período de 2,8 s, e amplitude
+igual do começo ao fim dos 12 s. Em unidades que se comparam de olho com o
+robô: serpenteia ±10 cm em torno da reta, e completa um S a cada 1,9 m.
+
+### A causa, com número
+
+O degrau em malha aberta deu a medida: comando de giro cortado com wz=1,0
+rad/s, e o robô **girou mais 0,44 rad (25°) depois do corte**. Desses, 0,33
+rad são a rampa do limitador (`angular.z.max_acceleration: 1.5` → wz²/2a) e
+~0,11 rad são atraso da planta.
+
+Ou seja, existe uma **distância de frenagem de rumo** de ~0,28 rad. Qualquer
+controlador que mande giro saturado até o erro trocar de sinal atravessa o
+alvo por essa margem, todo ciclo, para sempre. Sobrepasso previsto na
+inversão (wz=0,91): 0,276 rad. Medido: 0,34 rad.
+
+**A boba não é a culpada principal.** Comparando odometria de roda com a pose
+verdadeira: a roda acha que girou até 0,16 rad a mais durante a curva, e sobra
+0,082 rad (4,7°) por curva de 90°. Derrapagem real — o simulador não é
+cinemático perfeito — mas responde por ~20% do S. A rampa responde por ~80%.
+
+### A lei candidata
+
+`wz = sinal(e)·min(wz_max, √(2·a_dec·|e|))`, com a linear cedendo em `cos(e)`.
+Em uma frase: *nunca peça mais giro do que você consegue frear dentro do erro
+que ainda falta*. É a mesma conta do sobrepasso, usada como limite em vez de
+sofrida como defeito.
+
+Mesma planta, mesmos tetos, mesma boba, mesma manobra:
+
+| | bang-bang | frenagem |
+|---|---|---|
+| sobrepasso | 20,5° | 2,4° |
+| assenta em | nunca | 1,28 s |
+| erro em regime | ±17° eterno | 0,002 rad |
+
+### O dono julgou o simulador fraco — e isso virou estimativa
+
+Mostrado o S animado e em unidades físicas, o dono disse que o robô real faz
+"barrigas maiores", da ordem de **50 cm** contra os ±10 cm daqui. Rodando o
+mesmo ensaio com a planta degradada (a_dec 0,3 em vez de 1,5) a barriga foi a
+~100 cm; a lei de potência entre os dois pontos (barriga ∝ a_dec^-1,43) coloca
+o **a_dec real em ~0,5 rad/s²**. Estimativa, não medida — foi o que motivou o
+banco de ensaios.
+
+### Estresse: 10 corridas, e o que elas acharam
+
+Tudo na planta degradada (a_dec 0,3, mais pessimista que a estimativa do robô).
+
+| # | estresse | resultado |
+|---|---|---|
+| E1 | meia-volta 180° | sobrepasso 0,1° |
+| E2 | alvo trocando de sinal | 0,1° nos dois trechos |
+| E3 | velocidade baixa (0,2 m/s) | 0,1° |
+| E4 | malha a 10 Hz (taxa real) | 0,6°, erro final 0,12° |
+| E5 | zona morta andando | não mordeu nenhuma amostra |
+| E6 | zona morta girando parado | **travado** — é navegação |
+| E7 | meia-volta + zona morta 0,10 | soluço de 0,1 s, completou |
+| E8 | E7 + piso de linear 0,25 | soluço eliminado |
+| E9 | meia-volta + zona morta **0,15** | **22 s parado, erro 179,9°** |
+| E10 | E9 + piso 0,30 (fórmula) | sobrepasso 0,8° |
+
+Três achados:
+
+1. **Errar o `a_dec` pra baixo é de graça** (chute 3x menor: sobrepasso zero,
+   4,5 s contra 4,8 s do valor exato); pra cima é que traz o S de volta — mas
+   mesmo 5x otimista ela **degrada, não quebra**: oscila e decai. É isso que
+   autoriza escrever a movimentação antes de medir o robô.
+2. **A zona morta é precipício.** Entre 0,10 e 0,15 m/s está a diferença entre
+   "funciona" e "nunca sai do lugar". Virou o BO-3.
+3. **A regra `cos(e)` zera a linear acima de 90° de erro** — e linear zerada é
+   a condição do travamento. Daí o piso de linear, e a fórmula que o dimensiona
+   a partir da zona morta.
+
+### Fracassos e correções da sessão (ficam registrados)
+
+- **Dois Gazebos vivos ao mesmo tempo** corromperam uma bateria inteira: o
+  tempo andava pra trás no CSV e o rumo dava voltas de 180°. A limpeza matava o
+  `gz sim` mas deixava a ponte ROS viva, e cada rodada somava um publicador de
+  `/clock` — chegou a **9**. Corrigido com limpeza completa, trava que aborta
+  se sobrar processo, e o banco passou a **morrer de propósito** se o relógio
+  andar pra trás, em vez de gravar dado sujo.
+- **Métrica de sobrepasso errada**: contava a troca de alvo como se fosse
+  sobrepasso do controlador (E2 "+90°"). Corrigida para medir por trecho de
+  alvo constante.
+- **Previsão errada, pega pelo teste**: afirmei que a meia-volta travaria com
+  zona morta. Travou 0,1 s e completou com erro 0,0°. Acertei *onde* morde
+  (t=5,5 s, o instante previsto pelo log da E1), errei o tamanho. Foi o teste
+  de sensibilidade (E9, zona morta 0,15) que mostrou o risco verdadeiro.
+- **Superestimei a zona morta no começo**: disse que ela agiria sobre `wz`.
+  Ela age sobre a velocidade de cada **roda** — andando a 0,7 m/s as rodas
+  estão longe do limiar e ela não morde (E5 confirmou: zero amostras).
+
+### Onde parou
+
+Banco de ensaios versionado em `tools/banco/` (roda igual no robô e no
+simulador). O dono foi ao laboratório medir o robô por completo — trena,
+zona morta, `a_dec`, curva por velocidade. Com esses números a movimentação
+deixa de ter parâmetro chutado dentro.

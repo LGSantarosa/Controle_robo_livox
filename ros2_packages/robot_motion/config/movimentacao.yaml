@@ -1,0 +1,44 @@
+# Parâmetros da movimentação do robô 2 — TODOS em SI, TODOS num lugar só.
+#
+# ⚠️ NENHUM DESTES NÚMEROS FOI MEDIDO NESTE ROBÔ AINDA.
+# São chutes conservadores de propósito, para o robô errar devagar em vez de
+# errar rápido. O protocolo que os substitui está em `tools/banco/README.md`,
+# e o pendente está registrado como BO-3 no `ESTADO_PROJETO.md`.
+#
+# Racional de cada um: `docs/decisoes/005-lei-de-frenagem-de-rumo.md`.
+
+heading_controller:
+  ros__parameters:
+
+    # Desaceleração angular que a máquina entrega [rad/s²].
+    # É O PARÂMETRO CENTRAL: o sobrepasso do controlador velho valia
+    # wz²/(2·a_dec), e é dele que vinha o S.
+    #   medir com: ensaio `degrau_giro`
+    #   estimativa a partir do S relatado pelo dono: ~0,5
+    #   valor aqui: 0,3 — abaixo da estimativa, de propósito.
+    #   Medido: errar pra baixo custa 0,3 s a mais e zero sobrepasso;
+    #           errar pra cima traz o S de volta.
+    a_dec: 0.3
+
+    # Tetos. Iguais aos do diff_drive_controller — limite num lugar só.
+    wz_max: 1.0
+    v_max: 0.5
+
+    # Zona morta da RODA [m/s]: abaixo disso a placa ignora o comando.
+    #   medir com: ensaios `zona_morta_linear` e `zona_morta_giro`
+    #   valor aqui alto de propósito: gera um piso generoso, e piso generoso
+    #   é o que impede o robô de ficar plantado (BO-3). Medido no simulador:
+    #   0,10 passa raspando, 0,15 trava o robô por 22 s.
+    zona_morta: 0.15
+
+    # Bitola [m] — distância entre as rodas motrizes.
+    #   HERDADA do YAML do controlador, nunca medida com trena neste robô.
+    #   Entra na conversão de comando em rad/s de roda: errar aqui erra tudo.
+    bitola: 0.32
+
+    margem_piso: 0.05        # folga acima da zona morta [m/s]
+    tolerancia_rumo: 0.02    # ~1,1° — abaixo disso não gira [rad]
+    taxa: 20.0               # malha do nó [Hz]; medido: a 10 Hz ainda funciona
+
+    timeout_alvo: 1.0        # sem alvo/pose novos por este tempo, para [s]
+    plantao_s: 0.5           # comando saindo e robô imóvel: grita no log [s]

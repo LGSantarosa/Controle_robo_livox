@@ -128,32 +128,79 @@ Premissa da decisão 004: o simulador só serve se **errar como o robô erra**.
   11 testes travam geometria/massa. Suíte: **285 verdes**.
 - ⚠️ Falta `ros-jazzy-gz-ros2-control` (apt, precisa de sudo) para dirigir.
 
+## 🔬 2026-07-27 — O S explicado, e a lei que o elimina
+
+O simulador virou instrumento de medida. `gz-ros2-control` instalado, robô
+dirigível, e o defeito **reproduzido e explicado com número**.
+
+- **O S apareceu**: com o controlador velho (linear no teto, giro saturado no
+  sinal do erro), o rumo vira **ciclo-limite** — ±18°, período 2,8 s, 21 cm de
+  serpenteado a cada 1,9 m percorridos, **sem decair**.
+- **A causa é a rampa de desaceleração, não a boba.** Entre "o erro cruzou
+  zero" e "o giro parou" existe uma distância de frenagem de rumo de
+  `wz²/(2·a_dec)`. Medido em malha aberta: comando cortado a wz=1,0 rad/s e o
+  robô **girou mais 25°**. Previsto pela fórmula: 0,276 rad; medido: 0,34 rad.
+  A derrapada da boba responde por ~20% do S; a rampa, por ~80%.
+- **A lei que resolve** (validada, ainda não implementada):
+  `wz = sinal(e)·min(wz_max, √(2·a_dec·|e|))`, linear cedendo com `cos(e)` —
+  nunca pede mais giro do que consegue frear no erro que ainda falta.
+- **O dono julgou o S do simulador FRACO** perto do robô real (barriga de ~50 cm
+  contra os ±10 cm daqui). A barriga escala com `a_dec^-1,43`, o que estima o
+  **`a_dec` real em ~0,5 rad/s²** — um terço do que está no YAML. A estimativa
+  não vale como medida: entra no banco de ensaios.
+
+### Estresse da lei — 10 corridas na planta degradada (a_dec = 0,3)
+
+Meia-volta de 180°, alvo trocando de sinal, velocidade baixa, malha a 10 Hz
+(taxa do robô real) e zona morta injetada: **sobrepasso entre 0,1° e 0,8° em
+todos**, contra os ±47° do controlador velho. O S não voltou em nenhuma.
+
+Três achados que não estavam no pedido:
+
+1. **Errar o `a_dec` pra baixo é de graça.** Chutando 3x menos que a planta
+   entrega: sobrepasso zero e 4,5 s de assentamento, contra 4,8 s com o valor
+   exato. Chutar pra cima é que traz o S de volta (com 5x otimista: oscila,
+   mas **decai** — degrada, não quebra).
+2. **A zona morta é um precipício, não uma ladeira.** Com zona morta de roda em
+   0,10 m/s a meia-volta trava 0,1 s e completa; em **0,15 m/s o robô fica 22 s
+   parado**, 100% das amostras, com o controlador pedindo 1,0 rad/s. Ver BO-3.
+3. **Defesa dimensionada**: `v_piso = zona_morta + wz_max·bitola/2 + margem`,
+   confirmada nos dois valores. O piso não é número solto — depende da zona
+   morta MEDIDA.
+
+### Banco de ensaios (`tools/banco/`)
+
+Roda igual no robô e no simulador (mesmos tópicos, mesmo CSV), o que torna os
+dois diretamente comparáveis. `README.md` traz o protocolo de caracterização:
+zona morta linear e de giro, degrau de giro (`a_dec`), curva sustentada em
+várias velocidades e aceleração linear.
+
 ## ⏳ Próximos passos
 
-**Sem o robô (dá pra fazer agora):**
+**Primeiro, com o robô (virou prioridade — a movimentação depende destes
+números e hoje eles são chute):**
 
-1. **Instalar `ros-jazzy-gz-ros2-control`** — `sudo apt install -y
-   ros-jazzy-gz-ros2-control`. Destrava dirigir no simulador.
-2. **Confirmar que o S aparece no simulador.** Se não aparecer, o simulador está
-   otimista: primeiros suspeitos são `boba_pivo_atrito` (baixo demais) e
-   `boba_trail` (curto demais), ambos no topo da URDF.
-3. **Escrever a movimentação** — a meta declarada. Regra da decisão 003: SI real
-   direto no `diff_drive_controller`, sem escada de ganhos, limite num lugar só.
-4. *(opcional)* Instalar o SDK da Livox — `./setup_livox.sh` com `sudo`;
-   compilação já feita em `third_party/Livox-SDK2/build`. Só serve pra compilar
-   a localização aqui, que sem lidar não dá pra testar.
-
-**Quando tiver o robô:**
-
-5. **Medir `wheel_separation` e `wheel_radius` com trena** — e reconciliar com o
-   simulador (0,20 lá × 0,32 no controlador real; nenhum dos dois medido).
-6. **Confirmar o IP do lidar** — varredura procurando OUI `e4:7a:2c`. Já foram
+1. **Medir `wheel_separation` e `wheel_radius` com trena.** O
+   `diff_drive_controller` usa os dois pra converter comando em rad/s de roda:
+   errar aqui erra todo ensaio abaixo. (0,20 no simulador × 0,32 no controlador
+   real; nenhum dos dois medido.)
+2. **Rodar o protocolo de `tools/banco/README.md`** — zona morta, `a_dec`,
+   curva por velocidade, aceleração. O dono só roda; os CSV vêm por ssh.
+3. **Confirmar o IP do lidar** — varredura procurando OUI `e4:7a:2c`. Já foram
    vistos `.169` e `.158`. Errado = `bind failed` = sem `/Odometry`, falha
    silenciosa. Ver `ros2_packages/robot_base/config/README.md`.
-7. **Subir a base no robô**: `base.launch.py`, confirmar `/Odometry` e que as
-   rodas obedecem a `cmd_vel`.
-8. **Calibrar o simulador contra o robô** — critério: fazer um S *parecido* na
-   mesma manobra.
+
+**Sem o robô:**
+
+4. **Camada de movimentação** com a lei de frenagem, o piso de linear e o
+   detector de plantão (BO-3). Parâmetros em SI num lugar só, conservadores
+   até os ensaios chegarem.
+5. **Calibrar o simulador contra o robô** com os números dos ensaios —
+   critério: mesma manobra, S de tamanho parecido.
+6. **Navegação** (ponto a ponto) por cima da movimentação. É dela o problema do
+   erro lateral: o controlador de rumo trava o rumo mas segue paralelo à rota,
+   deslocado — medido em 66 cm depois de uma meia-volta. E é dela também o giro
+   parado, que a zona morta proíbe abaixo de ~1 rad/s.
 
 ## Fósseis conscientes (remover em fatia própria)
 
@@ -170,4 +217,29 @@ inertes o standdown de porta no `unstuck_supervisor` e o `cone_pose_fix.py`.
   caminho o baseline 2D vs LIO que a 002 previa como resultado. Candidatos:
   comparar métodos de LIO entre si, ou comparar estratégias de controle de
   rumo para esta geometria (motriz dianteira + boba traseira) — que é o
-  problema real em mãos.
+  problema real em mãos. **07-27: o segundo candidato ganhou corpo** — o S
+  está explicado por `wz²/(2·a_dec)` e há uma lei que o elimina, com 10
+  corridas medidas. Falta a comparação valer no robô.
+
+- **BO-3 — Zona morta do atuador** (aberto 07-27): comando abaixo da zona morta
+  deixa o robô **parado sem erro nenhum** — nó vivo, tópico publicando, log
+  limpo, máquina imóvel. Já custou horas de depuração na competição de 2025.
+  No simulador é precipício: zona morta de roda em 0,10 m/s passa raspando,
+  em 0,15 m/s o robô fica 22 s plantado com o controlador pedindo 1,0 rad/s.
+  **O valor real é desconhecido, e a faixa provável de uma placa de hoverboard
+  cai bem em cima do precipício.**
+
+  Defesa desenhada, em duas partes — porque prevenção pode falhar (bateria
+  fraca, carga, piso diferente) e o custo real do defeito é o tempo de
+  diagnóstico:
+  1. *prevenir* — `v_piso = zona_morta + wz_max·bitola/2 + margem`;
+  2. *delatar* — se há comando de movimento e a pose do LIO não muda por ~0,5 s,
+     gritar no log com pedido e efetivo. Nunca parar em silêncio.
+
+  **Fecha quando:** (a) zona morta medida na bancada (`tools/banco`, ensaios 1
+  e 2); (b) `a_dec` medido (ensaio 3); (c) `v_piso` calculado pela fórmula com
+  esses números; (d) meia-volta no robô real completando sem travar.
+
+  Some junto o caso não resolvido: **girar parado devagar é impossível** —
+  abaixo de `2·zona_morta/bitola` as duas rodas ficam na banda proibida. Isso
+  não é ajuste de ganho, é limite físico, e cai no colo da navegação.
