@@ -35,23 +35,71 @@ def wz_de_frenagem(erro, a_dec, wz_max):
 
 
 def piso_de_linear(zona_morta, wz, bitola, margem):
-    """Linear mínima para as DUAS rodas ficarem acima da zona morta.
-
-    A roda interna anda a `v - |wz|·bitola/2`. Para ela sair do lugar,
+    """Linear que tira a roda interna da banda morta **por cima**.
 
         v >= zona_morta + |wz|·bitola/2 + margem
 
-    Sem esse piso, um erro de rumo acima de 90° zera a linear (ver
-    `linear_de_avanco`), as duas rodas caem juntas na zona morta e o robô fica
-    **parado encarando o erro**, sem erro nenhum no log. Medido no simulador:
-    com zona morta de 0,15 m/s, 22 s imóvel com o controlador pedindo 1,0
-    rad/s.
-
-    Usa o `wz` do instante, não o teto: só exige avanço na medida da curva que
-    está sendo pedida. No pior caso (wz no teto) recai na fórmula da decisão
-    005.
+    É uma das duas saídas possíveis; a outra é `teto_de_pivo` (por baixo).
+    Ver `ajusta_para_zona_morta`.
     """
     return zona_morta + abs(wz) * bitola / 2.0 + margem
+
+
+def teto_de_pivo(zona_morta, wz, bitola, margem):
+    """Linear que tira a roda interna da banda morta **por baixo** — o pivô.
+
+        v <= |wz|·bitola/2 - (zona_morta + margem)
+
+    Girando, a roda interna anda a `v - |wz|·bitola/2`. Ela sai da banda morta
+    quando esse valor é grande em MÓDULO — ou seja, andando bastante para
+    frente (piso) **ou** bastante para trás (aqui). A roda de dentro girando ao
+    contrário é exatamente o que faz o robô virar no lugar.
+
+    Devolve negativo quando o giro pedido é pequeno demais para tirar a roda da
+    banda sozinho; nesse caso o pivô não existe e só resta a saída por cima.
+    """
+    return abs(wz) * bitola / 2.0 - (zona_morta + margem)
+
+
+def ajusta_para_zona_morta(v_desejada, wz, zona_morta, bitola, margem, v_teto):
+    """Empurra (v, wz) para fora da banda morta da roda interna.
+
+    A banda proibida é `|v - |wz|·bitola/2| < zona_morta + margem`. Existem
+    **duas** saídas, e considerar só uma delas foi um defeito real desta
+    camada: o robô ficava proibido de pivotar por aritmética, não por física,
+    e por isso descrevia arcos enormes — chegando a orbitar pontos próximos
+    sem nunca alcançá-los.
+
+    Escolhe a saída mais perto da velocidade desejada. Isso faz a coisa certa
+    sozinho: com erro de rumo grande a desejada já é baixa (cos) e ele pivota;
+    com erro pequeno o giro é pequeno, o pivô nem existe, e ele acelera.
+    """
+    limiar = zona_morta + margem
+    meia = abs(wz) * bitola / 2.0
+    if abs(v_desejada - meia) >= limiar:
+        return v_desejada, wz               # já está fora da banda
+
+    por_baixo = teto_de_pivo(zona_morta, wz, bitola, margem)
+    por_cima = piso_de_linear(zona_morta, wz, bitola, margem)
+
+    pode_pivotar = por_baixo >= 0.0
+    cabe_acelerar = por_cima <= v_teto
+
+    if pode_pivotar and (not cabe_acelerar
+                         or (v_desejada - por_baixo) <= (por_cima - v_desejada)):
+        return por_baixo, wz
+    if cabe_acelerar:
+        return por_cima, wz
+
+    # Nem pivota nem acelera até o piso: quem cede é o giro.
+    #
+    # Vai na velocidade MÁXIMA permitida, não na mínima: é ela que deixa mais
+    # espaço para a roda interna girar sem cair na banda, e portanto permite o
+    # maior giro. Escolher a mínima aqui deixava o robô sem poder curvar nada
+    # em certas combinações de parâmetro.
+    v = v_teto
+    teto_wz = max(0.0, 2.0 * (v - limiar) / bitola)
+    return v, math.copysign(min(abs(wz), teto_wz), wz)
 
 
 def linear_de_avanco(erro, v_max):
@@ -63,52 +111,40 @@ def linear_de_avanco(erro, v_max):
     return v_max * max(0.0, math.cos(erro))
 
 
-def wz_possivel_a(v, zona_morta, bitola, margem):
-    """Maior giro que ainda deixa a roda interna acima da zona morta, a esta `v`.
-
-    Inverte o piso: `v >= zona_morta + |wz|·bitola/2 + margem`. Devolve 0
-    quando nem parado o robô consegue girar àquela velocidade — o que é uma
-    resposta legítima, e não um erro a esconder.
-    """
-    folga = v - zona_morta - margem
-    return max(0.0, 2.0 * folga / bitola)
-
-
 def comando(erro, v_max, a_dec, wz_max, zona_morta, bitola, margem_piso,
-            tolerancia):
+            tolerancia, erro_do_movimento=None):
     """(v, wz) em SI para um erro de rumo. É o laço de controle inteiro.
 
-    Ordem das defesas, e o porquê de ser esta:
+    1. o giro sai da lei de frenagem, sobre o erro do BICO — é o rumo que ele
+       controla;
+    2. a linear cede com o desalinhamento do MOVIMENTO, não do bico;
+    3. o par é empurrado para fora da banda morta da roda interna, pela saída
+       mais próxima — acelerando ou **pivotando**.
 
-    1. o giro sai da lei de frenagem;
-    2. a linear cede com o desalinhamento, mas **sobe até o piso** que tira as
-       rodas da zona morta;
-    3. o piso nunca ultrapassa a velocidade pedida — andar mais rápido do que
-       mandaram é pior do que curvar devagar;
-    4. e então o giro é **reduzido ao que aquela velocidade sustenta**. Sem
-       este último passo, uma velocidade pedida abaixo do piso derrubaria a
-       roda interna de volta na zona morta e o robô travaria (BO-3) — agora
-       ele apenas curva mais devagar. Se quem chamou quiser curva mais fechada,
-       que peça mais velocidade: a decisão é de quem conhece a rota.
+    O passo 2 é o que faz o robô parar para virar quando precisa. Usar o erro
+    do bico ali foi um defeito medido: este robô **escorrega**. Em órbita
+    fechada o bico ficava a 50° do alvo (`cos` = 0,64, segue a 64% da
+    velocidade) enquanto o movimento estava a 87° — perpendicular, sem
+    aproximação nenhuma. Ele se recusava a parar para virar porque, pelo
+    nariz, o rumo não parecia tão errado assim.
 
-    Reduzir o giro é sempre seguro perante a lei de frenagem: menos giro do que
-    se pode frear continua sendo menos giro do que se pode frear.
-
-    Dentro da tolerância o giro é zerado — sem isso o robô fica caçando ruído
-    de pose para sempre, e o piso nunca desliga.
+    `erro_do_movimento` é opcional: sem estimativa de direção confiável (robô
+    quase parado), recai no erro do bico, que é o comportamento antigo.
     """
     erro = norm_ang(erro)
     if abs(erro) <= tolerancia:
         return v_max, 0.0
 
     wz = wz_de_frenagem(erro, a_dec, wz_max)
-    v = linear_de_avanco(erro, v_max)
 
-    piso = piso_de_linear(zona_morta, wz, bitola, margem_piso)
-    v = min(max(v, piso), v_max)
+    # O mais desalinhado dos dois manda na linear: é o conservador, e evita
+    # que uma estimativa ruim de direção acelere o robô.
+    erro_linear = erro
+    if erro_do_movimento is not None:
+        erro_linear = max(abs(erro), abs(norm_ang(erro_do_movimento)))
+    v = linear_de_avanco(erro_linear, v_max)
 
-    teto = wz_possivel_a(v, zona_morta, bitola, margem_piso)
-    return v, math.copysign(min(abs(wz), teto), wz)
+    return ajusta_para_zona_morta(v, wz, zona_morta, bitola, margem_piso, v_max)
 
 
 def wz_minimo_parado(zona_morta, bitola):

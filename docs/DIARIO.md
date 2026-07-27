@@ -401,3 +401,71 @@ dado. Refeito com o alvo de trás como primeiro objetivo, aí sim medido.
 Falta a fatia B: desviar de obstáculo. Depende do Livox e de percepção que o
 repo não tem. E continuam pendentes as medições do robô (BO-3), agora atrás de
 um problema elétrico.
+
+## 2026-07-27 (3ª leva) — Cliques do dono derrubam a navegação
+
+Ligado o RViz à pilha (`/goal_pose`, o nome padrão do ROS — o mesmo fio serve
+para a GUI web depois). O dono clicou pontos e **em cinco minutos achou o que
+dez corridas roteirizadas não acharam**: um ponto a 0,65 m, de lado, era
+orbitado para sempre.
+
+Isso vale como método, não como anedota: os ensaios eram roteirizados por quem
+escreveu a lei, e por isso testavam o que ela já sabia fazer — alvos longe,
+manobras amplas. Nenhum testava ponto perto e de lado.
+
+### A fronteira estava no log dele
+
+    (3.99, -2.89)  a 4,37 m  -> chegou
+    (3.72, -2.20)  a 0,73 m  -> chegou
+    (3.15, -1.76)  a 0,65 m  -> NUNCA CHEGOU
+
+### Quatro defeitos, um sintoma
+
+1. **Banda morta com duas saídas.** A roda interna sai dela andando para frente
+   OU para trás; só a primeira estava programada. O pivô ficou proibido por
+   aritmética, não por física.
+2. **Velocidade sem teto pela curva.** Perseguir um ponto a `d` com erro `e`
+   exige girar a `v·sen(e)/d`; sem teto, o ponto escapa pelo lado.
+3. **A linear cedia pelo erro do BICO.** Este era o principal, e foi o dono que
+   apontou: *"não tem como não vencer a velocidade mínima se você estiver
+   girando as duas rodas em lados opostos"*. Medido em órbita: bico a **50°**
+   do alvo (cos = 0,64 → segue a 64% da velocidade), movimento a **87°** —
+   perpendicular. **37,5° de deriva lateral**, constantes. A boba traseira
+   sendo jogada para fora, exatamente como a decisão 004 previu; primeira vez
+   que ela domina um comportamento em vez de ser detalhe de 20%.
+4. **Chegando, não parava.** O rumo até o ponto gira sozinho quando se está em
+   cima dele; o robô girava no lugar e o giro arrastava a traseira para fora.
+
+### Depois
+
+| caso | antes | agora |
+|---|---|---|
+| ponto a 0,65 m de lado | orbitava a 0,233 m para sempre | **chega a 0,059 m** |
+| alvo à frente (2, 2) | 7 mm | 9 mm |
+| alvo atrás (−1, 1) | 8 mm em 13,5 s, laço de 2,15 m | **8 mm em 9,8 s, laço de 1,67 m** |
+| parado no ponto | derivava 0,06 → 0,27 m | **9 mm em 30 s** |
+
+O "laço para alvo atrás", que eu tinha registrado como *custo aceito* na
+decisão 006, era sintoma do mesmo defeito. Custo documentado não vira verdade
+por estar escrito.
+
+### Meus erros da sessão (o que mais importa aqui)
+
+- **Não olhei o que já estava acontecendo.** O robô orbitava na tela do dono e
+  eu fui montar experimento novo — e resetei a pose, apagando o caso dele.
+  Reação: *"pq que vc só não viu oq já estava acontecendo"*. O log com os
+  cliques já tinha a resposta.
+- **Consertei antes de reproduzir.** Diagnostiquei "o piso proíbe o pivô",
+  implementei, e só então rodei: a órbita continuou igual. O piso nem estava
+  ativo — no simulador `zona_morta = 0`. A hipótese descrevia um bug real (a
+  conta estava errada mesmo) mas **não era o bug que o dono viu**.
+- **Alimentei o simulador com o chute do robô real.** Lá a zona morta é zero;
+  o robô se defendia de um perigo inexistente naquele ambiente. Agora há
+  config próprio de simulador, e o banco injeta zona morta quando quer
+  testá-la.
+
+### Onde parou
+
+325 testes verdes. Falta a fatia B (desviar de obstáculo, depende do Livox) e
+as medições do robô, agora atrás de um problema elétrico — o dono foi ao
+laboratório e voltou sem medir.

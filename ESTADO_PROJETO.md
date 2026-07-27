@@ -200,9 +200,21 @@ ainda guarda os fósseis do robô 1.
 - **Verificado no simulador**, os dois nós reais empilhados: alvo em (2, 2) a
   2,83 m — chegou e **parou a 7 mm do ponto**, 45 s sem orbitar; alvo em
   (−1, 1), 135° atrás — chegou a **8 mm**.
-- **Custo medido**: para alvo atrás o robô sai por um **laço** (afastou-se até
-  2,15 m de um ponto a 1,41 m). É o preço de não pivotar, que existe para não
-  cair na zona morta. Encolhe quando a zona morta real for medida.
+- **Quatro defeitos achados clicando no RViz** (o dono, em 5 minutos, achou o
+  que 10 corridas roteirizadas não acharam): um ponto a 0,65 m era **orbitado
+  para sempre**. Causas, todas medidas: (1) a banda morta tem duas saídas e só
+  uma estava programada — o pivô era proibido por aritmética; (2) a velocidade
+  não tinha teto pela curva; (3) **a linear cedia pelo erro do BICO num robô
+  que escorrega** — em órbita o bico ficava a 50° do alvo e o movimento a 87°,
+  **37,5° de deriva**, aproximação zero; (4) chegando, ele continuava girando e
+  se arrastava para fora (0,06 m viravam 0,27 m).
+- **Depois dos quatro**: o ponto de 0,65 m fecha a 0,059 m — ele **para, pivota
+  no próprio eixo** e só então arranca. Alvo à frente (2, 2): 9 mm. Alvo atrás
+  (−1, 1): 8 mm em 9,8 s, com afastamento máximo de 1,67 m (era 2,15 m num
+  laço andando). Parado no ponto: 9 mm de deriva em 30 s.
+- **O simulador ganhou config próprio** (`*_sim.yaml`): lá a zona morta é ZERO,
+  e alimentá-lo com o chute pessimista do robô real fazia o robô se defender de
+  um perigo inexistente naquele ambiente.
 - **Falta**: desviar de obstáculo (fatia B) — depende do Livox e de percepção
   que o repo ainda não tem.
 

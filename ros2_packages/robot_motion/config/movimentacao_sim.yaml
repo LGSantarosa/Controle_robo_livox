@@ -1,0 +1,27 @@
+# Movimentação no SIMULADOR — os números verdadeiros DE LÁ.
+#
+# O Gazebo não tem placa engolindo comando: a zona morta lá é ZERO. Alimentar
+# o simulador com o chute pessimista do robô real (0,15 m/s) fazia o robô se
+# defender de um perigo que não existe naquele ambiente — ele ficava proibido
+# de pivotar e descrevia arcos enormes, a ponto de orbitar pontos próximos sem
+# nunca alcançá-los.
+#
+# ⚠️ Isso torna o simulador OTIMISTA em uma dimensão específica: aqui as
+# defesas contra zona morta não são exercitadas. Para testá-las, o banco
+# (`tools/banco/`) injeta zona morta de propósito. Ver decisão 004 —
+# simulador só vale enquanto a gente souber exatamente onde ele mente.
+
+heading_controller:
+  ros__parameters:
+    a_dec: 0.3          # planta degradada de propósito (ver DIARIO 07-27)
+    wz_max: 1.0
+    v_max: 0.5
+
+    zona_morta: 0.0     # verdade do Gazebo
+    margem_piso: 0.0
+    bitola: 0.20        # bitola REAL do modelo simulado (robo2.urdf.xacro)
+
+    tolerancia_rumo: 0.02
+    taxa: 20.0
+    timeout_alvo: 1.0
+    plantao_s: 0.5

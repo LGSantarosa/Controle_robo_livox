@@ -14,12 +14,14 @@ from robot_motion.navegacao_ponto import (
     raio_minimo_de_chegada,
     rumo_para,
     velocidade_de_aproximacao,
+    velocidade_que_a_curva_permite,
 )
 
 V_MAX = 0.5
 A_LIN = 0.5
 V_MIN = 0.20
 RAIO = 0.15
+WZ_UTIL = 0.5
 
 
 # ------------------------------------------------------- geometria
@@ -92,13 +94,13 @@ def test_raio_minimo_cobre_a_parada_a_partir_do_piso():
 
 
 def test_chegada_corta_firme_e_nao_assintotica():
-    ch, _, v = comando_de_navegacao(0.0, 0.0, 0.10, 0.0, V_MAX, A_LIN, V_MIN, RAIO)
+    ch, _, v = comando_de_navegacao(0.0, 0.0, 0.0, 0.10, 0.0, V_MAX, A_LIN, V_MIN, RAIO, WZ_UTIL)
     assert ch is True
     assert v == 0.0
 
 
 def test_fora_do_raio_ainda_anda():
-    ch, _, v = comando_de_navegacao(0.0, 0.0, 2.0, 0.0, V_MAX, A_LIN, V_MIN, RAIO)
+    ch, _, v = comando_de_navegacao(0.0, 0.0, 0.0, 2.0, 0.0, V_MAX, A_LIN, V_MIN, RAIO, WZ_UTIL)
     assert ch is False
     assert v >= V_MIN
 
@@ -121,8 +123,46 @@ def test_alvo_atras_navega_sem_pedir_re():
     """Ponto atrás do robô: a navegação pede rumo de meia-volta e velocidade
     positiva. Quem segura o avanço enquanto o rumo está torto é a
     movimentação, com cos(e) — a navegação não conhece atuador."""
-    ch, rumo, v = comando_de_navegacao(0.0, 0.0, -2.0, 0.0, V_MAX, A_LIN,
-                                       V_MIN, RAIO)
+    ch, rumo, v = comando_de_navegacao(0.0, 0.0, 0.0, -2.0, 0.0, V_MAX, A_LIN,
+                                       V_MIN, RAIO, WZ_UTIL)
     assert ch is False
     assert abs(rumo) == pytest.approx(math.pi)
     assert v > 0.0
+
+
+# ------------------------------------------------- não orbitar o alvo
+
+def test_perto_e_de_lado_a_curva_limita_a_velocidade():
+    """O defeito que o dono encontrou clicando no RViz.
+
+    Alvo a 0,65 m e ~64° de erro de rumo: ir a 0,5 m/s exige girar a
+    v·sen(e)/d = 0,69 rad/s só para manter o bico no alvo. Se a máquina não
+    sustenta isso, o ponto escapa pelo lado e o robô orbita — medido, 0,365 m
+    de raio de órbita, indefinidamente.
+    """
+    teto = velocidade_que_a_curva_permite(0.65, math.radians(64), WZ_UTIL)
+    assert teto < V_MAX, 'a curva tem que limitar a velocidade aqui'
+    # e o giro que sobra é sustentável
+    assert teto * math.sin(math.radians(64)) / 0.65 <= WZ_UTIL + 1e-9
+
+
+def test_apontado_para_o_alvo_a_curva_nao_limita():
+    assert velocidade_que_a_curva_permite(0.65, 0.0, WZ_UTIL) == float('inf')
+
+
+def test_quanto_mais_perto_mais_devagar():
+    """É a distância que aperta a curva: perto do alvo, tem que ir devagar."""
+    e = math.radians(60)
+    tetos = [velocidade_que_a_curva_permite(d, e, WZ_UTIL)
+             for d in [2.0, 1.0, 0.5, 0.25]]
+    assert tetos == sorted(tetos, reverse=True)
+
+
+def test_velocidade_final_respeita_os_dois_tetos():
+    """Frenagem e curva limitam juntas; vale o menor."""
+    _, _, v = comando_de_navegacao(0.0, 0.0, 0.0, 0.28, 0.59, V_MAX, A_LIN,
+                                   0.0, RAIO, WZ_UTIL)
+    d = math.hypot(0.28, 0.59)
+    erro = math.atan2(0.59, 0.28)
+    assert v <= velocidade_de_aproximacao(d, V_MAX, A_LIN, 0.0) + 1e-9
+    assert v <= velocidade_que_a_curva_permite(d, erro, WZ_UTIL) + 1e-9

@@ -90,6 +90,53 @@ meia-volta isso o deixa 66 cm paralelo ao caminho de ida. É custo consciente:
 fechar essa distância lateral é trabalho da navegação, que conhece a rota; a
 movimentação responde por rumo.
 
+### CORREÇÃO (mesmo dia) — a banda morta tem DUAS saídas
+
+O parágrafo acima estava errado, e o erro era de aritmética, não de projeto.
+
+A roda interna anda a `v - |wz|·bitola/2`. Ela sai da banda morta quando esse
+valor é grande **em módulo** — andando bastante para frente **ou bastante para
+trás**. A roda de dentro girando ao contrário é exatamente o que faz o robô
+virar no lugar. A fórmula original só considerou a saída por cima, e com isso
+**proibiu o pivô por aritmética, não por física**.
+
+O sintoma apareceu quando o dono clicou pontos no RViz: o robô descrevia arcos
+enormes e chegou a **orbitar um ponto a 0,65 m sem nunca alcançá-lo**. A causa
+está no log dele: um ponto a 0,73 m foi alcançado, o de 0,65 m não. O raio de
+curva possível vale `v/wz`; com piso de velocidade ele fica em 0,52 m para 45°
+de erro, enquanto o ponto a 0,65 m exigia `d/(2·sen e)` = 0,46 m. **Existia um
+anel morto em volta do robô.**
+
+Passa a valer:
+
+```
+v_pivo <= |wz|·bitola/2 − (zona_morta + margem)      (saída por baixo)
+v_piso >= |wz|·bitola/2 + (zona_morta + margem)      (saída por cima)
+```
+
+A implementação escolhe a saída mais próxima da velocidade desejada, o que faz
+a coisa certa sozinho: com rumo muito torto a desejada já é baixa (`cos`) e ele
+pivota; com rumo quase certo o giro é pequeno, o pivô nem existe, e ele
+acelera. **A decisão de pivotar ou não sai do julgamento de quem escreveu o
+código e passa a ser consequência do `zona_morta` medido** — que é onde ela
+deveria estar desde o começo. O `wz_minimo_parado` continua sendo o árbitro:
+abaixo de `2·zona_morta/bitola` o pivô realmente não existe.
+
+Duas consequências menores caíram junto:
+
+- **O simulador ganhou config próprio** (`*_sim.yaml`) com `zona_morta: 0.0`,
+  que é a verdade do Gazebo. Alimentá-lo com o chute pessimista do robô real
+  fazia o robô se defender de um perigo inexistente naquele ambiente. Em troca,
+  o simulador deixa de exercitar as defesas de zona morta — quem as testa é o
+  banco (`tools/banco/`), que injeta zona morta de propósito.
+- **O caminho de escape por giro reduzido** escolhia a MENOR velocidade válida,
+  que é a que deixa menos espaço para girar; em certas combinações de parâmetro
+  o robô ficava sem poder curvar nada. Passa a escolher a maior.
+
+O que deixou isso passar: os testes cobriam a lei (frenagem, sinal, tolerância)
+e não a **geometria de alcançar um ponto**. Nenhum perguntava "qual é o raio de
+curva?". Agora perguntam.
+
 ### 3. O detector de plantão
 
 Se há comando de movimento e a pose do LIO não muda por ~0,5 s, o nó **grita no

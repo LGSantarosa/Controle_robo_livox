@@ -23,6 +23,11 @@ goal_navigator:
 
     # Raio de chegada [m]. O nó recusa raio menor que a distância de parada
     # a partir do piso (senão o robô orbita o ponto) e avisa no log.
+    # Giro que a máquina sustenta numa curva [rad/s] — NÃO MEDIDO
+    # (ensaio `curva` do banco). É ele que impede o robô de orbitar um ponto
+    # perto: perto do alvo, velocidade alta faz o ponto escapar pelo lado.
+    wz_util: 0.5
+
     raio_chegada: 0.15
 
     taxa: 20.0

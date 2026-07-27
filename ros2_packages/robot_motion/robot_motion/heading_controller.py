@@ -78,6 +78,7 @@ class HeadingController(Node):
 
         self.pose = None
         self.t_pose = None
+        self.hist = []          # (t, x, y) para estimar a direção do movimento
         self.rumo_alvo = None
         self.t_alvo = None
         self.v_alvo = self.par['v_max']
@@ -110,6 +111,29 @@ class HeadingController(Node):
     def cb_odom(self, msg):
         self.pose = msg
         self.t_pose = self.get_clock().now().nanoseconds * 1e-9
+        p = msg.pose.pose.position
+        self.hist.append((self.t_pose, p.x, p.y))
+        while len(self.hist) > 1 and self.t_pose - self.hist[0][0] > 0.3:
+            self.hist.pop(0)
+
+    def direcao_do_movimento(self):
+        """Para onde o robô ANDA de fato — não para onde aponta.
+
+        Este robô escorrega: motriz na frente, boba atrás. Em curva fechada a
+        diferença entre as duas passou de 37° em ensaio, e foi ela que
+        sustentou uma órbita infinita em volta de um ponto. Devolve None
+        quando o robô está lento demais para a estimativa valer.
+        """
+        if len(self.hist) < 2:
+            return None
+        t0, x0, y0 = self.hist[0]
+        t1, x1, y1 = self.hist[-1]
+        dt = t1 - t0
+        if dt < 1e-3:
+            return None
+        if math.hypot(x1 - x0, y1 - y0) / dt < 0.05:
+            return None
+        return math.atan2(y1 - y0, x1 - x0)
 
     def cb_rumo(self, msg):
         self.rumo_alvo = float(msg.data)
@@ -136,6 +160,11 @@ class HeadingController(Node):
         yaw = yaw_de(self.pose.pose.pose.orientation)
         erro = norm_ang(self.rumo_alvo - yaw)
 
+        # Quanto o MOVIMENTO está fora do rumo pedido. É ele que decide se
+        # vale a pena avançar ou se é hora de parar e virar.
+        direcao = self.direcao_do_movimento()
+        erro_mov = None if direcao is None else norm_ang(self.rumo_alvo - direcao)
+
         v, wz = comando(
             erro,
             v_max=self.v_alvo,
@@ -145,6 +174,7 @@ class HeadingController(Node):
             bitola=self.par['bitola'],
             margem_piso=self.par['margem_piso'],
             tolerancia=self.par['tolerancia_rumo'],
+            erro_do_movimento=erro_mov,
         )
         self.publica(v, wz)
         self.plantao(agora, v, wz)

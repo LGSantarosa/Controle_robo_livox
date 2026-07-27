@@ -22,6 +22,10 @@ Duas ideias sustentam o arquivo, e as duas vêm de coisa medida:
 import math
 
 
+def norm_ang(a):
+    return math.atan2(math.sin(a), math.cos(a))
+
+
 def distancia(x, y, alvo_x, alvo_y):
     return math.hypot(alvo_x - x, alvo_y - y)
 
@@ -48,6 +52,31 @@ def velocidade_de_aproximacao(dist, v_max, a_lin, v_min_viavel):
     return max(min(v_max, math.sqrt(2.0 * a_lin * max(0.0, dist))), v_min_viavel)
 
 
+def velocidade_que_a_curva_permite(dist, erro_rumo, wz_util):
+    """Teto de velocidade para o alvo continuar ALCANÇÁVEL.
+
+    Perseguir um ponto a `dist` com erro de rumo `e` exige girar a
+    `v·sen(e)/dist` só para manter o bico apontado nele — e quanto mais perto,
+    mais rápido é preciso girar. Se o robô não entrega esse giro, o ponto
+    escapa pelo lado e ele passa a **orbitá-lo**, a uma distância estável igual
+    ao próprio raio de curva.
+
+    Medido: com o alvo a 0,65 m o robô orbitou a 0,365 m indefinidamente,
+    com raio de curva de 0,27 m. Nenhum piso de velocidade estava ativo — o
+    problema não é zona morta, é ir rápido demais para a curva necessária.
+
+    Invertendo a relação: `v <= wz_util·dist/sen(e)`.
+
+    `wz_util` não é o teto de giro: é o giro que a máquina **sustenta de fato**
+    numa curva, que sai do ensaio `curva` do banco. Usar o teto aqui seria
+    otimismo, e otimismo neste ponto vira órbita.
+    """
+    seno = abs(math.sin(erro_rumo))
+    if seno < 1e-6:
+        return float('inf')          # apontado para o alvo: a curva não limita
+    return wz_util * dist / seno
+
+
 def raio_minimo_de_chegada(v_min_viavel, a_lin, folga=0.02):
     """Menor raio de chegada coerente com o piso de velocidade.
 
@@ -63,16 +92,23 @@ def chegou(dist, raio_chegada):
     return dist <= raio_chegada
 
 
-def comando_de_navegacao(x, y, alvo_x, alvo_y, v_max, a_lin, v_min_viavel,
-                         raio_chegada):
+def comando_de_navegacao(x, y, yaw, alvo_x, alvo_y, v_max, a_lin,
+                         v_min_viavel, raio_chegada, wz_util):
     """(chegou, rumo_alvo, velocidade) para a camada de movimentação.
 
-    Na chegada devolve velocidade zero — corte firme, não desaceleração
-    assintótica, porque abaixo do mínimo viável não existe "devagarinho".
+    A velocidade é o menor de dois tetos, cada um cuidando de um jeito de não
+    chegar: o da **frenagem** (não passar do ponto) e o da **curva** (não
+    orbitar o ponto). O piso do mínimo viável vem por último, porque abaixo
+    dele a placa engole o comando.
+
+    Na chegada devolve zero — corte firme, não desaceleração assintótica.
     """
     d = distancia(x, y, alvo_x, alvo_y)
+    rumo = rumo_para(x, y, alvo_x, alvo_y)
     if chegou(d, raio_chegada):
-        return True, rumo_para(x, y, alvo_x, alvo_y), 0.0
-    return (False,
-            rumo_para(x, y, alvo_x, alvo_y),
-            velocidade_de_aproximacao(d, v_max, a_lin, v_min_viavel))
+        return True, rumo, 0.0
+
+    erro = norm_ang(rumo - yaw)
+    v = min(velocidade_de_aproximacao(d, v_max, a_lin, 0.0),
+            velocidade_que_a_curva_permite(d, erro, wz_util))
+    return False, rumo, max(v, v_min_viavel)

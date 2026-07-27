@@ -105,6 +105,52 @@ dimensiona o piso de linear, e o piso é o que abre o arco. Se depois da
 medição o laço continuar caro, aí sim vale discutir marcha à ré para alvos
 atrás, com número na mão.
 
+## CORREÇÃO (mesmo dia) — o anel de pontos inalcançáveis
+
+O dono clicou pontos no RViz e achou o que os ensaios roteirizados não tinham
+achado: **um ponto a 0,65 m, de lado, nunca era alcançado.** O robô circulava
+em volta dele para sempre. No log dos cliques a fronteira estava nítida: um
+ponto a 0,73 m chegou; o de 0,65 m, não.
+
+Quatro defeitos independentes, todos medidos, todos escondidos atrás desse
+mesmo sintoma:
+
+1. **A banda morta tem duas saídas, e só uma estava programada.** Ver a
+   correção na decisão 005. O robô ficava proibido de pivotar por aritmética.
+2. **A velocidade não tinha teto pela curva.** Perseguir um ponto a `d` com
+   erro de rumo `e` exige girar a `v·sen(e)/d` só para manter o bico nele —
+   quanto mais perto, mais rápido. Sem esse teto o ponto escapa pelo lado.
+   Passa a valer `v <= wz_util·d/sen(e)`, com `wz_util` sendo o giro que a
+   máquina **sustenta** (ensaio `curva` do banco), não o teto.
+3. **A linear cedia pelo erro do BICO, num robô que escorrega.** Este era o
+   defeito principal, e o dono apontou o dedo nele: *"não tem como não vencer
+   a velocidade mínima se você estiver girando as duas rodas em lados
+   opostos"*. Medido em órbita: o bico ficava a **50°** do alvo (`cos` = 0,64,
+   segue a 64% da velocidade) enquanto o movimento estava a **87°** —
+   perpendicular, aproximação zero. Eram **37,5° de deriva lateral**
+   constantes, a boba traseira sendo jogada para fora exatamente como a
+   decisão 004 previu. O robô se recusava a parar para virar porque, pelo
+   nariz, o rumo não parecia errado o bastante. A linear passa a ceder pelo
+   **maior** entre o erro do bico e o erro do movimento.
+4. **Chegando, ele não parava.** O navegador continuava mandando "o rumo até o
+   ponto", e em cima do ponto essa direção gira sozinha: o robô girava no
+   lugar e o giro arrastava a traseira para fora — 0,06 m viraram 0,27 m em
+   4 s. Ao chegar, o rumo alvo passa a ser o **rumo atual**: erro zero, robô
+   quieto.
+
+### Depois dos quatro
+
+O mesmo ponto de 0,65 m: o robô **para, pivota no próprio eixo** e só então
+arranca — chega a 0,059 m e fica imóvel, com 9 mm de deriva em 30 s.
+
+### O que deixou passar
+
+Os ensaios eram todos roteirizados por quem escreveu a lei, e por isso
+testavam o que ela já sabia fazer: alvos longe, manobras amplas. Nenhum
+testava ponto perto e de lado. **Pontos escolhidos por gente acharam em cinco
+minutos o que dez corridas automatizadas não acharam** — e isso vale como
+método, não como anedota.
+
 ## O que esta decisão NÃO resolve
 
 - **Obstáculos.** Fatia B. O robô vai em linha reta até o ponto e bate no que

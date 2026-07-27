@@ -58,6 +58,11 @@ class GoalNavigator(Node):
             # o piso, o nó corrige e avisa — robô orbitando o alvo é defeito
             # difícil de ler no log.
             ('raio_chegada', 0.15),
+            # Giro que a máquina SUSTENTA numa curva [rad/s] — não o teto.
+            # NÃO MEDIDO: sai do ensaio `curva` do tools/banco.
+            # Limita a velocidade de aproximação: perto do alvo, ir rápido
+            # demais faz o ponto escapar pelo lado e o robô orbitá-lo.
+            ('wz_util', 0.5),
             ('taxa', 20.0),
             ('timeout_pose', 1.0),
         ])
@@ -134,11 +139,13 @@ class GoalNavigator(Node):
 
         p = self.pose.pose.pose.position
         chegou, rumo, vel = comando_de_navegacao(
-            p.x, p.y, self.objetivo[0], self.objetivo[1],
+            p.x, p.y, yaw_de(self.pose.pose.pose.orientation),
+            self.objetivo[0], self.objetivo[1],
             v_max=self.par['v_max'],
             a_lin=self.par['a_lin'],
             v_min_viavel=self.par['v_min_viavel'],
             raio_chegada=self.par['raio_chegada'],
+            wz_util=self.par['wz_util'],
         )
 
         if chegou:
@@ -147,7 +154,13 @@ class GoalNavigator(Node):
                 self.get_logger().info(
                     f'chegou — {self.distancia_atual():.2f} m do ponto '
                     f"(raio {self.par['raio_chegada']:.2f} m)")
-            self.publica(rumo, 0.0)
+            # Em cima do ponto, a direção ATÉ ele gira sozinha (o vetor fica
+            # curto e qualquer deriva o faz varrer). Mandar esse rumo depois
+            # de chegar punha o robô girando no lugar para sempre, e o giro
+            # arrastava a traseira para fora do raio — medido, 0,06 m viraram
+            # 0,27 m em 4 s. O rumo alvo passa a ser o rumo ATUAL: erro zero,
+            # robô quieto.
+            self.publica(yaw_de(self.pose.pose.pose.orientation), 0.0)
             return
 
         self.publica(rumo, vel)

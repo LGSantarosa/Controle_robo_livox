@@ -8,10 +8,12 @@ import math
 import pytest
 
 from robot_motion.lei_de_rumo import (
+    ajusta_para_zona_morta,
     comando,
     linear_de_avanco,
     norm_ang,
     piso_de_linear,
+    teto_de_pivo,
     wz_de_frenagem,
     wz_minimo_parado,
 )
@@ -103,14 +105,19 @@ def test_piso_tira_a_roda_interna_da_zona_morta():
 
 
 def test_comando_mantem_as_duas_rodas_vivas():
-    """Integração da lei: em qualquer erro, nenhuma roda fica na zona morta."""
+    """Nenhuma roda dentro da banda morta — checado em MÓDULO.
+
+    A roda interna girando ao contrário está tão viva quanto girando pra
+    frente: é assim que o robô pivota. Checar só o lado positivo foi o defeito
+    que proibiu o pivô por aritmética.
+    """
     for erro in [0.05, 0.5, 1.57, 2.5, 3.14]:
         v, wz = comando(erro, V_MAX, A_DEC, WZ_MAX, ZONA_MORTA, BITOLA,
                         MARGEM, TOL)
         interna = v - abs(wz) * BITOLA / 2.0
         externa = v + abs(wz) * BITOLA / 2.0
-        assert externa > ZONA_MORTA
-        assert interna > ZONA_MORTA, (
+        assert abs(externa) >= ZONA_MORTA
+        assert abs(interna) >= ZONA_MORTA, (
             f'erro {erro}: v={v:.3f} wz={wz:.3f} -> roda interna {interna:.3f}')
 
 
@@ -187,3 +194,63 @@ def test_sobrepasso_nao_depende_do_tamanho_do_erro():
         wz = wz_de_frenagem(erro, A_DEC, WZ_MAX)
         folgas.append(erro - frenagem_necessaria(wz, A_DEC))
     assert all(f >= -1e-9 for f in folgas)
+
+
+# ------------------------------------------------- pivô (a saída por baixo)
+
+def test_pivo_existe_quando_o_giro_sozinho_tira_a_roda_da_banda():
+    """A roda interna girando ao contrário também está fora da zona morta.
+
+    Ignorar essa saída proibiu o robô de virar no lugar por aritmética, e o
+    obrigou a arcos enormes — chegando a orbitar pontos próximos sem alcançá-los.
+    """
+    # meia bitola de giro (1.0*0.20/2 = 0.10) já supera o limiar (0.05+0.02),
+    # então v=0 é válido: a roda interna gira para trás, fora da banda.
+    v, wz = ajusta_para_zona_morta(0.0, 1.0, 0.05, BITOLA, 0.02, v_teto=0.5)
+    assert wz == pytest.approx(1.0), 'o giro não pode ser cortado'
+    assert v == pytest.approx(0.0), 'parado e girando é válido — é o pivô'
+    assert abs(v - abs(wz) * BITOLA / 2.0) >= 0.05
+
+    # e o teto do pivô é a maior linear que ainda mantém a roda interna
+    # girando ao contrário
+    limite = teto_de_pivo(0.05, 1.0, BITOLA, 0.02)
+    assert limite == pytest.approx(0.10 - 0.07)
+    v2, _ = ajusta_para_zona_morta(0.05, 1.0, 0.05, BITOLA, 0.02, v_teto=0.5)
+    assert v2 == pytest.approx(limite), 'dentro da banda, sai pelo lado mais perto'
+
+
+def test_sem_zona_morta_a_lei_nao_e_tocada():
+    """Zona morta zero (o simulador) não pode inventar piso nenhum."""
+    for erro in [0.1, 1.0, 2.0, 3.0]:
+        v, wz = comando(erro, V_MAX, A_DEC, WZ_MAX, 0.0, BITOLA, 0.0, TOL)
+        assert v == pytest.approx(linear_de_avanco(erro, V_MAX))
+        assert wz == pytest.approx(wz_de_frenagem(erro, A_DEC, WZ_MAX))
+
+
+def test_erro_grande_prefere_pivotar_a_acelerar():
+    """Com o rumo muito torto, avançar é o que menos interessa."""
+    v, wz = comando(3.0, V_MAX, A_DEC, WZ_MAX, 0.05, BITOLA, 0.02, TOL)
+    assert abs(wz) > 0.5
+    assert v < 0.1, f'deveria quase parar para virar, mas v={v:.3f}'
+
+
+def test_erro_pequeno_nao_pivota():
+    """Giro pequeno não tira a roda da banda: aí a saída é acelerar."""
+    v, wz = comando(0.1, V_MAX, A_DEC, WZ_MAX, 0.05, BITOLA, 0.02, TOL)
+    assert v > 0.1
+    assert abs(v - abs(wz) * BITOLA / 2.0) >= 0.05
+
+
+def test_raio_de_curva_encolhe_com_o_pivo_liberado():
+    """O defeito visível era o raio: v/wz grande demais para pegar pontos perto.
+
+    Com a saída por baixo, o mesmo erro de rumo passa a produzir raio bem menor.
+    """
+    def raio(zona_morta):
+        # erro grande: é onde a linear desejada é baixa e o pivô pode ganhar
+        v, wz = comando(2.5, V_MAX, A_DEC, WZ_MAX, zona_morta, BITOLA, 0.02, TOL)
+        return v / abs(wz)
+
+    # zona morta pequena: pivota, raio ~zero. Grande: obrigado a arco largo.
+    assert raio(0.05) < 0.05, 'com zona morta pequena tem que pivotar'
+    assert raio(0.15) > 0.20, 'com zona morta grande o arco é inevitável'
