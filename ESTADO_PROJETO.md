@@ -1,7 +1,7 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-07-27**.
+> Versionado na `main`. Atualizado em **2026-07-28**.
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
@@ -232,6 +232,33 @@ ainda guarda os fósseis do robô 1.
 - **Falta**: desviar de obstáculo (fatia B) — depende do Livox e de percepção
   que o repo ainda não tem.
 
+## 🔙 2026-07-28 — A ré como manobra (decisão 007), e a boba do simulador cai
+
+O ponto perto e de lado deixou de ser inalcançável, e uma premissa da decisão
+004 caiu no mesmo dia.
+
+- **A ré entrou** (`docs/decisoes/007-re-como-manobra.md`): quando o alvo exige
+  um raio menor do que o robô consegue fazer (`d/(2·sen e) < raio_min_curva`),
+  ele **recua reto** até a geometria abrir, e então entra normal. Gatilho
+  geométrico — decidido antes de orbitar, não depois.
+- **Ré reta por decisão do dono.** Curvar de ré é a manobra sem medida nenhuma:
+  andando para trás a boba vira roda dianteira. Reta ainda mantém a zona morta
+  simétrica.
+- **A lei de rumo NÃO mudou**: `linear_de_avanco` segue com `max(0, cos e)` e o
+  `test_nunca_anda_de_re` segue verde. A ré é modo à parte, acionado por
+  **velocidade negativa** no tópico que já existia — sem tópico novo.
+- **Com orçamento e com voz**: histerese de 1,3× para sair, teto de 1,0 m e 8 s
+  para a manobra inteira. Estourou, para e grita com os números.
+- **Verificado**: o alvo a 0,65 m de lado, que orbitava a 0,168 m para sempre,
+  recua 9 cm em duas mordidas e **chega** (0,150 m, parado 30 s). Alvo (2, 2)
+  continua em 8 mm sem acionar ré. **338 testes verdes** (eram 325).
+- ⚠️ **Com os parâmetros de hoje o pivô não existe em NENHUM dos dois perfis** —
+  no real, pivotar exigiria 1,25 rad/s contra teto de 1,0 (`zona_morta` 0,15,
+  `bitola` 0,32). Medida a bitola, `raio_min_curva: 0` desliga a ré sozinho.
+- **A boba do simulador é decorativa** — ver BO-4. Consequência imediata: a ré
+  foi validada só no simulador, e a única coisa que preocupa nela (a boba
+  virando roda dianteira) é justamente o que aquele modelo não pode mostrar.
+
 ## ⏳ Próximos passos
 
 **Primeiro, com o robô (virou prioridade — a movimentação depende destes
@@ -242,7 +269,9 @@ números e hoje eles são chute):**
    errar aqui erra todo ensaio abaixo. (0,20 no simulador × 0,32 no controlador
    real; nenhum dos dois medido.)
 2. **Rodar o protocolo de `tools/banco/README.md`** — zona morta, `a_dec`,
-   curva por velocidade, aceleração. O dono só roda; os CSV vêm por ssh.
+   curva por velocidade, aceleração, **e o ensaio 6 (reta com cutucão, ida ×
+   ré)**, que é o que valida a manobra da decisão 007 e ataca o BO-4. O dono só
+   roda; os CSV vêm por ssh.
 3. **Confirmar o IP do lidar** — varredura procurando OUI `e4:7a:2c`. Já foram
    vistos `.169` e `.158`. Errado = `bind failed` = sem `/Odometry`, falha
    silenciosa. Ver `ros2_packages/robot_base/config/README.md`.
@@ -300,3 +329,29 @@ inertes o standdown de porta no `unstuck_supervisor` e o `cone_pose_fix.py`.
   Some junto o caso não resolvido: **girar parado devagar é impossível** —
   abaixo de `2·zona_morta/bitola` as duas rodas ficam na banda proibida. Isso
   não é ajuste de ganho, é limite físico, e cai no colo da navegação.
+  **07-28: o alcance disso foi resolvido pela ré** (decisão 007) — o robô
+  contorna a falta de pivô recuando. O limite físico continua de pé.
+
+- **BO-4 — A boba do simulador não é uma boba** (aberto 07-28): o garfo do
+  pivô **não se alinha com a direção de movimento**. Medido numa curva pra
+  frente (v=0,25, wz=0,6, raio 0,42 m): ele deveria assentar a ~157° do corpo
+  (`atan(0,18/0,42)` fora do eixo) e ficar lá; em vez disso saiu de 180° e
+  girou continuamente até 38°, mantendo o rumo do **mundo**. É um patim, não
+  uma boba.
+
+  Multiplicar o atrito da boba por 16 (`mu 0,05 → 0,8`) mudou o rumo da mesma
+  curva de 136,161° para 136,675° — **0,4%**. O contato dela não participa da
+  dinâmica, e a hipótese do `mu2` baixo como causa foi testada e **descartada**.
+  A causa real é desconhecida.
+
+  **Custo:** a decisão 004 apoia-se em "trail de 4 cm + atrito no pivô
+  reproduzem a traseira jogada pra fora", e o S de 27-07 foi atribuído ~20% à
+  boba. Essa atribuição não se sustenta: a derrapada que o simulador mostra vem
+  do `mu` baixo do contato, não da geometria de boba. Some junto a validação da
+  ré (decisão 007), que no simulador não testa nada — lá ré e ida deram
+  idênticas porque não há boba para virar.
+
+  **Fecha quando:** (a) ensaio 6 do banco rodado no robô real, ida × ré, com a
+  boba filmada; (b) a causa do garfo não alinhar identificada no modelo; (c)
+  simulador reproduzindo o ângulo de boba medido no robô, ou a decisão 004
+  corrigida para dizer o que ele de fato reproduz.

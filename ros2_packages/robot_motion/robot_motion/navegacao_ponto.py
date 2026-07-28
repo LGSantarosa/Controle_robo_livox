@@ -77,6 +77,56 @@ def velocidade_que_a_curva_permite(dist, erro_rumo, wz_util):
     return wz_util * dist / seno
 
 
+def raio_necessario(dist, erro_rumo):
+    """Raio da curva que leva ao alvo sem largar o alvo: `d/(2·sen e)`.
+
+    Robô e alvo estão os dois sobre a mesma circunferência, separados pela
+    corda `d`, com o bico `e` fora dela. Alinhado (`sen e = 0`) o raio é
+    infinito: segue reto.
+    """
+    seno = abs(math.sin(erro_rumo))
+    if seno < 1e-6:
+        return float('inf')
+    return dist / (2.0 * seno)
+
+
+def precisa_recuar(dist, erro_rumo, raio_min_curva, recuando, folga=1.3):
+    """O alvo está dentro do círculo que o robô não consegue fechar?
+
+    Sem pivô o robô tem um raio mínimo de curva, e um ponto que exige menos
+    que isso fica **dentro** do círculo que ele descreve. Perseguir um ponto
+    por dentro do próprio círculo não converge: o robô o orbita para sempre —
+    medido, 0,168 m de um alvo com raio de chegada de 0,15 m.
+
+    A saída é geométrica e é a manobra de baliza: recuando, `d` cresce, o raio
+    necessário abre, e o ponto volta a caber. Por isso a decisão sai daqui e
+    não de um detector de órbita: dá para saber ANTES, pela geometria, em vez
+    de descobrir depois de orbitar.
+
+    `raio_min_curva = 0` é o robô que pivota — para ele nenhum ponto está
+    dentro de círculo nenhum, e a ré nunca acontece. Quando a bitola medida
+    liberar o pivô, este comportamento some sozinho, pelo parâmetro.
+
+    A `folga` é histerese, e ela não é enfeite: no ponto exato em que o alvo
+    passa a caber, sem folga o robô alterna ré e avanço a cada ciclo e não sai
+    do lugar.
+    """
+    if raio_min_curva <= 0.0:
+        return False
+    limite = raio_min_curva * (folga if recuando else 1.0)
+    return raio_necessario(dist, erro_rumo) < limite
+
+
+def orcamento_de_re_estourado(recuou, t_recuando, re_max_dist, re_max_s):
+    """A ré tem fim — em metros e em segundos.
+
+    Uma manobra que não converge tem que parar e ser dita em voz alta. Recuar
+    indefinidamente é o pior dos mundos: o robô sai do lugar onde alguém o
+    procura, e o log continua limpo.
+    """
+    return recuou >= re_max_dist or t_recuando >= re_max_s
+
+
 def raio_minimo_de_chegada(v_min_viavel, a_lin, folga=0.02):
     """Menor raio de chegada coerente com o piso de velocidade.
 

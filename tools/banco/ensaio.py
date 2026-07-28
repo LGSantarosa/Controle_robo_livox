@@ -125,6 +125,26 @@ class Ensaio(Node):
             # velocidades é o que responde "quanto ele curva a x, 2x, 3x".
             return (c.v, c.wz) if te >= 2.0 else (c.v, 0.0)
 
+        if e == 'reta':
+            # Reta com CUTUCÃO: anda, leva um pulso de giro de 0,5 s e SOLTA.
+            # `--v` aceita NEGATIVO, e é assim que se mede a ré — de ré a boba
+            # passa a ser a roda da frente, e boba na frente é a configuração
+            # geometricamente instável (o carrinho de supermercado).
+            #
+            # O pulso não é enfeite: sem ele o ensaio não mede nada. O robô
+            # simulado é perfeitamente simétrico num plano liso, então reta
+            # pura dá desvio ZERO EXATO nos dois sentidos (medido: 0,0° e
+            # 0,0 cm em 4 m, ida e ré). Instabilidade é bifurcação — só se vê
+            # perturbando e olhando se o desvio volta ou cresce.
+            #
+            # `--wz 0` desliga o pulso, para quem quiser a reta crua no robô
+            # real, onde a assimetria de verdade perturba sozinha.
+            if te < 2.0:
+                return 0.0, 0.0
+            if 5.0 <= te < 5.5:
+                return c.v, c.wz
+            return c.v, 0.0
+
         if e == 'aceleracao_linear':
             # Degrau de linear e corte: acelera e desacelera de fato quanto?
             if te < 2.0:
@@ -210,7 +230,7 @@ class Ensaio(Node):
 
 
 ENSAIOS = ['zona_morta_linear', 'zona_morta_giro', 'degrau_giro', 'curva',
-           'aceleracao_linear']
+           'aceleracao_linear', 'reta']
 
 
 def main():

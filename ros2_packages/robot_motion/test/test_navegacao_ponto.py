@@ -11,6 +11,9 @@ from robot_motion.navegacao_ponto import (
     chegou,
     comando_de_navegacao,
     distancia,
+    orcamento_de_re_estourado,
+    precisa_recuar,
+    raio_necessario,
     raio_minimo_de_chegada,
     rumo_para,
     velocidade_de_aproximacao,
@@ -166,3 +169,93 @@ def test_velocidade_final_respeita_os_dois_tetos():
     erro = math.atan2(0.59, 0.28)
     assert v <= velocidade_de_aproximacao(d, V_MAX, A_LIN, 0.0) + 1e-9
     assert v <= velocidade_que_a_curva_permite(d, erro, WZ_UTIL) + 1e-9
+
+
+# ------------------------------------------------- a ré como manobra
+
+RAIO_MIN = V_MIN / WZ_UTIL          # 0,40 m: o círculo mais fechado que ele faz
+
+
+def test_raio_necessario_e_a_geometria_da_perseguicao():
+    """Ir a um ponto a `d` com erro `e` exige raio `d/(2·sen e)`.
+
+    É a corda do círculo: o robô e o alvo estão os dois sobre ele, separados
+    por `d`, com o bico `e` fora da corda.
+    """
+    assert raio_necessario(1.0, math.pi / 2) == pytest.approx(0.5)
+    assert raio_necessario(1.0, math.radians(30)) == pytest.approx(1.0)
+    assert raio_necessario(1.0, 0.0) == float('inf')
+
+
+def test_alvo_muito_perto_e_de_lado_nao_cabe_na_curva():
+    """O caso que o dono achou clicando: 0,65 m de lado, e o robô orbitou.
+
+    Sem pivô, o robô não fecha curva mais apertada que `raio_min`. Um ponto
+    que exige menos que isso está DENTRO do círculo que ele descreve — e
+    círculo que se persegue por dentro nunca se alcança.
+    """
+    assert precisa_recuar(dist=0.168, erro_rumo=math.pi / 2,
+                          raio_min_curva=RAIO_MIN, recuando=False)
+
+
+def test_alvo_longe_ou_alinhado_nao_pede_re():
+    assert not precisa_recuar(dist=3.0, erro_rumo=math.radians(20),
+                              raio_min_curva=RAIO_MIN, recuando=False)
+    assert not precisa_recuar(dist=0.5, erro_rumo=0.0,
+                              raio_min_curva=RAIO_MIN, recuando=False)
+
+
+def test_quem_pivota_nunca_precisa_de_re():
+    """`raio_min_curva = 0` é o robô que vira no próprio eixo.
+
+    Quando a bitola medida permitir o pivô, a ré some sozinha do
+    comportamento — sem trocar código, só o parâmetro.
+    """
+    for d in [0.05, 0.168, 0.5]:
+        assert not precisa_recuar(dist=d, erro_rumo=math.pi / 2,
+                                  raio_min_curva=0.0, recuando=False)
+
+
+def test_histerese_impede_tremer_na_fronteira():
+    """Sair da ré exige folga; entrar não.
+
+    Sem isso, no ponto exato em que o alvo passa a caber, o robô alterna ré e
+    avanço a cada ciclo e não sai do lugar.
+    """
+    # distância em que o alvo cabe raspando, de lado
+    d = 2.0 * RAIO_MIN
+    assert not precisa_recuar(d * 1.01, math.pi / 2, RAIO_MIN, recuando=False)
+    # já recuando, esse mesmo ponto ainda não é suficiente: falta folga
+    assert precisa_recuar(d * 1.01, math.pi / 2, RAIO_MIN, recuando=True)
+    # com folga sobrando, solta
+    assert not precisa_recuar(d * 1.5, math.pi / 2, RAIO_MIN, recuando=True)
+
+
+def test_recuar_afasta_o_alvo_e_resolve_a_geometria():
+    """A manobra funciona: recuando em linha reta o ponto passa a caber.
+
+    Robô na origem apontando para +x, alvo a 0,20 m em +y (de lado, dentro do
+    círculo). Recuando, a distância cresce mais rápido do que o ângulo
+    atrapalha, e em algum ponto o alvo cabe.
+    """
+    alvo = (0.0, 0.20)
+    coube = None
+    for recuo in [0.1 * i for i in range(1, 30)]:
+        x = -recuo
+        d = math.hypot(alvo[0] - x, alvo[1])
+        erro = math.atan2(alvo[1], alvo[0] - x)     # bico segue em +x
+        if not precisa_recuar(d, erro, RAIO_MIN, recuando=True):
+            coube = recuo
+            break
+    assert coube is not None, 'recuar nunca resolveu — a manobra não serve'
+    assert coube <= 1.0, f'precisou de {coube:.2f} m, mais que o orçamento'
+
+
+def test_orcamento_de_re_e_finito():
+    """Recuar para sempre é pior que não alcançar: o robô some do laboratório."""
+    assert not orcamento_de_re_estourado(recuou=0.3, t_recuando=2.0,
+                                         re_max_dist=1.0, re_max_s=8.0)
+    assert orcamento_de_re_estourado(recuou=1.2, t_recuando=2.0,
+                                     re_max_dist=1.0, re_max_s=8.0)
+    assert orcamento_de_re_estourado(recuou=0.3, t_recuando=9.0,
+                                     re_max_dist=1.0, re_max_s=8.0)

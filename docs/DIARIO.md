@@ -509,3 +509,88 @@ O nó agora anuncia na subida qual dos dois casos é o dele, com o número:
 `robot_base` não tinha `setup.cfg`, então o executável do nó novo não era
 instalado e o launch morria com "libexec directory does not exist". Três
 corridas abortadas até eu ler o log do launch em vez do log da corrida.
+
+## 2026-07-28 — A ré entra, e a boba do simulador cai
+
+Sessão que começou numa pergunta do dono sobre a decisão 005 ("ele tá fazendo
+ré? pq dando ré ele pode chegar sem problema, não?") e terminou derrubando uma
+premissa da decisão 004.
+
+### O que eu prometi medir antes de mexer na lei
+
+A ré resolve o ponto inalcançável por geometria — recuar aumenta `d` e o raio
+necessário `d/(2·sen e)` abre. O contra que eu não sabia responder: de ré a
+boba vira roda dianteira, e boba na frente é instável. Ficou combinado medir
+antes de implementar.
+
+### Erro de ensaio nº 1: reta pura não mede nada
+
+Primeiro ensaio: reta, ida e ré, medindo desvio de rumo. Resultado nos quatro
+casos: **0,0° e 0,0 cm em 4 m**, com `y` exatamente zero. O robô simulado é
+perfeitamente simétrico num plano liso — ele anda numa reta matemática.
+Instabilidade é bifurcação: só aparece se você perturbar. O ensaio `reta` do
+banco ganhou um **cutucão** (pulso de giro de 0,5 s e solta) por causa disso.
+
+### Com cutucão: ré ≡ ida, e é aí que a coisa fica suspeita
+
+| | solto com | girou mais | assentou | \|wz\| nos últimos 2 s |
+|---|---|---|---|---|
+| frente 0,20 | 0,086 rad/s | 1,9° | 0,56 s | 0,000 |
+| ré 0,20 | 0,084 | 1,9° | 0,56 s | 0,000 |
+| frente 0,35 | 0,086 | 1,9° | 0,56 s | 0,000 |
+| ré 0,35 | 0,084 | 1,9° | 0,54 s | 0,000 |
+
+Idênticos demais. Fui olhar o pivô da boba direto no Gazebo (o `/joint_states`
+só publica as duas motrizes; o ângulo veio da posição do contato em torno do
+pivô, no `dynamic_pose/info`).
+
+### A boba do simulador não é uma boba
+
+Numa curva **pra frente** — v=0,25, wz=0,6, raio 0,42 m — o garfo deveria
+assentar a ~157° do corpo, que é `atan(0,18/0,42)` fora do eixo, e ficar lá.
+Em vez disso saiu de 180° e girou continuamente até 38°: ele mantém o rumo do
+**mundo**, não acompanha o corpo. É um patim, não uma boba.
+
+Hipótese: o `mu2=0.05` da boba (posto de propósito para a traseira derrapar)
+matava o torque que alinha o garfo. **Errada.** Multipliquei o atrito por 16
+(`mu 0,05 → 0,8`) e o rumo na mesma curva foi de 136,161° para 136,675° —
+0,4%. O contato da boba não participa da dinâmica, e a causa real de o garfo
+não alinhar continua desconhecida. Arquivo revertido; virou o BO-4.
+
+Isso é maior que a ré: a decisão 004 diz que o trail de 4 cm + atrito no pivô
+reproduzem a traseira jogada pra fora, e o S de 27-07 foi atribuído ~20% à
+boba. Essa atribuição não se sustenta — a derrapada que o simulador mostra vem
+do `mu` baixo do contato, não da geometria de boba.
+
+### Decisão do dono: caminho B
+
+Seguir com a ré conservadora e mandar a boba para a bancada, em vez de caçar a
+causa no modelo agora. O simulador só se valida contra os números do robô, que
+ainda não temos. Custo assumido e registrado: **a ré foi validada só no
+simulador, e justamente a parte que preocupa nela é a que o simulador não pode
+mostrar.**
+
+### O que entrou (decisão 007)
+
+Gatilho geométrico (`d/(2·sen e) < raio_min_curva`), ré **reta** por escolha do
+dono, sinal negativo em `velocidade_alvo` como modo (sem tópico novo), lei de
+rumo intacta (`test_nunca_anda_de_re` continua verde), histerese de 1,3× e
+orçamento de 1,0 m / 8 s com grito no log.
+
+Verificado: alvo a 0,65 m de lado, que orbitava a 0,168 m para sempre, agora
+recua 9 cm em duas mordidas e **chega** — 0,150 m do ponto, parado 30 s.
+Regressão do alvo (2, 2): 8 mm, sem acionar ré. 338 testes verdes (eram 325).
+
+### Erro de ensaio nº 2: dez `/clock` órfãos
+
+Duas corridas de aceitação saíram com o tempo embaralhado e o robô recuando
+5 m. Causa: o `trap` do meu script expandia `$NAV` antes da variável existir,
+então cada corrida deixava viva a pilha de navegação — e, pior, **dez
+`parameter_bridge` de `/clock`** acumulados. Quando um Gazebo novo sobe, todos
+voltam a republicar o mesmo `/clock` fora de ordem. O banco tem guarda contra
+isso desde 07-27 ("relógio andou pra trás"); minha ferramenta de aceitação,
+não. Depois de limpar, refiz a medição de ré e os números bateram com os de
+antes — a conclusão não tinha sido contaminada.
+
+Também gastei três chamadas descobrindo que `pkill -f 'gz sim'` casava com a
+própria linha de comando do shell que o chamava, e eu me matava.

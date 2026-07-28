@@ -30,5 +30,25 @@ goal_navigator:
 
     raio_chegada: 0.15
 
+    # --- manobra de ré (decisão 007) ---
+    # Raio da curva mais fechada que o robô descreve [m]. Ponto que exige
+    # menos que isso está dentro do círculo dele: não se alcança perseguindo,
+    # só recuando até a geometria abrir.
+    #   negativo = deduzir de v_min_viavel/wz_util (0,40 m com estes números)
+    #   ZERO     = o robô pivota, e a ré nunca acontece
+    # Com os chutes atuais (zona_morta 0,15, bitola 0,32) o pivô NÃO existe:
+    # exigiria 1,25 rad/s contra um teto de 1,0. Medir a bitola com trena é o
+    # que pode zerar isto.
+    raio_min_curva: -1.0
+
+    # Teto DESEJADO da ré [m/s]. A manobra recua no mínimo viável; este número
+    # serve para o nó avisar quando o mínimo viável já passou do desejado.
+    v_re_max: 0.20
+
+    # Orçamento da manobra: estourou, para e grita. Ré sem fim tira o robô do
+    # lugar onde alguém foi procurá-lo.
+    re_max_dist: 1.0
+    re_max_s: 8.0
+
     taxa: 20.0
     timeout_pose: 1.0

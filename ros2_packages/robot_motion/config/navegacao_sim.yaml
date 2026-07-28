@@ -16,5 +16,14 @@ goal_navigator:
     wz_util: 0.5
 
     raio_chegada: 0.15
+
+    # Manobra de ré (decisão 007). Aqui ela é a regra, não a exceção: com
+    # bitola 0,20 e zona morta 0,10 o pivô não existe, então todo ponto dentro
+    # de 0,30 m de raio (= v_min_viavel/wz_util) depende de recuar.
+    raio_min_curva: -1.0     # negativo = deduzir; 0 = pivota e nunca dá ré
+    v_re_max: 0.20
+    re_max_dist: 1.0
+    re_max_s: 8.0
+
     taxa: 20.0
     timeout_pose: 1.0

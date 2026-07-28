@@ -147,6 +147,29 @@ def comando(erro, v_max, a_dec, wz_max, zona_morta, bitola, margem_piso,
     return ajusta_para_zona_morta(v, wz, zona_morta, bitola, margem_piso, v_max)
 
 
+def comando_de_re(v_pedida, zona_morta, margem, v_max):
+    """Ré RETA: giro zero, módulo acima da zona morta, sinal negativo.
+
+    A ré é um modo à parte, não um sinal que a lei de rumo descobre no meio do
+    cálculo. `linear_de_avanco` continua sem ré (`max(0, cos e)`): quem decide
+    recuar é a navegação, que conhece a geometria do alvo — esta função só
+    executa, e executa reto.
+
+    Reta por decisão, e a decisão protege o que não sabemos: andando para trás
+    a boba deixa de ser arrastada e passa a ser empurrada, que é a
+    configuração instável do carrinho de supermercado. Curvar nessa condição é
+    a manobra sobre a qual não existe medida nenhuma — o simulador não pode
+    dar essa resposta, porque a boba dele não chega a virar (ver BO-4). Reta
+    também mantém a zona morta simétrica: as duas rodas na mesma velocidade,
+    longe da banda proibida.
+    """
+    if v_pedida >= 0.0:
+        raise ValueError('comando_de_re só aceita velocidade negativa — '
+                         'a ré é modo explícito, não sinal descoberto')
+    modulo = min(max(abs(v_pedida), zona_morta + margem), v_max)
+    return -modulo, 0.0
+
+
 def pivo_disponivel(zona_morta, bitola, margem, wz_max):
     """O robô consegue girar no próprio eixo, com estes números?
 

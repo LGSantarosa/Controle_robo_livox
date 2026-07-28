@@ -31,6 +31,7 @@ from std_msgs.msg import Float64
 
 from robot_motion.lei_de_rumo import (
     comando,
+    comando_de_re,
     norm_ang,
     pivo_disponivel,
     wz_minimo_parado,
@@ -154,7 +155,11 @@ class HeadingController(Node):
         self.t_alvo = self.get_clock().now().nanoseconds * 1e-9
 
     def cb_velocidade(self, msg):
-        self.v_alvo = max(0.0, min(float(msg.data), self.par['v_max']))
+        # Velocidade NEGATIVA é o pedido de ré, e é assim que a navegação
+        # pede a manobra — sem tópico novo, sem modo escondido. O sinal já
+        # diz tudo: quem manda -0,2 quer recuar a 0,2 m/s.
+        self.v_alvo = max(-self.par['v_max'],
+                          min(float(msg.data), self.par['v_max']))
 
     def passo(self):
         agora = self.get_clock().now().nanoseconds * 1e-9
@@ -170,6 +175,16 @@ class HeadingController(Node):
             return self.para(None)          # ainda não mandaram alvo: quieto
         if agora - self.t_alvo > self.par['timeout_alvo']:
             return self.para('alvo de rumo venceu')
+
+        # ---- modo ré: reta, sem giro, e sem passar pela lei de rumo ----
+        if self.v_alvo < 0.0:
+            v, wz = comando_de_re(self.v_alvo, self.par['zona_morta'],
+                                  self.par['margem_piso'], self.par['v_max'])
+            self.get_logger().info(f'RÉ a {abs(v):.2f} m/s (manobra)',
+                                   throttle_duration_sec=2.0)
+            self.publica(v, wz)
+            self.plantao(agora, v, wz)
+            return
 
         yaw = yaw_de(self.pose.pose.pose.orientation)
         erro = norm_ang(self.rumo_alvo - yaw)

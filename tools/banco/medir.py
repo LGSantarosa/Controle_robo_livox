@@ -15,6 +15,11 @@ import sys
 LIMIAR_PARADO = 0.02   # m/s e rad/s abaixo disso é considerado imóvel
 
 
+def norm(a):
+    """Ângulo em (-pi, pi] — diferença de rumo não pode dar 359°."""
+    return math.atan2(math.sin(a), math.cos(a))
+
+
 def le(p):
     return [{k: (float(v) if v not in ('', None) else None)
              for k, v in l.items()} for l in csv.DictReader(open(p))]
@@ -115,6 +120,61 @@ def aceleracao(r):
                   f'(parou {t_parou-6.0:.2f} s depois do corte)')
 
 
+def reta(r):
+    """Cutuca o rumo andando reto e olha se o desvio VOLTA ou CRESCE.
+
+    Serve para comparar ida e ré na mesma velocidade. De ré a boba deixa de ser
+    arrastada e passa a ser empurrada — vira roda dianteira, que é a
+    configuração instável do carrinho de supermercado.
+
+    Não adianta olhar o rumo final: um diferencial não tem nada que traga o
+    rumo de volta sozinho: solto o giro, ele segue reto no rumo em que ficou.
+    Quem denuncia instabilidade é a VELOCIDADE DE GIRO depois de soltar. Se ela
+    cai a zero e fica, a boba está sendo dominada pelas rodas motrizes; se ela
+    sobrevive ou cresce, a boba dianteira está mandando no rumo e a ré precisa
+    de teto de velocidade.
+    """
+    solta = None
+    for i in range(1, len(r)):
+        if abs(r[i - 1]['cmd_wz']) > 1e-6 and abs(r[i]['cmd_wz']) < 1e-6:
+            solta = i
+            break
+    if solta is None:
+        print('  sem cutucão neste CSV (rodar sem --wz 0) — nada a comparar')
+        return
+
+    pos = r[solta:]
+    if len(pos) < 20:
+        print('  ensaio curto demais depois do cutucão')
+        return
+    v_med = sum(abs(l['v_pose']) for l in pos) / len(pos)
+    sentido = 'RÉ' if pos[0]['cmd_v'] < 0 else 'FRENTE'
+    wz_solta = r[solta - 1]['wz_pose']
+    yaw_solta = pos[0]['yaw']
+
+    parou = next((l for l in pos if abs(l['wz_pose']) < LIMIAR_PARADO), None)
+    extra = (abs(norm(parou['yaw'] - yaw_solta)) if parou else
+             abs(norm(pos[-1]['yaw'] - yaw_solta)))
+
+    cauda = [l for l in pos if l['t'] >= pos[-1]['t'] - 2.0]
+    wz_cauda = max(abs(l['wz_pose']) for l in cauda)
+    meio = len(pos) // 2
+    wz1 = max(abs(l['wz_pose']) for l in pos[:meio])
+    wz2 = max(abs(l['wz_pose']) for l in pos[meio:])
+
+    print(f'  {sentido} a {v_med:.2f} m/s, cutucão solto com '
+          f'wz={wz_solta:.3f} rad/s')
+    print(f'  girou mais {math.degrees(extra):.1f}° depois de soltar' +
+          (f', parou de girar em {parou["t"] - pos[0]["t"]:.2f} s'
+           if parou else ' e NÃO PAROU dentro do ensaio'))
+    print(f'  pico de |wz|: {wz1:.3f} (1ª metade) -> {wz2:.3f} rad/s (2ª)')
+    print(f'  últimos 2 s: |wz| máximo = {wz_cauda:.3f} rad/s')
+    if wz_cauda > LIMIAR_PARADO or wz2 > wz1:
+        print('  -> o rumo NÃO assentou: a boba está mandando. INSTÁVEL')
+    else:
+        print('  -> o rumo assentou e ficou: as motrizes dominam. ESTÁVEL')
+
+
 def main():
     if len(sys.argv) != 3:
         print(__doc__)
@@ -134,6 +194,8 @@ def main():
         curva(r)
     elif tipo == 'aceleracao_linear':
         aceleracao(r)
+    elif tipo == 'reta':
+        reta(r)
     else:
         print(f'tipo desconhecido: {tipo}')
 

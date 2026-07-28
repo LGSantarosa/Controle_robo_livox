@@ -117,6 +117,38 @@ desaceleração reais — para conferir se os tetos do
 `hoverboard_controllers.yaml` (0,7 m/s e 0,8 m/s²) descrevem esta máquina ou
 foram herdados sem medir. Espaço: ~4 m em reta.
 
+### 6. Reta com cutucão — *o rumo volta ou foge? E de ré?*
+
+```bash
+python3 ensaio.py --ensaio reta --csv reta_frente.csv --v  0.25 --wz 0.5 --dur 16
+python3 ensaio.py --ensaio reta --csv reta_re.csv     --v -0.25 --wz 0.5 --dur 16
+python3 medir.py reta reta_frente.csv
+python3 medir.py reta reta_re.csv
+```
+
+Anda reto, leva um pulso de giro de 0,5 s e **solta**. `--v` aceita negativo, e
+é assim que se mede a ré. Espaço: ~4 m em reta, nos dois sentidos.
+
+**É o ensaio que decide se a manobra de ré da decisão 007 é segura.** Andando
+para trás a boba deixa de ser arrastada e passa a ser empurrada — vira roda
+dianteira, que é a configuração instável do carrinho de supermercado. O que
+interessa não é o tamanho do desvio e sim se ele **cresce**: um diferencial não
+tem nada que traga o rumo de volta sozinho, então quem denuncia instabilidade é
+a velocidade de giro depois de soltar. Assentou e ficou, as motrizes dominam;
+sobreviveu ou cresceu, a boba está mandando e a ré precisa de teto menor.
+
+O pulso não é enfeite: sem ele o ensaio não mede nada **no simulador**, porque
+lá o robô é perfeitamente simétrico num plano liso e reta pura dá desvio zero
+exato nos dois sentidos. No robô real a assimetria perturba sozinha, e vale
+rodar também com `--wz 0` para ver o desvio natural.
+
+⚠️ **O simulador não substitui este ensaio.** A boba dele não chega a virar
+(BO-4), então lá ré e ida deram idênticas — o que não é evidência de que a ré
+seja segura, é evidência de que aquele modelo não tem boba nenhuma.
+
+Vale filmar a traseira: o que se procura é a boba dando meia-volta, e quanto o
+robô se desvia enquanto ela decide.
+
 ## O que fazer com os números
 
 | ensaio | devolve | vai para |
@@ -125,6 +157,7 @@ foram herdados sem medir. Espaço: ~4 m em reta.
 | 3 | `a_dec` | o parâmetro central da lei de frenagem |
 | 4 | giro realizado, derrapada | teto de `wz` por velocidade; calibrar o simulador |
 | 5 | aceleração e velocidade reais | tetos do `diff_drive_controller` |
+| 6 | rumo assenta ou foge, ida × ré | teto de velocidade da ré (decisão 007); BO-4 |
 
 E, com trena, antes de tudo: **`wheel_separation` e `wheel_radius`**. Os valores
 no YAML (0,32 e 0,0825) nunca foram medidos neste robô, e o

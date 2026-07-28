@@ -147,3 +147,19 @@ com o do robô. Por isso todos moram no bloco de propriedades no topo da URDF:
   números finais.
 - Sem Livox no modelo por enquanto — o controle de movimentação não precisa
   dele, já que a pose vem pronta. Entra se formos simular percepção.
+
+## ⚠️ REVISÃO 2026-07-28 — a boba não está fazendo o papel dela
+
+Uma premissa central deste documento está **medida como falsa**: o garfo do
+pivô não se alinha com a direção de movimento. Numa curva pra frente (v=0,25,
+wz=0,6, raio 0,42 m) ele deveria assentar a ~157° do corpo e ficar lá; em vez
+disso mantém o rumo do MUNDO, girando continuamente em relação ao corpo. E
+multiplicar o atrito da boba por 16 muda o rumo da mesma curva em 0,4%.
+
+Ou seja: a derrapada que este simulador mostra vem do `mu` baixo do contato,
+**não da geometria de boba com trail**. O "~20% do S é da boba" registrado na
+decisão 005 fica sem sustentação até isso ser resolvido.
+
+Registrado como **BO-4** no `ESTADO_PROJETO.md`. O que o simulador entregou e
+continua valendo: a inércia de guinada, a rampa de desaceleração (que responde
+pela maior parte do S) e a zona morta da placa fingida.

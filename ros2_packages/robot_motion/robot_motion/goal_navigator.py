@@ -30,7 +30,11 @@ from std_msgs.msg import Float64
 from robot_motion.navegacao_ponto import (
     comando_de_navegacao,
     distancia,
+    norm_ang,
+    orcamento_de_re_estourado,
+    precisa_recuar,
     raio_minimo_de_chegada,
+    raio_necessario,
 )
 
 
@@ -63,6 +67,20 @@ class GoalNavigator(Node):
             # Limita a velocidade de aproximação: perto do alvo, ir rápido
             # demais faz o ponto escapar pelo lado e o robô orbitá-lo.
             ('wz_util', 0.5),
+            # Raio da curva mais fechada que o robô descreve [m]. Ponto que
+            # exige menos que isso está DENTRO do círculo dele, e não se
+            # alcança perseguindo — só recuando (decisão 007).
+            #   negativo = deduzir de v_min_viavel/wz_util (o padrão)
+            #   ZERO     = o robô pivota; nunca dá ré
+            ('raio_min_curva', -1.0),
+            # Teto de velocidade da ré [m/s]. Não é a velocidade da manobra:
+            # ela recua no mínimo viável, que é o mais devagar que ainda tira
+            # a roda do lugar. Este número existe para DELATAR quando o
+            # mínimo viável já é mais rápido do que gostaríamos de recuar.
+            ('v_re_max', 0.20),
+            # Orçamento da manobra: recuar sem fim é pior que não alcançar.
+            ('re_max_dist', 1.0),
+            ('re_max_s', 8.0),
             ('taxa', 20.0),
             ('timeout_pose', 1.0),
         ])
@@ -91,10 +109,40 @@ class GoalNavigator(Node):
         self.objetivo = None
         self.anunciou_chegada = False
 
+        # estado da manobra de ré
+        self.recuando = False
+        self.p_re0 = None
+        self.t_re0 = None
+        self.desistiu = False
+
         self.create_timer(1.0 / self.par['taxa'], self.passo)
         self.get_logger().warn(
             'a_lin e v_min_viavel NÃO foram medidos neste robô — '
             'rodar tools/banco/ e corrigir (BO-3)')
+        self.anuncia_a_re()
+
+    def anuncia_a_re(self):
+        """Diz na subida se este robô vai precisar recuar, e por quê."""
+        if self.par['raio_min_curva'] < 0.0:
+            self.par['raio_min_curva'] = (self.par['v_min_viavel']
+                                          / self.par['wz_util'])
+        if self.par['raio_min_curva'] <= 0.0:
+            self.get_logger().info(
+                'raio_min_curva = 0: este robô pivota, e a manobra de ré '
+                'nunca será acionada')
+            return
+        self.get_logger().info(
+            f"raio mínimo de curva {self.par['raio_min_curva']:.2f} m "
+            f"(v_min_viavel/wz_util). Alvo que exigir menos que isso está "
+            f'dentro do círculo do robô: ele RECUA até caber, reto, no '
+            f'mínimo viável, com teto de '
+            f"{self.par['re_max_dist']:.2f} m e {self.par['re_max_s']:.0f} s.")
+        if self.par['v_min_viavel'] > self.par['v_re_max']:
+            self.get_logger().warn(
+                f"a ré vai a {self.par['v_min_viavel']:.2f} m/s, acima do "
+                f"teto desejado de {self.par['v_re_max']:.2f} m/s: o mínimo "
+                'viável manda, senão a placa engole o comando e a manobra '
+                'trava calada (BO-3). Zona morta menor baixaria isso.')
 
     def cb_odom(self, msg):
         self.pose = msg
@@ -112,6 +160,10 @@ class GoalNavigator(Node):
             return
         self.objetivo = (msg.pose.position.x, msg.pose.position.y)
         self.anunciou_chegada = False
+        # Objetivo novo zera a desistência: a manobra falhou para o alvo
+        # anterior, não para sempre.
+        self.desistiu = False
+        self.encerra_re()
         d = self.distancia_atual()
         self.get_logger().info(
             f'objetivo ({self.objetivo[0]:.2f}, {self.objetivo[1]:.2f})'
@@ -160,10 +212,79 @@ class GoalNavigator(Node):
             # arrastava a traseira para fora do raio — medido, 0,06 m viraram
             # 0,27 m em 4 s. O rumo alvo passa a ser o rumo ATUAL: erro zero,
             # robô quieto.
+            self.encerra_re()
             self.publica(yaw_de(self.pose.pose.pose.orientation), 0.0)
             return
 
+        yaw = yaw_de(self.pose.pose.pose.orientation)
+        erro = norm_ang(rumo - yaw)
+        d = self.distancia_atual()
+
+        if self.desistiu:
+            # Já gritou uma vez; fica parado esperando objetivo novo em vez de
+            # repetir a manobra que não converge.
+            self.publica(yaw, 0.0)
+            return
+
+        if precisa_recuar(d, erro, self.par['raio_min_curva'], self.recuando):
+            self.recua(agora, yaw, d, erro)
+            return
+
+        if self.recuando:
+            self.get_logger().info(
+                f'alvo cabe na curva agora (precisa de '
+                f'{raio_necessario(d, erro):.2f} m de raio, tenho '
+                f"{self.par['raio_min_curva']:.2f}) — recuei "
+                f'{self.recuo_atual():.2f} m. Seguindo.')
+            self.encerra_re()
+
         self.publica(rumo, vel)
+
+    def recua(self, agora, yaw, d, erro):
+        """Ré reta até o alvo caber na curva — com orçamento e com voz.
+
+        O rumo alvo publicado é o rumo ATUAL: erro zero, giro zero. É o que
+        faz a ré ser reta sem a movimentação precisar saber de manobra
+        nenhuma; para ela é só uma velocidade negativa.
+        """
+        p = self.pose.pose.pose.position
+        if not self.recuando:
+            self.recuando = True
+            self.p_re0 = (p.x, p.y)
+            self.t_re0 = agora
+            self.get_logger().warn(
+                f'alvo a {d:.2f} m e {math.degrees(erro):.0f}° exige raio de '
+                f'{raio_necessario(d, erro):.2f} m, e o meu mínimo é '
+                f"{self.par['raio_min_curva']:.2f} m — ele está DENTRO do meu "
+                'círculo. Recuando para abrir a curva.')
+
+        if orcamento_de_re_estourado(self.recuo_atual(), agora - self.t_re0,
+                                     self.par['re_max_dist'],
+                                     self.par['re_max_s']):
+            self.get_logger().error(
+                f'RÉ ABORTADA: recuei {self.recuo_atual():.2f} m em '
+                f'{agora - self.t_re0:.1f} s e o alvo continua sem caber '
+                f'(precisa de {raio_necessario(d, erro):.2f} m de raio). '
+                'Parando aqui — o objetivo NÃO foi alcançado. '
+                'Mandar objetivo novo, ou medir bitola e zona morta para '
+                'liberar o pivô (BO-3).')
+            self.desistiu = True
+            self.encerra_re()
+            self.publica(yaw, 0.0)
+            return
+
+        self.publica(yaw, -self.par['v_min_viavel'])
+
+    def recuo_atual(self):
+        if self.p_re0 is None or self.pose is None:
+            return 0.0
+        p = self.pose.pose.pose.position
+        return math.hypot(p.x - self.p_re0[0], p.y - self.p_re0[1])
+
+    def encerra_re(self):
+        self.recuando = False
+        self.p_re0 = None
+        self.t_re0 = None
 
     def publica(self, rumo, vel):
         self.pub_rumo.publish(Float64(data=float(rumo)))

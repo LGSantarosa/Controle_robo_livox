@@ -10,6 +10,7 @@ import pytest
 from robot_motion.lei_de_rumo import (
     ajusta_para_zona_morta,
     comando,
+    comando_de_re,
     linear_de_avanco,
     norm_ang,
     piso_de_linear,
@@ -272,3 +273,45 @@ def test_pivo_disponivel_depende_da_bitola():
                            wz_max=1.0)
     # sem zona morta, sempre disponível
     assert pivo_disponivel(zona_morta=0.0, bitola=0.20, margem=0.0, wz_max=1.0)
+
+
+# ---------------------------------------------------------------- a ré
+
+def test_re_nunca_gira():
+    """Ré é RETA. Decisão do dono, e ela protege o que não sabemos.
+
+    Curvar de ré inverte a geometria da direção e coloca a boba na frente
+    enquanto ela ainda decide para onde apontar. Como manobra de espaço, a ré
+    não precisa curvar: recuar já abre o raio de curva de que o alvo precisa.
+    """
+    for v in [-0.05, -0.2, -0.5, -5.0]:
+        assert comando_de_re(v, ZONA_MORTA, MARGEM, V_MAX)[1] == 0.0
+
+
+def test_re_nunca_fica_abaixo_da_zona_morta():
+    """Ré fraca demais é o BO-3 outra vez, agora andando para trás.
+
+    Pedir 0,02 m/s de ré com zona morta de 0,15 é pedir robô parado em
+    silêncio no meio de uma manobra — pior que não manobrar, porque o log
+    fica limpo.
+    """
+    for pedida in [-0.001, -0.05, -0.1]:
+        v, _ = comando_de_re(pedida, ZONA_MORTA, MARGEM, V_MAX)
+        assert abs(v) >= ZONA_MORTA + MARGEM
+
+
+def test_re_respeita_o_teto_de_velocidade():
+    v, _ = comando_de_re(-10.0, ZONA_MORTA, MARGEM, V_MAX)
+    assert abs(v) <= V_MAX
+
+
+def test_re_e_sempre_negativa():
+    for pedida in [-0.001, -0.2, -10.0]:
+        assert comando_de_re(pedida, ZONA_MORTA, MARGEM, V_MAX)[0] < 0.0
+
+
+def test_re_recusa_velocidade_para_frente():
+    """A ré é modo explícito, não um sinal que se descobre no meio da lei."""
+    for pedida in [0.0, 0.3]:
+        with pytest.raises(ValueError):
+            comando_de_re(pedida, ZONA_MORTA, MARGEM, V_MAX)
