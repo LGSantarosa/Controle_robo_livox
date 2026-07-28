@@ -77,7 +77,12 @@ Visualization Manager:
       Line Style: Lines
       Pose Style: Arrows
       Arrow Length: 0.12
-    - Class: rviz_default_plugins/Pose
+    # PoseWithCovariance, não Pose: /initialpose é
+    # geometry_msgs/PoseWithCovarianceStamped, que é o que a ferramenta
+    # "2D Pose Estimate" publica. Com um display do tipo Pose aqui, o RViz
+    # via dois tipos no mesmo tópico, recusava a configuração INTEIRA e
+    # fechava — a tela ficava vazia sem explicação visível.
+    - Class: rviz_default_plugins/PoseWithCovariance
       Name: Partida
       Enabled: true
       Topic:
@@ -88,6 +93,8 @@ Visualization Manager:
       Color: 40; 200; 255
       Shape: Arrow
       Alpha: 1
+      Covariance:
+        Value: false
     - Class: rviz_default_plugins/Pose
       Name: Destino
       Enabled: true
