@@ -1,0 +1,245 @@
+<?xml version="1.0"?>
+<!--
+  GERADO por tools/mundo/gera_pista.py — não editar à mão.
+  Edite a planta no script e rode de novo; o mapa do Nav2 sai do mesmo lugar.
+
+  Pista de obstáculos: porta de 0,90 m, bloco solto, aperto de 0,80 m e um beco
+  sem saída. Sala de 12 x 8 m. O robô tem 0,50 m de largura.
+-->
+<sdf version="1.10">
+  <world name="pista_obstaculos">
+
+    <physics name="passo_fino" type="ode">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+    <plugin filename="gz-sim-contact-system" name="gz::sim::systems::Contact"/>
+    <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu"/>
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+
+    <gravity>0 0 -9.8</gravity>
+
+    <light type="directional" name="sol">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.9 0.9 0.9 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <direction>-0.5 0.3 -0.9</direction>
+    </light>
+
+    <model name="chao">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><plane><normal>0 0 1</normal><size>60 60</size></plane></geometry>
+          <surface>
+            <friction>
+              <ode><mu>1.0</mu><mu2>1.0</mu2></ode>
+            </friction>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <geometry><plane><normal>0 0 1</normal><size>60 60</size></plane></geometry>
+          <material>
+            <ambient>0.75 0.75 0.75 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="borda_sul">
+      <static>true</static>
+      <pose>6.000 0.100 0.300 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>12.000 0.200 0.600</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>12.000 0.200 0.600</size></box></geometry>
+          <material>
+            <ambient>0.55 0.55 0.58 1</ambient>
+            <diffuse>0.62 0.62 0.66 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="borda_norte">
+      <static>true</static>
+      <pose>6.000 7.900 0.300 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>12.000 0.200 0.600</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>12.000 0.200 0.600</size></box></geometry>
+          <material>
+            <ambient>0.55 0.55 0.58 1</ambient>
+            <diffuse>0.62 0.62 0.66 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="borda_oeste">
+      <static>true</static>
+      <pose>0.100 4.000 0.300 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.200 8.000 0.600</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.200 8.000 0.600</size></box></geometry>
+          <material>
+            <ambient>0.55 0.55 0.58 1</ambient>
+            <diffuse>0.62 0.62 0.66 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="borda_leste">
+      <static>true</static>
+      <pose>11.900 4.000 0.300 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.200 8.000 0.600</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.200 8.000 0.600</size></box></geometry>
+          <material>
+            <ambient>0.55 0.55 0.58 1</ambient>
+            <diffuse>0.62 0.62 0.66 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="divisoria_sul">
+      <static>true</static>
+      <pose>4.000 1.125 0.300 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.200 1.850 0.600</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.200 1.850 0.600</size></box></geometry>
+          <material>
+            <ambient>0.55 0.55 0.58 1</ambient>
+            <diffuse>0.62 0.62 0.66 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="divisoria_norte">
+      <static>true</static>
+      <pose>4.000 5.375 0.300 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.200 4.850 0.600</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.200 4.850 0.600</size></box></geometry>
+          <material>
+            <ambient>0.55 0.55 0.58 1</ambient>
+            <diffuse>0.62 0.62 0.66 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="bloco">
+      <static>true</static>
+      <pose>7.250 4.750 0.300 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>1.500 1.500 0.600</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>1.500 1.500 0.600</size></box></geometry>
+          <material>
+            <ambient>0.55 0.55 0.58 1</ambient>
+            <diffuse>0.62 0.62 0.66 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="aperto_sul">
+      <static>true</static>
+      <pose>9.000 1.700 0.300 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.200 3.000 0.600</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.200 3.000 0.600</size></box></geometry>
+          <material>
+            <ambient>0.55 0.55 0.58 1</ambient>
+            <diffuse>0.62 0.62 0.66 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="aperto_norte">
+      <static>true</static>
+      <pose>9.000 5.900 0.300 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.200 3.800 0.600</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.200 3.800 0.600</size></box></geometry>
+          <material>
+            <ambient>0.55 0.55 0.58 1</ambient>
+            <diffuse>0.62 0.62 0.66 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="beco_lateral">
+      <static>true</static>
+      <pose>10.100 1.350 0.300 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.200 2.300 0.600</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.200 2.300 0.600</size></box></geometry>
+          <material>
+            <ambient>0.55 0.55 0.58 1</ambient>
+            <diffuse>0.62 0.62 0.66 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="beco_fundo">
+      <static>true</static>
+      <pose>10.500 2.400 0.300 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>1.000 0.200 0.600</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>1.000 0.200 0.600</size></box></geometry>
+          <material>
+            <ambient>0.55 0.55 0.58 1</ambient>
+            <diffuse>0.62 0.62 0.66 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+  </world>
+</sdf>

@@ -11,8 +11,15 @@ venv/
 *.log
 controle_web/logs/
 
-# Mapas gerados pelo SLAM
-maps/
+# Mapas gerados pelo SLAM.
+# `maps/*` e não `maps/`: com o DIRETÓRIO ignorado o git nem entra nele, e a
+# exceção abaixo não teria efeito nenhum.
+maps/*
+# ...menos a pista da bancada do planner, que é gerada por
+# tools/mundo/gera_pista.py e precisa vir no clone para a bancada subir.
+# Editar a planta no script e RODAR DE NOVO — os arquivos abaixo são saída.
+!maps/pista_obstaculos.pgm
+!maps/pista_obstaculos.yaml
 
 # Colcon workspace (build artifacts deste repo)
 build/

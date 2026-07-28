@@ -259,6 +259,48 @@ O ponto perto e de lado deixou de ser inalcançável, e uma premissa da decisão
   foi validada só no simulador, e a única coisa que preocupa nela (a boba
   virando roda dianteira) é justamente o que aquele modelo não pode mostrar.
 
+## 🔀 2026-07-28 (2ª leva) — Navegação própria APOSENTADA, Nav2 entra
+
+O dono dirigiu o robô no simulador clicando no RViz e reprovou o resultado. O
+CSV da sessão está em `docs/dados/2026-07-28-cliques-movimentacao.csv` e o
+diagnóstico no diário. O resumo em um número: **0 amostras de giro parado em
+2714** — ele nunca virou no próprio eixo; alvo a 0,43 m custou 3,66 m de
+caminho e 57 s.
+
+- **Dois defeitos distintos, e só um era da ré.** O ciclo "ré e anda" (12
+  entradas, período 2,10 s) é da histerese da decisão 007, que solta a manobra
+  assim que o alvo cabe *naquele instante*. O **balão** é da movimentação:
+  `raio = v/wz`, com `wz_max` 1,0 (herdado, nunca medido) e o piso de linear
+  que a zona morta obriga — girando a 1,0 rad/s ele é obrigado a andar a
+  0,23 m/s.
+- **Decisão do dono**: aposentar a navegação ponto a ponto (`goal_navigator` +
+  a ré da decisão 007 — os dados ficam), trazer o **Nav2**, e por agora testar
+  **só o planner**. O seguidor provavelmente será nosso, como no robô 1.
+- **O "gira no lugar e anda reto" do robô 1 foi DESCARTADO** pelo dono: aquilo
+  era a única saída do chassi de 4 rodas, que não faz arco. Este faz curva boa
+  e não deve parar para virar.
+- **O que vale trazer do robô 1** (lido a pedido dele): a ré como recuperação
+  **por sintoma** com vão traseiro medido em metros (`rear_min_gap`), o
+  `twist_mux` com prioridade, e o carrot no plano quando houver seguidor.
+- ⚠️ **`wz_max = 1,0` nunca foi medido** e é 4× menor que o do robô 1
+  (2,4–4,5 rad/s). É ele que torna o pivô "impossível" por aritmética. Virou
+  item de bancada.
+
+### Bancada do planner (`ros2_packages/robot_planning/`)
+
+Dois cliques no RViz, dois caminhos desenhados, uma tabela de números —
+**sem robô, sem simulador, sem sensor**, de propósito: o defeito que trouxe o
+Nav2 nasceu na movimentação, e julgar planner junto com quem executa mistura as
+culpas. Compara **Theta\*** (o do robô 1) com **Smac Hybrid-A\*** em
+Reeds-Shepp, que respeita raio de curva e pode usar ré no próprio plano.
+
+Pista em `tools/mundo/gera_pista.py`, que gera **mapa do Nav2 e mundo do
+Gazebo da mesma planta**: porta 0,90 m, bloco solto, aperto 0,80 m, beco sem
+saída. Como rodar e como ler: `ros2_packages/robot_planning/README.md`.
+
+**Ainda não julgado pelo dono** — a decisão 008 (Nav2 na arquitetura, revisando
+a 003, a 006 e a 007) fica em aberto até ele ver os desenhos.
+
 ## ⏳ Próximos passos
 
 **Primeiro, com o robô (virou prioridade — a movimentação depende destes
@@ -278,15 +320,15 @@ números e hoje eles são chute):**
 
 **Sem o robô:**
 
-4. **Camada de movimentação** com a lei de frenagem, o piso de linear e o
-   detector de plantão (BO-3). Parâmetros em SI num lugar só, conservadores
-   até os ensaios chegarem.
-5. **Calibrar o simulador contra o robô** com os números dos ensaios —
+4. **Julgar o planner do Nav2** na bancada (`robot_planning`) — é o que está na
+   mesa agora. Depois disso: decisão 008, e o seguidor.
+5. **Modelo 3D real do robô** no simulador (o dono vai levantar), com o
+   Mid-360 no topo. É ele que troca a fonte de obstáculos do mapa estático
+   para o sensor, e corrige footprint e bitola do modelo.
+6. **Calibrar o simulador contra o robô** com os números dos ensaios —
    critério: mesma manobra, S de tamanho parecido.
-6. **Navegação** (ponto a ponto) por cima da movimentação. É dela o problema do
-   erro lateral: o controlador de rumo trava o rumo mas segue paralelo à rota,
-   deslocado — medido em 66 cm depois de uma meia-volta. E é dela também o giro
-   parado, que a zona morta proíbe abaixo de ~1 rad/s.
+7. **Seguidor próprio** por cima do que o Nav2 planejar (a navegação ponto a
+   ponto da decisão 006 foi aposentada em 28-07).
 
 ## Fósseis conscientes (remover em fatia própria)
 

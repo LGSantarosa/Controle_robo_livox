@@ -594,3 +594,84 @@ antes — a conclusão não tinha sido contaminada.
 
 Também gastei três chamadas descobrindo que `pkill -f 'gz sim'` casava com a
 própria linha de comando do shell que o chamava, e eu me matava.
+
+## 2026-07-28 (2ª leva) — O dono dirigiu, a navegação caiu, o Nav2 entrou
+
+Sessão ao vivo no RViz com o dono clicando objetivos, e o veredito dele em
+duas frases: *"essa ré tá uma merda"* e *"ao invés de ele só girar e ir reto,
+ele dá um puta balão para chegar num goal do lado"*.
+
+### O que o CSV da sessão mostrou (`docs/dados/2026-07-28-cliques-*.csv`)
+
+2714 amostras, 4 objetivos clicados. O número que resume tudo:
+**0 amostras de giro parado**. Ele não virou no próprio eixo uma única vez.
+
+| alvo clicado | distância | caminho andado | tempo | ré |
+|---|---|---|---|---|
+| (−1,02, −0,33) | 1,07 m | 3,04 m (2,8×) | 9,5 s | nenhuma |
+| (−1,58, 0,60) | 0,43 m | 3,66 m (8,5×) | 57 s | 12 entradas |
+| (−1,24, 0,23) | 0,40 m | 1,98 m (5,0×) | 60 s | 6 entradas |
+
+Raio de curva efetivo: mediana 0,37 m, mínimo 0,23 m.
+
+**Dois defeitos, e só um era da ré.** O ciclo "ré e anda" tem assinatura de
+ciclo-limite: 12 entradas com período de **2,10 s ± 0,54** e mordidas de 5,5 cm.
+Causa: a histerese da decisão 007 solta a ré assim que o alvo cabe *naquele
+instante*; o robô avança, a distância encurta, a geometria fecha de novo. Eu
+validei a ré com UMA geometria e o dono achou o ciclo clicando, de novo.
+
+O balão é outra coisa: é `v/wz` com `wz_max` em 1,0 (herdado, nunca medido) e o
+piso de linear que a zona morta obriga — girando a 1,0 rad/s ele é *obrigado* a
+andar a 0,23 m/s, e o raio mínimo é isso. Nenhum planner arrumaria.
+
+### O robô 1, lido a pedido do dono
+
+Ele mandou parar de consertar desenho meu e ler o `Controle_robo_web`. Estava
+certo. De lá:
+
+- **`path_follower`**: "gira no lugar e anda reto", com histerese (entra a 16°,
+  sai a 3°) e saída preditiva do giro. O comentário no código descreve o meu
+  defeito de hoje: *"girava e parava no MESMO limiar → limite-ciclo"*.
+- **`unstuck_supervisor`**: a ré de lá dispara **por sintoma** ("não se
+  deslocou por N s com goal ativo"), é sempre reta, tem orçamento, e mede o vão
+  traseiro em METROS num retângulo da largura do robô (`rear_min_gap`) — isso
+  nasceu de uma batida de ré real em 11-06-2026.
+- **`twist_mux` com prioridade** para humano/desencalhe.
+- E um número que me pegou: o robô 1 gira a **2,4–4,5 rad/s**. O nosso teto de
+  1,0 é o que torna o pivô "impossível" — e nunca foi medido.
+
+**O dono descartou o "gira no lugar"**: aquilo era a única saída do chassi de 4
+rodas, que não faz arco. Este faz curva boa, e não deve parar para virar.
+
+### Decisão do dono: Nav2
+
+Aposentar a navegação ponto a ponto (dados ficam), trazer o Nav2, e por **agora
+só o planner** — ver se ele desenha caminho que agrada. Seguidor provavelmente
+será nosso, como no robô 1.
+
+### A bancada do planner (`ros2_packages/robot_planning/`)
+
+Dois cliques, dois caminhos, uma tabela. Sem robô, sem simulador, sem sensor —
+de propósito: julgar o desenho isolado de quem o executa. Theta\* (o do robô 1)
+contra Smac Hybrid-A\* com Reeds-Shepp (respeita raio de curva e pode usar ré).
+
+Pista gerada por `tools/mundo/gera_pista.py`, que escreve **mapa do Nav2 e
+mundo do Gazebo da mesma planta**: porta de 0,90 m, bloco solto, aperto de
+0,80 m e beco sem saída, com o robô de 0,50 m.
+
+### Três defeitos meus, achados testando a própria bancada
+
+1. **O beco que desenhei era uma caixa lacrada** — sem entrada. Os dois
+   planners recusavam o destino, corretamente, e o caso não testava nada.
+2. **A medida de raio mínimo estava errada**: eu calculava curvatura entre
+   pontos vizinhos de um caminho suavizado a 5 cm, e media ruído de
+   arredondamento — acusava 0,01 m num planner configurado com 0,25 m. Corrigido
+   reamostrando a 0,20 m.
+3. **Preempção silenciosa**: o `planner_server` atende um objetivo por vez, e eu
+   pedia os dois caminhos em paralelo. O segundo preemptava o primeiro, e o
+   preemptado voltava com **caminho vazio e código de sucesso**. Aparecia como
+   "Theta\* sem caminho" só no primeiro clique de cada corrida (frio, ele
+   demorava mais e era atropelado). Antes de achar a causa eu culpei o costmap
+   e "consertei" uma corrida que não existia.
+
+Seis pares (partida, destino) rodados nos dois planners, todos com caminho.

@@ -1,0 +1,111 @@
+# Bancada do planner — Nav2 planejando SEM mover o robô (decisão 008).
+#
+# Só o `planner_server` e o `map_server` sobem aqui. Não há controlador, não há
+# seguidor, não há robô: o objetivo é julgar o CAMINHO desenhado, isolado de
+# quem o executa. Isso importa porque o defeito que motivou esta bancada (o
+# "balão" em alvo perto) nasceu na movimentação, e misturar as duas coisas
+# esconde de quem é a culpa.
+#
+# ⚠️ Os números de geometria abaixo descrevem o robô que o simulador tem hoje
+# (caixa 0,50 × 0,50). O modelo 3D real está a caminho e vai corrigi-los.
+
+map_server:
+  ros__parameters:
+    yaml_filename: ""        # a launch preenche com maps/pista_obstaculos.yaml
+
+planner_server:
+  ros__parameters:
+    expected_planner_frequency: 1.0
+
+    # DOIS planners no ar ao mesmo tempo, de propósito: a bancada pede o
+    # caminho aos dois para o MESMO par (início, destino) e publica os dois
+    # para comparação lado a lado. Comparar planners em runs separadas é como
+    # comparar fotos de dias diferentes.
+    planner_plugins: ["theta", "hibrido"]
+
+    # --- Theta* : o planner do robô 1 ---
+    # Caminho em linha reta com cantos, sem noção de raio de curva: supõe que
+    # o robô vira no lugar. É o que o robô 1 usa, e lá funciona porque aquele
+    # chassi SÓ sabe girar parado.
+    theta:
+      plugin: "nav2_theta_star_planner::ThetaStarPlanner"
+      how_many_corners: 8
+      w_euc_cost: 1.0          # peso da distância
+      w_traversal_cost: 2.0    # peso de passar perto de obstáculo
+      use_final_approach_orientation: false
+
+    # --- Smac Hybrid-A* : respeita RAIO DE CURVA ---
+    # Desenha caminho que o robô consegue seguir curvando, sem parar para
+    # girar. É o candidato certo para este chassi, que faz curva boa —
+    # diferente do robô 1.
+    hibrido:
+      plugin: "nav2_smac_planner::SmacPlannerHybrid"
+      tolerance: 0.25
+      downsample_costmap: false
+      allow_unknown: false
+      max_iterations: 1000000
+      max_on_approach_iterations: 1000
+      max_planning_time: 5.0
+
+      # Raio mínimo de curva [m]. MEDIDO no simulador em 28-07: a curva mais
+      # fechada que o robô descreveu foi 0,23 m, e a mediana 0,37 m. O limite
+      # vem do teto de giro (1,0 rad/s, não medido) e do piso de linear que a
+      # zona morta obriga. Se o teto de giro real for maior, este número cai.
+      minimum_turning_radius: 0.25
+
+      # REEDS_SHEPP deixa o PLANNER usar ré. É o mesmo recurso que tentamos
+      # fazer à mão na decisão 007 — aqui ele nasce do planejamento, com o
+      # caminho inteiro já sabendo onde a ré entra, em vez de ser manobra de
+      # emergência decidida no susto. DUBIN proíbe ré (só para frente).
+      motion_model_for_search: "REEDS_SHEPP"
+      angle_quantization_bins: 72
+      reverse_penalty: 2.0     # ré é permitida, mas nunca de graça
+      change_penalty: 0.0
+      non_straight_penalty: 1.2
+      cost_penalty: 2.0
+      retrospective_penalty: 0.015
+      analytic_expansion_ratio: 3.5
+      analytic_expansion_max_length: 3.0
+      smooth_path: true
+      smoother:
+        max_iterations: 1000
+        w_smooth: 0.3
+        w_data: 0.2
+        tolerance: 1.0e-10
+        do_refinement: true
+        refinement_num: 2
+
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      update_frequency: 1.0
+      publish_frequency: 1.0
+      global_frame: map
+      robot_base_frame: base_link
+      resolution: 0.05
+      track_unknown_space: false
+
+      # Raio do robô [m]: circunscrito da caixa 0,50 × 0,50 = 0,354.
+      # Vira 0,36 por segurança. O modelo 3D real corrige isto.
+      robot_radius: 0.36
+
+      plugins: ["static_layer", "inflation_layer"]
+
+      static_layer:
+        plugin: "nav2_costmap_2d::StaticLayer"
+        map_subscribe_transient_local: true
+
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        # A inflação é a alavanca que decide se ele aceita o aperto de 0,80 m
+        # da pista: com raio 0,36, sobram 0,04 m de folga de cada lado. Um
+        # valor generoso aqui faz o planner recusar o vão e dar a volta — o
+        # que pode ser a coisa CERTA, e é justamente o que a bancada existe
+        # para você julgar.
+        inflation_radius: 0.45
+        cost_scaling_factor: 3.0
+
+    # Este bloco existe porque o costmap do Nav2 pede pose do robô mesmo só
+    # planejando. Na bancada, uma TF fixa segura essa exigência e o caminho é
+    # calculado entre os DOIS pontos que você clica (`use_start`), não a
+    # partir do robô. Quando o robô entrar, a TF fixa sai.
