@@ -19,12 +19,13 @@
 # saía acima do teto e era engolida), então precisam estar no laço aqui, senão
 # o simulador não reproduz o problema que viemos estudar.
 #
-# ⚠️ DIVERGÊNCIA CONHECIDA — wheel_separation
-#   aqui (simulador): 0.20   ← medida informada para o modelo
-#   robô real:        0.32   ← valor HERDADO, nunca medido com trena
-# Enquanto os dois não forem reconciliados, um controlador ajustado aqui vai
-# comandar giro diferente no robô: o diff_drive_controller usa esse número para
-# converter cmd_vel em rad/s de roda. Medir o robô e igualar os dois.
+# ✅ DIVERGÊNCIA RESOLVIDA POR MEDIÇÃO — 2026-07-29
+#   Era: simulador 0.20 / robô real 0.32, ambos herdados e nunca medidos.
+#   Trena no robô: por fora das rodas 315 mm, por dentro 225 mm
+#   → bitola real = (315+225)/2 = 0.270. Nenhum dos dois valores acertou, e
+#   erravam para lados OPOSTOS: o simulador girava 26% a menos que o comandado
+#   e o robô 19% a mais.
+#   Raio: 0.0825 (roda de 6,5" nominal) → 0.080 medido (diâmetro 160 mm).
 
 controller_manager:
   ros__parameters:
@@ -45,8 +46,8 @@ hoverboard_base_controller:
     left_wheel_names: ["left_wheel_joint"]
     right_wheel_names: ["right_wheel_joint"]
 
-    wheel_separation: 0.20
-    wheel_radius: 0.0825
+    wheel_separation: 0.270
+    wheel_radius: 0.080
 
     wheel_separation_multiplier: 1.0
     left_wheel_radius_multiplier: 1.0

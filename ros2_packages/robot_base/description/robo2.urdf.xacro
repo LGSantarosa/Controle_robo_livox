@@ -7,7 +7,9 @@
   e o MESMO diff_drive_controller. Isso é de propósito: o que se ajusta no
   simulador só transfere para o robô se a cadeia de controle for a mesma.
 
-  ⚠️ As dimensões são ESTIMADAS — o robô real ainda não foi medido com trena.
+  Dimensões da caixa e das rodas MEDIDAS COM TRENA em 2026-07-29 (ver DIARIO).
+  O que ainda é estimativa está marcado caso a caso abaixo — sobretudo as
+  posições longitudinais (roda_x, boba_x), o trail da boba e as massas.
   Todos os números ajustáveis estão no bloco de propriedades abaixo, de propósito:
   a calibração vai ser comparar o comportamento daqui com o do robô real e mexer
   nestes valores, então eles têm que estar num lugar só.
@@ -21,27 +23,52 @@
 
   <!-- Caixa de madeira. Fundo a `altura_solo` do chão: quem toca o chão são as
        rodas, nunca a caixa. -->
-  <xacro:property name="caixa_x"     value="0.50"/>
-  <xacro:property name="caixa_y"     value="0.50"/>
-  <xacro:property name="caixa_z"     value="0.30"/>
-  <xacro:property name="altura_solo" value="0.10"/>
+  <!-- MEDIDO 2026-07-29: 433 × 455 × 145 mm, fundo a 85,2 mm do chão.
+       Confere com a altura total medida (85,2 + 145 = 230,2 mm contra 233,5
+       medidos do chão ao topo; 3,3 mm de tampa/folga). -->
+  <xacro:property name="caixa_x"     value="0.433"/>
+  <xacro:property name="caixa_y"     value="0.455"/>
+  <xacro:property name="caixa_z"     value="0.145"/>
+  <xacro:property name="altura_solo" value="0.0852"/>
 
   <!-- Rodas motrizes (hoverboard). A separação é o valor que o
        diff_drive_controller usa para converter cmd_vel em rad/s de roda —
        errar aqui erra TODO comando de giro. -->
-  <xacro:property name="roda_raio"      value="0.0825"/>
-  <xacro:property name="roda_largura"   value="0.05"/>
-  <xacro:property name="roda_separacao" value="0.20"/>
-  <!-- Eixo das motrizes adiantado: é o que faz a traseira ser a ponta solta. -->
-  <xacro:property name="roda_x"         value="0.15"/>
+  <!-- MEDIDO 2026-07-29 com trena:
+         por fora das duas rodas .... 315 mm
+         por dentro das duas rodas .. 225 mm
+       → bitola (centro a centro) = (315+225)/2 = 270 mm
+       → espessura da roda        = (315-225)/2 =  45 mm
+       Diâmetro da roda medido de frente: 160 mm → raio 0,080.
+       Os valores antigos (0.20 aqui, 0.32 no robô) eram AMBOS herdados e
+       AMBOS errados, para lados opostos. -->
+  <xacro:property name="roda_raio"      value="0.080"/>
+  <xacro:property name="roda_largura"   value="0.045"/>
+  <xacro:property name="roda_separacao" value="0.270"/>
+  <!-- Eixo das motrizes adiantado: é o que faz a traseira ser a ponta solta.
+       MEDIDO 2026-07-29: da ponta da roda até a face frontal da caixa são 55 mm.
+         face frontal = 0.433/2 = 0.2165 → ponta da roda = 0.1615
+         centro do eixo = 0.1615 - 0.080 (raio) = 0.0815
+       Era 0.15 estimado: o eixo real está 68,5 mm MAIS ATRÁS. Com isso o
+       entre-eixos (eixo → pivô da boba) cai de 0.330 para 0.2615 — a traseira
+       é uma ponta solta 21% mais curta do que vínhamos simulando. -->
+  <xacro:property name="roda_x"         value="0.0815"/>
 
   <!-- Roda boba. O `boba_trail` (avanço) é o deslocamento horizontal entre o
        eixo do pivô e o contato da roda com o chão. É ELE que faz a boba ser
        jogada pra fora quando o robô gira, e que a obriga a "dar meia volta"
        antes de acompanhar. Trail zero = boba ideal = simulador que mente. -->
-  <xacro:property name="boba_raio"  value="0.05"/>
-  <xacro:property name="boba_x"     value="-0.18"/>
-  <xacro:property name="boba_trail" value="0.04"/>
+  <!-- ⚠️ NÃO MEDIDOS — valores PROVISÓRIOS, escolhidos para serem POSSÍVEIS.
+       O anterior (raio 0,05 = roda de 100 mm) era impossível: o vão inteiro sob
+       a caixa é de 85,2 mm, e a boba precisa caber ali INTEIRA (chapa + pivô +
+       garfo + roda). Descontando o ferro, sobra roda de ~2" → raio 0,025.
+       O trail acompanha: em boba giratória ele fica em 15–25% do diâmetro da
+       roda, ou seja ~0,01 numa roda de 50 mm — e não os 0,04 de antes, que
+       EXAGERAVAM em 4× o quanto a boba é jogada pra fora no giro.
+       Medir o diâmetro da rodinha fecha os dois de uma vez. -->
+  <xacro:property name="boba_raio"  value="0.025"/>
+  <xacro:property name="boba_x"     value="-0.19"/>
+  <xacro:property name="boba_trail" value="0.01"/>
 
   <!-- Massas (total ~10 kg — o robô é leve).
        A inércia de guinada que sai daqui é o que produz o sobrepasso: um robô
@@ -61,9 +88,16 @@
   <xacro:property name="caixa_cz"  value="${altura_solo + caixa_z/2}"/>
   <xacro:property name="boba_pivo_z" value="${altura_solo}"/>
 
-  <!-- Inércia de caixa sólida -->
-  <xacro:macro name="inercia_caixa" params="m x y z">
+  <!-- Inércia de caixa sólida.
+       ox/oy/oz = onde o CENTRO DE MASSA fica dentro do link. Sem isso o URDF
+       assume (0,0,0), e a origem do base_link está NO CHÃO: a caixa aparecia
+       desenhada a 85–230 mm mas a massa era simulada rente ao solo. O robô
+       simulado virava uma panqueca — não rolava e, o que importa aqui, não
+       fazia TRANSFERÊNCIA DE PESO. Sem ela a boba nunca fica leve ao acelerar,
+       e é justamente a boba leve que escorrega de lado. -->
+  <xacro:macro name="inercia_caixa" params="m x y z ox:=0 oy:=0 oz:=0">
     <inertial>
+      <origin xyz="${ox} ${oy} ${oz}"/>
       <mass value="${m}"/>
       <inertia ixx="${m*(y*y+z*z)/12}" iyy="${m*(x*x+z*z)/12}" izz="${m*(x*x+y*y)/12}"
                ixy="0" ixz="0" iyz="0"/>
@@ -91,12 +125,14 @@
       <origin xyz="0 0 ${caixa_cz}"/>
       <geometry><box size="${caixa_x} ${caixa_y} ${caixa_z}"/></geometry>
     </collision>
-    <xacro:inercia_caixa m="${massa_chassi}" x="${caixa_x}" y="${caixa_y}" z="${caixa_z}"/>
+    <xacro:inercia_caixa m="${massa_chassi}" x="${caixa_x}" y="${caixa_y}" z="${caixa_z}"
+                         oz="${caixa_cz}"/>
   </link>
 
-  <!-- O centro de massa fica alto (caixa a 0,10–0,40 do chão) em relação à
-       bitola de 0,20. Isso é fiel ao robô e importa: alimenta a rolagem que
-       acompanha o giro brusco. -->
+  <!-- Com as medidas reais, a caixa vai de 0,0852 a 0,2302 do chão e a bitola é
+       0,270 — o robô é mais baixo e mais largo do que o modelo estimado supunha.
+       A tendência a rolar no giro brusco é MENOR do que a que vínhamos
+       simulando; se a bancada mostrava rolagem, parte dela era do modelo. -->
 
   <!-- ==================== RODAS MOTRIZES ==================== -->
 
@@ -136,7 +172,8 @@
       <geometry><box size="${boba_trail} 0.03 ${boba_raio}"/></geometry>
       <material name="metal"><color rgba="0.5 0.5 0.55 1"/></material>
     </visual>
-    <xacro:inercia_caixa m="${massa_garfo}" x="${boba_trail}" y="0.03" z="${boba_raio}"/>
+    <xacro:inercia_caixa m="${massa_garfo}" x="${boba_trail}" y="0.03" z="${boba_raio}"
+                         ox="${-boba_trail/2}" oz="${-boba_raio/2}"/>
   </link>
 
   <joint name="caster_swivel_joint" type="continuous">

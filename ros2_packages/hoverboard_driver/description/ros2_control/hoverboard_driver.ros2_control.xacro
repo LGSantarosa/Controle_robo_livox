@@ -6,7 +6,9 @@
     <ros2_control name="${name}" type="system">
       <hardware>
         <plugin>hoverboard_driver/hoverboard_driver</plugin>
-        <param name="wheel_radius">0.0825</param>
+        <!-- MEDIDO 2026-07-29: diâmetro 160 mm. Era 0.0825 (roda de 6,5"
+             nominal), herdado e nunca medido neste robô. -->
+        <param name="wheel_radius">0.080</param>
         <param name="max_velocity">1.0</param>
         <param name="device">/dev/ttyUSB0</param>
       </hardware>

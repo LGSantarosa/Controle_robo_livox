@@ -675,3 +675,131 @@ mundo do Gazebo da mesma planta**: porta de 0,90 m, bloco solto, aperto de
    e "consertei" uma corrida que não existia.
 
 Seis pares (partida, destino) rodados nos dois planners, todos com caminho.
+
+## 📏 2026-07-29 — A trena no robô: dois números herdados, ambos errados
+
+Primeira vez que o robô 2 é medido. Até hoje **toda** dimensão do modelo era
+estimativa ou herança, e o `ESTADO_PROJETO.md` já registrava isso como a dívida
+nº 1. O dono passou as medidas; abaixo o que elas derrubaram.
+
+### As medidas
+
+```
+caixa .................... 433 × 455 × 145 mm
+fundo da caixa ao chão ... 85,2 mm
+altura total (sem lidar) . 233,5 mm   (confere: 85,2 + 145 = 230,2; 3,3 mm de tampa)
+rodas, por fora .......... 315 mm
+rodas, por dentro ........ 225 mm
+diâmetro da roda ......... 160 mm
+ponta da roda → frente ... 55 mm
+```
+
+Da terceira e quarta linha saem dois números de uma vez, sem medir nenhum
+outro: bitola = (315+225)/2 = **270 mm**, espessura da roda = (315−225)/2 =
+**45 mm**.
+
+### O achado: a bitola errava dos DOIS lados, em sentidos opostos
+
+O `hoverboard_controllers_sim.yaml` carregava um bloco `⚠️ DIVERGÊNCIA
+CONHECIDA` escrito à mão: simulador com 0,20, robô real com 0,32, nenhum dos
+dois medido. A trena diz 0,270 — **nenhum dos dois acertou**, e o efeito é em
+direções contrárias:
+
+| | bitola usada | giro real vs comandado |
+|---|---|---|
+| Simulador | 0,20 | gira **26% a menos** (90° → 67°) |
+| Robô real | 0,32 | gira **19% a mais** (90° → 107°) |
+
+Ou seja: sintonizar o controlador de rumo na bancada e mandar pro robô erraria
+duas vezes, em sentidos opostos. É a pior forma de erro possível — a bancada
+teria parecido boa e o robô teria piorado. Não é hipótese: era o estado do repo
+até hoje de manhã.
+
+O raio caiu junto: 0,0825 (roda de 6,5" nominal, herdado) → **0,080** medido.
+Sozinho ele é ~3% de erro de odometria — 30 cm a cada 10 m percorridos.
+
+### O eixo estava 68,5 mm à frente de onde está
+
+Dos 55 mm entre a ponta da roda e a face frontal: face em 0,2165, ponta em
+0,1615, centro do eixo em **0,0815** — contra 0,15 estimado. O entre-eixos
+(eixo motriz → pivô da boba) cai de 0,330 para 0,2615, **21% menor**. Importa
+direto: a traseira é uma ponta solta mais curta do que vínhamos simulando, com
+menos vantagem mecânica pra jogar a boba pra fora.
+
+### Defeito achado conferindo: o chassi tinha massa no chão
+
+O `<inertial>` do `base_link` não tinha `<origin>`. Sem ele o URDF assume
+`(0,0,0)`, e a origem do `base_link` está **no nível do solo**. A caixa era
+desenhada a 85–230 mm e os 5,8 kg eram simulados a 0 mm.
+
+```
+CoM do robô, antes ....... z = 0,0173 m
+CoM do robô, corrigido ... z = 0,1244 m     (7,2× mais alto)
+```
+
+O simulador rodava com uma panqueca colada no chão: sem rolagem e — o que
+importa aqui — **sem transferência de peso**. É o mecanismo central do problema
+que estudamos: ao acelerar, o peso sai da traseira, a boba fica leve, perde
+força normal e **escorrega mais de lado**. Com a massa no solo esse mecanismo
+simplesmente não existia; a carga na boba era constante o tempo todo.
+
+Delimitando o estrago, porque ele não é total: o deslocamento é só em Z, e
+inércia de guinada (`izz`) não muda com deslocamento vertical. **A inércia de
+rumo estava certa** — o trabalho de oscilação de rumo feito na bancada continua
+válido. Errado estava rolagem, arfagem e transferência de peso.
+
+### A boba do modelo era geometricamente impossível
+
+`boba_raio` valia 0,05 — roda de **100 mm**. Mas o vão inteiro sob a caixa é de
+**85,2 mm**, e a boba precisa caber ali com chapa, pivô e garfo. A roda sozinha
+era mais alta que o conjunto todo. O valor morreu por restrição, sem precisar de
+medida nova: o robô estar reto a 85,2 mm já prova que ele é falso.
+
+Provisórios que entraram, escolhidos para serem POSSÍVEIS (não medidos):
+`boba_raio` 0,025 (roda de ~2", descontando o ferro) e `boba_trail` 0,01
+(15–25% do diâmetro é o típico). O trail anterior de 0,04 **exagerava em 4×** o
+quanto a boba é jogada pra fora. Modelo que exagera o defeito engana tanto
+quanto modelo que o esconde.
+
+### O teste do trail reprovou o valor certo
+
+`test_boba_tem_trail_nao_nulo` exigia trail > 10 mm fixos, e o novo valor é
+exatamente 10 mm. O teste fez o trabalho dele — ele existe pra impedir que
+alguém zere o trail e transforme o simulador num robô ideal. Mas o piso de 10 mm
+foi escrito quando o modelo supunha roda de 100 mm: nessa escala 10 mm é
+desprezível. Numa roda de 50 mm, 10 mm é o valor **típico**, e o piso absoluto
+reprovava justamente o número correto.
+
+Corrigido para limite **relativo**: `trail > 0,2 · raio_da_roda`. Preserva a
+intenção e vale em qualquer tamanho. Não subimos o trail pra passar no teste —
+seria ajustar o robô pra agradar o teste.
+
+### O pivô continua indefinido, e agora depende da zona morta
+
+O `ESTADO_PROJETO.md` registrava que a bitola decidia se o robô consegue
+pivotar. Reescalando os dois casos já calculados para a bitola medida:
+
+| caso | wz p/ pivotar (bitola suposta) | com bitola 0,270 |
+|---|---|---|
+| simulador (zona morta 0,10) | 1,30 rad/s | **0,96 rad/s** — cabe no teto de 1,0, com 4% de folga |
+| robô real (zona morta 0,15) | 1,25 rad/s | **1,48 rad/s** — impossível, e PIOR que antes |
+
+A bitola medida **não resolveu a pergunta**: ela caiu entre os dois palpites, e
+agora quem decide é a **zona morta**, que segue sem medir. Com 4% de folga no
+melhor caso, isso não é margem nenhuma. A zona morta virou o item nº 1 da
+bancada, no lugar da bitola.
+
+### Estado
+
+282 testes verdes. Ainda **não medidos**: diâmetro da rodinha da boba (fecha
+`boba_raio` e `boba_trail` de uma vez), massas, e a largura da caixa **na altura
+das rodas** — as rodas ficam 70 mm para dentro da parede lateral, então ou a
+caixa tem recortes ou a parte de baixo é mais estreita que os 455 mm do topo.
+Não afeta giro nem odometria; afeta o footprint que o Nav2 usa pra decidir se
+passa num vão.
+
+Em aberto com o dono: trocar a boba por uma **roda omnidirecional**. Não é
+contornar o problema — omni não tem pivô nem trail, então elimina a causa da
+instabilidade de rumo em vez de mascará-la. Mas invalida a junta de pivô, o
+trail, o atrito de pivô e boa parte do `robo2.gazebo.xacro`. Se for pra frente,
+é decisão registrada, não ajuste.

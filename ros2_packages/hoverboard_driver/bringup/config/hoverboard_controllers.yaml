@@ -13,9 +13,12 @@ hoverboard_base_controller:
     left_wheel_names: ["left_wheel_joint"]
     right_wheel_names: ["right_wheel_joint"]
 
-    wheel_separation: 0.32
+    # MEDIDOS COM TRENA NESTE ROBÔ em 2026-07-29. Antes: separation 0.32 e
+    # radius 0.0825, ambos herdados e nunca medidos aqui. Com 0.32 o robô
+    # girava ~19% A MAIS do que o comandado (90° viravam ~107°).
+    wheel_separation: 0.270
     #wheels_per_side: 1  # actually 2, but both are controlled by 1 signal
-    wheel_radius: 0.0825
+    wheel_radius: 0.080
 
     wheel_separation_multiplier: 1.0
     left_wheel_radius_multiplier: 1.0

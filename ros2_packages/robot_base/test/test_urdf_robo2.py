@@ -88,9 +88,18 @@ def test_boba_tem_trail_nao_nulo(urdf):
 
     É o parâmetro que faz este simulador reproduzir o robô em vez de um robô
     ideal. Zerar isso invalida qualquer ajuste feito aqui.
+
+    O limite é RELATIVO ao raio da roda, não absoluto. O piso anterior (10 mm
+    fixos) foi escrito quando o modelo supunha uma roda de 100 mm — nessa escala
+    10 mm de trail é desprezível e o piso fazia sentido. Medido o robô em
+    2026-07-29, a boba cabe em 85,2 mm de vão e a roda é de ~50 mm; aí 10 mm de
+    trail passa a ser o valor TÍPICO (15–25% do diâmetro), e o piso absoluto
+    reprovava justamente o valor correto. Amarrar à roda vale em qualquer
+    tamanho e preserva a intenção: o trail não pode sumir.
     """
     dx, _, _ = _xyz(_junta(urdf, 'caster_wheel_joint'))
-    assert abs(dx) > 0.01, 'trail da boba sumiu — simulador vira robô ideal'
+    raio = _raio_cilindro(urdf, 'caster_wheel')
+    assert abs(dx) > 0.2 * raio, 'trail da boba sumiu — simulador vira robô ideal'
 
 
 def test_pivo_da_boba_tem_atrito(urdf):

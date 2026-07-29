@@ -1,7 +1,7 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-07-28**.
+> Versionado na `main`. Atualizado em **2026-07-29**.
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
@@ -31,12 +31,31 @@
   localização) verificada em hardware**; movimentação e navegação ponto a
   ponto escritas e verificadas em simulador, à espera dos números do robô.
 
-### Medidas ainda NÃO conferidas (afetam tudo acima)
+### Medidas ✅ CONFERIDAS COM TRENA (2026-07-29)
 
-`wheel_separation: 0.32` e `wheel_radius: 0.0825` no controlador diferencial
-são valores **herdados, não medidos neste robô**. Erram a odometria de roda e
-a conversão do comando em rad/s. **Medir com trena** antes de calibrar
-movimentação.
+```
+caixa 433 × 455 × 145 mm, fundo a 85,2 mm do chão
+bitola 270 mm   roda Ø160 mm (raio 0,080)   espessura 45 mm
+eixo motriz a +81,5 mm do centro (era 0,15 estimado)
+```
+
+A bitola era o item nº 1 e **os dois valores herdados estavam errados, em
+sentidos opostos**: simulador com 0,20 girava 26% a MENOS que o comandado,
+robô real com 0,32 girava 19% a MAIS. Sintonizar rumo na bancada e levar pro
+robô erraria duas vezes, em direções contrárias. Raio: 0,0825 → 0,080 (~3% de
+odometria, 30 cm a cada 10 m). Detalhes na entrada 07-29 do `docs/DIARIO.md`.
+
+### Medidas que AINDA faltam
+
+1. **Diâmetro da rodinha da boba** — fecha `boba_raio` e `boba_trail` de uma
+   vez. Os valores no arquivo hoje são PROVISÓRIOS (0,025 / 0,01), escolhidos
+   só para serem possíveis: o anterior (roda de 100 mm) não cabia nos 85,2 mm
+   de vão. Governam o comportamento que o projeto inteiro quer reproduzir.
+2. **Largura da caixa na altura das rodas** — as rodas ficam 70 mm para dentro
+   da parede lateral, então ou há recortes ou a parte de baixo é mais estreita
+   que os 455 mm do topo. Não afeta giro nem odometria; afeta o footprint que
+   o Nav2 usa pra decidir se passa num vão.
+3. **Massas** — os 10 kg (5,8 + 2 + 2 + 0,2) seguem estimados.
 
 ## 2026-07-14 — Nascimento do repo: clone do robô 1 + demolição
 
@@ -228,7 +247,12 @@ ainda guarda os fósseis do robô 1.
   próximos** (chegou a 0,168 m de um alvo com raio de chegada de 0,15). Com a
   bitola real presumida (0,32), o mesmo caso dá 0,62 rad/s e o pivô **existe**.
   O nó diz qual dos dois é o caso, em voz alta, na subida.
-  **Isso torna medir a bitola com trena mais urgente que medir a zona morta.**
+  **↑ SUPERADO em 2026-07-29** — a bitola foi medida: 0,270. Ela caiu ENTRE os
+  dois palpites e **não resolveu a pergunta**. Reescalando: com zona morta 0,10
+  o pivô exige 0,96 rad/s (cabe no teto de 1,0, mas com 4% de folga — o que não
+  é margem nenhuma); com zona morta 0,15, exige 1,48 rad/s e é impossível, PIOR
+  que os 1,25 que se supunha. Quem decide agora é a **zona morta**, ainda não
+  medida — ela tomou o lugar da bitola como item nº 1 da bancada.
 - **Falta**: desviar de obstáculo (fatia B) — depende do Livox e de percepção
   que o repo ainda não tem.
 
@@ -255,6 +279,11 @@ O ponto perto e de lado deixou de ser inalcançável, e uma premissa da decisão
 - ⚠️ **Com os parâmetros de hoje o pivô não existe em NENHUM dos dois perfis** —
   no real, pivotar exigiria 1,25 rad/s contra teto de 1,0 (`zona_morta` 0,15,
   `bitola` 0,32). Medida a bitola, `raio_min_curva: 0` desliga a ré sozinho.
+  **↑ A expectativa NÃO se cumpriu (07-29).** A bitola medida (0,270) é MENOR
+  que os 0,32 supostos, e braço menor exige MAIS wz: o pivô passa a exigir
+  1,48 rad/s nesse cenário, contra os 1,25 que se temia. Medir a bitola
+  **piorou** o caso em vez de resolvê-lo, e a ré da decisão 007 segue
+  necessária. Só a zona morta pode mudar isso agora.
 - **A boba do simulador é decorativa** — ver BO-4. Consequência imediata: a ré
   foi validada só no simulador, e a única coisa que preocupa nela (a boba
   virando roda dianteira) é justamente o que aquele modelo não pode mostrar.
@@ -306,10 +335,11 @@ a 003, a 006 e a 007) fica em aberto até ele ver os desenhos.
 **Primeiro, com o robô (virou prioridade — a movimentação depende destes
 números e hoje eles são chute):**
 
-1. **Medir `wheel_separation` e `wheel_radius` com trena.** O
-   `diff_drive_controller` usa os dois pra converter comando em rad/s de roda:
-   errar aqui erra todo ensaio abaixo. (0,20 no simulador × 0,32 no controlador
-   real; nenhum dos dois medido.)
+1. ~~Medir `wheel_separation` e `wheel_radius` com trena.~~ **FEITO 07-29**:
+   bitola 0,270 e raio 0,080, os dois já no URDF e nos três YAMLs. Em seu lugar,
+   o novo item nº 1 é a **zona morta** — é ela que agora decide se o robô
+   consegue pivotar (ver a nota superada acima), e a folga no melhor caso é de
+   4%. Medir a rodinha da boba junto, se der.
 2. **Rodar o protocolo de `tools/banco/README.md`** — zona morta, `a_dec`,
    curva por velocidade, aceleração, **e o ensaio 6 (reta com cutucão, ida ×
    ré)**, que é o que valida a manobra da decisão 007 e ataca o BO-4. O dono só
