@@ -365,6 +365,47 @@ na mesma simulação, uma corrida por perfil de zona morta. CSVs em
   pareceria boa e o robô pioraria. A bancada passa a rodar uma **faixa** de
   raio.
 
+## 📐 2026-07-29 (3ª leva) — A régua da bancada do planner estava errada
+
+`tools/planner/varredura_raio.py` (novo): 6 casos × 4 raios mínimos × 2
+planners, headless, sem cliques. Antes de responder a pergunta, achou um defeito
+na régua da bancada.
+
+- **`mede()` lia cúspide de Reeds-Shepp como curva fechadíssima.** No caso real
+  `perto_de_lado` com 0,46 m configurado, ela acusava raio 0,125 m, 181° de giro
+  e ZERO inversões — as três erradas ao mesmo tempo, e **todas contra quem usa
+  ré**. O caminho estava certo (frente · ré por 0,86 m · frente, arcos de
+  ~0,41 m); a régua, não. Suavizador e planner foram descartados como causa
+  antes do conserto, cada um com seu teste.
+- Consertado partindo o caminho nas cúspides. **5 testes novos**, com geometria
+  do caminho real. A bancada não tinha teste nenhum — foi assim que sobreviveu.
+- **Trecho curto entre cúspides agora é pulado e CONTADO** (coluna `curt`), em
+  vez de virar `raio_min = 0,00`. Dentro desse defeito havia um achado de
+  verdade: com raio grande, o Smac **treme em cima do alvo** — no `bloco` com
+  0,46 m são 4 inversões dentro de uma caixa de 9 cm, depois de 4,86 m limpos.
+  Fica para o seguidor.
+- **Por consertar, de propósito**: o `giro` de arco contínuo sai curto (90° são
+  lidos como 50°). Viés oposto ao da cúspide na mesma coluna; corrigir junto
+  impediria saber qual moveu qual número. Travado em teste que o descreve.
+
+### O veredito da varredura: o ranking não vira, ele se acentua
+
+| raio que a máquina fecha | Theta\*: caminhos seguíveis | Smac: idem |
+|---|---|---|
+| 0,25 m | 4/6 | 6/6 |
+| 0,34 m | 3/6 | 5/6 |
+| 0,37 m | 3/6 | 6/6 |
+| 0,46 m | **0/6** | 6/6 |
+
+O Theta\* sai **idêntico nos quatro raios** (não conhece raio) — é a testemunha
+de que a varredura mexeu só no que devia. Quem se move é a linha que ele precisa
+cruzar. Nos dois casos "de lado" ele falha em qualquer raio: desenha reta
+lateral, que só serve para robô que pivota. O Smac cobra caminho mais longo, e o
+preço sobe com o raio (1,50× → 2,12× no alvo perto e de lado).
+
+**A decisão 008 pode ser assinada sem esperar a zona morta**: a medida que falta
+muda o tamanho da vantagem, não quem vence. Falta o julgamento do dono.
+
 ## ⏳ Próximos passos
 
 **Primeiro, com o robô (virou prioridade — a movimentação depende destes
@@ -385,11 +426,10 @@ números e hoje eles são chute):**
 
 **Sem o robô:**
 
-4. **Julgar o planner do Nav2** na bancada (`robot_planning`) — é o que está na
-   mesa agora, **varrendo o raio mínimo** (0,25 · 0,34 · 0,46) em vez de fixar
-   um valor: o número certo depende da zona morta que só o robô mede, e a
-   varredura diz se a conclusão depende dele. Depois disso: decisão 008, e o
-   seguidor.
+4. ~~Varrer o raio mínimo na bancada do planner.~~ **FEITO 07-29 (3ª leva)**:
+   48 planos, o ranking não vira entre 0,25 m e 0,46 m. Falta só o **julgamento
+   do dono** e a redação da **decisão 008** — que já não depende da zona morta.
+   Depois dela: o seguidor.
 5. **Modelo 3D real do robô** no simulador (o dono vai levantar), com o
    Mid-360 no topo. É ele que troca a fonte de obstáculos do mapa estático
    para o sensor, e corrige footprint e bitola do modelo.

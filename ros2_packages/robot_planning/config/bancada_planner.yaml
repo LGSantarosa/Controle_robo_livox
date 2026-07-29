@@ -47,11 +47,18 @@ planner_server:
       max_on_approach_iterations: 1000
       max_planning_time: 5.0
 
-      # Raio mínimo de curva [m]. MEDIDO no simulador em 28-07: a curva mais
-      # fechada que o robô descreveu foi 0,23 m, e a mediana 0,37 m. O limite
-      # vem do teto de giro (1,0 rad/s, não medido) e do piso de linear que a
-      # zona morta obriga. Se o teto de giro real for maior, este número cai.
-      minimum_turning_radius: 0.25
+      # Raio mínimo de curva [m].
+      #
+      # Era 0,25, justificado por uma curva solta de 28-07. A corrida de
+      # bancada de 29-07 mediu o raio REALIZADO (p5) em 0,370 m com zona morta
+      # 0,10 e 0,463 m com 0,15 — e o realizado abre em relação ao pedido
+      # porque o giro entrega só 79% do comandado. Qual dos dois vale depende
+      # da zona morta, que segue sem medir no robô.
+      #
+      # Fica no otimista (0,37). O valor honesto não é este nem o outro: é a
+      # VARREDURA (`tools/planner/varredura_raio.py`), que roda a comparação
+      # inteira nos dois extremos e mostra que o ranking não vira entre eles.
+      minimum_turning_radius: 0.37
 
       # REEDS_SHEPP deixa o PLANNER usar ré. É o mesmo recurso que tentamos
       # fazer à mão na decisão 007 — aqui ele nasce do planejamento, com o

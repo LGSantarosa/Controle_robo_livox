@@ -16,3 +16,7 @@ aberta (reta a 100,4%), 10 de 10 alvos alcançados, zero rodas pedidas dentro da
 banda morta, e o raio de curva realizado (p5) de 0,370 m no perfil sim e
 0,463 m no real — o número que reabriu o `minimum_turning_radius` da bancada do
 planner.
+
+| arquivo | o que é |
+|---|---|
+| `2026-07-29-varredura-raio-planner.csv` | 48 planos de `tools/planner/varredura_raio.py`: 6 casos × 4 raios mínimos (0,25 · 0,34 · 0,37 · 0,46) × Theta\* e Smac Hybrid-A\*, na pista de `tools/mundo/gera_pista.py`. Sem robô, sem simulador, sem sensor. Colunas: comprimento, desvio sobre a linha reta, giro, raio mínimo do caminho, inversões (a ré do Reeds-Shepp), trechos curtos demais para medir e tempo do planner. O Theta\* sai IDÊNTICO nos quatro raios — é a testemunha de que a varredura mexeu só no que devia. |

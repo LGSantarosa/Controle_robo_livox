@@ -26,6 +26,9 @@ depender de "achei mais bonito":
   raio mínimo   curva mais fechada do caminho [m]; abaixo do que a máquina
                 faz, o caminho é bonito e inseguível
   inversões     quantas vezes o caminho troca de sentido (ré do Reeds-Shepp)
+  curtos        trechos entre cúspides curtos demais para medir curvatura —
+                não entram no raio nem no giro, e são contados para não sumir
+                em silêncio. Muitos deles = o planner está tremendo no alvo.
   tempo         quanto o planner levou [ms]
 """
 import math
@@ -48,8 +51,44 @@ def norm_ang(a):
     return math.atan2(math.sin(a), math.cos(a))
 
 
+def _rumo(a, b):
+    """Direção do segmento a→b, ou None se os pontos coincidem."""
+    dx, dy = b[0] - a[0], b[1] - a[1]
+    if math.hypot(dx, dy) < 1e-9:
+        return None
+    return math.atan2(dy, dx)
+
+
+def cuspides(pts):
+    """Índices onde o caminho TROCA DE SENTIDO (a ré do Reeds-Shepp).
+
+    Na cúspide o caminho dobra sobre si mesmo: o robô para, inverte e volta.
+    Detectado nos pontos CRUS, não nos reamostrados — a reamostragem por
+    distância pula por cima da dobra (os pontos depois dela ficam perto dos de
+    antes) e a inversão desaparecia justamente onde ela acontece.
+    """
+    idx = []
+    for i in range(1, len(pts) - 1):
+        r1, r2 = _rumo(pts[i - 1], pts[i]), _rumo(pts[i], pts[i + 1])
+        if r1 is None or r2 is None:
+            continue
+        if abs(norm_ang(r2 - r1)) > math.radians(150.0):
+            idx.append(i)
+    return idx
+
+
 def mede(caminho):
-    """Números de um caminho, para comparar planners sem depender de gosto."""
+    """Números de um caminho, para comparar planners sem depender de gosto.
+
+    ⚠️ Cúspides são tratadas à parte. Medir curvatura por três pontos em cima de
+    uma cúspide lê a dobra como curva fechadíssima e soma ~180° de giro que o
+    robô não faz — ele inverte, não vira. Medido no caso real `perto_de_lado`
+    com raio mínimo de 0,46 m: a régua acusava raio de 0,125 m, 181° de giro e
+    ZERO inversões, as três erradas ao mesmo tempo e todas contra quem usa ré.
+    Como a ré do Reeds-Shepp é o motivo de o Smac estar na disputa, isso cegava
+    a bancada exatamente no assunto dela. Agora o caminho é PARTIDO nas
+    cúspides e cada trecho é medido sozinho.
+    """
     pts = [(p.pose.position.x, p.pose.position.y) for p in caminho.poses]
     if len(pts) < 3:
         # Caminho de 1 ou 2 pontos é reta pura — o planner achou o destino
@@ -59,42 +98,62 @@ def mede(caminho):
                 if len(pts) == 2 else 0.0)
         return {'pontos': len(pts), 'comprimento': comp, 'reta': comp,
                 'desvio': 1.0, 'giro_deg': 0.0, 'raio_min': float('inf'),
-                'inversoes': 0}
+                'inversoes': 0, 'trechos_curtos': 0}
 
     comp = sum(math.hypot(b[0] - a[0], b[1] - a[1])
                for a, b in zip(pts, pts[1:]))
     reta = math.hypot(pts[-1][0] - pts[0][0], pts[-1][1] - pts[0][1])
 
-    # Curvatura tem que ser medida em passo LONGO. O Smac entrega o caminho
-    # suavizado com pontos a ~5 cm, e três pontos vizinhos assim medem ruído
-    # de arredondamento, não a curva: com raio mínimo de 0,25 m configurado no
-    # planner, a conta ponto-a-ponto acusava 0,01 m. Reamostrado a 0,20 m o
-    # número volta a descrever a geometria.
-    ralos = [pts[0]]
-    for p in pts[1:]:
-        if math.hypot(p[0] - ralos[-1][0], p[1] - ralos[-1][1]) >= 0.20:
-            ralos.append(p)
-    if len(ralos) < 3:
-        ralos = pts
+    # O caminho é partido nas cúspides: cada trecho é um sentido de marcha, e
+    # medir através da dobra é o defeito descrito no docstring.
+    cortes = cuspides(pts)
+    trechos = []
+    ini = 0
+    for c in cortes:
+        trechos.append(pts[ini:c + 1])
+        ini = c
+    trechos.append(pts[ini:])
 
     giro = 0.0
     raio_min = float('inf')
-    inversoes = 0
-    rumo_ant = None
-    for a, b, c in zip(ralos, ralos[1:], ralos[2:]):
-        r1 = math.atan2(b[1] - a[1], b[0] - a[0])
-        r2 = math.atan2(c[1] - b[1], c[0] - b[0])
-        d = abs(norm_ang(r2 - r1))
-        giro += d
-        # Inversão de sentido: o caminho "dobra sobre si mesmo" (>150°). É
-        # assim que a ré do Reeds-Shepp aparece na geometria do caminho.
-        if rumo_ant is not None and abs(norm_ang(r1 - rumo_ant)) > math.radians(150):
-            inversoes += 1
-        rumo_ant = r1
-        # Raio da curva por três pontos: dois segmentos e o ângulo entre eles.
-        passo = math.hypot(c[0] - b[0], c[1] - b[1])
-        if d > 1e-6 and passo > 1e-6:
-            raio_min = min(raio_min, passo / (2.0 * math.sin(min(d, math.pi) / 2.0)))
+    curtos = 0
+    for trecho in trechos:
+        if len(trecho) < 3:
+            curtos += 1
+            continue
+        # Curvatura tem que ser medida em passo LONGO. O Smac entrega o caminho
+        # suavizado com pontos a ~5 cm, e três pontos vizinhos assim medem ruído
+        # de arredondamento, não a curva: com raio mínimo de 0,25 m configurado
+        # no planner, a conta ponto-a-ponto acusava 0,01 m. Reamostrado a 0,20 m
+        # o número volta a descrever a geometria.
+        ralos = [trecho[0]]
+        for p in trecho[1:]:
+            if math.hypot(p[0] - ralos[-1][0], p[1] - ralos[-1][1]) >= 0.20:
+                ralos.append(p)
+        if len(ralos) < 3:
+            # Trecho curto demais para a régua: menos de 0,40 m entre duas
+            # cúspides. Antes daqui caía um `ralos = trecho`, que media
+            # curvatura nos pontos CRUS e devolvia o ruído que a reamostragem
+            # existe para evitar — no caso `bloco` com raio 0,46 isso virou
+            # `raio_min = 0,00 m`, num caminho cujo trecho longo fecha 0,54 m.
+            # Não há curvatura para ler num arco menor que a resolução: o
+            # trecho é PULADO e contado em `trechos_curtos`, porque pular em
+            # silêncio é como o defeito anterior sobreviveu tanto tempo.
+            curtos += 1
+            continue
+        for a, b, c in zip(ralos, ralos[1:], ralos[2:]):
+            r1, r2 = _rumo(a, b), _rumo(b, c)
+            if r1 is None or r2 is None:
+                continue
+            d = abs(norm_ang(r2 - r1))
+            giro += d
+            # Raio da curva por três pontos: dois segmentos e o ângulo entre eles.
+            passo = math.hypot(c[0] - b[0], c[1] - b[1])
+            if d > 1e-6 and passo > 1e-6:
+                raio_min = min(raio_min,
+                               passo / (2.0 * math.sin(min(d, math.pi) / 2.0)))
+
+    inversoes = len(cortes)
 
     return {
         'pontos': len(pts),
@@ -104,6 +163,7 @@ def mede(caminho):
         'giro_deg': math.degrees(giro),
         'raio_min': raio_min,
         'inversoes': inversoes,
+        'trechos_curtos': curtos,
     }
 
 
@@ -115,9 +175,16 @@ class BancadaPlanner(Node):
             # na ordem da tabela do log.
             ('planners', ['theta', 'hibrido']),
             # Raio de curva que a máquina entrega [m]. Só para o log dizer se
-            # o caminho é seguível — MEDIDO em 28-07 no simulador, e refém do
-            # teto de giro, que não foi medido.
-            ('raio_da_maquina', 0.23),
+            # o caminho é seguível.
+            #
+            # Era 0,23 até 29-07, tirado de uma curva solta de 28-07. A corrida
+            # de bancada de 29-07 mediu o realizado (p5) em 0,370 m com zona
+            # morta 0,10 e 0,463 m com 0,15 — o valor DEPENDE da zona morta,
+            # que ainda não foi medida no robô. Fica no otimista; quem quiser o
+            # pessimista passa o parâmetro. A varredura
+            # (`tools/planner/varredura_raio.py`) é que responde direito: ela
+            # roda a comparação inteira nos dois extremos.
+            ('raio_da_maquina', 0.37),
             ('quadro', 'map'),
         ])
         self.par = {x.name: x.value for x in p}
@@ -250,8 +317,8 @@ class BancadaPlanner(Node):
 
     def tabela(self):
         """Imprime os dois caminhos lado a lado. Sem veredito — a escolha é do dono."""
-        linhas = ['', 'planner      compr.  desvio   giro   raio min  inv  pts   tempo',
-                  '-----------------------------------------------------------------']
+        linhas = ['', 'planner      compr.  desvio   giro   raio min  inv  curt  pts   tempo',
+                  '-----------------------------------------------------------------------']
         for pid in self.par['planners']:
             medida, ms = self.resultados.get(pid, (None, None))
             if medida is None:
@@ -266,7 +333,8 @@ class BancadaPlanner(Node):
             linhas.append(
                 f"{pid:<12} {medida['comprimento']:5.2f}m  "
                 f"{medida['desvio']:5.2f}x  {medida['giro_deg']:5.0f}°  "
-                f"{raio}m  {medida['inversoes']:3d} {medida['pontos']:4d}  "
+                f"{raio}m  {medida['inversoes']:3d} "
+                f"{medida['trechos_curtos']:4d}  {medida['pontos']:4d}  "
                 f'{ms:5.0f}ms{marca}')
         reta = next((m['reta'] for m, _ in self.resultados.values() if m), 0.0)
         linhas.append(f'(reta pura: {reta:.2f} m · a máquina fecha '

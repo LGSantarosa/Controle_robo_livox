@@ -35,11 +35,12 @@ MAPA_PADRAO = os.path.join(RAIZ, 'maps', 'pista_obstaculos.yaml')
 
 def generate_launch_description():
     pkg = get_package_share_directory('robot_planning')
-    params = os.path.join(pkg, 'config', 'bancada_planner.yaml')
+    params_padrao = os.path.join(pkg, 'config', 'bancada_planner.yaml')
     rviz_config = os.path.join(pkg, 'rviz', 'bancada_planner.rviz')
 
     mapa = LaunchConfiguration('mapa')
     rviz = LaunchConfiguration('rviz')
+    params = LaunchConfiguration('params')
 
     return LaunchDescription([
         DeclareLaunchArgument(
@@ -48,6 +49,14 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'rviz', default_value='true',
             description='false sobe só a bancada, sem interface'),
+        # Existe para a varredura de raio (`tools/planner/varredura_raio.py`)
+        # poder injetar um YAML por raio. O `minimum_turning_radius` é lido pelo
+        # Smac na TRANSIÇÃO de configuração, então não dá para mudá-lo em um
+        # servidor de pé: cada valor exige uma pilha nova, e cada pilha nova
+        # exige um arquivo próprio.
+        DeclareLaunchArgument(
+            'params', default_value=params_padrao,
+            description='YAML de parâmetros (a varredura injeta um por raio)'),
 
         Node(
             package='nav2_map_server',

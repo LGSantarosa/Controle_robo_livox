@@ -917,3 +917,101 @@ de raio, não com um valor. Se o ranking não virar com o raio, a conclusão est
 imune à zona morta que ainda não medimos e a decisão 008 pode ser assinada já.
 Se virar, descobrimos antes de assinar — e o item nº 1 da bancada com o robô
 ganha uma segunda razão de peso.
+
+## 📐 2026-07-29 (3ª leva) — A régua da bancada estava errada; consertada, o planner se decide
+
+A corrida da manhã reabriu o `minimum_turning_radius` da bancada do planner: os
+0,25 m configurados contra 0,370 m e 0,463 m de raio realizado, um por perfil de
+zona morta. Como o número certo depende de uma medida que só o robô dá, o jeito
+honesto não era escolher — era **varrer**. Daí
+`tools/planner/varredura_raio.py`: 6 casos × 4 raios × 2 planners, headless,
+sem cliques.
+
+E a varredura achou um defeito antes de responder a pergunta.
+
+### O caminho estava certo; a régua, não
+
+Na primeira rodada o Smac apareceu devolvendo, com raio de 0,46 m configurado,
+um caminho de **raio 0,125 m** — 3,7× mais fechado do que ele foi mandado
+respeitar. Isso é grave: o Smac está na disputa exatamente por respeitar raio.
+
+Reproduzido e desmontado antes de consertar nada:
+
+1. **Não é o suavizador.** `smooth_path` ligado e desligado dão caminho
+   idêntico, ponto por ponto.
+2. **Não é o planner.** Despejados os 20 pontos crus do caso `perto_de_lado`,
+   com o deslocamento projetado no rumo de cada pose, o sinal aparece: `+0,072`
+   nos pontos 1–3, **`−0,072` nos pontos 5–16**, `+0,072` nos 17–19. O caminho
+   é *frente, ré por 0,86 m, frente* — duas **cúspides** de Reeds-Shepp. Os
+   arcos fecham ~0,41 m, dentro da discretização dos 0,46 pedidos.
+3. **É o `mede()`.** Ajustar círculo por três pontos EM CIMA da cúspide lê a
+   dobra como curva fechadíssima; e a reamostragem a 0,20 m pula por cima da
+   dobra, então a inversão sumia. As três colunas erravam de uma vez:
+
+| | relatado | verdade |
+|---|---|---|
+| raio mínimo | 0,125 m | ~0,41 m |
+| giro | 181° | ~72° (o resto é a inversão) |
+| inversões | **0** | **2** |
+
+E erravam todas na mesma direção: **contra quem usa ré**. A bancada estava cega
+justamente no assunto que ela existe para julgar. Ela não tinha teste nenhum —
+foi assim que sobreviveu.
+
+**Conserto**: o caminho é partido nas cúspides (detectadas nos pontos CRUS) e
+cada trecho é medido sozinho; `inversoes` passa a ser a contagem de cúspides.
+Cinco testes novos em `test_mede.py`, com a geometria tirada do caminho real,
+não inventada para passar.
+
+### Um segundo número impossível, e um achado de verdade dentro dele
+
+Consertada a cúspide, o caso `bloco` com raio 0,46 passou a acusar
+`raio_min = 0,00 m`. Despejado o caminho: 69 pontos, dos quais **63 formam
+4,86 m limpos** e os 6 últimos são um **tremor em cima do alvo** — 4 inversões
+dentro de uma caixa de 9 cm, deixando trechos de 8 cm entre cúspides.
+
+São duas coisas, e separá-las importa:
+
+- o `0,00` era da régua (um fallback que media curvatura nos pontos crus quando
+  o trecho era curto demais para reamostrar — exatamente o ruído que a
+  reamostragem existe para evitar). Trecho curto agora é **pulado e contado** na
+  coluna nova `curt`, porque pular calado é como o defeito anterior durou tanto;
+- **o tremor é do planner e é achado**: com raio grande, a aproximação final do
+  Smac não assenta no alvo e fica trocando de sentido. Fica registrado para o
+  seguidor — quem for executar isso precisa saber.
+
+### Com a régua honesta: o ranking não vira, ele se acentua
+
+288 → 289 testes verdes, e a varredura rodada de novo. O Theta\* saiu
+**idêntico nos quatro raios** — ele não conhece raio, e é a testemunha de que a
+varredura mexeu só no que devia.
+
+| raio que a máquina fecha | Theta\*: caminhos seguíveis | Smac: idem |
+|---|---|---|
+| 0,25 m | 4/6 | 6/6 |
+| 0,34 m | 3/6 | 5/6 |
+| 0,37 m | 3/6 | 6/6 |
+| 0,46 m | **0/6** | 6/6 |
+
+O Theta\* desenha sempre o mesmo caminho; quem se move é a linha que ele precisa
+cruzar. Os raios dos caminhos dele são 0,28 m (`aperto`) e 0,37–0,39 m nos
+demais — com a máquina fechando 0,46 m, **nenhum** é seguível. E nos dois casos
+"de lado" ele falha em qualquer raio, por outro motivo: desenha reta lateral,
+que só serve para robô que pivota, e este não pivota com a zona morta
+pessimista (medido hoje de manhã: zero amostras de giro parado).
+
+O Smac cobra por isso, e o preço sobe com o raio: no alvo perto e de lado, de
+1,50× para **2,12×** a linha reta. É o custo de desenhar só o que a máquina faz.
+
+**A consequência prática é boa**: a decisão 008 **pode ser assinada sem esperar
+a zona morta**. A medida que falta muda o tamanho da vantagem, não quem vence.
+Era exatamente o que a varredura foi feita para descobrir.
+
+### O que ficou por consertar, de propósito
+
+O `giro` de um arco contínuo sai **curto** — 90° são medidos como 50°. A causa é
+a mesma reamostragem: as meias-viradas das duas pontas não têm vértice onde
+aparecer. Não foi corrigido junto com a cúspide porque os dois viéses puxam para
+lados CONTRÁRIOS na mesma coluna, e consertar os dois na mesma mudança tornaria
+impossível saber qual moveu qual número. Fica travado num teste que diz o que
+está errado e por quê.

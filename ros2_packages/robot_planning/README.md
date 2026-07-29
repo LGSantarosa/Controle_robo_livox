@@ -48,18 +48,24 @@ susto quando o robô já está preso.
 ## Lendo a tabela
 
 ```
-planner      compr.  desvio   giro   raio min  inv  pts   tempo
-theta         1.00m   1.00x      0°     retom    0   21      0ms
-hibrido       1.33m   1.33x    104°     0.30m    0   21     12ms
+planner      compr.  desvio   giro   raio min  inv  curt  pts   tempo
+theta         1.00m   1.00x      0°     retom    0     0   21      0ms
+hibrido       1.33m   1.33x    104°     0.30m    2     2   21     12ms
 ```
 
 - **compr.** quanto o robô andaria de fato
 - **desvio** comprimento ÷ linha reta. 1,00 = reta perfeita; 1,33 = anda 33% a mais
 - **giro** soma de todas as viradas do caminho, em graus
-- **raio min** curva mais fechada do caminho. Vem marcado `<-- APERTADO` quando
-  é menor que o raio que a máquina fecha (`raio_da_maquina`, hoje 0,23 m
-  medido no simulador) — caminho bonito que o robô não consegue seguir
+- **raio min** curva mais fechada do caminho, medida DENTRO de cada trecho
+  entre cúspides. Vem marcado `<-- APERTADO` quando é menor que o raio que a
+  máquina fecha (`raio_da_maquina`, hoje 0,37 m — o realizado medido em 29-07
+  com zona morta otimista; com a pessimista são 0,46 m) — caminho bonito que o
+  robô não consegue seguir
 - **inv** quantas vezes o caminho inverte o sentido: é a ré aparecendo
+- **curt** trechos entre cúspides curtos demais para medir curvatura. Não
+  entram no raio nem no giro, e aparecem aqui para não sumir calados. Vários
+  deles = o planner está TREMENDO em cima do alvo (visto no `bloco` com raio
+  0,46: 4 inversões dentro de uma caixa de 9 cm)
 - **pts** pontos do caminho, útil para saber se veio suavizado ou cru
 
 O exemplo acima é o caso "alvo a 1 m de lado": o Theta\* manda ir reto de lado
@@ -101,3 +107,30 @@ em paralelo faz o segundo preemptar o primeiro, e o preemptado volta com
 caminho **vazio e código de sucesso** — mentindo. Isso apareceu como "Theta\*
 sem caminho" no primeiro clique de cada corrida (frio ele demora mais e era
 atropelado; quente, escapava). A bancada pede um de cada vez.
+
+## Varredura de raio: a conclusão depende do raio mínimo?
+
+```bash
+python3 tools/planner/varredura_raio.py
+```
+
+Roda os mesmos casos contra os dois planners, uma vez por raio candidato, sem
+RViz e sem cliques. Existe porque o `minimum_turning_radius` não é um parâmetro
+qualquer desta comparação — ele **é** o argumento dela: o Smac está na disputa
+justamente por respeitar raio de curva, e informá-lo otimista dá a vitória ao
+Smac num robô que não existe.
+
+**Resultado de 29-07** (`docs/dados/2026-07-29-varredura-raio-planner.csv`,
+48 planos): o ranking **não vira** entre 0,25 m e 0,46 m — ele se acentua. O
+Theta\* desenha sempre o mesmo caminho (não conhece raio), então quem se move é
+a linha que ele precisa cruzar: com 0,25 m ele entrega 4 dos 6 casos seguíveis,
+com 0,46 m entrega **zero**. O Smac fica em 5–6 de 6 em toda a faixa, cobrando
+por isso um caminho mais longo que cresce com o raio (no alvo perto e de lado,
+de 1,50× para 2,12× a linha reta).
+
+Ou seja: **a decisão 008 pode ser tomada sem esperar a zona morta**. A medida
+que falta muda o tamanho da vantagem, não quem vence.
+
+⚠️ O Theta\* falha nos dois casos "de lado" em QUALQUER raio, e por outro
+motivo: ele desenha uma reta lateral, que só é seguível por um robô que pivota
+— e este não pivota com a zona morta pessimista.
