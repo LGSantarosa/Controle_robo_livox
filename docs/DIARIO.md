@@ -803,3 +803,117 @@ contornar o problema — omni não tem pivô nem trail, então elimina a causa d
 instabilidade de rumo em vez de mascará-la. Mas invalida a junta de pivô, o
 trail, o atrito de pivô e boa parte do `robo2.gazebo.xacro`. Se for pra frente,
 é decisão registrada, não ajuste.
+
+## 🎯 2026-07-29 (2ª leva) — A pilha inteira obedece; o giro é que não entrega
+
+Com a trena já dentro dos YAMLs, faltava a pergunta que a manhã não respondeu:
+**a pilha montada obedece?** O `ensaio.py` mede a máquina em malha aberta e roda
+igual no robô; ele não diz nada sobre navegação + movimentação + placa
+empilhadas. Daí `tools/banco/corrida_gazebo.py`: sobe o Gazebo headless, roda
+duas fases na MESMA simulação e derruba tudo. Duas corridas, uma por perfil de
+zona morta (`sim` 0,10 · `real` 0,15) — o chute otimista e o pessimista, postos
+nos dois lados (planta E controlador), porque pôr o pessimista só no controlador
+mede uma máquina que não existe.
+
+232 mil amostras nos dois CSV de `docs/dados/`.
+
+### Fase B: os 5 alvos fecharam, nos dois perfis
+
+Reta de 2 m, 90° de lado, 180° para trás, o ponto perto-e-de-lado (o caso da
+decisão 007) e a volta à origem. **10 de 10 chegaram** dentro do raio de 0,15 m.
+Nenhuma órbita, nenhum travamento — contra a sessão de 28-07, em que o dono
+clicando derrubou a navegação com 0 amostras de giro parado em 2714.
+
+Isso não é a navegação absolvida: ela segue aposentada. É a constatação de que
+o roteiro fechado não reproduz o defeito que o dono achou clicando — mais uma
+vez, e o registro de 27-07 já dizia o mesmo (10 corridas roteirizadas não
+acharam o que 5 minutos de clique acharam).
+
+### Fase A: a reta sai exata, o giro sai curto — e piora subindo
+
+A fase A publica **direto** no controlador de tração, contornando a placa
+fingida: sem zona morta no caminho, o que sobra é a conversão comando→roda mais
+a física. O controlador de rumo nem está no ar.
+
+| comando | realizado ÷ comandado |
+|---|---|
+| reta v=0,30 | **1,004** |
+| giro 0,3 rad/s | 0,860 |
+| giro ±0,5 rad/s | 0,855 / 0,853 |
+| giro 0,8 rad/s | 0,786 |
+| giro 1,0 rad/s | **0,790** |
+| arco v=0,3 wz=0,4 | 0,941 |
+
+A varredura de wz existia para separar RAZÃO de OFFSET, e a resposta é **razão,
+e agravando**: o teto de `wz_max = 1,0` entrega **0,79 rad/s de verdade**. Não é
+a bitola errada — bitola errada daria razão CONSTANTE, e a reta a 100,4% já
+prova que raio e conversão estão certos. O que degrada com a velocidade é
+escorregamento.
+
+Esquerda e direita batem em 0,2% (0,855 × 0,853): não há assimetria de
+conversão. Some a isso um recuo sistemático de ~0,065 m/s por rad/s **girando
+parado**, igual nos dois sentidos. Parte é geometria de medida — a origem do
+`base_link` está 81,5 mm atrás do eixo motriz, então ela orbita quando o robô
+pivota — mas o efeito de geometria trocaria de sinal com o sentido do giro, e
+este não troca. Fica anotado, sem explicação fechada.
+
+⚠️ **Tudo isso é o Gazebo com a boba do BO-4**, que já sabemos ser um patim. O
+déficit de giro pode ser o mesmo contato falso. Não vale como medida do robô.
+
+### O pivô só existe no perfil otimista — de novo, e agora medido
+
+181 amostras de giro parado no `lado_90` do perfil `sim`; **zero em toda a fase
+B do perfil `real`**. Bate na mosca com a aritmética de hoje de manhã: 0,96 rad/s
+para pivotar com zona morta 0,10 (cabe no teto, 4% de folga), 1,48 rad/s com
+0,15 (impossível). Sem pivô, o `lado_90` do perfil real custou 2,43 m de caminho
+e 151,6° líquidos para uma virada de 90°.
+
+### O piso de linear segura o BO-3
+
+**Zero amostras** com roda pedida dentro da banda morta, em todos os trechos dos
+dois perfis. A defesa `v_piso = zona_morta + wz_max·bitola/2 + margem` está
+fazendo o que foi desenhada para fazer.
+
+### O ciclo "ré e anda" voltou, e só no perfil pessimista
+
+O alvo `perto_de_lado` (0,40 m de distância):
+
+| | tempo | caminho | caminho ÷ reta | entradas em ré |
+|---|---|---|---|---|
+| perfil sim | 2,7 s | 0,54 m | 2,20 | 2 |
+| perfil real | **9,2 s** | **1,85 m** | **7,19** | **5** (período 2,23 s) |
+
+É o mesmo defeito de histerese diagnosticado em 28-07, com período quase igual
+(2,23 s contra 2,10 s). Ele sobrevive porque quem roda nesta bancada ainda é o
+`goal_navigator`. **Não vamos consertá-lo**: a camada está aposentada, e o
+trabalho iria para o lixo junto com ela.
+
+### O que isto muda no trabalho de amanhã: um número da bancada do planner
+
+`bancada_planner.yaml` está com `minimum_turning_radius: 0.25`, justificado no
+comentário por "a curva mais fechada no simulador em 28-07 foi 0,23 m". Esta
+corrida contradiz:
+
+| | raio que o controlador PEDE | raio REALIZADO (p5) |
+|---|---|---|
+| perfil sim | 0,270 m | **0,370 m** |
+| perfil real | 0,339 m | **0,463 m** |
+
+(os mínimos absolutos de 0,14 e 0,20 m são transitórios de uma amostra, não
+curva sustentada — por isso o p5.)
+
+O realizado abre em relação ao pedido **por causa do déficit de giro**: pede-se
+1,0 rad/s, sai 0,79, e o raio abre na mesma proporção. No perfil pessimista o
+planner está configurado com quase METADE do raio que a máquina fecha.
+
+Isso não é um parâmetro qualquer nessa bancada: o raio mínimo **é** o argumento
+da comparação. O Smac Hybrid-A\* está na mesa contra o Theta\* precisamente
+porque respeita raio de curva. Julgar os dois com um raio 1,9× otimista é dar a
+vitória ao Smac num robô que não existe — a mesma forma de erro da bitola, em
+que a bancada pareceria boa e o robô pioraria.
+
+**Decidido em vez de chutar de novo**: a bancada do planner roda com uma FAIXA
+de raio, não com um valor. Se o ranking não virar com o raio, a conclusão está
+imune à zona morta que ainda não medimos e a decisão 008 pode ser assinada já.
+Se virar, descobrimos antes de assinar — e o item nº 1 da bancada com o robô
+ganha uma segunda razão de peso.

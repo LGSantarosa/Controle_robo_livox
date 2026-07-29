@@ -314,6 +314,9 @@ caminho e 57 s.
 - ⚠️ **`wz_max = 1,0` nunca foi medido** e é 4× menor que o do robô 1
   (2,4–4,5 rad/s). É ele que torna o pivô "impossível" por aritmética. Virou
   item de bancada.
+  **↑ 07-29: segue sem medida no robô, e piorou no simulador** — em malha aberta
+  o comando de 1,0 rad/s entrega 0,79. O teto efetivo é ainda menor que o número
+  escrito, e o pivô fica mais longe, não mais perto.
 
 ### Bancada do planner (`ros2_packages/robot_planning/`)
 
@@ -329,6 +332,38 @@ saída. Como rodar e como ler: `ros2_packages/robot_planning/README.md`.
 
 **Ainda não julgado pelo dono** — a decisão 008 (Nav2 na arquitetura, revisando
 a 003, a 006 e a 007) fica em aberto até ele ver os desenhos.
+
+## 🎯 2026-07-29 (2ª leva) — A pilha obedece; o giro é que não entrega
+
+`tools/banco/corrida_gazebo.py` (novo) responde o que o `ensaio.py` não
+responde: **a pilha montada obedece?** Sobe o Gazebo headless e roda duas fases
+na mesma simulação, uma corrida por perfil de zona morta. CSVs em
+`docs/dados/2026-07-29-bancada-gazebo-{sim,real}.csv`.
+
+- **10 de 10 alvos alcançados** (5 por perfil), sem órbita e sem travamento.
+  Não absolve a navegação aposentada: confirma pela terceira vez que roteiro
+  fechado não reproduz o que o dono acha clicando.
+- **O giro entrega 79–86% do comandado, e piora subindo** — medido em malha
+  ABERTA, com a placa contornada e o controlador de rumo fora do ar. A reta sai
+  a 100,4% e esquerda/direita batem em 0,2%, o que exclui bitola e conversão: é
+  escorregamento. **`wz_max = 1,0` vale 0,79 rad/s de verdade.**
+- **O pivô só existe no perfil otimista**: 181 amostras de giro parado no perfil
+  `sim`, **zero** em toda a fase B do perfil `real`. Confirma a aritmética de
+  hoje de manhã (0,96 rad/s com zona morta 0,10; 1,48 com 0,15).
+- **O piso de linear segura o BO-3**: zero amostras com roda pedida dentro da
+  banda morta, nos dois perfis.
+- **O ciclo "ré e anda" voltou no perfil pessimista** (5 entradas, período
+  2,23 s; 1,85 m de caminho para um alvo a 0,40 m). É o defeito de 28-07, e
+  **não será consertado** — vive no `goal_navigator`, já aposentado.
+- ⚠️ Tudo isto é Gazebo com a boba do BO-4, que é um patim. O déficit de giro
+  pode ser o mesmo contato falso. Não vale como medida do robô.
+- **Consequência para a bancada do planner**: `minimum_turning_radius: 0.25`
+  está otimista. O raio realizado (p5) foi 0,370 m no perfil sim e **0,463 m no
+  real** — ele abre em relação ao pedido justamente por causa do déficit de
+  giro. Como o raio mínimo **é** o argumento da comparação Theta\* × Smac,
+  julgar com um valor só repetiria a forma de erro da bitola: a bancada
+  pareceria boa e o robô pioraria. A bancada passa a rodar uma **faixa** de
+  raio.
 
 ## ⏳ Próximos passos
 
@@ -351,7 +386,10 @@ números e hoje eles são chute):**
 **Sem o robô:**
 
 4. **Julgar o planner do Nav2** na bancada (`robot_planning`) — é o que está na
-   mesa agora. Depois disso: decisão 008, e o seguidor.
+   mesa agora, **varrendo o raio mínimo** (0,25 · 0,34 · 0,46) em vez de fixar
+   um valor: o número certo depende da zona morta que só o robô mede, e a
+   varredura diz se a conclusão depende dele. Depois disso: decisão 008, e o
+   seguidor.
 5. **Modelo 3D real do robô** no simulador (o dono vai levantar), com o
    Mid-360 no topo. É ele que troca a fonte de obstáculos do mapa estático
    para o sensor, e corrige footprint e bitola do modelo.
