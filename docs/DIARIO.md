@@ -1141,3 +1141,68 @@ o seguidor de pé. O costmap ainda vem de mapa estático, porque o robô simulad
 não tem lidar. E fica anotado o tremor do Smac em cima do alvo com raio grande
 (4 inversões numa caixa de 9 cm no `bloco` com 0,46 m), que é achado medido e
 cai no colo do seguidor.
+
+## 🥕 2026-07-29 (6ª leva) — Seguidor, fatia A: a lei, sem ROS
+
+Decisão 008 aceita pelo dono, e a fatia grande que ela destrava começou.
+`robot_motion/lei_de_seguimento.py` — pura, sem ROS, testável sozinha, mesma
+forma da `lei_de_rumo.py` e pelo mesmo motivo: o que decide o comportamento do
+robô tem que poder ser exercitado sem subir simulador nenhum.
+
+### A arquitetura, fechada com o dono
+
+```
+GUI → /goal_pose → bt_navigator → planner_server (Smac) → /plan → seguidor
+                                                                     ↓
+                                          rumo_alvo + velocidade_alvo
+                                                                     ↓
+                                      heading_controller → cmd_vel → rodas
+```
+
+Quem pede o plano é a **GUI**, e o **replanejamento vem de graça** com o
+`bt_navigator` — eu tinha suposto que precisaria de uma fatia própria e não
+precisa. O seguidor só ouve `/plan` e produz dois números.
+
+A divisão de responsabilidade fica explícita: o Nav2 diz POR ONDE, esta lei diz
+PARA ONDE OLHAR e QUÃO RÁPIDO, e a `lei_de_rumo` diz O QUE O ATUADOR AGUENTA.
+A lei de seguimento **não conhece zona morta nem `a_dec`** e não fala com roda —
+essa camada já está caracterizada e não se duplica.
+
+### Os três números, cada um de um defeito medido
+
+1. **Carrot** — mira um ponto à frente NO CAMINHO, medido pelo **arco**, não
+   pela linha reta. Pela reta o robô corta a curva por dentro e raspa a quina
+   do vão em vez de seguir a forma que o planner desenhou.
+2. **Lookahead derivado do raio mínimo** (`max(piso, 1,5 · raio_min)`), não
+   escolhido. É o parâmetro central deste nó, e número solto aqui viraria mais
+   um valor herdado sem justificativa — como a bitola 0,32 e o raio de roda
+   0,0825, que chegaram errados até a trena. Amarrado ao raio, ele acompanha a
+   máquina quando a zona morta for medida. O piso existe porque carrot colado
+   no robô faz o rumo alvo oscilar com ruído de pose: é o S de 27-07 entrando
+   por outra porta.
+3. **Teto de velocidade pela curva** — o defeito nº 2 de 28-07, o balão.
+   `raio = v/wz`: com o giro e a linear nos tetos, o robô é OBRIGADO a descrever
+   um arco de `v/wz_max`, e foi assim que um alvo a 0,43 m custou 3,66 m. A
+   linear cede para a curva caber. E a curvatura é olhada numa **janela à
+   frente**, não no ponto atual: a máquina tem distância de frenagem, então
+   frear em cima da curva é frear tarde.
+
+### O teste que passou de primeira e estava mentindo
+
+Os 11 testes passaram na primeira execução, o que é suspeito. Rodei mutação —
+quebrar a lei de propósito e ver se algum teste reclama. **O do carrot não
+reclamou**: o arco de 90° que eu usara é curto demais para a corda e o
+comprimento divergirem, e a tolerância estava larga. Trocado por arco de 180°
+com passo fino, as duas contas separam (0,69 contra 0,78) e o teste passou a
+morder.
+
+Uma armadilha custou tempo e fica anotada: `build/robot_motion/robot_motion` é
+**symlink para o fonte**, e o `__pycache__` sobrevivia à restauração do arquivo.
+O teste de mutação mentiu duas vezes por causa disso — o fonte já estava
+restaurado e o comportamento ainda era o da mutação. Toda rodada de mutação
+limpa o cache antes.
+
+Refeito limpo: **5 mutações, 5 pegas**, cada uma por exatamente um teste.
+
+305 testes verdes (eram 294). Fatia B (cúspides e ré) e C (chegada e guarda do
+tremor do Smac) vêm depois.
