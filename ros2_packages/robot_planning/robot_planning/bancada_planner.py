@@ -59,15 +59,42 @@ def _rumo(a, b):
     return math.atan2(dy, dx)
 
 
-def cuspides(pts):
+def cuspides(pts, yaws=None):
     """Índices onde o caminho TROCA DE SENTIDO (a ré do Reeds-Shepp).
 
-    Na cúspide o caminho dobra sobre si mesmo: o robô para, inverte e volta.
-    Detectado nos pontos CRUS, não nos reamostrados — a reamostragem por
-    distância pula por cima da dobra (os pontos depois dela ficam perto dos de
-    antes) e a inversão desaparecia justamente onde ela acontece.
+    Duas maneiras, e a boa depende do planner:
+
+    **Pela POSE**, quando o caminho traz orientação: projeta cada passo no rumo
+    da pose e vê o sinal. Andar de ré é passo com projeção negativa, e a troca
+    de sinal é a cúspide. É o critério certo porque é o que a palavra significa.
+
+    **Pela geometria** (dobra > 150°), quando não traz. O Theta* devolve o
+    caminho inteiro com orientação zerada — medido em 29-07: faixa de yaw de
+    0,0° em 144 pontos — então para ele não há pose que consultar. Não custa
+    nada: ele é planner só-para-frente, não tem cúspide para achar.
+
+    Por que não ficar só na geometria: ela erra nas pontas. No caso `lado_1m`
+    com raio 0,25 o caminho é `+----------------+` pela pose — um passo à
+    frente, 16 de ré, um à frente, DUAS cúspides. A dobra geométrica nelas mede
+    147°, passa por baixo do limiar de 150°, e as duas sumiam. O preço aparecia
+    no `giro`: 2 x 147° de virada que o robô não faz entravam na conta, e um
+    caminho de 1,19 m era relatado com **437°** de giro.
     """
     idx = []
+    if yaws is not None and len(yaws) == len(pts) and (
+            max(yaws) - min(yaws)) > math.radians(1.0):
+        sinal_ant = None
+        for i in range(1, len(pts)):
+            dx, dy = pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]
+            if math.hypot(dx, dy) < 1e-9:
+                continue
+            proj = dx * math.cos(yaws[i]) + dy * math.sin(yaws[i])
+            sinal = proj >= 0.0
+            if sinal_ant is not None and sinal != sinal_ant:
+                idx.append(i - 1)
+            sinal_ant = sinal
+        return idx
+
     for i in range(1, len(pts) - 1):
         r1, r2 = _rumo(pts[i - 1], pts[i]), _rumo(pts[i], pts[i + 1])
         if r1 is None or r2 is None:
@@ -75,6 +102,36 @@ def cuspides(pts):
         if abs(norm_ang(r2 - r1)) > math.radians(150.0):
             idx.append(i)
     return idx
+
+
+def _yaws_de(poses):
+    """Rumos das poses, ou None se o caminho não traz orientação utilizável."""
+    try:
+        return [yaw_de(p.pose.orientation) for p in poses]
+    except AttributeError:
+        return None
+
+
+def _sem_tocos(pts, minimo):
+    """Tira os segmentos curtos demais para definir direção.
+
+    Mantém sempre o primeiro e o último ponto: o toco é costurado fora, o
+    caminho não é encurtado. Comprimento e desvio seguem saindo dos pontos
+    CRUS — só a medida de ângulo usa esta lista.
+    """
+    if minimo <= 0.0:
+        return pts
+    limpos = [pts[0]]
+    for p in pts[1:-1]:
+        if math.hypot(p[0] - limpos[-1][0], p[1] - limpos[-1][1]) >= minimo:
+            limpos.append(p)
+    if len(pts) > 1:
+        while (len(limpos) > 1
+               and math.hypot(pts[-1][0] - limpos[-1][0],
+                              pts[-1][1] - limpos[-1][1]) < minimo):
+            limpos.pop()
+        limpos.append(pts[-1])
+    return limpos
 
 
 def mede(caminho):
@@ -90,6 +147,7 @@ def mede(caminho):
     cúspides e cada trecho é medido sozinho.
     """
     pts = [(p.pose.position.x, p.pose.position.y) for p in caminho.poses]
+    yaws = _yaws_de(caminho.poses)
     if len(pts) < 3:
         # Caminho de 1 ou 2 pontos é reta pura — o planner achou o destino
         # trivial. É resultado válido, não falha: relatar como falha aqui
@@ -100,13 +158,15 @@ def mede(caminho):
                 'desvio': 1.0, 'giro_deg': 0.0, 'raio_min': float('inf'),
                 'inversoes': 0, 'trechos_curtos': 0}
 
-    comp = sum(math.hypot(b[0] - a[0], b[1] - a[1])
-               for a, b in zip(pts, pts[1:]))
+    passos = sorted(math.hypot(b[0] - a[0], b[1] - a[1])
+                    for a, b in zip(pts, pts[1:]))
+    comp = sum(passos)
     reta = math.hypot(pts[-1][0] - pts[0][0], pts[-1][1] - pts[0][1])
+    meio_passo = passos[len(passos) // 2] / 2.0
 
     # O caminho é partido nas cúspides: cada trecho é um sentido de marcha, e
     # medir através da dobra é o defeito descrito no docstring.
-    cortes = cuspides(pts)
+    cortes = cuspides(pts, yaws)
     trechos = []
     ini = 0
     for c in cortes:
@@ -114,7 +174,47 @@ def mede(caminho):
         ini = c
     trechos.append(pts[ini:])
 
+    # --- giro: somado nos pontos CRUS, dentro de cada trecho ---------------
+    # Medido nos reamostrados, o giro de curva CONTÍNUA saía curto: um arco de
+    # 90° virava 50°, porque as meias-viradas das duas pontas não têm vértice
+    # onde aparecer. E o erro não era parelho entre os dois planners — o canto
+    # vivo do Theta* tem vértice e era contado inteiro, enquanto o arco do Smac
+    # perdia nas duas pontas. A coluna que mede "quanto ele mexe o bico"
+    # favorecia o Smac, justo na comparação que ela existe para arbitrar.
+    #
+    # Somar no cru só é honesto se o passo cru for limpo, e ele é: medido em
+    # 29-07, o Theta* anda 0,0500 m por passo (a resolução do mapa) com virada
+    # MEDIANA de 0,00°, e o Smac 0,086 m com virada máxima de 19,9° — que dá
+    # raio 0,249 m, o teto configurado, não ruído. A justificativa antiga da
+    # reamostragem ("três pontos vizinhos medem ruído de arredondamento") não
+    # se sustentou: o 0,01 m que ela dizia consertar era a cúspide.
+    #
+    # A exceção são os TOCOS DE PONTA: o planner cola a pose exata de partida e
+    # de chegada no caminho discretizado, e sobra um segmento de poucos
+    # milímetros em cada extremidade, fora do arco. Direção tirada de um toco
+    # desses é lixo — no caso `lado_1m` com raio 0,25, os dois tocos (7,7 mm
+    # cada) injetavam ±125,6° e o giro de um caminho de 1,19 m saía 447°.
+    # Segmento abaixo de METADE do passo típico do caminho não define direção e
+    # é costurado fora. Limite relativo, não absoluto: o passo do Theta* (0,05,
+    # a resolução do mapa) e o do Smac (~0,08) são diferentes, e um número fixo
+    # serviria a um e não ao outro.
     giro = 0.0
+    for trecho in trechos:
+        limpos = _sem_tocos(trecho, meio_passo)
+        for a, b, c in zip(limpos, limpos[1:], limpos[2:]):
+            r1, r2 = _rumo(a, b), _rumo(b, c)
+            if r1 is None or r2 is None:
+                continue
+            giro += abs(norm_ang(r2 - r1))
+
+    # --- raio mínimo: segue na poligonal reamostrada ------------------------
+    # ⚠️ NÃO mexido nesta mudança, de propósito (uma correção por vez). Mas o
+    # levantamento acima expôs um problema nele: a reamostragem a 0,20 m passa
+    # POR CIMA do canto vivo do Theta* e devolve 0,37–0,39 m onde a virada real
+    # é um canto — curvatura infinita, que robô sem pivô não segue de jeito
+    # nenhum. Ou seja, o raio faz o Theta* parecer MAIS seguível do que ele é,
+    # e o veredito de 29-07 (Smac ganha) é conservador, não otimista. Tratar
+    # canto e arco como coisas diferentes é a próxima correção da régua.
     raio_min = float('inf')
     curtos = 0
     for trecho in trechos:
@@ -146,7 +246,6 @@ def mede(caminho):
             if r1 is None or r2 is None:
                 continue
             d = abs(norm_ang(r2 - r1))
-            giro += d
             # Raio da curva por três pontos: dois segmentos e o ângulo entre eles.
             passo = math.hypot(c[0] - b[0], c[1] - b[1])
             if d > 1e-6 and passo > 1e-6:

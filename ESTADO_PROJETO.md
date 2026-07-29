@@ -384,9 +384,8 @@ na régua da bancada.
   verdade: com raio grande, o Smac **treme em cima do alvo** — no `bloco` com
   0,46 m são 4 inversões dentro de uma caixa de 9 cm, depois de 4,86 m limpos.
   Fica para o seguidor.
-- **Por consertar, de propósito**: o `giro` de arco contínuo sai curto (90° são
-  lidos como 50°). Viés oposto ao da cúspide na mesma coluna; corrigir junto
-  impediria saber qual moveu qual número. Travado em teste que o descreve.
+- ~~**Por consertar**: o `giro` de arco contínuo sai curto.~~ **FEITO na 4ª
+  leva** (abaixo), e atrás dele havia mais dois defeitos.
 
 ### O veredito da varredura: o ranking não vira, ele se acentua
 
@@ -405,6 +404,44 @@ preço sobe com o raio (1,50× → 2,12× no alvo perto e de lado).
 
 **A decisão 008 pode ser assinada sem esperar a zona morta**: a medida que falta
 muda o tamanho da vantagem, não quem vence. Falta o julgamento do dono.
+
+## 🧭 2026-07-29 (4ª leva) — O viés do giro, e dois defeitos escondidos atrás dele
+
+O `giro` encolhia arco contínuo (90° lidos como 50°) e **favorecia o Smac na
+comparação que ele arbitra** — o canto vivo do Theta\* tem vértice e era contado
+inteiro. Consertado somando nos pontos crus, o que exigiu derrubar antes a
+premissa da reamostragem: medido, o passo cru é limpo (Theta\* anda 0,05 m com
+virada mediana de 0,00°; o Smac 0,086 m com virada máxima de 19,9°, que é o arco
+no raio configurado). A justificativa antiga descrevia a cúspide, não ruído.
+
+Somar no cru expôs dois defeitos que a reamostragem escondia:
+
+- **Tocos de ponta**: o planner cola a pose exata de partida/chegada no caminho
+  discretizado e sobra um segmento de 7,7 mm em cada ponta, injetando ±125,6°.
+  Costurados fora por limite relativo (metade do passo típico). O comprimento
+  não muda — o robô percorre o toco, ele só não define rumo.
+- **Cúspide rasa**: a dobra geométrica nas inversões do `lado_1m` mede 147° e
+  passava por baixo do limiar de 150°. A pose resolve: projetando o passo no
+  rumo, o caminho é `+----------------+` — 1 passo à frente, 16 de ré, 1 à
+  frente. A detecção passou a usar **pose quando existe, geometria quando não**
+  (o Theta\* devolve orientação zerada — faixa de yaw de 0,0° em 144 pontos).
+
+```
+lado_1m @0.25    antes: giro 437°  inv 0        depois: giro 144°  inv 2
+```
+
+**O veredito não mudou** (a seguibilidade sai do `raio_min`, não tocado). O que
+mudou é que a coluna do giro passou a servir: o Smac mexe MAIS o bico em todos
+os casos com obstáculo (é o custo de curvar em vez de pivotar), e os dois zeros
+do Theta\* nos casos de lado não são virtude — é reta lateral para um robô que
+teria de pivotar. A ré do Reeds-Shepp aparece constante nos casos de lado: 2
+inversões nos quatro raios. 294 testes verdes.
+
+⚠️ **Próxima correção da régua, não feita aqui**: a reamostragem passa por cima
+do canto vivo do Theta\* e devolve 0,37–0,39 m onde a virada é um canto
+(curvatura infinita). O `raio_min` faz o Theta\* parecer MAIS seguível do que
+é — o veredito de hoje é conservador, e distinguir canto de arco só pode
+melhorar o lado do Smac.
 
 ## ⏳ Próximos passos
 
