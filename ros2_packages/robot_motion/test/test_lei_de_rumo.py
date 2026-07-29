@@ -262,9 +262,12 @@ def test_pivo_disponivel_depende_da_bitola():
 
     Medido no simulador: bitola 0,20 com zona morta 0,10 exige 1,3 rad/s para
     pivotar, contra um teto de 1,0 — impossível, e pontos próximos ficam
-    inalcançáveis (o robô os orbita). A bitola real (0,32) resolve o mesmo
-    caso. Daí medir a bitola com trena ser mais urgente que medir a zona
-    morta.
+    inalcançáveis (o robô os orbita). Supunha-se que a bitola real (0,32)
+    resolvesse o mesmo caso, e por isso medi-la era urgente.
+
+    MEDIDA em 2026-07-29: 0,270 — entre os dois palpites, e ela NÃO resolveu
+    a pergunta. Com zona morta 0,10 o pivô existe, mas por 4% de folga; com
+    0,15 ele some. Quem decide agora é a ZONA MORTA, ainda não medida.
     """
     from robot_motion.lei_de_rumo import pivo_disponivel
     assert not pivo_disponivel(zona_morta=0.10, bitola=0.20, margem=0.03,
@@ -273,6 +276,13 @@ def test_pivo_disponivel_depende_da_bitola():
                            wz_max=1.0)
     # sem zona morta, sempre disponível
     assert pivo_disponivel(zona_morta=0.0, bitola=0.20, margem=0.0, wz_max=1.0)
+
+    # A bitola MEDIDA, nos dois cenários de zona morta que estão em jogo.
+    # Trava o resultado: o pivô depende da zona morta, não mais da bitola.
+    assert pivo_disponivel(zona_morta=0.10, bitola=0.270, margem=0.03,
+                           wz_max=1.0), 'com zm 0,10 o pivô existe (folga 4%)'
+    assert not pivo_disponivel(zona_morta=0.15, bitola=0.270, margem=0.05,
+                               wz_max=1.0), 'com zm 0,15 o pivô some'
 
 
 # ---------------------------------------------------------------- a ré

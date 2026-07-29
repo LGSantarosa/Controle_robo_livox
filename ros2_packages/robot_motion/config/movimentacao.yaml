@@ -32,9 +32,13 @@ heading_controller:
     zona_morta: 0.15
 
     # Bitola [m] — distância entre as rodas motrizes.
-    #   HERDADA do YAML do controlador, nunca medida com trena neste robô.
+    #   MEDIDA COM TRENA 2026-07-29: por fora das rodas 315 mm, por dentro
+    #   225 mm → (315+225)/2 = 270 mm. Era 0.32, herdada e nunca medida.
     #   Entra na conversão de comando em rad/s de roda: errar aqui erra tudo.
-    bitola: 0.32
+    #   ⚠️ Bitola MENOR exige MAIS wz para pivotar: com zona_morta 0.15 e
+    #   margem 0.05 o pivô passa a exigir 1,48 rad/s contra teto de 1,0 —
+    #   pior que os 1,25 de antes. A ré da decisão 007 segue necessária.
+    bitola: 0.270
 
     margem_piso: 0.05        # folga acima da zona morta [m/s]
     tolerancia_rumo: 0.02    # ~1,1° — abaixo disso não gira [rad]

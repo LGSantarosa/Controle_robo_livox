@@ -61,8 +61,8 @@ class HeadingController(Node):
             # Chute alto de propósito: o piso que sai daqui é o que impede o
             # robô de ficar plantado no chão (BO-3).
             ('zona_morta', 0.15),
-            # Bitola. NÃO MEDIDA neste robô — herdada do YAML do controlador.
-            ('bitola', 0.32),
+            # Bitola MEDIDA com trena em 2026-07-29 (era 0.32, herdada).
+            ('bitola', 0.270),
             ('margem_piso', 0.05),
             ('tolerancia_rumo', 0.02),
             ('taxa', 20.0),

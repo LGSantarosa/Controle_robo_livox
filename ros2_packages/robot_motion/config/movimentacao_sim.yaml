@@ -17,7 +17,7 @@ heading_controller:
 
     zona_morta: 0.10    # igual à da placa fingida no sim.launch.py
     margem_piso: 0.03
-    bitola: 0.20        # bitola REAL do modelo simulado (robo2.urdf.xacro)
+    bitola: 0.270       # MEDIDA COM TRENA 2026-07-29 (era 0.20 estimada)
 
     tolerancia_rumo: 0.02
     taxa: 20.0

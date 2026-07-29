@@ -43,7 +43,8 @@ class PlacaSimulada(Node):
             ('zona_morta', 0.10),
             # Têm que bater com o diff_drive_controller, senão a conversão
             # mente e o defeito simulado não é o defeito de verdade.
-            ('bitola', 0.20),
+            # MEDIDA COM TRENA 2026-07-29 (era 0.20, herdada e nunca medida).
+            ('bitola', 0.270),
             ('taxa_avisos', 2.0),
         ])
         self.par = {x.name: x.value for x in p}

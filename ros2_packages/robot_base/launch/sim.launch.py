@@ -100,7 +100,7 @@ def generate_launch_description():
         name='placa_simulada',
         output='both',
         parameters=[{'zona_morta': LaunchConfiguration('zona_morta'),
-                     'bitola': 0.20,
+                     'bitola': 0.270,  # medida com trena 2026-07-29
                      'use_sim_time': True}],
     )
 
