@@ -134,3 +134,77 @@ def velocidade_de_seguimento(dist_ao_fim, raio_da_curva, v_max, a_lin, wz_max):
     if not math.isinf(raio_da_curva):
         v = min(v, raio_da_curva * wz_max)
     return v
+
+
+# --------------------------------------------------------- a ré por gatilho
+#
+# Decisão 009. O plano não dá ré (o planner roda em Dubins), então quem recua é
+# esta camada — e o gatilho é o SINTOMA, não a geometria.
+#
+# Por que sintoma, se a decisão 007 o havia descartado: lá o argumento era que
+# esperar o sintoma "gasta N segundos de órbita toda vez". É verdade, e é o
+# preço certo a pagar. O gatilho geométrico age cedo e SEMPRE que a conta diz
+# que não cabe — inclusive em situações que se resolveriam sozinhas — e é assim
+# que nasce o ciclo "ré e anda", reprovado duas vezes com dado: 28-07 no clique
+# do dono (12 entradas, período 2,10 s) e 29-07 na bancada (5 entradas, 1,85 m
+# de caminho para um alvo a 0,40 m).
+#
+# Sintoma dispara raro e tarde. É a propriedade que se quer.
+
+
+class ProgressoDeAvanco:
+    """Diz se o robô parou de se aproximar do objetivo.
+
+    Mede aproximação, não velocidade: robô que anda em círculo tem velocidade e
+    não tem progresso, e é exatamente o caso que interessa (a órbita).
+
+    Só acusa depois de `parado_s` CONTÍNUOS sem ganhar `avanco_min` metros. O
+    relógio zera a cada avanço real — dois travamentos curtos separados não
+    somam para virar um disparo.
+    """
+
+    def __init__(self, parado_s=1.5, avanco_min=0.05):
+        self.parado_s = parado_s
+        self.avanco_min = avanco_min
+        self.melhor = None      # menor distância já vista neste objetivo
+        self.desde = None       # instante em que a melhor marca parou de cair
+
+    def reinicia(self):
+        self.melhor = None
+        self.desde = None
+
+    def atualiza(self, t, dist_ao_objetivo):
+        """Devolve True enquanto o robô estiver emperrado."""
+        if self.melhor is None or dist_ao_objetivo <= self.melhor - self.avanco_min:
+            self.melhor = dist_ao_objetivo
+            self.desde = t
+            return False
+        return (t - self.desde) > self.parado_s
+
+
+def orcamento_de_re(vao_traseiro=None, folga=0.30, cego=0.30):
+    """Quantos metros de ré são permitidos [m].
+
+    Sem `vao_traseiro` a ré é **cega**: o Mid-360 é 360° e vai enxergar atrás,
+    mas ainda não está no modelo do simulador. Aposta cega tem que ser curta —
+    daí o `cego` valer o mesmo que a folga, e não mais.
+
+    Com vão medido, recua o que há descontando a folga. Vão menor que a folga
+    **proíbe** a ré: é zero, não "um pouquinho", porque encostar devagar também
+    é bater.
+    """
+    if vao_traseiro is None:
+        return cego
+    return max(0.0, vao_traseiro - folga)
+
+
+def re_esgotada(recuado, orcamento, t_na_re, teto_s=8.0):
+    """A manobra acabou — por metros ou por tempo.
+
+    O teto de TEMPO não é redundante com o de metros: se a pose não mudar (roda
+    patinando, comando engolido pela zona morta), o orçamento em metros nunca é
+    gasto e a ré duraria para sempre. É o BO-3 visto de outro ângulo — comando
+    saindo, robô parado — e a defesa é a mesma: não confiar que o movimento
+    aconteceu só porque foi pedido.
+    """
+    return recuado >= orcamento or t_na_re > teto_s

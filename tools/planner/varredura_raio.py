@@ -185,11 +185,16 @@ class Pilha:
                 pass
 
 
-def yaml_do_raio(base, raio, destino):
-    """Copia o YAML da bancada trocando só o raio mínimo.
+def yaml_do_raio(base, raio, destino, modelo=None):
+    """Copia o YAML da bancada trocando o raio mínimo (e o modelo, se pedido).
 
     Reescrita por LINHA, de propósito: carregar e reserializar o YAML jogaria
     fora todos os comentários, que neste repo são metade do valor do arquivo.
+
+    `modelo` troca o `motion_model_for_search`. REEDS_SHEPP deixa o planner usar
+    ré; DUBIN a proíbe. Existe porque a ré PLANEJADA é contestada: em robô com
+    Nav2 ela tende a ficar tentando entrar e sair de trechos de ré, e o custo de
+    proibi-la no plano não era conhecido — esta bancada mede.
     """
     trocou = False
     with open(base) as f:
@@ -200,6 +205,9 @@ def yaml_do_raio(base, raio, destino):
             indent = linha[:len(linha) - len(linha.lstrip())]
             saida.append(f'{indent}minimum_turning_radius: {raio}\n')
             trocou = True
+        elif modelo and linha.strip().startswith('motion_model_for_search:'):
+            indent = linha[:len(linha) - len(linha.lstrip())]
+            saida.append(f'{indent}motion_model_for_search: "{modelo}"\n')
         else:
             saida.append(linha)
     if not trocou:
@@ -215,6 +223,10 @@ def main():
         RAIZ, 'docs', 'dados',
         f'{time.strftime("%Y-%m-%d")}-varredura-raio-planner.csv'))
     ap.add_argument('--tmp', default='/tmp')
+    ap.add_argument('--modelo', default=None,
+                    choices=['REEDS_SHEPP', 'DUBIN'],
+                    help='troca o motion_model_for_search (padrão: o do YAML). '
+                         'REEDS_SHEPP deixa o planner usar ré; DUBIN proíbe.')
     cfg = ap.parse_args()
 
     from ament_index_python.packages import get_package_share_directory
@@ -228,7 +240,8 @@ def main():
             print(f'\n{"=" * 74}\nRAIO {raio:.2f} m — {porque}\n{"=" * 74}',
                   file=sys.stderr)
             params = yaml_do_raio(
-                base, raio, os.path.join(cfg.tmp, f'bancada_r{raio:.2f}.yaml'))
+                base, raio, os.path.join(cfg.tmp, f'bancada_r{raio:.2f}.yaml'),
+                modelo=cfg.modelo)
             pilha = Pilha()
             no = Varredura()
             try:

@@ -1206,3 +1206,85 @@ Refeito limpo: **5 mutações, 5 pegas**, cada uma por exatamente um teste.
 
 305 testes verdes (eram 294). Fatia B (cúspides e ré) e C (chegada e guarda do
 tremor do Smac) vêm depois.
+
+## 🔙 2026-07-29 (7ª leva) — A ré volta a ser por gatilho (decisão 009), e a fatia B
+
+Horas depois de a decisão 008 dizer que a ré nasceria do planejamento, o dono
+derrubou essa seção com razão de campo: **ré planejada em robô com Nav2 é
+problemática — o robô fica tentando entrar e seguir os trechos de ré.** Foi por
+isso que ele tirou a ré do planejamento no robô 1 e criou lá a ré por gatilho.
+
+Não dava para arbitrar com a bancada: ela desenha, não dirige. O que dava era
+medir o custo de cada saída, e foi o que se fez antes de decidir.
+
+### Três medições, e uma hipótese minha que caiu
+
+**1. Encarecer a ré não a elimina.** `reverse_penalty` de 2 → 10 → 40, no raio de
+produção: as inversões ficam onde estavam (porta 2, perto_de_lado 2, lado_1m 2,
+bloco 3→4→2). Nesses casos a ré é geometricamente necessária, não oportunismo do
+planner. A opção do meio não existe.
+
+**2. Proibir a ré no plano custa, e assimetricamente.** Varredura inteira em
+`DUBIN`: `porta`, `aperto` e `beco` não sentem; `bloco` fica **sem caminho nos
+quatro raios** (erro 208, NO_VALID_PATH) e os dois alvos "de lado" passam de
+1,50–2,12 para **3,61–5,66** de desvio. Um alvo a 0,60 m custa 2,9–3,4 m de
+caminho com ~350° de giro. É o balão de volta, agora nascendo do plano.
+
+**3. Recuar NÃO salva o plano do Dubins.** Essa era a tese natural da ré por
+gatilho e eu a testei antes de escrevê-la: recuando reto 0,3 e 0,5 m antes de
+planejar, o comprimento **não cai** (2,92 → 2,99 → 3,20 no `perto_de_lado`), e o
+`bloco` segue sem caminho. A razão é geométrica e vale para qualquer recuo:
+**recuar reto não muda o rumo**. O alvo continua a 90° do bico, e um carro
+só-para-frente precisa da mesma volta, saia de onde sair. (A 0,8 m dá
+START_OCCUPIED — o robô recua para dentro da inflação da divisória.)
+
+### O que isso revelou, e é o ponto de verdade
+
+**O robô 1 se dá bem com a ré por gatilho porque ele PIVOTA.** Recua, gira no
+lugar, o alvo de lado vira alvo de frente. O robô 2 não pivota com os parâmetros
+de hoje — zero amostras de giro parado em toda a fase B do perfil pessimista.
+
+Então a escolha depende do pivô, que depende da **zona morta**, sem medida desde
+27-07. Decisão 009 escrita e aceita: **plano em Dubins, ré por gatilho no
+seguidor**, valendo a experiência de operação; e a dependência fica registrada —
+se a zona morta medida mostrar que o pivô não existe, a 008 seção 3 volta à mesa
+com número, não com opinião.
+
+Some junto, de graça, o **tremor em cima do alvo** que a varredura achou com
+Reeds-Shepp (4 inversões numa caixa de 9 cm). Era a mesma doença, e eu a tinha
+arquivado como problema do seguidor.
+
+### Fatia B: o gatilho, e por que ele é tardio
+
+`ProgressoDeAvanco` mede **aproximação, não velocidade** — robô em órbita tem
+velocidade e não tem progresso, e é justamente esse o caso. Só acusa depois de
+1,5 s CONTÍNUOS sem ganhar 5 cm, e o relógio zera a cada avanço real: dois
+travamentos curtos separados não somam.
+
+A decisão 007 havia descartado o sintoma porque ele "gasta N segundos de órbita
+toda vez". É verdade, e é o preço certo: o gatilho geométrico age cedo e SEMPRE
+que a conta diz que não cabe, inclusive onde se resolveria sozinho — é assim que
+nasce o vai-e-volta. Sintoma dispara raro e tarde.
+
+A ré é **cega** enquanto o Mid-360 não estiver no modelo: orçamento curto (0,30 m)
+e obrigatório. Com vão medido ele passa a sair de metros reais. E tem teto de
+TEMPO além do de metros, que não é redundante: se a pose não muda (comando
+engolido pela zona morta), o orçamento em metros nunca é gasto e a ré duraria
+para sempre — é o BO-3 visto de outro ângulo.
+
+### Dois testes meus estavam errados, e o segundo ensinou algo
+
+O primeiro usava 3 cm/s como "devagar mas progredindo" e reprovava a lei. Mas
+**este robô não anda a 3 cm/s**: abaixo do piso de linear (~0,33 m/s no perfil
+pessimista) ele não anda devagar, ele não anda. Ficou um teste novo travando
+essa folga — a taxa mínima implícita do gatilho (0,05 m / 1,5 s = 3,3 cm/s) tem
+que ficar ~10x abaixo do piso, e se a zona morta medida derrubar o piso, o par
+de números volta à mesa.
+
+O segundo simulava o robô chegando e **ficando parado no alvo por 4 s** — e o
+gatilho disparava, corretamente. Parado em cima do alvo não é travamento, mas o
+detector só vê distância que não cai. Quem sabe que chegou é o seguidor, e é ele
+que desarma. Sem isso o robô chegaria, esperaria 1,5 s e daria ré para longe do
+ponto onde acabou de chegar. Virou teste.
+
+6 mutações, 6 pegas. **316 testes verdes** (eram 305).

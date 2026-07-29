@@ -156,3 +156,151 @@ def test_curvatura_adiante_ve_a_curva_ANTES_de_entrar_nela():
 
 def test_curvatura_adiante_em_reta_e_infinita():
     assert math.isinf(curvatura_adiante(reta(20, 0.1), 0, janela=1.0))
+
+
+# ------------------------------------------------ fatia B: a ré por gatilho
+#
+# Decisão 009: o plano não dá ré (Dubins), e quem recua é o seguidor, disparado
+# por SINTOMA — o robô não está progredindo — e não por geometria que prevê que
+# ele não vai progredir. O gatilho geométrico da decisão 007 foi reprovado duas
+# vezes com dado, pelo ciclo "ré e anda".
+
+from robot_motion.lei_de_seguimento import (          # noqa: E402
+    ProgressoDeAvanco,
+    orcamento_de_re,
+    re_esgotada,
+)
+
+
+def test_avanco_normal_nao_dispara_re():
+    """Robô andando não recua. O óbvio, travado: é o falso positivo que
+    produziria o vai-e-volta que a 007 morreu de ter."""
+    p = ProgressoDeAvanco(parado_s=1.5, avanco_min=0.05)
+    t, d = 0.0, 3.0
+    disparou = False
+    while t < 10.0:
+        d -= 0.02                 # 0,4 m/s a 20 Hz: progride
+        t += 0.05
+        disparou |= p.atualiza(t, d)
+    assert not disparou
+
+
+def test_dispara_so_DEPOIS_de_parado_o_tempo_todo():
+    """O gatilho é tardio de propósito.
+
+    Sintoma dispara raro e tarde; geometria dispara cedo e sempre — e foi a
+    geometria que produziu 5 entradas em ré e 1,85 m de caminho para um alvo a
+    0,40 m, na bancada de 29-07. Aqui: 1,5 s sem progredir, nem um tick antes.
+    """
+    p = ProgressoDeAvanco(parado_s=1.5, avanco_min=0.05)
+    t, d = 0.0, 1.0
+    assert not p.atualiza(t, d)
+    primeiro = None
+    while t < 5.0:
+        t += 0.05                 # distância NÃO cai: emperrado
+        if p.atualiza(t, d) and primeiro is None:
+            primeiro = t
+    assert primeiro == pytest.approx(1.55, abs=0.06), (
+        f'disparou em {primeiro} s — o gatilho tem que ser tardio')
+
+
+def test_progresso_lento_mas_real_nao_dispara():
+    """Chegar devagar não é estar preso.
+
+    A aproximação freia por `sqrt(2·a·d)` e fica lenta de propósito perto do
+    fim; confundir isso com travamento faria o robô dar ré JUSTO ao chegar.
+
+    0,10 m/s é o "devagar" que este robô CONSEGUE. Escrevi este teste a 3 cm/s
+    primeiro e ele reprovou a lei — mas 3 cm/s é abaixo do piso de linear que a
+    zona morta obriga (~0,33 m/s no perfil pessimista): nessa faixa o robô não
+    anda devagar, ele **não anda**. Ver o teste da taxa mínima logo abaixo.
+    """
+    p = ProgressoDeAvanco(parado_s=1.5, avanco_min=0.05)
+    t, d = 0.0, 0.40
+    disparou = False
+    while d > 0.02:               # só a APROXIMAÇÃO: parar em cima do alvo é
+        d -= 0.005                # assunto da chegada, não do gatilho — lá o
+        t += 0.05                 # seguidor desarma o detector (`reinicia`)
+        disparou |= p.atualiza(t, d)
+    assert not disparou, 'aproximação a 0,10 m/s foi lida como travamento'
+
+
+def test_chegada_desarma_o_detector():
+    """Parado EM CIMA do alvo não é travamento — mas o detector não sabe disso.
+
+    Ele só vê distância que não cai, e no alvo ela não cai mesmo. Quem sabe que
+    chegou é o seguidor, e é ele que desarma. Sem isso o robô chega, fica, e
+    depois de 1,5 s dá ré para longe do ponto onde acabou de chegar.
+    """
+    p = ProgressoDeAvanco(parado_s=1.5, avanco_min=0.05)
+    t = 0.0
+    for _ in range(60):           # 3 s parado no alvo
+        t += 0.05
+        p.atualiza(t, 0.01)
+    assert p.atualiza(t, 0.01), 'sem desarme, o detector acusa — e deve acusar'
+    p.reinicia()
+    assert not p.atualiza(t + 0.05, 0.01), 'depois de reiniciar, ele cala'
+
+
+def test_a_taxa_minima_implicita_tem_folga_contra_o_piso_de_linear():
+    """`avanco_min / parado_s` é uma velocidade mínima disfarçada.
+
+    Com 0,05 m em 1,5 s, quem se aproximar a menos de 3,3 cm/s é declarado
+    preso. Isso é seguro só porque o piso de linear que a zona morta obriga é
+    ~10x maior — abaixo dele o robô não anda de verdade, então "aproximação
+    lenta" não é um estado que esta máquina ocupa.
+
+    Se a zona morta medida na bancada derrubar muito o piso, este par de
+    números volta à mesa: a folga é o que sustenta o gatilho.
+    """
+    taxa_minima = 0.05 / 1.5
+    v_piso_pessimista = 0.15 + 1.0 * 0.270 / 2 + 0.05
+    assert taxa_minima < v_piso_pessimista / 5.0, (
+        f'taxa mínima {taxa_minima:.3f} m/s perto demais do piso '
+        f'{v_piso_pessimista:.3f} m/s — o gatilho vira falso positivo')
+
+
+def test_o_relogio_zera_quando_o_robo_volta_a_andar():
+    p = ProgressoDeAvanco(parado_s=1.5, avanco_min=0.05)
+    t, d = 0.0, 1.0
+    for _ in range(20):           # 1,0 s emperrado
+        t += 0.05
+        p.atualiza(t, d)
+    d -= 0.20                     # destravou
+    t += 0.05
+    p.atualiza(t, d)
+    for _ in range(20):           # mais 1,0 s emperrado: total 2 s, mas
+        t += 0.05                 # nenhum trecho contínuo de 1,5 s
+        assert not p.atualiza(t, d)
+
+
+def test_orcamento_da_re_e_obrigatorio_e_curto():
+    """Sem sensor traseiro a ré é CEGA (decisão 009).
+
+    O Mid-360 é 360° e vai ver atrás, mas ainda não está no modelo. Enquanto
+    não estiver, recuar é apostar que não tem nada lá — e aposta cega tem que
+    ser curta.
+    """
+    assert orcamento_de_re(vao_traseiro=None) == pytest.approx(0.30)
+
+
+def test_com_vao_medido_a_re_pode_ir_mais_longe_mas_com_folga():
+    """Quando o lidar entrar, o orçamento passa a sair de metros medidos."""
+    assert orcamento_de_re(vao_traseiro=1.20, folga=0.30) == pytest.approx(0.90)
+
+
+def test_vao_menor_que_a_folga_proibe_a_re():
+    """Parede atrás = não recua. Zero, não 'um pouquinho'."""
+    assert orcamento_de_re(vao_traseiro=0.20, folga=0.30) == 0.0
+
+
+def test_re_para_ao_gastar_o_orcamento():
+    assert not re_esgotada(recuado=0.10, orcamento=0.30, t_na_re=1.0, teto_s=8.0)
+    assert re_esgotada(recuado=0.31, orcamento=0.30, t_na_re=1.0, teto_s=8.0)
+
+
+def test_re_para_no_teto_de_TEMPO_mesmo_sem_ter_recuado():
+    """A ré também é cega para si mesma: se a pose não muda, ela nunca gastaria
+    o orçamento em metros e recuaria para sempre. O teto de tempo é a defesa —
+    é o mesmo BO-3 (comando saindo, robô parado) visto de outro ângulo."""
+    assert re_esgotada(recuado=0.0, orcamento=0.30, t_na_re=8.1, teto_s=8.0)

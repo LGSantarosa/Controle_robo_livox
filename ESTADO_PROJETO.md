@@ -446,6 +446,33 @@ do canto vivo do Theta\* e devolve 0,37–0,39 m onde a virada é um canto
 é — o veredito de hoje é conservador, e distinguir canto de arco só pode
 melhorar o lado do Smac.
 
+## 🔙 2026-07-29 (7ª leva) — A ré volta a ser por gatilho (decisão 009)
+
+O dono derrubou a seção 3 da 008 com razão de campo: ré planejada em robô com
+Nav2 faz o robô ficar tentando entrar e seguir os trechos de ré. A bancada não
+sabe arbitrar isso (ela desenha, não dirige), então mediu-se o custo de cada
+saída antes de decidir.
+
+- **Encarecer a ré não a elimina**: `reverse_penalty` de 2 a 40 não muda as
+  inversões — nesses casos ela é geometricamente necessária.
+- **Proibir a ré (Dubins) custa**: `bloco` fica sem caminho nos 4 raios, e os
+  alvos "de lado" passam de 1,50–2,12 para 3,61–5,66 de desvio (~3 m de caminho
+  para um alvo a 0,60 m). `porta`, `aperto` e `beco` não sentem.
+- **Recuar NÃO salva o plano Dubins** — hipótese minha, testada e derrubada:
+  recuar reto não muda o RUMO, e o alvo segue a 90° do bico.
+- **O que sustenta a ré por gatilho é o PIVÔ**, e o robô 1 pivota. O robô 2 não,
+  com os parâmetros de hoje.
+
+**Decisão 009 aceita**: planner em `DUBIN`, ré por gatilho no seguidor, disparada
+por SINTOMA (não progrediu) e não por geometria. Fica registrado que **a zona
+morta reabre esta decisão**: se o pivô não existir, a 008 seção 3 volta com
+número. É a terceira razão de peso para o item nº 1 da bancada.
+
+**Fatia B do seguidor feita**: `ProgressoDeAvanco` (mede aproximação, não
+velocidade — órbita tem velocidade e não tem progresso), orçamento de ré cego de
+0,30 m enquanto o Mid-360 não estiver no modelo, e teto de tempo além do de
+metros (se a pose não muda, o orçamento em metros nunca é gasto). 316 testes.
+
 ## ⏳ Próximos passos
 
 **Primeiro, com o robô (virou prioridade — a movimentação depende destes

@@ -60,13 +60,26 @@ planner_server:
       # inteira nos dois extremos e mostra que o ranking não vira entre eles.
       minimum_turning_radius: 0.37
 
-      # REEDS_SHEPP deixa o PLANNER usar ré. É o mesmo recurso que tentamos
-      # fazer à mão na decisão 007 — aqui ele nasce do planejamento, com o
-      # caminho inteiro já sabendo onde a ré entra, em vez de ser manobra de
-      # emergência decidida no susto. DUBIN proíbe ré (só para frente).
-      motion_model_for_search: "REEDS_SHEPP"
+      # DUBIN = só para frente; o plano NUNCA dá ré (decisão 009).
+      #
+      # Foi REEDS_SHEPP por algumas horas em 29-07, na decisão 008. Caiu por
+      # experiência de operação: ré planejada em robô com Nav2 faz o robô ficar
+      # tentando entrar e seguir os trechos de ré, com as cúspides mudando de
+      # lugar a cada replanejamento. A bancada não sabe medir isso — ela
+      # desenha, não dirige.
+      #
+      # O custo está medido e aceito (varredura Dubins de 29-07): metade dos
+      # casos não sente; `bloco` fica sem solução e os alvos perto-e-de-lado
+      # passam a custar ~3 m de caminho para 0,6 m de alvo. Quem cobre esses
+      # casos é a ré POR GATILHO, no seguidor.
+      #
+      # Encarecer a ré em vez de proibi-la foi testado e não funciona:
+      # `reverse_penalty` de 2 para 40 não muda as inversões, porque nesses
+      # casos a ré é geometricamente necessária, não oportunismo do planner.
+      motion_model_for_search: "DUBIN"
       angle_quantization_bins: 72
-      reverse_penalty: 2.0     # ré é permitida, mas nunca de graça
+      reverse_penalty: 2.0     # inerte com DUBIN; fica para o dia em que
+                               # a zona morta medida reabrir a decisão 009
       change_penalty: 0.0
       non_straight_penalty: 1.2
       cost_penalty: 2.0

@@ -33,17 +33,21 @@ planner responde por desenhar.
 |---|---|---|
 | caminho | reto com cantos | curvas com raio mínimo |
 | supõe que o robô | vira no lugar | curva andando |
-| ré | não existe | sim (Reeds-Shepp) |
+| ré | não existe | **não** (Dubins, decisão 009) |
 | é o do | robô 1 | candidato para este chassi |
 
 O robô 1 usa Theta\* porque **aquele** chassi (skid-steer 4 rodas) só sabe girar
 parado — vira ~3% do comando em arco. Este robô é o oposto: faz curva boa. Daí
 o Hybrid ser candidato de verdade aqui, e não só curiosidade.
 
-O `motion_model_for_search: REEDS_SHEPP` deixa o **planner** usar ré. É o mesmo
-recurso que tentamos fazer à mão na decisão 007, mas nascendo do planejamento —
-o caminho inteiro já sabe onde a ré entra, em vez de ser manobra decidida no
-susto quando o robô já está preso.
+O `motion_model_for_search` está em **`DUBIN`**: o plano nunca dá ré
+(decisão 009). Foi `REEDS_SHEPP` por algumas horas em 29-07 e caiu por
+experiência de operação — ré planejada faz o robô ficar tentando entrar e sair
+dos trechos de ré, com as cúspides mudando de lugar a cada replanejamento. Quem
+cobre os casos que o Dubins não resolve é a **ré por gatilho**, no seguidor.
+
+Para medir de novo o custo dessa escolha:
+`python3 tools/planner/varredura_raio.py --modelo REEDS_SHEPP`.
 
 ## Lendo a tabela
 
