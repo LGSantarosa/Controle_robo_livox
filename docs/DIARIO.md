@@ -1288,3 +1288,62 @@ que desarma. Sem isso o robô chegaria, esperaria 1,5 s e daria ré para longe d
 ponto onde acabou de chegar. Virou teste.
 
 6 mutações, 6 pegas. **316 testes verdes** (eram 305).
+
+## 🎯 2026-07-29 (8ª leva) — Seguidor, fatia C e o nó: a pilha fecha
+
+### A chegada, e o que a zona morta cobra em PRECISÃO
+
+Duas lições da decisão 006 viraram lei testada:
+
+**O raio de chegada tem um mínimo, e ele é a distância de parada.** O robô não
+sabe ir mais devagar que o piso de linear — abaixo disso a placa engole o
+comando (BO-3). Então ele entra no raio a `v_piso` e precisa de
+`v_piso²/(2·a_lin)` para parar; raio menor que isso e ele atravessa, sai do
+outro lado, volta, para sempre. Com os números de hoje (piso 0,335 m/s no perfil
+pessimista) isso dá **0,187 m**.
+
+Isso rendeu um argumento que ainda não estava escrito em lugar nenhum: **a zona
+morta não encarece só a manobra, encarece a PRECISÃO — e com o quadrado.** Piso
+o dobro, chegada quatro vezes mais grosseira. Não há ganho que conserte, e é
+mais um peso na balança do item nº 1 da bancada.
+
+**Chegou é chegou: para tudo, inclusive o giro.** Na sessão de 27-07 o robô
+chegava e continuava girando para acertar o rumo, arrastando-se para fora do
+ponto — 0,06 m viravam 0,27 m. Rumo na chegada não é requisito deste seguidor.
+
+### O nó, e o aviso que ele dá na subida
+
+`robot_motion/path_follower.py` amarra as três fatias: ouve `/plan` e
+`/Odometry`, publica `~/rumo_alvo` e `~/velocidade_alvo`, com dois estados
+(SEGUINDO / RÉ). A ré sai por **velocidade negativa** no tópico que já existia —
+sem tópico novo, como a movimentação já esperava.
+
+Ele grita na subida quando o raio de chegada pedido é impossível, verificado:
+
+```
+raio_chegada=0.100 -> ERROR: menor que a distância de parada (0.187 m).
+                      O robô vai ORBITAR o ponto sem nunca fechar.
+raio_chegada=0.250 -> INFO: aceito (mínimo viável 0.19 m)
+```
+
+Vale a pena o grito: o sintoma desse defeito (robô circulando o ponto) parece
+problema de controle, e é de configuração.
+
+O único número da movimentação que atravessa para cá é o `v_piso`, e **só** para
+essa conta — o nó não conhece zona morta, não conhece `a_dec` de giro e não fala
+com roda.
+
+### O CSV que já nasce mirando um defeito que ainda não vimos
+
+O registro grava `rumo_alvo` e `erro_rumo` a cada ciclo de propósito. A leitura
+do seguidor do robô 1 mostrou que **o plano salta entre replanejamentos** (13–15°
+lá) e que um seguidor que persegue esse salto oscila. Vai nos acontecer, porque o
+replanejamento vem do `bt_navigator`. Mas eu não vou pôr filtro agora contra
+defeito que não medi neste robô — seria começar a escada de ganhos que a decisão
+003 mandou não herdar. O que dá para fazer hoje é garantir que, quando aparecer,
+o número esteja na mão.
+
+320 testes verdes (eram 316). 2 mutações na fatia C, 2 pegas.
+
+**Falta para rodar**: a launch juntando Nav2 + seguidor + movimentação no
+simulador. Aí dá para ver o robô andando pela primeira vez com esta pilha.

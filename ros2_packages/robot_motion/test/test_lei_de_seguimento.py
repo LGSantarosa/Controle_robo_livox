@@ -304,3 +304,63 @@ def test_re_para_no_teto_de_TEMPO_mesmo_sem_ter_recuado():
     o orçamento em metros e recuaria para sempre. O teto de tempo é a defesa —
     é o mesmo BO-3 (comando saindo, robô parado) visto de outro ângulo."""
     assert re_esgotada(recuado=0.0, orcamento=0.30, t_na_re=8.1, teto_s=8.0)
+
+
+# ----------------------------------------------------- fatia C: a chegada
+#
+# Duas lições da decisão 006, as duas medidas e as duas caras:
+#
+#   1. não existe "chegar devagarinho" — abaixo do mínimo viável a placa engole
+#      o comando e o robô para LONGE do ponto achando que chegou (BO-3
+#      disfarçado de sucesso);
+#   2. chegando, se ele continua girando, se arrasta para fora: 0,06 m viraram
+#      0,27 m na sessão de 27-07.
+
+from robot_motion.lei_de_seguimento import (          # noqa: E402
+    chegou,
+    comando_de_parada,
+    raio_de_chegada_minimo,
+)
+
+V_PISO = 0.15 + 1.0 * 0.270 / 2 + 0.05     # perfil pessimista: 0,335 m/s
+
+
+def test_raio_de_chegada_minimo_e_a_distancia_de_PARADA():
+    """Raio menor que a distância de parada faz o robô ORBITAR o ponto.
+
+    Ele não consegue ir mais devagar que o piso, então entra no raio com
+    `v_piso` e precisa de `v_piso²/(2·a_lin)` para parar. Se o raio for menor
+    que isso, ele atravessa, sai do outro lado, volta — para sempre.
+    """
+    assert raio_de_chegada_minimo(V_PISO, A_LIN) == pytest.approx(
+        V_PISO ** 2 / (2 * A_LIN))
+    # com os números de hoje isso dá quase 19 cm — nada desprezível
+    assert raio_de_chegada_minimo(V_PISO, A_LIN) > 0.18
+
+
+def test_piso_maior_exige_raio_de_chegada_maior():
+    """A zona morta não encarece só a manobra: ela encarece a PRECISÃO.
+
+    É o argumento que o dono vai querer quando escolher entre pivotar e não:
+    piso alto = chegada grosseira, e não há ganho que conserte isso.
+    """
+    r_baixo = raio_de_chegada_minimo(0.20, A_LIN)
+    r_alto = raio_de_chegada_minimo(0.40, A_LIN)
+    assert r_alto > 3.5 * r_baixo, 'a precisão piora com o QUADRADO do piso'
+
+
+def test_chegou_e_so_a_distancia():
+    assert chegou(0.10, raio=0.15)
+    assert not chegou(0.20, raio=0.15)
+
+
+def test_parada_zera_o_GIRO_tambem_nao_so_a_linear():
+    """O defeito nº 4 de 27-07: chegando, ele continuava girando para acertar o
+    rumo e se ARRASTAVA para fora do ponto — 0,06 m viraram 0,27 m.
+
+    Chegou é chegou: para tudo. Rumo no ponto de chegada não é requisito deste
+    seguidor, e persegui-lo custa a própria chegada.
+    """
+    v, wz = comando_de_parada()
+    assert v == 0.0
+    assert wz == 0.0, 'girar depois de chegar arrasta o robô para fora do ponto'

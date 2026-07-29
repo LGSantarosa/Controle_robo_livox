@@ -26,6 +26,8 @@ setup(
     entry_points={
         'console_scripts': [
             'heading_controller = robot_motion.heading_controller:main',
+            'path_follower = robot_motion.path_follower:main',
+            # aposentado em 28-07 (decisão 008); sai numa fatia própria
             'goal_navigator = robot_motion.goal_navigator:main',
         ],
     },

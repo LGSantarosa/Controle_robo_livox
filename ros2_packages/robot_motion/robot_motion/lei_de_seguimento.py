@@ -208,3 +208,38 @@ def re_esgotada(recuado, orcamento, t_na_re, teto_s=8.0):
     aconteceu só porque foi pedido.
     """
     return recuado >= orcamento or t_na_re > teto_s
+
+
+# ------------------------------------------------------------- a chegada
+#
+# Duas lições medidas da decisão 006, e as duas custaram corrida.
+
+
+def raio_de_chegada_minimo(v_piso, a_lin):
+    """Menor raio de chegada que não faz o robô orbitar o ponto [m].
+
+    Ele não sabe ir mais devagar que `v_piso` — abaixo disso a placa engole o
+    comando (BO-3). Então ele entra no raio com essa velocidade e precisa de
+    `v_piso²/(2·a_lin)` para parar. Raio menor que isso: atravessa, sai do outro
+    lado, volta, para sempre.
+
+    Com os números de hoje (piso 0,335 m/s no perfil pessimista, `a_lin` 0,3)
+    isso dá ~0,19 m. Ou seja: **a zona morta não encarece só a manobra, encarece
+    a PRECISÃO**, e com o quadrado. Não há ganho que conserte.
+    """
+    return v_piso * v_piso / (2.0 * a_lin)
+
+
+def chegou(dist_ao_objetivo, raio):
+    return dist_ao_objetivo <= raio
+
+
+def comando_de_parada():
+    """O comando de quem chegou: zero linear e **zero giro**.
+
+    O giro zerado não é detalhe. Na sessão de 27-07 o robô chegava e continuava
+    girando para acertar o rumo, arrastando-se para fora do ponto: 0,06 m de
+    erro viravam 0,27 m. Rumo na chegada não é requisito deste seguidor, e
+    persegui-lo custa a própria chegada.
+    """
+    return 0.0, 0.0
