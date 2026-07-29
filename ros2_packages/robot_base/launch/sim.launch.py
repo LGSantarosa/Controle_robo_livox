@@ -40,6 +40,12 @@ def generate_launch_description():
 
     args = [
         DeclareLaunchArgument('mundo', default_value=mundo_padrao),
+        # Onde o robô nasce. Padrão (0,0) para não mudar nada de quem já usa a
+        # pista livre; na pista de obstáculos a origem cai DENTRO da parede
+        # (o perímetro começa em 0), então lá é obrigatório passar um ponto
+        # livre.
+        DeclareLaunchArgument('x', default_value='0.0'),
+        DeclareLaunchArgument('y', default_value='0.0'),
         DeclareLaunchArgument('gui', default_value='true',
                               description='false roda headless (útil para teste automatizado)'),
         DeclareLaunchArgument(
@@ -110,7 +116,8 @@ def generate_launch_description():
     spawn = Node(
         package='ros_gz_sim',
         executable='create',
-        arguments=['-topic', 'robot_description', '-name', 'robo2', '-z', '0.05'],
+        arguments=['-topic', 'robot_description', '-name', 'robo2', '-z', '0.05',
+                   '-x', LaunchConfiguration('x'), '-y', LaunchConfiguration('y')],
         output='both',
     )
 

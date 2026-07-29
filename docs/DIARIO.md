@@ -1347,3 +1347,86 @@ o número esteja na mão.
 
 **Falta para rodar**: a launch juntando Nav2 + seguidor + movimentação no
 simulador. Aí dá para ver o robô andando pela primeira vez com esta pilha.
+
+## 🚗 2026-07-29 (9ª leva) — A pilha inteira anda pela primeira vez
+
+`ros2 launch robot_motion pilha.launch.py sim:=true` sobe Gazebo + Nav2 +
+seguidor + movimentação, e o robô vai onde você clicar. Primeira vez que esta
+pilha dirige.
+
+```
+alvo (2,0 · 2,0), 90° atrás    CHEGOU 15,2 s   5,00 m de caminho / 3,00 reta = 1,67x
+alvo (6,0 · 1,5), pela porta   CHEGOU 12,3 s   5,55 m / 5,32 reta = 1,04x
+```
+
+### Quatro defeitos, e três eram do Nav2 discordando de si mesmo
+
+**1. A árvore padrão derruba o `bt_navigator` na subida.** Ela exige os
+servidores `spin`, `backup`, `wait` e `drive_on_heading`. Subir o
+`behavior_server` para satisfazê-la seria errado por mérito, não só por
+conveniência: `spin` é PIVÔ, que este robô não faz (zero amostras de giro parado
+no perfil pessimista), e `backup` é a ré do Nav2, que a decisão 009 tirou do
+caminho. E as duas seriam no-op — o `cmd_vel` delas sai pelo tópico ignorado, e a
+árvore acharia que recuperou sem nada ter acontecido. Trocado pela árvore de
+fábrica `navigate_w_replanning_time.xml`, que replaneja a 1 Hz e não tem
+recuperação nenhuma.
+
+**2. E derruba de novo, pela SEGUNDA árvore.** O `bt_navigator` carrega
+`navigate_through_poses` junto, com a árvore com recuperação. Não usamos rota com
+pontos intermediários: `navigators: ["navigate_to_pose"]`.
+
+**3. O `controller_server` não dirige, mas ABORTA.** Esta foi a premissa errada
+mais cara da leva: eu havia escrito que ele era inofensivo porque o `cmd_vel`
+dele ia para um tópico ignorado. Na corrida da porta ele derrubou a navegação com
+`RegulatedPurePursuitController detected collision ahead!` — o robô tinha
+atravessado a porta e parou. O palpite dele é sobre uma trajetória que ninguém
+vai executar (ele projeta supondo os comandos DELE), então julgar colisão ali só
+pode errar. `use_collision_detection: false`, com o motivo escrito no YAML.
+
+**4. Inflação 0,45 trava o robô DENTRO da porta.** Com raio 0,36 e inflação 0,45,
+o vão de 0,90 m fica inteiramente inflado e o replanejamento a 1 Hz falha com
+`Start occupied` — a célula do próprio robô conta como ocupada. Medido:
+
+```
+inflação 0,45  ->  atravessa a porta e TRAVA
+inflação 0,30  ->  chega em 12,3 s, 1,04x a linha reta
+```
+
+A produção foi para 0,30 e a bancada fica em 0,45 (é o número por trás dos 48
+planos da decisão 008). A divergência é deliberada e está escrita no
+`test_configs_coerentes.py`, que trava os números FÍSICOS (raio de curva, raio do
+robô) e deixa a inflação de fora de propósito: ela é escolha, não medida.
+
+### Um botão falso que eu mesmo criei, e o que ele ensinou
+
+Para expor a inflação como argumento da launch, passei um override de parâmetro
+por um caminho aninhado que eu **não verifiquei**. Ele quebrou a camada de
+inflação — o planner passou a gritar "Inflation layer either not found" e a porta
+voltou a falhar. Removido, a porta voltou a funcionar na hora.
+
+Lição, e ela é de método: um botão de conveniência não medido custou o mesmo tipo
+de tempo que um número herdado não medido. Se não dá para verificar agora, não
+entra — melhor editar o YAML do que ter um botão que mente.
+
+### E um artefato de ambiente que mentiu três vezes
+
+`pkill -f <nome>` casa com QUALQUER processo cuja linha de comando contenha o
+nome — inclusive o shell que está rodando o próprio `pkill`. Isso matou a sessão
+duas vezes e, pior, produziu diagnósticos falsos: uma pilha remanescente
+disputando o `/clock` fez uma corrida largar da pose errada com 25 mil
+`jump back in time`, e eu quase registrei aquilo como defeito da pilha. A
+limpeza agora vive em `mata.py`, que compara por PID.
+
+Regra que fica: **corrida cujo ambiente não foi provado limpo não é medida.**
+
+### O que sobrou anotado, sem conserto
+
+- O alvo a 90° atrás custou **1,67x** a linha reta, e o gatilho de ré disparou
+  duas vezes na corrida — uma delas a **0,43 m do objetivo**. Ré perto da chegada
+  é suspeito e é a primeira coisa a olhar na próxima sessão. O CSV do seguidor
+  (`csv:=`) grava o que falta para diagnosticar.
+- A TF `map→odom` é fixa. No simulador vale porque mundo e mapa saem da mesma
+  planta; **no robô real não vale**, e é o que falta para a pilha sair do
+  simulador.
+
+324 testes verdes.

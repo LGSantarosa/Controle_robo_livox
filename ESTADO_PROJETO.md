@@ -473,6 +473,29 @@ velocidade — órbita tem velocidade e não tem progresso), orçamento de ré c
 0,30 m enquanto o Mid-360 não estiver no modelo, e teto de tempo além do de
 metros (se a pose não muda, o orçamento em metros nunca é gasto). 316 testes.
 
+## 🚗 2026-07-29 (9ª leva) — A pilha inteira anda
+
+`ros2 launch robot_motion pilha.launch.py sim:=true` — Gazebo + Nav2 + seguidor
++ movimentação, e o robô vai onde se clicar. Dois alvos verificados: 90° atrás
+(15,2 s, 1,67x a reta) e através da porta de 0,90 m (12,3 s, 1,04x).
+
+Quatro defeitos achados e corrigidos, três deles do Nav2 discordando de si mesmo:
+a árvore padrão exige `spin`/`backup` (pivô que este robô não faz e a ré que a
+009 tirou) → trocada pela `navigate_w_replanning_time.xml`; a segunda árvore
+(`navigate_through_poses`) derrubava a subida → `navigators` restrito; e o
+`controller_server` **não dirige mas ABORTA** — o detector de colisão dele
+derrubou a navegação com o robô já do outro lado da porta.
+
+**Inflação medida como alavanca**: 0,45 trava o robô DENTRO da porta de 0,90 m
+(`Start occupied` no replanejamento, porque o vão inteiro fica inflado); 0,30
+passa em 1,04x. Produção em 0,30, bancada em 0,45 (é o número dos 48 planos da
+008) — divergência deliberada e travada em teste.
+
+⚠️ **Anotado sem conserto**: o alvo a 90° atrás custa 1,67x, e o gatilho de ré
+disparou **a 0,43 m do objetivo**. Ré perto da chegada é suspeita e é a primeira
+coisa da próxima sessão. E a TF `map→odom` é fixa — vale no simulador (mundo e
+mapa saem da mesma planta), **não vale no robô real**.
+
 ## ⏳ Próximos passos
 
 **Primeiro, com o robô (virou prioridade — a movimentação depende destes

@@ -1,0 +1,219 @@
+# Nav2 de PRODUÇÃO do robô 2 — o que roda quando o robô anda de verdade.
+#
+# Não confundir com `robot_planning/config/bancada_planner.yaml`: aquele é a
+# BANCADA, sobe dois planners lado a lado e não move nada. Este sobe um só, o
+# escolhido pela decisão 008, e entra na pilha que dirige.
+#
+# ⚠️ Os números de GEOMETRIA (raio mínimo de curva, raio do robô, inflação)
+# aparecem nos dois arquivos, e `test_configs_coerentes.py` falha se eles
+# divergirem. Isso não é zelo: em 29-07 a bitola estava com valores diferentes
+# no simulador (0,20) e no robô (0,32), nenhum medido, e sintonizar num e levar
+# para o outro erraria duas vezes em sentidos opostos.
+#
+# QUEM DIRIGE NÃO É O NAV2. O `controller_server` sobe porque a árvore de
+# comportamento padrão usa `FollowPath` e sem ele a árvore falha — e junto morre
+# o replanejamento, que é o que queremos do Nav2. O `cmd_vel` dele não vai a
+# lugar nenhum: quem move roda é `path_follower` → `heading_controller` →
+# `/hoverboard_base_controller/cmd_vel`. Os tópicos são diferentes de propósito,
+# então nem `twist_mux` é preciso aqui.
+
+map_server:
+  ros__parameters:
+    yaml_filename: ""          # a launch preenche
+
+bt_navigator:
+  ros__parameters:
+    global_frame: map
+    robot_base_frame: base_link
+    odom_topic: /Odometry
+    bt_loop_duration: 10
+    default_server_timeout: 20
+
+    # SÓ o navegador de um objetivo. O padrão carrega `navigate_through_poses`
+    # junto, com a árvore COM recuperação — e ela derrubava a subida mesmo com a
+    # de um objetivo já trocada, porque o `bt_navigator` carrega as duas. Não
+    # usamos rota com pontos intermediários; quando usarmos, a árvore dela entra
+    # aqui pelo mesmo caminho.
+    navigators: ["navigate_to_pose"]
+    navigate_to_pose:
+      plugin: "nav2_bt_navigator::NavigateToPoseNavigator"
+
+    # Árvore SEM nós de recuperação, replanejando a 1 Hz. A launch aponta o
+    # caminho (é de fábrica, `nav2_bt_navigator/behavior_trees/`).
+    #
+    # A árvore padrão (`..._w_replanning_and_recovery.xml`) foi a primeira
+    # tentativa e derrubou o `bt_navigator` na subida: ela exige os servidores
+    # `spin`, `backup`, `wait` e `drive_on_heading` do `behavior_server`. Subir
+    # o `behavior_server` para satisfazê-la seria errado por dois motivos, e
+    # nenhum deles é o erro de carregamento:
+    #
+    #   1. `spin` é PIVÔ, e este robô não pivota — medido em 29-07, zero
+    #      amostras de giro parado no perfil pessimista de zona morta;
+    #   2. `backup` é a ré do Nav2, e a decisão 009 tirou a ré do Nav2 do
+    #      caminho de propósito. Quem recua é o `path_follower`, por gatilho.
+    #
+    # E as duas seriam no-op de qualquer jeito: o `cmd_vel` desses
+    # comportamentos sai pelo mesmo tópico ignorado do `controller_server`, então
+    # a árvore acharia que recuperou sem nada ter acontecido — falha silenciosa,
+    # que é a classe de defeito que mais custou tempo neste projeto (BO-3).
+    #
+    # Recuperação existe, mas é nossa e vive no seguidor.
+
+planner_server:
+  ros__parameters:
+    expected_planner_frequency: 1.0
+    planner_plugins: ["GridBased"]
+
+    GridBased:
+      plugin: "nav2_smac_planner::SmacPlannerHybrid"
+      tolerance: 0.25
+      downsample_costmap: false
+      allow_unknown: false
+      max_iterations: 1000000
+      max_on_approach_iterations: 1000
+      max_planning_time: 5.0
+
+      # MEDIDO em 29-07 (`tools/banco/corrida_gazebo.py`): raio realizado (p5)
+      # de 0,370 m com zona morta 0,10 e 0,463 m com 0,15. O valor definitivo
+      # depende da zona morta, que é o item nº 1 da bancada com o robô.
+      minimum_turning_radius: 0.37
+
+      # DUBIN = o plano NUNCA dá ré (decisão 009). O custo está medido e
+      # aceito; quem cobre os casos que o Dubins não resolve é a ré POR
+      # GATILHO, no `path_follower`.
+      motion_model_for_search: "DUBIN"
+      angle_quantization_bins: 72
+      reverse_penalty: 2.0     # inerte com DUBIN
+      change_penalty: 0.0
+      non_straight_penalty: 1.2
+      cost_penalty: 2.0
+      retrospective_penalty: 0.015
+      analytic_expansion_ratio: 3.5
+      analytic_expansion_max_length: 3.0
+      smooth_path: true
+
+controller_server:
+  ros__parameters:
+    # Frequência baixa de propósito: ele não dirige nada, só mantém a árvore de
+    # comportamento viva. Rodar a 20 Hz seria queimar CPU para jogar fora.
+    controller_frequency: 5.0
+    controller_plugins: ["FollowPath"]
+    progress_checker_plugins: ["progress_checker"]
+    goal_checker_plugins: ["goal_checker"]
+
+    progress_checker:
+      plugin: "nav2_controller::SimpleProgressChecker"
+      required_movement_radius: 0.5
+      # Generoso: quem move o robô é a nossa cadeia, e o progresso dela não tem
+      # nada a ver com o que este servidor acha que está mandando. Apertar isto
+      # faria a árvore abortar uma navegação que está indo bem.
+      movement_time_allowance: 30.0
+
+    goal_checker:
+      plugin: "nav2_controller::SimpleGoalChecker"
+      stateful: true
+      # TEM que bater com o `raio_chegada` do `path_follower`: é este cheque
+      # que faz a árvore declarar sucesso, e quem de fato chega é o nosso
+      # seguidor. Se o do Nav2 for menor, a árvore fica pedindo mais depois de
+      # o robô já ter parado.
+      xy_goal_tolerance: 0.25
+      # Rumo na chegada não é requisito deste seguidor (ver decisão 006: girar
+      # depois de chegar arrasta o robô para fora do ponto). Tolerância larga
+      # para a árvore não exigir o que ninguém vai entregar.
+      yaw_goal_tolerance: 3.15
+
+    FollowPath:
+      plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
+      desired_linear_vel: 0.5
+      lookahead_dist: 0.55
+      max_angular_accel: 1.0
+
+      # ⚠️ SEM detecção de colisão, e isto NÃO é afrouxar segurança.
+      #
+      # Descoberto na primeira corrida da pilha (29-07, alvo do outro lado da
+      # porta de 0,90 m): o robô ATRAVESSOU a porta e então parou, com
+      # `RegulatedPurePursuitController detected collision ahead!` abortando o
+      # `FollowPath`, a árvore devolvendo `Goal failed` e o `/plan` parando de
+      # sair — o seguidor então parou sozinho por "plano velho", corretamente.
+      #
+      # A premissa de que este servidor era inofensivo por não dirigir estava
+      # errada: ele não move roda, mas ABORTA a navegação. E o palpite dele é
+      # sobre uma trajetória que ninguém vai executar — ele projeta o caminho a
+      # partir da pose supondo os comandos DELE, que vão para o tópico
+      # ignorado. Julgar colisão de um movimento que não vai acontecer só pode
+      # errar.
+      #
+      # Quem responde por não bater é o costmap (o plano já nasce inflado) e,
+      # quando o Mid-360 entrar no modelo, uma guarda nossa com o sensor de
+      # verdade. Enquanto isso o risco fica anotado no ESTADO_PROJETO.
+      use_collision_detection: false
+
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      update_frequency: 1.0
+      publish_frequency: 1.0
+      global_frame: map
+      robot_base_frame: base_link
+      resolution: 0.05
+      track_unknown_space: false
+      robot_radius: 0.36        # circunscrito da caixa; o modelo 3D real corrige
+      plugins: ["static_layer", "inflation_layer"]
+      static_layer:
+        plugin: "nav2_costmap_2d::StaticLayer"
+        map_subscribe_transient_local: true
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+      # Inflação: a ALAVANCA que decide o que ele aceita, e não é medida —
+      # é escolha. 0,30 aqui, contra 0,45 da bancada, e a diferença é
+      # deliberada (ver `test_configs_coerentes.py`).
+      #
+      # MEDIDO em 29-07, alvo do outro lado da porta de 0,90 m:
+      #   0,45 -> o robô ATRAVESSA a porta e trava: o replanejamento a 1 Hz
+      #           falha com "Start occupied", porque com raio 0,36 e inflação
+      #           0,45 o vão inteiro fica inflado e a célula do próprio robô
+      #           conta como ocupada;
+      #   0,30 -> chega em 12,4 s, 5,57 m de caminho para 5,32 m de reta (1,05x).
+      #
+      # Subir de novo faz ele RECUSAR vãos apertados e dar a volta — o que pode
+      # ser a decisão certa num corredor de verdade. A launch expõe isto como
+      # argumento (`inflacao:=`) justamente para você comparar sem editar YAML.
+        inflation_radius: 0.30
+
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      update_frequency: 5.0
+      publish_frequency: 2.0
+      global_frame: odom
+      robot_base_frame: base_link
+      rolling_window: true
+      width: 4
+      height: 4
+      resolution: 0.05
+      robot_radius: 0.36
+      # Só o mapa estático por enquanto: o robô simulado ainda não tem lidar.
+      # Quando o Mid-360 entrar no modelo, entra aqui uma camada de obstáculo
+      # com a nuvem, e é ela que faz o desvio ao vivo existir (fatia B do
+      # ESTADO_PROJETO).
+      plugins: ["static_layer", "inflation_layer"]
+      static_layer:
+        plugin: "nav2_costmap_2d::StaticLayer"
+        map_subscribe_transient_local: true
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+      # Inflação: a ALAVANCA que decide o que ele aceita, e não é medida —
+      # é escolha. 0,30 aqui, contra 0,45 da bancada, e a diferença é
+      # deliberada (ver `test_configs_coerentes.py`).
+      #
+      # MEDIDO em 29-07, alvo do outro lado da porta de 0,90 m:
+      #   0,45 -> o robô ATRAVESSA a porta e trava: o replanejamento a 1 Hz
+      #           falha com "Start occupied", porque com raio 0,36 e inflação
+      #           0,45 o vão inteiro fica inflado e a célula do próprio robô
+      #           conta como ocupada;
+      #   0,30 -> chega em 12,4 s, 5,57 m de caminho para 5,32 m de reta (1,05x).
+      #
+      # Subir de novo faz ele RECUSAR vãos apertados e dar a volta — o que pode
+      # ser a decisão certa num corredor de verdade. A launch expõe isto como
+      # argumento (`inflacao:=`) justamente para você comparar sem editar YAML.
+        inflation_radius: 0.30
