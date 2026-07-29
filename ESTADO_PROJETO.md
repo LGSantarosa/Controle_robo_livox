@@ -331,11 +331,10 @@ Gazebo da mesma planta**: porta 0,90 m, bloco solto, aperto 0,80 m, beco sem
 saída. Como rodar e como ler: `ros2_packages/robot_planning/README.md`.
 
 **Julgado com dado em 29-07**: `docs/decisoes/008-nav2-planeja-nos-seguimos.md`
-está escrita, em estado **proposta**, aguardando o dono aprovar ou derrubar
-lendo. Recomenda o **Smac Hybrid-A\*** (único seguível em toda a faixa de raio
-plausível — Theta\* vai a 0/6 no pior caso), a ré nascendo do planejamento em
-vez do susto (revisa a 007) e o **seguidor próprio** (a movimentação da 005 é a
-única camada com física medida).
+foi **ACEITA pelo dono em 29-07**. Decide o **Smac Hybrid-A\*** (único seguível
+em toda a faixa de raio plausível — o Theta\* vai a 0/6 no pior caso), a ré
+nascendo do planejamento em vez do susto (revisa a 007) e o **seguidor próprio**
+(a movimentação da 005 é a única camada com física medida).
 
 ## 🎯 2026-07-29 (2ª leva) — A pilha obedece; o giro é que não entrega
 
@@ -469,9 +468,8 @@ números e hoje eles são chute):**
 
 4. ~~Varrer o raio mínimo e julgar o planner.~~ **FEITO 07-29**: 48 planos, o
    ranking não vira entre 0,25 m e 0,46 m, e a **decisão 008 está escrita**
-   (`docs/decisoes/008-nav2-planeja-nos-seguimos.md`, estado *proposta*).
-   **Falta só o dono aprovar ou derrubar lendo** — ou clicar na bancada antes,
-   se quiser conferir com o olho.
+   (`docs/decisoes/008-nav2-planeja-nos-seguimos.md`) e **ACEITA pelo dono**.
+   O Smac Hybrid-A\* é a escolha oficial; o Theta\* sai.
 5. **Modelo 3D real do robô** no simulador (o dono vai levantar), com o
    Mid-360 no topo. É ele que troca a fonte de obstáculos do mapa estático
    para o sensor, e corrige footprint e bitola do modelo.

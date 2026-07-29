@@ -1,7 +1,7 @@
 # 008 — O Nav2 planeja com Smac Hybrid-A\*, e o seguidor é nosso
 
 **Data:** 2026-07-29
-**Estado:** proposta — aguardando o dono
+**Estado:** aceita (pelo dono, 2026-07-29)
 **Depende de:** [003](003-base-ros2control-e-lio.md), [005](005-lei-de-frenagem-de-rumo.md)
 **Revisa:** [006](006-navegacao-ponto-a-ponto.md), [007](007-re-como-manobra.md)
 
