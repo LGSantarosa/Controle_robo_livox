@@ -330,8 +330,12 @@ Pista em `tools/mundo/gera_pista.py`, que gera **mapa do Nav2 e mundo do
 Gazebo da mesma planta**: porta 0,90 m, bloco solto, aperto 0,80 m, beco sem
 saída. Como rodar e como ler: `ros2_packages/robot_planning/README.md`.
 
-**Ainda não julgado pelo dono** — a decisão 008 (Nav2 na arquitetura, revisando
-a 003, a 006 e a 007) fica em aberto até ele ver os desenhos.
+**Julgado com dado em 29-07**: `docs/decisoes/008-nav2-planeja-nos-seguimos.md`
+está escrita, em estado **proposta**, aguardando o dono aprovar ou derrubar
+lendo. Recomenda o **Smac Hybrid-A\*** (único seguível em toda a faixa de raio
+plausível — Theta\* vai a 0/6 no pior caso), a ré nascendo do planejamento em
+vez do susto (revisa a 007) e o **seguidor próprio** (a movimentação da 005 é a
+única camada com física medida).
 
 ## 🎯 2026-07-29 (2ª leva) — A pilha obedece; o giro é que não entrega
 
@@ -463,17 +467,20 @@ números e hoje eles são chute):**
 
 **Sem o robô:**
 
-4. ~~Varrer o raio mínimo na bancada do planner.~~ **FEITO 07-29 (3ª leva)**:
-   48 planos, o ranking não vira entre 0,25 m e 0,46 m. Falta só o **julgamento
-   do dono** e a redação da **decisão 008** — que já não depende da zona morta.
-   Depois dela: o seguidor.
+4. ~~Varrer o raio mínimo e julgar o planner.~~ **FEITO 07-29**: 48 planos, o
+   ranking não vira entre 0,25 m e 0,46 m, e a **decisão 008 está escrita**
+   (`docs/decisoes/008-nav2-planeja-nos-seguimos.md`, estado *proposta*).
+   **Falta só o dono aprovar ou derrubar lendo** — ou clicar na bancada antes,
+   se quiser conferir com o olho.
 5. **Modelo 3D real do robô** no simulador (o dono vai levantar), com o
    Mid-360 no topo. É ele que troca a fonte de obstáculos do mapa estático
    para o sensor, e corrige footprint e bitola do modelo.
 6. **Calibrar o simulador contra o robô** com os números dos ensaios —
    critério: mesma manobra, S de tamanho parecido.
-7. **Seguidor próprio** por cima do que o Nav2 planejar (a navegação ponto a
-   ponto da decisão 006 foi aposentada em 28-07).
+7. **Seguidor próprio** por cima do plano do Nav2 — destravado pela 008, é a
+   fatia grande seguinte. Carrot no plano, como no robô 1, por cima da
+   movimentação da decisão 005.
+
 
 ## Fósseis conscientes (remover em fatia própria)
 

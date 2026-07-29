@@ -1102,3 +1102,42 @@ pivô não segue de jeito nenhum. Ou seja, o raio faz o Theta\* parecer **mais**
 seguível do que ele é, e o veredito de hoje é conservador, não otimista.
 Distinguir canto de arco é a próxima correção da régua — e ela só pode
 melhorar o lado do Smac.
+
+## ⚖️ 2026-07-29 (5ª leva) — A decisão 008, escrita com os 48 planos na mesa
+
+Fechada a régua, escrevi `docs/decisoes/008-nav2-planeja-nos-seguimos.md` em
+estado **proposta**: ela recomenda, e o dono aprova ou derruba lendo. O que ela
+decide, e sobre que número:
+
+1. **Planner global = Smac Hybrid-A\*, em Reeds-Shepp.** É o único seguível em
+   toda a faixa de raio plausível (6/6 · 5/6 · 6/6 · 6/6 contra 4/6 · 3/6 ·
+   3/6 · **0/6**). A vantagem não depende da zona morta que falta: o ranking não
+   vira entre os extremos, ele se acentua.
+2. **O Theta\* sai, e não é por ser ruim.** Ele é o planner do robô 1 e lá
+   funciona *porque* aquele chassi só sabe girar parado. Aqui ele desenha reta
+   lateral com giro zero para um robô que teria de pivotar — e este não pivota.
+   Herdá-lo seria herdar a solução do problema do outro robô, que é exatamente o
+   que a decisão 000 mandou não fazer.
+3. **A ré passa a nascer do planejamento** (revisa a 007). A histerese da 007 foi
+   reprovada duas vezes com dado: 28-07 no clique do dono e 29-07 na bancada
+   (5 entradas em ré, 1,85 m de caminho para um alvo a 0,40 m). Com Reeds-Shepp
+   o caminho inteiro já sabe onde a ré entra — medido: 2 inversões nos casos de
+   lado, nos quatro raios, consistente e não oportunista.
+4. **O seguidor é nosso**, com a movimentação da decisão 005 por baixo. Trocá-la
+   por um controlador do Nav2 seria jogar fora a única camada com física medida
+   para ganhar ganhos a sintonizar do zero, contra um simulador que ainda tem a
+   boba do BO-4.
+
+Quatro alternativas ficaram registradas como descartadas, com o motivo: manter
+o Theta\* e resolver na movimentação (já tentado — foram as decisões 006 e 007,
+as duas reprovadas), usar o seguidor do Nav2 agora (reavaliável depois, e aí
+vira o BO-2), Smac Lattice (precisa das primitivas, que precisam dos números que
+não temos) e escolher um raio só (repetiria a forma de erro da bitola).
+
+### O que a 008 explicitamente NÃO resolve
+
+A bancada desenha, não dirige — se o robô consegue seguir o caminho só fecha com
+o seguidor de pé. O costmap ainda vem de mapa estático, porque o robô simulado
+não tem lidar. E fica anotado o tremor do Smac em cima do alvo com raio grande
+(4 inversões numa caixa de 9 cm no `bloco` com 0,46 m), que é achado medido e
+cai no colo do seguidor.
