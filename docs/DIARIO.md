@@ -1430,3 +1430,79 @@ Regra que fica: **corrida cujo ambiente não foi provado limpo não é medida.**
   simulador.
 
 324 testes verdes.
+
+## 🧰 2026-07-30 — O kit de bancada, e o que o robô do estágio tem a dizer
+
+Sessão sem robô, preparando a ida ao robô. Duas coisas: o banco ganhou um
+condutor, e entrou no repo (só para leitura) o workspace do estágio, que roda
+**neste mesmo robô** com a pilha Nav2 de fábrica.
+
+### `tools/banco/sessao.py` — o protocolo inteiro num comando
+
+O `ensaio.py` mede UM ensaio; o protocolo tem SEIS, cada um com argumentos,
+espaço e pose de partida próprios. Digitar isso na mão com o robô ligado é onde
+se erra o `--wz`, se sobrescreve um CSV ou se pula um ensaio — e o custo é voltar
+ao laboratório. O condutor roda os seis em ordem, pausa para reposicionar, grava
+tudo numa pasta só e chama o `medir.py` depois de cada corrida, para o número
+aparecer ainda com o robô ligado.
+
+Três coisas que ele faz e que o `ensaio.py` sozinho não faz:
+
+1. **Conferência que BLOQUEIA.** Sem `/Odometry` toda velocidade do banco sai de
+   uma pose que não existe, e o CSV sai limpo e errado — do jeito que só se
+   descobre em casa. Ele mede a taxa dos dois tópicos de odometria, conta os
+   ouvintes do `cmd_vel` (zero = `diff_drive_controller` fora do ar, e o banco
+   comandaria no vazio) e recusa medir se algo faltar.
+2. **Cutucão de sanidade** (`--checar --mexer`): anda 2 s, gira 2 s e confere o
+   **sinal**. Roda trocada na fiação dá um robô que anda certo e gira ao
+   contrário, e **nenhum dos seis ensaios acusa isso** — eles medem magnitude. Ou
+   sai aqui, em 5 s, ou a sessão inteira sai espelhada.
+3. **Ambiente escrito ao lado** (`ambiente.txt`: piso, bateria, commit). Piso e
+   carga mudam derrapada e zona morta; medida sem eles não se compara com a
+   próxima sessão nem entra no artigo.
+
+Provado de ponta a ponta contra o Gazebo headless antes de existir como
+recomendação — os seis passos, as onze corridas, leitura saindo em cada uma. A
+conferência também foi provada no **caso negativo**, com a pilha derrubada:
+recusa e explica. Folha de campo em `tools/banco/CHECKLIST_ROBO.md`.
+
+### O workspace do estágio: mesma máquina, três números que divergem
+
+Clonado em `ESTAGIO-2026/` (ignorado pelo git — é repo próprio, e o que sai daqui
+vira medida nossa, não código copiado). Ele **anda** e faz SLAM, o que o nosso
+ainda não faz no robô; e se perde, e faz recuperação quase só de ré. Lendo os
+YAMLs contra a nossa trena de 29-07, três hipóteses caem no colo da bancada:
+
+**1. Dois raios de roda contraditórios na mesma pilha.** O
+`diff_drive_controller` usa `wheel_radius: 0.0425`; o plugin de hardware, no
+xacro, `0.0825`. A conversão do driver é `rad/s ÷ 0,10472` — **independente de
+raio** —, então quem fixa a escala é o controlador. Nossa trena mediu 0,080.
+Efeito: a roda gira `0,080/0,0425 ≈ 1,9×` mais rápido do que os m/s pedidos. Um
+robô que anda ao dobro do que o Nav2 acha que mandou se perde por construção, e
+nenhum ajuste de controlador conserta isso.
+
+**2. `wheel_separation: 0.32` contra os 0,270 medidos.** Bitola 18,5% maior no
+YAML faz o robô girar ~19% a mais do que o comandado — que é exatamente o desvio
+que anotamos em 29-07 quando esse mesmo 0,32 era nosso.
+
+**3. O piso de velocidade do mux protege a reta e não protege o giro.** O
+`cmd_vel_mux.py` deles força mínimo de 0,10 m/s no linear e 0,15 rad/s no
+angular. Com bitola 0,32, esses 0,15 rad/s são **0,024 m/s de roda** — quatro
+vezes abaixo da faixa de zona morta que nosso simulador trata como plausível
+(0,10–0,15 m/s). O piso angular não pisa em nada. E o `Spin` do Nav2 decai até
+`min_rotational_vel` (0,4 rad/s de fábrica = 0,064 m/s de roda, também abaixo),
+enquanto o `BackUp` é linear puro e o piso de 0,10 m/s o levanta sempre.
+
+Daí a hipótese, que é a mais útil das três: **"só vai de ré" pode não ser a
+boba — pode ser que a ré seja a única recuperação que fisicamente acontece.**
+O `spin` estola no meio, a árvore o dá por falho e escala para o `backup`, que
+sempre anda. É a nossa BO-3 vista de fora, num robô que já roda.
+
+Nenhuma das três é fato nosso: são hipóteses, e as três se resolvem com o
+**ensaio 2** (zona morta de giro) e o **ensaio 4** (curva por velocidade). O item
+nº 1 da bancada acabou de ganhar uma quarta razão de peso.
+
+Anotado sem investigar: os tetos deles são `linear.x.max_velocity: 3.0` e
+`max_acceleration: 3.0` (contra 0,7 e 0,8 nossos), o `controller_manager` roda a
+10 Hz, e o footprint declarado é 0,50 × 0,40 — mais estreito que a caixa que
+medimos com trena (0,433 × 0,455).

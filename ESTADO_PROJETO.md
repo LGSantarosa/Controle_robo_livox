@@ -1,7 +1,7 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-07-29**.
+> Versionado na `main`. Atualizado em **2026-07-30**.
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
@@ -496,6 +496,48 @@ disparou **a 0,43 m do objetivo**. Ré perto da chegada é suspeita e é a prime
 coisa da próxima sessão. E a TF `map→odom` é fixa — vale no simulador (mundo e
 mapa saem da mesma planta), **não vale no robô real**.
 
+## 🧰 2026-07-30 — Kit de bancada pronto, e o robô do estágio como testemunha
+
+**`tools/banco/sessao.py`**: o protocolo inteiro do `tools/banco/README.md` num
+comando — os 6 passos em ordem, 11 corridas, pausando para reposicionar, tudo
+numa pasta só com `ambiente.txt` (piso, bateria, commit) e `leituras.txt`. Chama
+o `medir.py` depois de cada corrida, então o número sai ainda com o robô ligado.
+Folha de campo: **`tools/banco/CHECKLIST_ROBO.md`**.
+
+Duas defesas que o `ensaio.py` sozinho não tem:
+
+- **conferência que bloqueia** — sem `/Odometry`, sem ouvinte no `cmd_vel`, ele
+  recusa medir e diz por quê. CSV gravado com a base incompleta sai limpo e
+  errado, e isso só se descobre em casa;
+- **cutucão de sanidade** (`--checar --mexer`) — anda 2 s, gira 2 s e confere o
+  **sinal**. Roda trocada na fiação dá robô que anda certo e gira ao contrário, e
+  nenhum dos 6 ensaios acusa (eles medem magnitude).
+
+Provado ponta a ponta contra o Gazebo headless, e no caso negativo também (pilha
+derrubada → recusa). 380 testes verdes.
+
+### O workspace do estágio (`ESTAGIO-2026/`, fora do git) — 3 hipóteses
+
+Mesma máquina, pilha Nav2 de fábrica, **anda e faz SLAM** (o que o nosso ainda
+não faz no robô), se perde, e recupera quase só de ré. Lido contra a nossa trena:
+
+1. **Dois raios de roda contraditórios na mesma pilha**: `0.0425` no
+   `diff_drive_controller`, `0.0825` no plugin de hardware. A conversão do driver
+   (`rad/s ÷ 0,10472`) não usa raio, então quem fixa escala é o controlador —
+   com a nossa medida de 0,080, a roda gira **~1,9×** mais que os m/s pedidos.
+2. **`wheel_separation: 0.32`** contra os 0,270 medidos → gira ~19% a mais que o
+   comandado. É o mesmo desvio que anotamos em 29-07 quando o 0,32 era nosso.
+3. **O piso de velocidade do mux deles protege a reta e não o giro**: 0,10 m/s
+   no linear, 0,15 rad/s no angular — que com bitola 0,32 são **0,024 m/s de
+   roda**, 4× abaixo da faixa de zona morta plausível. O `Spin` do Nav2 decai
+   até 0,4 rad/s (0,064 m/s de roda, também abaixo); o `BackUp` é linear puro e
+   o piso o levanta sempre. **Hipótese: "só vai de ré" pode não ser a boba — pode
+   ser que a ré seja a única recuperação que fisicamente acontece.** É a nossa
+   BO-3 vista de fora, num robô que já roda.
+
+Nenhuma é fato nosso. As três se resolvem com os **ensaios 2 e 4** — quarta razão
+de peso para o item nº 1 da bancada.
+
 ## ⏳ Próximos passos
 
 **Primeiro, com o robô (virou prioridade — a movimentação depende destes
@@ -506,10 +548,12 @@ números e hoje eles são chute):**
    o novo item nº 1 é a **zona morta** — é ela que agora decide se o robô
    consegue pivotar (ver a nota superada acima), e a folga no melhor caso é de
    4%. Medir a rodinha da boba junto, se der.
-2. **Rodar o protocolo de `tools/banco/README.md`** — zona morta, `a_dec`,
-   curva por velocidade, aceleração, **e o ensaio 6 (reta com cutucão, ida ×
-   ré)**, que é o que valida a manobra da decisão 007 e ataca o BO-4. O dono só
-   roda; os CSV vêm por ssh.
+2. **Rodar a sessão de bancada** — `python3 tools/banco/sessao.py`, com a folha
+   de campo `tools/banco/CHECKLIST_ROBO.md` na mão. Zona morta, `a_dec`, curva
+   por velocidade, aceleração, **e o ensaio 6 (reta com cutucão, ida × ré)**, que
+   valida a manobra da decisão 007 e ataca o BO-4. **Filmar a traseira no
+   passo 6** — é a única medida possível da boba, porque o simulador não tem uma.
+   O dono só roda; os CSV vêm por git ou ssh.
 3. **Confirmar o IP do lidar** — varredura procurando OUI `e4:7a:2c`. Já foram
    vistos `.169` e `.158`. Errado = `bind failed` = sem `/Odometry`, falha
    silenciosa. Ver `ros2_packages/robot_base/config/README.md`.

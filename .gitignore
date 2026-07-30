@@ -51,3 +51,9 @@ firmware/**/.pio/
 # Vídeos POV da câmera (grandes — ficam fora do git)
 pov_*.mkv
 pov_*.mjpeg
+
+# Workspace de referência do estágio (mesmo robô, pilha Nav2 de fábrica),
+# clonado à mão para comparação. É um repo git próprio — commitá-lo aqui
+# criaria um submódulo acidental. O que sai da comparação vira medida nossa
+# no DIARIO, não código copiado.
+ESTAGIO-2026/
