@@ -30,6 +30,18 @@
   medição no laboratório abortada por isso). **Base de software (tração +
   localização) verificada em hardware**; movimentação e navegação ponto a
   ponto escritas e verificadas em simulador, à espera dos números do robô.
+  ⚠️ **07-30: o NUC foi reinstalado** — o nosso repo tinha sumido do disco (só
+  restava o workspace do estágio) e foi **re-deployado do zero** nesta sessão de
+  bancada, via `git bundle` (o NUC não tem auth no GitHub — ver DIARIO 07-30 2ª
+  leva). A base foi reconstruída (com um conserto de `launch_ros` no
+  `tracao.launch.py`, commitado) e **volta a subir**: `--checar` passou,
+  `/Odometry` a 9,9 Hz, placa e lidar de pé (este só depois de um power-cycle).
+  ⛔ **BLOQUEIO ABERTO: giro espelhado.** O cutucão de sanidade
+  (`--checar --mexer`) mostrou reta no sentido certo mas **giro invertido**
+  (comando anti-horário → girou horário): esquerda/direita trocadas no YAML/fiação.
+  A zona morta (item nº 1) NÃO foi medida — seria medida espelhada. Fix preparado
+  e não aplicado (trocar `left`/`right` em `hoverboard_controllers.yaml`), a
+  validar com o cutucão amanhã antes de qualquer ensaio. Ver DIARIO 07-30 2ª leva.
 
 ### Medidas ✅ CONFERIDAS COM TRENA (2026-07-29)
 
@@ -548,7 +560,11 @@ números e hoje eles são chute):**
    o novo item nº 1 é a **zona morta** — é ela que agora decide se o robô
    consegue pivotar (ver a nota superada acima), e a folga no melhor caso é de
    4%. Medir a rodinha da boba junto, se der.
-2. **Rodar a sessão de bancada** — `python3 tools/banco/sessao.py`, com a folha
+2. **PRIMEIRO: corrigir o giro espelhado** (bloqueio 07-30). Trocar
+   `left`/`right` em `hoverboard_driver/bringup/config/hoverboard_controllers.yaml`,
+   rebuild, e **revalidar com `sessao.py --checar --mexer`** — o giro tem de sair
+   anti-horário (+). Só então rodar a sessão (medir espelhado é medir errado).
+   **Rodar a sessão de bancada** — `python3 tools/banco/sessao.py`, com a folha
    de campo `tools/banco/CHECKLIST_ROBO.md` na mão. Zona morta, `a_dec`, curva
    por velocidade, aceleração, **e o ensaio 6 (reta com cutucão, ida × ré)**, que
    valida a manobra da decisão 007 e ataca o BO-4. **Filmar a traseira no

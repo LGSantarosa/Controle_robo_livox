@@ -1506,3 +1506,140 @@ Anotado sem investigar: os tetos deles são `linear.x.max_velocity: 3.0` e
 `max_acceleration: 3.0` (contra 0,7 e 0,8 nossos), o `controller_manager` roda a
 10 Hz, e o footprint declarado é 0,50 × 0,40 — mais estreito que a caixa que
 medimos com trena (0,433 × 0,455).
+
+## 🔌 2026-07-30 (2ª leva) — A ida ao robô: o repo nunca tinha chegado aqui
+
+Sessão de bancada para medir a **zona morta de giro** (ensaio 2, item nº 1). O
+dono só executa o físico; o assistente conduz por ssh no NUC. Antes de qualquer
+medida, dois achados de infra que valem registro — o segundo é grande.
+
+### A rede primeiro: o PC de dev não enxergava o NUC
+
+`10.244.3.205` (NUC) contra `10.150.13.54/19` (PC de dev): **sub-redes
+diferentes**, o gateway não encaminhava, ping e ssh davam timeout. Não era senha
+nem robô desligado — era topologia. Resolvido pelo dono ao pôr o PC de dev na
+**mesma rede do robô** (`wlp3s0`); daí o ssh entrou por chave, sem senha. Fica a
+lição de bancada: a primeira conferência não é do lidar, é de haver rota até o
+NUC.
+
+### O achado grande: este NUC nunca tinha visto o nosso repo
+
+`~` no NUC tinha `ros2_ws` (o do estágio: `FAST_LIO`, `livox_ros_driver2`,
+**`hoverboard-driver-humble`**, `robo_exemplos`, mapas de SLAM) e
+`Workspace/competicao_2025` — e **nenhum `Controle_robo_livox`**, nenhum
+`base.launch.py`, nenhum `tools/banco/`. Uptime de 7 min, `install_ros2_jazzy.sh`
+e `ros2_ws.zip` soltos no home: a máquina foi (re)instalada e o nosso software
+nunca foi puxado para ela. O `ESTADO` dizia "base verificada em hardware" — foi,
+num estado da máquina que não existe mais. **A memória do assistente não cruza
+PCs, e o disco do robô também não guardou.** É a razão de o `ESTADO_PROJETO.md`
+existir, provada pela ausência.
+
+Confirmado que é o robô certo mesmo assim: `enp2s0` em `192.168.1.2/24` — a
+interface do lidar que o `ESTADO` descreve.
+
+### O deploy, sem GitHub e sem sudo
+
+O NUC não clona do GitHub: origin é ssh (`git@github…`) e ele não tem chave; por
+HTTPS o repo é privado e não há credencial. Como o repo local do dev estava
+**em sync com `origin/main`** (`2aa17bd`, limpo), semeei por **`git bundle`** —
+git-nativo, histórico completo (6,5 MB, `verify` ok), não é "arquivo solto" da
+regra 8. Clonado em `~/Controle_robo_livox`, `origin` reapontado para o GitHub.
+
+Terreno conferido antes de compilar, tudo sem `sudo`: `ros2_control` já
+instalado (controller-manager, diff-drive-controller, hardware-interface,
+ros2-controllers), `bara` no grupo `dialout`, placa em
+`/dev/ttyUSB0` (Prolific USB-Serial), **SDK nativo da Livox já em `/usr/local`**
+(do estágio) — o único passo com sudo do `setup_livox.sh` se pula sozinho.
+Config do lidar commitada: host `192.168.1.2`, lidar `192.168.1.169` (a conferir
+contra a varredura na hora do `--checar`).
+
+### O tropeço de ordem de build (não é bug, é dependência)
+
+`setup_livox.sh` compila só `livox_ros_driver2 + fast_lio + robot_base` — **não**
+o `hoverboard_driver`. Mas `robot_base` depende dele, e num workspace zerado
+`install/hoverboard_driver` não existe → `robot_base` falha na configuração
+(0,02 s, antes de compilar linha nenhuma). Nas máquinas anteriores o
+`hoverboard_driver` já fora compilado numa passada avulsa; aqui, primeira vez, não.
+Conserto pela ordem: compilar `hoverboard_driver` primeiro, depois re-rodar o
+`setup_livox.sh` (idempotente — clones já presentes, só refaz o build).
+
+### O build subiu, com dois consertos de infra (não de calibração)
+
+1. **Ordem de build:** `hoverboard_driver` compilado ANTES do `setup_livox.sh`
+   (que só faz livox+fast_lio+robot_base). Sem isso `robot_base` falha na
+   configuração por falta de `install/hoverboard_driver`. Depois: `fast_lio`
+   (59 s), `livox_ros_driver2` e `robot_base` compilaram limpos.
+2. **`launch_ros >=0.26` recusa `robot_description` cru** (lê como YAML; um URDF
+   não é YAML). A máquina anterior tinha `launch_ros` mais tolerante; este NUC
+   recém-instalado (pacotes de 2025-10-07) não. Conserto em `tracao.launch.py`:
+   `ParameterValue(robot_description_content, value_type=str)` — forma correta no
+   novo e no antigo. Aprovado pelo dono, aplicado em dev e NUC (md5 idênticos),
+   COMMITADO. Sem ele a base não sobe.
+
+### O lidar não streamava — e a lição do `kill -9`
+
+Base de pé, mas `sessao.py --checar` **reprovou**: `/Odometry` não publicava.
+`/hoverboard_base_controller/odom` a 9,9 Hz e `cmd_vel` com ouvinte — a placa
+falava, faltava a localização. Varredura ARP: lidar em `192.168.1.169`
+(`e4:7a:2c:90:1d:f1`), **exatamente o IP do config**. Não era IP.
+
+Cavando: `/livox/lidar` e `/livox/imu` **mudos**, mesmo com QoS best_effort. RX na
+`enp2s0` (contado no fio, antes de firewall): **6 pacotes/3 s** — o lidar respondia
+ping e ACKava todo comando de controle (work mode Normal, IMU enable), mas **não
+transmitia dado**. Rodei o driver do **estágio** (o que funciona) para isolar:
+mesmo handshake, **mesmos 6 pacotes/3 s**. Concluí "é o lidar" — e o dono, com
+razão de campo ("rodou ONTEM"), religou o Mid-360. Depois do power-cycle: RX
+**9152 pacotes/4 s (~3 MB/s)**, o log ganhou as linhas `livox/lidar publish use
+livox custom format`, e `--checar` passou: `/Odometry` a 9,9 Hz. **Conferência ok.**
+
+Lição registrada: subi e matei o driver livox com `kill -9` várias vezes no meio
+do handshake, depurando o launch. O Mid-360 **tranca a sessão de dado** quando o
+driver morre no meio — provável que eu mesmo tenha travado o lidar. Da próxima:
+derrubar o driver com SIGINT e esperar, nunca `-9` no meio da subida.
+
+### O cutucão pegou o defeito que os seis ensaios NÃO pegariam
+
+`sessao.py --checar --mexer`, com o dono avisado do lado e da velocidade:
+
+```
+[ok]    +0,25 m/s andou +0,737 m PARA FRENTE (lado: -0,204 m)
+[FALHA] +0,6 rad/s girou -78,5° — sentido INVERTIDO
+```
+
+- **Frente: sentido certo.** (A deriva de -0,20 m para a direita o dono
+  reconheceu como **distribuição de peso** — acontece também quando ele chuta o
+  robô. Não é fiação; é viés mecânico de rumo, dado de projeto do controlador.)
+- **Giro: espelhado.** Comando anti-horário (+), robô girou horário (-). É
+  **esquerda/direita trocadas** (fiação da placa ou YAML): com as rodas
+  invertidas, a reta sai certa (as duas no mesmo sentido) e só o giro espelha. É
+  exatamente o que o cutucão existe para pegar, e o que **nenhum dos seis ensaios
+  acusaria** (medem magnitude). Sem o cutucão, um dia de medida sairia lixo.
+
+**PARADO aqui pela regra 3.** A zona morta — item nº 1 — **não foi medida**: medir
+com o giro espelhado é medir errado.
+
+Números crus do cutucão, a confirmar nos ensaios (não são medida formal): a reta
+andou ~0,37 m/s para 0,25 comandado e o giro ~0,68 rad/s para 0,6 — os dois saíram
+ACIMA do comandado, ao contrário do déficit de -20% que o Gazebo (com a boba do
+BO-4) sugeria. Se confirmar, o simulador erra o sinal do desvio de giro também.
+
+### Onde parou / primeira coisa amanhã
+
+1. **Inverter esquerda↔direita e RE-TESTAR o cutucão.** Fix mínimo e reversível em
+   `ros2_packages/hoverboard_driver/bringup/config/hoverboard_controllers.yaml`:
+   trocar `left_wheel_names: ["left_wheel_joint"]` /
+   `right_wheel_names: ["right_wheel_joint"]` por
+   `left_wheel_names: ["right_wheel_joint"]` /
+   `right_wheel_names: ["left_wheel_joint"]`. Rebuild do `hoverboard_driver`,
+   `--checar --mexer` de novo: o giro tem de sair **+** (esquerda). O dono já
+   mandou inverter; **não apliquei hoje** porque a validação exige o robô andando
+   com alguém de olho, e ele saía. NÃO commitar o swap antes do cutucão validar.
+2. Passando o cutucão, rodar a sessão: **zona morta de giro (ensaio 2)** é o alvo,
+   e o passo 6 (ré + boba filmada) ataca o BO-4.
+
+**Dívida de infra (fora desta sessão):** o NUC não tem autenticação no GitHub —
+nem `fetch` nem `push`. Este deploy veio de bundle; o `git fetch && git reset
+--hard origin/main` do passo 1 do checklist não roda ainda, e o passo 6 ("commit
+docs/dados && push" do robô) também não. Enquanto isso: código vai por bundle do
+dev, e os CSV/commits saem **do dev** (que tem chave), com os dados trazidos do
+NUC. Corrigir com uma chave de deploy no NUC registrada no GitHub.

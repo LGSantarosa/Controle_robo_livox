@@ -14,6 +14,7 @@ from launch.actions import RegisterEventHandler
 from launch.event_handlers import OnProcessExit
 from launch.substitutions import Command, FindExecutable, PathJoinSubstitution
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 
 
@@ -27,7 +28,12 @@ def generate_launch_description():
             FindPackageShare('hoverboard_driver'), 'urdf', 'diffbot.urdf.xacro'
         ]),
     ])
-    robot_description = {'robot_description': robot_description_content}
+    # O launch_ros >=0.26 lê parâmetro como YAML por padrão; um URDF cru falha
+    # ('<?xml ...' não é YAML). value_type=str força string — correto no
+    # launch_ros novo e no antigo.
+    robot_description = {
+        'robot_description': ParameterValue(robot_description_content, value_type=str)
+    }
 
     robot_controllers = PathJoinSubstitution([
         FindPackageShare('hoverboard_driver'), 'config', 'hoverboard_controllers.yaml'
