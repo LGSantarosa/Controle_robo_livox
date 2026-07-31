@@ -41,48 +41,50 @@
   que o robô está em estado de medir. É o documento a ler antes de tocar no
   simulador ou no controlador.
 
-  ✅ **07-31: o giro espelhado não existia — e as duas zonas mortas saíram.**
-  O robô sempre esteve certo; quem mente é o LIO, com o **yaw de sinal
-  invertido**. Confirmado a olho, com o dono atrás do robô: comando à esquerda →
-  nariz à esquerda, enquanto o LIO dizia "direita". O swap de `left`/`right`
-  (`368ea13`) consertava sintoma inexistente e foi revertido (`595cf80`).
-  Medidos pelo LIO, por deslocamento de pose, confirmados a olho pelo dono:
+  ✅ **07-31: bancada no robô real — o modelo está medido.**
+  Detalhes completos em `docs/MODELO_ROBO2.md`. Resumo:
 
   ```
-  zona_morta_giro   ≈ 0,095 rad/s   faixa 0,084 – 0,105   <- firme (tem patamar)
-  zona_morta_linear ≈ 0,023 m/s     faixa 0,020 – 0,025   <- com ressalva
+  zona morta linear   0,0178 m/s (frente)   0,0148 m/s (ré)
+  zona morta de giro  0,095 rad/s           faixa 0,084 – 0,105
+  a_dec angular       ~3,05 rad/s²          faixa 2,08 – 3,67
+  curva v=0,10 wz=0,30: obedece a 0,94x, raio 0,333 m
   ```
 
-  A linear sobe com o critério de deslocamento (0,029 a 8 cm, 0,040 a 20 cm):
-  não tem patamar, ele rasteja antes de andar. O giro tem patamar e duas
-  corridas independentes concordam.
+  🔴 **`cmd_vel` não é obedecido em MAGNITUDE na faixa útil.** O driver escala
+  qualquer comando pequeno até a roda maior bater em 100 unidades de firmware,
+  com fator `k = 100/mx` — então **todo comando entre ~0,008 e ~0,838 m/s vira a
+  mesma coisa na placa**. O teto do robô é 1,0 m/s, ou seja, o patamar cobre a
+  operação inteira: `cmd_vel` escolhe **sentido**, não módulo. Latência de
+  ~0,35 s para destravar. É o primeiro fato a levar para o Gazebo.
+  A compensação **fica ligada**: sem ela o robô não sai do lugar (`v=0,25` andou
+  2 mm em 1,5 s).
 
-  ⚠️ **Uma leva anterior de números (0,021 m/s e 0,131 rad/s) foi RETRATADA** —
-  media o próprio limiar de detecção, via odometria em `open_loop`. Ver DIARIO
-  07-31 4ª leva antes de usar qualquer número da 3ª leva.
+  🔴 **O robô não anda reto indo para a FRENTE** — roda esquerda 11–12% mais
+  rápida e demorando 0,2–0,4 s a mais para parar, dando −9,2°/−6,9° de desvio em
+  ~18 cm. **De ré sai reto** (+0,5°, rodas simétricas). Confirmado a olho pelo
+  dono. Causa em aberto: a dependência do sentido aponta para algo mecânico (a
+  roda boba é a candidata); motor fraco apareceria nos dois sentidos.
 
-  🔴 **`cmd_vel` NÃO é velocidade — é acelerador.** `open_loop: True` no
-  `hoverboard_base_controller`, e não há malha fechada de velocidade de roda: o
-  robô **acelera enquanto o comando estiver ligado**, sem estabilizar. Comando
-  de 0,30 rad/s por 1,5 s levou o giro de 0 a **3,94 rad/s** (13× o comando) e
-  ainda deu 85° de inércia depois do corte. Isso invalida qualquer leitura que
-  assuma "comando = velocidade realizada", e é o primeiro fato a levar para o
-  Gazebo.
+  ✅ **O LIO é excelente** — parado, deriva **1,8 mm em 15 s**. Bateu com o olho
+  do dono em todas as conferências do dia, inclusive numa de ~270°. As três
+  acusações que fiz contra ele durante a sessão eram defeitos meus (janela de
+  derivação curta, odometria em `open_loop` como referência, buraco de gravação)
+  — ver DIARIO 07-31 4ª leva.
 
-  ```
-  aceleração angular ≈ 2,9 rad/s²    desaceleração ≈ 2,2 rad/s²
-  ```
+  ⚠️ **`/hoverboard_base_controller/odom` não mede nada**: `open_loop: True`, ele
+  integra o comando e devolve. Odometria de roda real só pelos encoders crus
+  (`/hoverboard/{left,right}_wheel/velocity`). Resolvida a "anomalia" de
+  `-70,1 rad` contra `-0,607 rad`: os motores são espelhados e reportavam sinais
+  opostos: corrigido com `feedback_sign_left/right` no `robo2.urdf.xacro`.
 
-  ⚠️ **`/hoverboard_base_controller/odom` não mede nada** (é o comando
-  integrado). Odometria real só pelos encoders crus,
-  `/hoverboard/{left,right}_wheel/position` a 46 Hz — ou pondo `open_loop:
-  false`. **Anomalia aberta:** acumulado de `-70,1 rad` na esquerda contra
-  `-0,607 rad` na direita; testar girando cada roda com a mão.
+  ⚠️ **Antes de medir qualquer coisa**, conferir que há **exatamente um**
+  `fastlio_mapping` e **um** `livox_ros_driver2_node` no NUC. Em 07-31 três
+  pilhas órfãs publicando em `/Odometry` produziram saltos de ~1,35 m e custaram
+  horas de diagnóstico errado.
 
-  ✅ **O LIO é bom.** 20 s parado: deriva de yaw +0,05°, excursão 0,54°, xy
-  0,009 m, a 10 Hz. Bateu com o olho do dono nas três vezes em que foram
-  confrontados. O "ruído" que eu acusei era `JANELA_S = 0,2 s` sobre pose a
-  10 Hz — derivada curta demais, não sensor. Usar `--janela 0.5` no robô.
+  ❌ **Não medido:** faixa acima de 0,838 m/s; `reta` com cutucão (recuperação de
+  rumo após perturbação); repetição a n=3.
 
 ### Medidas ✅ CONFERIDAS COM TRENA (2026-07-29)
 
