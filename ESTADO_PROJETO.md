@@ -36,6 +36,11 @@
   leva). A base foi reconstruída (com um conserto de `launch_ros` no
   `tracao.launch.py`, commitado) e **volta a subir**: `--checar` passou,
   `/Odometry` a 9,9 Hz, placa e lidar de pé (este só depois de um power-cycle).
+  📄 **O robô medido está em `docs/MODELO_ROBO2.md`** — atuador, zona morta,
+  desvio de rumo, rotação e curva, com o que o modelo NÃO cobre e como conferir
+  que o robô está em estado de medir. É o documento a ler antes de tocar no
+  simulador ou no controlador.
+
   ✅ **07-31: o giro espelhado não existia — e as duas zonas mortas saíram.**
   O robô sempre esteve certo; quem mente é o LIO, com o **yaw de sinal
   invertido**. Confirmado a olho, com o dono atrás do robô: comando à esquerda →
