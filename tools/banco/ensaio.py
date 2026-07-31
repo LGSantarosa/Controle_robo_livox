@@ -36,6 +36,17 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy
 # atrasa a medida e estraga justamente o que queremos medir (a rampa de giro).
 JANELA_S = 0.2
 
+# Limiares do dente de serra da zona morta. `PAROU` é o mesmo LIMIAR_PARADO do
+# medir.py de propósito: quem vira o dente e quem lê o CSV têm que concordar
+# sobre o que é "imóvel", senão o ensaio inverte num ponto e a leitura acha
+# outro. `SAIU` fica acima para o gatilho não disparar no ruído da pose.
+SAIU = 0.03
+PAROU = 0.02
+CONFIRMA_SAIU = 0.15    # s de movimento contínuo para aceitar que saiu
+CONFIRMA_PAROU = 0.40   # s de imobilidade para aceitar que parou (ele desliza)
+PAUSA_DENTE = 1.0       # s parado entre dentes: a próxima saída tem que ser
+                        # do REPOUSO, senão não é atrito estático que se mede
+
 
 def yaw_de(q):
     return math.atan2(2.0 * (q.w * q.z + q.x * q.y),
@@ -69,6 +80,15 @@ class Ensaio(Node):
         self.linhas = []
         self.fim = False
         self.motivo = 'concluído'
+
+        # Estado do dente de serra (só os ensaios de zona morta usam).
+        self.dente = 0
+        self.fase = 'sobe'
+        self.nivel = 0.0
+        self.te_cmd = None       # te da chamada anterior, para integrar a rampa
+        self.gatilho = None      # início da condição de troca de fase
+        self.eventos = []        # (dente, fase, nível) — só para o resumo na tela
+
         self.create_timer(1.0 / cfg.taxa, self.passo)
 
     def cb_pose(self, msg):
@@ -95,20 +115,109 @@ class Ensaio(Node):
 
     # ---------------- os ensaios ----------------
 
-    def comando(self, te):
+    def dente_de_serra(self, te, med):
+        """Rampa que SOBE até o robô sair da inércia e DESCE até ele parar.
+
+        Devolve a magnitude comandada (com sinal). É o único ensaio do banco em
+        malha fechada, e é de propósito.
+
+        Uma corrida entrega três coisas que a rampa de subida única não dava:
+
+         · N saídas da inércia em vez de uma. Cada dente parte do REPOUSO com o
+           rotor numa posição diferente, que é a fonte real de dispersão de um
+           limiar de atrito estático. É a repetição do ensaio sem reposicionar
+           o robô e sem gastar corrida.
+         · o limiar de QUEDA — o comando em que ele para, já andando. Atrito
+           dinâmico é menor que o estático, então é um número menor que o de
+           saída, e é ELE que o piso de velocidade do seguidor precisa (manter
+           andando o que já anda). A rampa só de subida não media isso.
+         · os dois sentidos, que nesta máquina não têm por que ser iguais:
+           motriz na frente, boba atrás, e de ré a boba vira roda dianteira.
+
+        Por que virar no EVENTO e não no relógio: subindo até o teto sempre, o
+        comando continua crescendo muito depois de já ter achado o número, e
+        todo esse trecho é metro e segundo jogados fora. Medido antes de
+        existir: com virada por tempo o ensaio linear se afastava **5,25 m** da
+        origem — a trava de espaço (3 m) mataria a corrida dentro do primeiro
+        dente, e o CSV traria uma saída só, pior que a versão antiga.
+
+        A TAXA da rampa é a mesma de sempre (`rampa_ate / rampa_seg`, com
+        `rampa_seg` = 20 s, que reproduz a rampa única). Não é conservadorismo:
+        o limiar é lido na primeira amostra que passa de PAROU, então rampa
+        mais rápida infla o número medido pelo atraso de detecção. No giro, a
+        rampa de hoje já infla ~0,011 rad/s, e a decisão do pivô se joga entre
+        0,10 e 0,15. Mais dentes custam TEMPO, nunca precisão.
+        """
+        c = self.cfg
+        dt = te - self.te_cmd if self.te_cmd is not None else 0.0
+        self.te_cmd = te
+        if not 0.0 < dt < 0.5:            # primeira chamada, ou engasgo
+            dt = 1.0 / c.taxa
+
+        if self.dente >= c.dentes:
+            self.parar(f'{c.dentes} dentes concluídos')
+            return 0.0
+
+        taxa = c.rampa_ate / c.rampa_seg
+        sinal = 1.0 if self.dente % 2 == 0 else -1.0
+
+        def confirmou(cond, quanto):
+            """Exige que a condição dure — pose tem ruído, e um pico só não é
+            saída da inércia nem parada."""
+            if not cond:
+                self.gatilho = None
+                return False
+            if self.gatilho is None:
+                self.gatilho = te
+            return te - self.gatilho >= quanto
+
+        if self.fase == 'sobe':
+            self.nivel = min(c.rampa_ate, self.nivel + taxa * dt)
+            if confirmou(abs(med) > SAIU, CONFIRMA_SAIU):
+                self.eventos.append((self.dente, 'saiu', sinal * self.nivel))
+                self.fase, self.gatilho = 'desce', None
+            elif self.nivel >= c.rampa_ate - 1e-9:
+                # Bateu o teto sem sair do lugar. Não é falha do ensaio — é o
+                # resultado, e o medir.py vai dizer isso. Desce e tenta o
+                # próximo dente mesmo assim.
+                self.eventos.append((self.dente, 'teto', sinal * self.nivel))
+                self.fase, self.gatilho = 'desce', None
+
+        elif self.fase == 'desce':
+            self.nivel = max(0.0, self.nivel - taxa * dt)
+            if confirmou(abs(med) < PAROU, CONFIRMA_PAROU):
+                self.eventos.append((self.dente, 'parou', sinal * self.nivel))
+                self.fase, self.gatilho, self.nivel = 'pausa', te, 0.0
+            elif self.nivel <= 0.0:
+                self.eventos.append((self.dente, 'zerou', 0.0))
+                self.fase, self.gatilho = 'pausa', te
+
+        elif self.fase == 'pausa':
+            self.nivel = 0.0
+            if te - self.gatilho >= PAUSA_DENTE:
+                self.dente += 1
+                # Encerrar AQUI, e não na próxima passada: deixar o contador
+                # andar antes de parar gravava uma linha de um dente que nunca
+                # existiu, e a leitura a contava como "não saiu do lugar".
+                if self.dente >= c.dentes:
+                    self.parar(f'{c.dentes} dentes concluídos')
+                    return 0.0
+                self.fase, self.gatilho = 'sobe', None
+
+        return sinal * self.nivel
+
+    def comando(self, te, v_pose, wz_pose):
         """Devolve (v, wz) do ensaio no instante te. Um lugar só."""
         c = self.cfg
         e = c.ensaio
 
         if e == 'zona_morta_linear':
-            # Rampa lenta de linear até a roda sair do lugar. O que sai daqui
-            # é o v mínimo que produz movimento — a zona morta em m/s.
-            return c.rampa_ate * te / c.dur, 0.0
+            return self.dente_de_serra(te, v_pose), 0.0
 
         if e == 'zona_morta_giro':
-            # Mesma ideia, girando parado: o wz mínimo que tira o robô do
-            # lugar. É o pior caso da zona morta (as duas rodas pequenas).
-            return 0.0, c.rampa_ate * te / c.dur
+            # Girando parado é o pior caso da zona morta: as duas rodas ficam
+            # na banda proibida ao mesmo tempo.
+            return 0.0, self.dente_de_serra(te, wz_pose)
 
         if e == 'degrau_giro':
             # 2 s reto, 2 s de giro constante, resto SEM comando de giro.
@@ -185,11 +294,18 @@ class Ensaio(Node):
             return
 
         v_pose, wz_pose = self.derivada(t, x, y, yaw)
-        cv, cw = self.comando(te)
+        cv, cw = self.comando(te, v_pose, wz_pose)
+        if self.fim:                      # o dente de serra pode encerrar aqui
+            return
         self.publica(cv, cw)
 
         self.linhas.append({
             't': round(te, 3),
+            # Quem virou o dente foi o ensaio; quem MEDE o limiar é o medir.py.
+            # Estas duas colunas são a costura entre os dois: sem elas a leitura
+            # teria de readivinhar onde cada rampa começou e acabou.
+            'dente': self.dente,
+            'fase': self.fase,
             'x': round(x, 4), 'y': round(y, 4), 'yaw': round(yaw, 4),
             'cmd_v': round(cv, 4), 'cmd_wz': round(cw, 4),
             'v_pose': round(v_pose, 4), 'wz_pose': round(wz_pose, 4),
@@ -227,6 +343,13 @@ class Ensaio(Node):
             w.writerows(self.linhas)
         print(f'{len(self.linhas)} amostras -> {self.cfg.csv} ({self.motivo})',
               file=sys.stderr)
+        if self.eventos:
+            # Resumo cru do que o dente de serra viu. Não é a medida (quem mede
+            # é o medir.py, lendo o CSV) — é para o operador perceber ainda no
+            # laboratório que um dente não fechou.
+            print('  dentes: ' + '  '.join(
+                f'#{d}:{q}={n:+.3f}' for d, q, n in self.eventos),
+                file=sys.stderr)
 
 
 ENSAIOS = ['zona_morta_linear', 'zona_morta_giro', 'degrau_giro', 'curva',
@@ -245,6 +368,14 @@ def main():
     ap.add_argument('--wz', type=float, default=0.5, help='giro do ensaio [rad/s]')
     ap.add_argument('--rampa-ate', dest='rampa_ate', type=float, default=0.35,
                     help='valor final da rampa nos ensaios de zona morta')
+    ap.add_argument('--dentes', type=int, default=4,
+                    help='dentes de serra nos ensaios de zona morta. Cada dente '
+                         'é uma saída da inércia E uma queda medidas, e o '
+                         'sentido alterna a cada um. Custa tempo, não precisão')
+    ap.add_argument('--rampa-seg', dest='rampa_seg', type=float, default=20.0,
+                    help='segundos de 0 até --rampa-ate: é a TAXA da rampa. '
+                         'Subir mais rápido infla o limiar medido pelo atraso '
+                         'de detecção — mexer aqui é mexer no número')
     ap.add_argument('--taxa', type=float, default=50.0, help='malha do banco [Hz]')
     ap.add_argument('--sim', action='store_true',
                     help='usar tempo de simulação (no robô real, NÃO passar)')

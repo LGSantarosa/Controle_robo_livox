@@ -1,7 +1,7 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-07-30**.
+> Versionado na `main`. Atualizado em **2026-07-31**.
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
@@ -550,6 +550,54 @@ não faz no robô), se perde, e recupera quase só de ré. Lido contra a nossa t
 Nenhuma é fato nosso. As três se resolvem com os **ensaios 2 e 4** — quarta razão
 de peso para o item nº 1 da bancada.
 
+## 📊 2026-07-31 — O protocolo passa a repetir, e a zona morta vira dente de serra
+
+Véspera da ida ao robô. Duas perguntas do dono derrubaram partes do método.
+
+- **Nenhum ensaio repetia.** As 11 corridas eram 11 condições diferentes — os
+  "3" dos passos 3, 4 e 6 são três *valores*, não três tentativas. Todo número
+  sairia com n=1, sem faixa. Agora são **27 corridas**: reta, curva e aceleração
+  ×3 (decisão do dono: repete o que identifica erro), com `--repete 1` para
+  encurtar se a bateria cair. Cada grupo imprime **média, faixa e dispersão** ao
+  fechar, e delata quando uma corrida morreu e a repetição encolheu.
+- **Uma corrida de controle, girada 180°** (passo 6). Não é repetição: média
+  mata erro aleatório e **não mata erro sistemático**, então três retas do mesmo
+  ponto medem o caimento do piso e a média sai confiante e errada. É a única
+  corrida que separa robô de sala. Ponto 0 marcado com fita **e com o rumo**.
+- **Zona morta virou DENTE DE SERRA**: sobe até sair do lugar, desce até parar,
+  inverte o sentido, 4×. Uma corrida dá **4 saídas e 4 quedas**, nos dois
+  sentidos, sem reposicionar — a repetição vive dentro dela. E mede dois números
+  onde havia um: **saída** (do repouso, atrito estático — o do BO-3) e **queda**
+  (já andando, menor — é ela que o piso de velocidade do seguidor precisa).
+- **A primeira versão não cabia na sala**, e quem disse foi o teste: virando por
+  tempo, o ensaio linear se afastava **5,25 m** contra trava de 3 m que mata a
+  corrida. O dente passou a virar **no evento, não no relógio** — excursão de
+  0,059 m e 4 dentes em 18 s (eram 160 s). É o único ensaio em malha fechada.
+- **A taxa da rampa virou parâmetro nomeado** (`--rampa-seg`): o limiar é lido na
+  primeira amostra que passa de `LIMIAR_PARADO`, então rampa mais rápida infla o
+  número. No giro a taxa atual já infla ~0,011 rad/s — 10% do que se distingue.
+- **`tools/banco/` ganhou 17 testes** (não tinha nenhum, que é como a régua do
+  planner sobreviveu errada em 29-07). O do dente fantasma verificado por
+  mutação. Suíte: **397 verdes** (eram 380).
+- ⚠️ **O Gazebo provou o mecanismo, não o número**: lá o `ensaio.py` publica
+  direto no `cmd_vel` do controlador e passa **por fora da placa fingida**, então
+  os 0,023 m/s e 0,036 rad/s medidos são piso de detecção, não zona morta.
+
+### Aberto: `install/` velho envenena todos os limiares
+
+A bitola e o raio da trena moram em arquivos que o `tracao.launch.py` lê de
+`FindPackageShare` — da cópia **instalada**. `git reset --hard` troca o fonte e
+não troca o `install/`. Se o build faltar, o robô sobe com 0,32/0,0825 e todo
+limiar sai 18,5% enviesado, sem sintoma. A folha de campo ganhou o `colcon build
+--packages-select hoverboard_driver` e um `grep` de conferência.
+
+**Por fazer**: o `--checar` LER `wheel_separation` e `wheel_radius` do
+controlador vivo e anotá-los no `ambiente.txt` — hoje ele grava o commit, que
+descreve o fonte, não o que está dirigindo o robô. Importa porque a comparação
+roda × lidar é limpa na reta (raio de roda puro) mas **não separa bitola errada
+de escorregamento** no giro: 0,32 num robô de 0,270 faz girar 18,5% a mais,
+derrapar faz girar menos, e `1,185 × 0,82 ≈ 0,97` leria como "quase não derrapa".
+
 ## ⏳ Próximos passos
 
 **Primeiro, com o robô (virou prioridade — a movimentação depende destes
@@ -562,17 +610,23 @@ números e hoje eles são chute):**
    4%. Medir a rodinha da boba junto, se der.
 2. **PRIMEIRO: corrigir o giro espelhado** (bloqueio 07-30). Trocar
    `left`/`right` em `hoverboard_driver/bringup/config/hoverboard_controllers.yaml`,
-   rebuild, e **revalidar com `sessao.py --checar --mexer`** — o giro tem de sair
-   anti-horário (+). Só então rodar a sessão (medir espelhado é medir errado).
-   **Rodar a sessão de bancada** — `python3 tools/banco/sessao.py`, com a folha
-   de campo `tools/banco/CHECKLIST_ROBO.md` na mão. Zona morta, `a_dec`, curva
-   por velocidade, aceleração, **e o ensaio 6 (reta com cutucão, ida × ré)**, que
-   valida a manobra da decisão 007 e ataca o BO-4. **Filmar a traseira no
-   passo 6** — é a única medida possível da boba, porque o simulador não tem uma.
-   O dono só roda; os CSV vêm por git ou ssh.
-3. **Confirmar o IP do lidar** — varredura procurando OUI `e4:7a:2c`. Já foram
-   vistos `.169` e `.158`. Errado = `bind failed` = sem `/Odometry`, falha
-   silenciosa. Ver `ros2_packages/robot_base/config/README.md`.
+   **rebuild do `hoverboard_driver`** (o YAML é lido do `install/`, não do fonte
+   — sem rebuild o swap não existe para o robô) e **revalidar com
+   `sessao.py --checar --mexer`**: o giro tem de sair anti-horário (+). Só então
+   medir. Medir espelhado é medir errado.
+3. **Rodar a sessão de bancada** — `python3 tools/banco/sessao.py`, com a folha
+   de campo `tools/banco/CHECKLIST_ROBO.md` na mão. **27 corridas, ~30 min**:
+   zona morta em dente de serra, `a_dec`, curva por velocidade, aceleração, **e
+   o ensaio 6 (reta com cutucão, ida × ré + uma girada 180°)**, que valida a
+   manobra da decisão 007 e ataca o BO-4. **Filmar a traseira nas 4 primeiras
+   corridas do passo 6** — é a única medida possível da boba, porque o simulador
+   não tem uma. O dono só roda; os CSV vêm por bundle/ssh (o NUC não tem
+   autenticação no GitHub — ver a dívida de infra na entrada 07-30 do diário).
+4. **IP do lidar** — confirmado em `192.168.1.169` na sessão de 07-30, igual ao
+   config. Mas o Mid-360 pode ficar **mudo mesmo com o IP certo**: ele tranca a
+   sessão de dado se o driver morrer no meio do handshake (não usar `kill -9`;
+   SIGINT e esperar). Sintoma: pinga e ACKa, RX de ~6 pacotes/3 s, `/livox/lidar`
+   mudo. Cura: power-cycle do lidar. Ver a entrada 07-30 (2ª leva) do diário.
 
 **Sem o robô:**
 

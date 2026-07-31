@@ -10,6 +10,7 @@ evidência ao lado — não um veredito solto.
 """
 import csv
 import math
+import os
 import sys
 
 LIMIAR_PARADO = 0.02   # m/s e rad/s abaixo disso é considerado imóvel
@@ -20,19 +21,141 @@ def norm(a):
     return math.atan2(math.sin(a), math.cos(a))
 
 
+def _num(v):
+    """Número quando dá, texto quando não dá. A coluna `fase` do dente de serra
+    é texto ('sobe'/'desce'/'pausa') e converter tudo em float estourava aqui."""
+    if v in ('', None):
+        return None
+    try:
+        return float(v)
+    except ValueError:
+        return v
+
+
 def le(p):
-    return [{k: (float(v) if v not in ('', None) else None)
-             for k, v in l.items()} for l in csv.DictReader(open(p))]
+    return [{k: _num(v) for k, v in l.items()} for l in csv.DictReader(open(p))]
+
+
+def espalhamento(vs):
+    """Média e faixa. Um número sozinho não é medida — é uma amostra."""
+    m = sum(vs) / len(vs)
+    if len(vs) == 1:
+        return m, 0.0, m, m
+    dp = math.sqrt(sum((v - m) ** 2 for v in vs) / (len(vs) - 1))
+    return m, dp, min(vs), max(vs)
 
 
 def zona_morta(r, campo_cmd, campo_med, unidade):
-    """Primeiro comando da rampa que produziu movimento sustentado."""
+    """Limiares de SAÍDA e de QUEDA, um par por dente do dente de serra.
+
+    Duas medidas diferentes, e o projeto precisa das duas:
+
+      · SAÍDA (subindo, partindo do repouso) — atrito estático. É o número do
+        BO-3: abaixo dele o robô fica plantado sem erro nenhum, e é ele que
+        decide se este robô consegue pivotar.
+      · QUEDA (descendo, já andando) — atrito dinâmico, sempre menor. É o que
+        o piso de velocidade do seguidor precisa, porque manter andando custa
+        menos que arrancar. Usar a saída no lugar da queda deixa o piso alto
+        demais e o robô mais rápido do que precisa perto do alvo.
+
+    Cada dente é uma amostra independente (rotor parado em outro ponto), e os
+    dentes alternam de sentido. Por isso a leitura sai com FAIXA: um limiar de
+    atrito não é um número, é uma distribuição, e a decisão do pivô se joga
+    dentro dela.
+    """
+    tem_dente = r and r[0].get('dente') is not None
+    if not tem_dente:
+        return _zona_morta_rampa_unica(r, campo_cmd, campo_med, unidade)
+
+    # Segmenta por (dente, fase): o ensaio já marcou onde cada rampa começa.
+    # Rampa interrompida no meio (teto de tempo, trava de espaço) não vale como
+    # "não saiu do lugar" — ela não chegou a tentar. Sem este piso, uma corrida
+    # cortada no fim vira um falso negativo com cara de resultado.
+    pico = max(abs(l[campo_cmd]) for l in r) if r else 0.0
+    MINIMO_TENTATIVA = 0.5 * pico
+
+    saidas, quedas, sem_saida, parciais = [], [], [], []
+    for d in sorted({int(l['dente']) for l in r}):
+        sobe = [l for l in r if int(l['dente']) == d and l['fase'] == 'sobe']
+        desce = [l for l in r if int(l['dente']) == d and l['fase'] == 'desce']
+
+        achou = None
+        for i, l in enumerate(sobe):
+            if abs(l[campo_med]) > LIMIAR_PARADO:
+                seg = sobe[i:i + 8]
+                if len(seg) == 8 and all(abs(k[campo_med]) > LIMIAR_PARADO / 2
+                                         for k in seg):
+                    achou = l
+                    break
+        if achou:
+            saidas.append((d, abs(achou[campo_cmd]), achou['t']))
+        elif sobe:
+            tentou = max(abs(l[campo_cmd]) for l in sobe)
+            if tentou >= MINIMO_TENTATIVA:
+                sem_saida.append((d, tentou))
+            else:
+                parciais.append(d)
+
+        # A queda é a ÚLTIMA amostra ainda em movimento da descida: abaixo dela
+        # o comando já não sustenta o movimento.
+        movendo = [l for l in desce if abs(l[campo_med]) > LIMIAR_PARADO]
+        if movendo and achou:
+            quedas.append((d, abs(movendo[-1][campo_cmd]), movendo[-1]['t']))
+
+    if not saidas:
+        print('  ROBÔ NÃO SAIU DO LUGAR EM DENTE NENHUM.')
+        if sem_saida:
+            print(f'    comando máximo tentado: '
+                  f'{max(v for _, v in sem_saida):.3f} {unidade}')
+        print('    -> refazer com --rampa-ate maior')
+        return None
+
+    m, dp, lo, hi = espalhamento([v for _, v, _ in saidas])
+    print(f'  ZONA MORTA (saída, do repouso) = {m:.3f} {unidade}')
+    print(f'    {len(saidas)} dente(s): ' +
+          '  '.join(f'#{d}={v:.3f}' for d, v, _ in saidas))
+    print(f'    faixa {lo:.3f} a {hi:.3f}  (desvio {dp:.3f})')
+    if sem_saida:
+        print(f'    [atenção] {len(sem_saida)} dente(s) NÃO saíram do lugar até '
+              f'o teto da rampa —')
+        print(f'              a saída é maior que {max(v for _, v in sem_saida):.3f} '
+              f'{unidade} em pelo menos um sentido.')
+
+    if quedas:
+        mq, dpq, loq, hiq = espalhamento([v for _, v, _ in quedas])
+        print(f'  LIMIAR DE QUEDA (já andando) = {mq:.3f} {unidade}')
+        print(f'    {len(quedas)} dente(s): ' +
+              '  '.join(f'#{d}={v:.3f}' for d, v, _ in quedas))
+        print(f'    faixa {loq:.3f} a {hiq:.3f}  (desvio {dpq:.3f})')
+        if mq < m:
+            print(f'    -> arrancar custa {m - mq:.3f} {unidade} a mais que '
+                  f'manter andando ({100 * (m - mq) / m:.0f}%)')
+        else:
+            print('    -> a queda saiu MAIOR que a saída, o que é fisicamente '
+                  'esquisito:')
+            print('       atrito estático deveria ser o maior dos dois. '
+                  'Suspeitar da rampa')
+            print('       rápida demais ou de pouca amostra na descida.')
+
+    # A dispersão entre sentidos é dado, não ruído: nesta máquina ir e voltar
+    # não são simétricos (motriz na frente, boba atrás).
+    if len(saidas) >= 2 and hi > 0:
+        print(f'    dispersão entre dentes: {100 * (hi - lo) / hi:.0f}% do maior')
+    if parciais:
+        print(f'    ({len(parciais)} dente(s) cortados no meio da rampa, '
+              f'ignorados — corrida terminou antes)')
+    return m
+
+
+def _zona_morta_rampa_unica(r, campo_cmd, campo_med, unidade):
+    """Leitura dos CSV antigos, de rampa única e subida só. Mantida para os
+    dados já gravados continuarem legíveis."""
     for i, l in enumerate(r):
         if abs(l[campo_med]) > LIMIAR_PARADO:
-            # exige que continue se movendo, para não pegar solavanco
             seg = r[i:i + 25]
             if len(seg) == 25 and all(abs(k[campo_med]) > LIMIAR_PARADO / 2 for k in seg):
-                print(f'  ZONA MORTA = {abs(l[campo_cmd]):.3f} {unidade}')
+                print(f'  ZONA MORTA = {abs(l[campo_cmd]):.3f} {unidade}  '
+                      f'(rampa única — UMA amostra, sem faixa)')
                 print(f'    (saiu do lugar em t={l["t"]:.2f} s, '
                       f'comando {l[campo_cmd]:.3f}, medido {l[campo_med]:.3f})')
                 return abs(l[campo_cmd])
@@ -96,6 +219,10 @@ def curva(r):
         if giro > 0.1:
             print(f'    DERRAPADA: a roda acha que girou {math.degrees(abs(d1-d0)):.1f}° '
                   f'a mais que a pose, numa curva de {math.degrees(giro):.0f}°')
+    # O número agregável desta leitura é a RAZÃO realizado÷comandado: é ela que
+    # se compara entre velocidades e entre corridas (em 29-07 o giro entregou
+    # 79-86% do comandado no Gazebo). O raio e a derrapada saem dela.
+    return med / cmd if abs(cmd) > 1e-6 else None
 
 
 def aceleracao(r):
@@ -108,8 +235,10 @@ def aceleracao(r):
     t10 = next((l['t'] for l in subida if l['v_pose'] > 0.1 * v_max), None)
     t90 = next((l['t'] for l in subida if l['v_pose'] > 0.9 * v_max), None)
     print(f'  velocidade atingida: {v_max:.3f} m/s')
+    a_lin = None
     if t10 and t90 and t90 > t10:
-        print(f'  aceleração ≈ {0.8*v_max/(t90-t10):.3f} m/s² '
+        a_lin = 0.8 * v_max / (t90 - t10)
+        print(f'  aceleração ≈ {a_lin:.3f} m/s² '
               f'(10%→90% em {t90-t10:.2f} s)')
     descida = [l for l in r if l['t'] >= 6.0]
     if descida:
@@ -118,6 +247,8 @@ def aceleracao(r):
         if t_parou:
             print(f'  desaceleração ≈ {v_max/(t_parou-6.0):.3f} m/s² '
                   f'(parou {t_parou-6.0:.2f} s depois do corte)')
+    # Agregável: a aceleração de arranque, que é o número que vai ao YAML.
+    return a_lin
 
 
 def reta(r):
@@ -175,7 +306,101 @@ def reta(r):
         print('  -> o rumo assentou e ficou: as motrizes dominam. ESTÁVEL')
 
 
+def resumo(tipo, arqs):
+    """As N repetições de uma condição, juntas: média, faixa e dispersão.
+
+    Existe porque uma corrida é uma amostra, e a leitura corrida a corrida não
+    responde a pergunta que decide se o número serve: **as três concordam?**
+    Rodar isto ainda no laboratório é o que permite repetir uma condição
+    esquisita com o robô ligado, em vez de descobrir em casa.
+
+    Não reimplementa nenhuma medida: chama a mesma leitura de sempre em cada
+    arquivo e junta o que ela devolveu. Uma medida, um lugar.
+    """
+    print(f'\n=== RESUMO {tipo} — {len(arqs)} corridas')
+    if tipo not in LEITURAS:
+        # `reta` é o caso: a leitura dela é um laudo (o rumo assentou ou não),
+        # não uma grandeza. Média de laudo não existe, e dizer "nenhuma corrida
+        # devolveu número" soa como falha quando não é.
+        print(f'  este ensaio não devolve grandeza agregável — a leitura dele é')
+        print(f'  um laudo por corrida. Comparar as {len(arqs)} acima, a olho.')
+        return
+    vals = []
+    for a in arqs:
+        try:
+            r = le(a)
+        except FileNotFoundError:
+            print(f'  [falta] {os.path.basename(a)} — corrida não gravou')
+            continue
+        v = LEITURAS[tipo](r) if tipo in LEITURAS else None
+        if v is not None:
+            vals.append((os.path.basename(a), v))
+
+    if not vals:
+        print('  nenhuma corrida devolveu número — ver as leituras acima')
+        return
+    ns = [v for _, v in vals]
+    m, dp, lo, hi = espalhamento(ns)
+    print(f'  {UNIDADES.get(tipo, "valor")}')
+    print(f'  média = {m:.4f}   faixa {lo:.4f} a {hi:.4f}   desvio {dp:.4f}')
+    for nome, v in vals:
+        print(f'    {nome}: {v:.4f}')
+    if len(ns) < len(arqs):
+        print(f'  [atenção] {len(arqs) - len(ns)} de {len(arqs)} corridas não '
+              f'devolveram número — a repetição encolheu sozinha.')
+        print(f'            Repetir a condição: sessao.py --so <passo>')
+    if len(ns) < 3:
+        print(f'  [atenção] só {len(ns)} corrida(s) válida(s). Três é o mínimo '
+              f'para uma média significar algo.')
+    elif m and abs(dp / m) > 0.15:
+        print(f'  [atenção] dispersão de {100 * abs(dp / m):.0f}% da média. '
+              f'Alguma coisa mudou entre as corridas')
+        print(f'            (ponto de partida, piso, bateria) — vale repetir '
+              f'antes de guardar.')
+    else:
+        print(f'  dispersão de {100 * abs(dp / m):.0f}% da média — as corridas '
+              f'concordam.')
+
+
+def _silencioso(f):
+    """Roda a leitura sem imprimir: no resumo interessa o número, não o laudo
+    de cada corrida (que já saiu na tela quando ela rodou)."""
+    def g(r):
+        real, sys.stdout = sys.stdout, open(os.devnull, 'w')
+        try:
+            return f(r)
+        finally:
+            sys.stdout.close()
+            sys.stdout = real
+    return g
+
+
+# O que cada tipo devolve como NÚMERO agregável. Nem todo ensaio tem um: a
+# `reta` devolve um laudo (assentou / não assentou), não uma grandeza.
+UNIDADES = {
+    'zona_morta_linear': 'zona morta de saída [m/s]',
+    'zona_morta_giro': 'zona morta de saída [rad/s]',
+    'degrau_giro': 'a_dec [rad/s²]',
+    'curva': 'giro realizado ÷ comandado [1,0 = entrega o que se pede]',
+    'aceleracao_linear': 'aceleração de arranque [m/s²]',
+}
+
+LEITURAS = {
+    'zona_morta_linear': _silencioso(lambda r: zona_morta(r, 'cmd_v', 'v_pose', 'm/s')),
+    'zona_morta_giro': _silencioso(lambda r: zona_morta(r, 'cmd_wz', 'wz_pose', 'rad/s')),
+    'degrau_giro': _silencioso(a_dec),
+    'curva': _silencioso(curva),
+    'aceleracao_linear': _silencioso(aceleracao),
+}
+
+
 def main():
+    if len(sys.argv) >= 2 and sys.argv[1] == '--resumo':
+        if len(sys.argv) < 4:
+            print('uso: medir.py --resumo <tipo> <csv> [csv...]')
+            raise SystemExit(1)
+        resumo(sys.argv[2], sys.argv[3:])
+        return
     if len(sys.argv) != 3:
         print(__doc__)
         raise SystemExit(1)

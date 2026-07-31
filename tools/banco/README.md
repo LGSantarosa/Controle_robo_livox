@@ -34,30 +34,57 @@ derrapada e zona morta — medir no carpete e rodar no cimento invalida tudo.
 ### 1. Zona morta linear — *o robô sai do lugar com quanto?*
 
 ```bash
-python3 ensaio.py --ensaio zona_morta_linear --csv zm_lin.csv --dur 20 --rampa-ate 0.35
+python3 ensaio.py --ensaio zona_morta_linear --csv zm_lin.csv --dur 180 --rampa-ate 0.35 --dentes 4
 python3 medir.py zona_morta_linear zm_lin.csv
 ```
 
-Rampa lenta de 0 a 0,35 m/s em 20 s, andando reto. Devolve o **menor comando
-que produz movimento**. Espaço: ~3 m em linha reta.
+**Dente de serra**, andando reto: a rampa sobe até o robô sair do lugar, desce
+até ele parar, inverte o sentido e repete. Espaço: ~3 m (ele vai e volta, quase
+não se afasta). O `--dur` é teto de tempo, não duração — os 4 dentes fecham bem
+antes.
 
 Primeiro de todos porque é o número que decide se o robô anda: comando abaixo
 dele é silêncio absoluto — nó vivo, tópico publicando, robô imóvel. Já custou
 horas de depuração na competição de 2025.
 
-Se o robô **não sair do lugar** em nenhum ponto da rampa, refazer com
-`--rampa-ate 0.6`. Isso não é falha do ensaio, é o resultado.
+Devolve **dois** números, e o projeto precisa dos dois:
+
+- **saída** — do repouso, atrito estático. É o número do BO-3, e é ele que
+  decide se o robô pivota;
+- **queda** — já andando, sempre menor, porque manter andando custa menos que
+  arrancar. É o que o piso de velocidade do seguidor precisa. Usar a saída no
+  lugar dela deixa o piso alto demais perto do alvo.
+
+Sai com **faixa**, não com um número solto: um limiar de atrito é uma
+distribuição, e cada dente parte com o rotor numa posição diferente — que é a
+fonte real da dispersão. Por isso a repetição vive DENTRO da corrida e este
+ensaio não repete em corrida.
+
+Se o robô **não sair do lugar** em dente nenhum, refazer com `--rampa-ate 0.6`.
+Isso não é falha do ensaio, é o resultado.
+
+> **A taxa da rampa é parte da medida.** `--rampa-seg` (padrão 20 s de 0 ao
+> teto) define quão rápido o comando sobe, e o limiar é lido na primeira
+> amostra que passa de `LIMIAR_PARADO` — então rampa mais rápida infla o número
+> pelo atraso de detecção. No giro, a taxa de hoje já infla ~0,011 rad/s, e a
+> decisão do pivô se joga entre 0,10 e 0,15. Mais dentes custam TEMPO, nunca
+> precisão; mexer no `--rampa-seg` é mexer no número.
 
 ### 2. Zona morta de giro — *e girando parado?*
 
 ```bash
-python3 ensaio.py --ensaio zona_morta_giro --csv zm_giro.csv --dur 20 --rampa-ate 1.5
+python3 ensaio.py --ensaio zona_morta_giro --csv zm_giro.csv --dur 220 --rampa-ate 1.5 --dentes 4
 python3 medir.py zona_morta_giro zm_giro.csv
 ```
 
-Mesma rampa, girando no lugar (linear zerada). É o **pior caso**: as duas rodas
-ficam pequenas ao mesmo tempo, então é aqui que a zona morta morde com força
-total. Espaço: raio de 1 m livre em volta.
+Mesmo dente de serra, girando no lugar (linear zerada). É o **pior caso**: as
+duas rodas ficam pequenas ao mesmo tempo, então é aqui que a zona morta morde
+com força total. Espaço: raio de 1 m livre em volta.
+
+É o **item nº 1 do projeto**, e a folga é de 4%: com zona morta 0,10 pivotar
+exige 0,96 rad/s contra teto de 1,0; com 0,15 exige 1,48 e é impossível. A
+resposta vira dentro da faixa, e é por isso que a faixa importa tanto quanto a
+média.
 
 No simulador, com zona morta de roda em 0,15 m/s, este é o ensaio em que o robô
 fica **22 s parado** com o controlador pedindo 1,0 rad/s. Se acontecer no real,

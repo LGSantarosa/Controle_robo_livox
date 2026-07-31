@@ -45,17 +45,33 @@ MEDIR = os.path.join(AQUI, 'medir.py')
 # que decide se o robô anda, e um robô que não sai do lugar invalida todo
 # ensaio seguinte sem dar erro nenhum.
 
+# `repete` é o número de corridas IDÊNTICAS da mesma condição, e existe porque
+# uma corrida só não é medida — é uma amostra. Média de 3 mata o erro
+# aleatório; o que ela NÃO mata é erro sistemático (caimento do piso, por
+# exemplo), e por isso o passo 6 tem uma corrida girada 180° em vez de só mais
+# uma repetição: é a única que separa "o robô puxa para a direita" de "o chão
+# cai para a direita".
+#
+# Repetir tudo x3 dariam 33 corridas e ~50 min de bateria. A prioridade seguiu
+# o que o dono decidiu em 31-07: repete o que identifica ERRO (reta, curva,
+# aceleração); os ensaios de zona morta não repetem em corrida porque o dente
+# de serra já entrega N saídas da inércia dentro de UMA corrida.
+
 PASSOS = [
     dict(
         n=1, tipo='zona_morta_linear',
         titulo='Zona morta linear — o robô sai do lugar com quanto?',
-        espaco='~3 m em linha reta à frente',
+        espaco='~3 m em linha reta à frente (ele vai e volta, quase não sai do lugar)',
         pose='Robô parado, apontando para o lado livre mais comprido.',
         corridas=[dict(csv='1-zona_morta_linear.csv',
-                       args=['--dur', '20', '--rampa-ate', '0.35',
-                             '--espaco', '3.0'])],
-        nota='Se ele NÃO sair do lugar em nenhum ponto da rampa, isso não é\n'
-             'falha do ensaio — é o resultado. Repetir com --rampa-ate 0.6.',
+                       args=['--dur', '180', '--rampa-ate', '0.35',
+                             '--espaco', '3.0', '--dentes', '4'])],
+        nota='DENTE DE SERRA: sobe até ele sair do lugar, desce até ele parar,\n'
+             'inverte o sentido e repete 4x. Uma corrida dá 4 medidas de saída\n'
+             'e 4 de queda, nos dois sentidos — a repetição está DENTRO dela.\n'
+             'Os 180 s são teto de tempo, não duração: ele fecha os 4 dentes\n'
+             'muito antes. Se NÃO sair do lugar, isso não é falha do ensaio,\n'
+             'é o resultado; refazer com --rampa-ate 0.6.',
     ),
     dict(
         n=2, tipo='zona_morta_giro',
@@ -63,51 +79,58 @@ PASSOS = [
         espaco='raio de 1 m livre em volta',
         pose='Robô parado, no meio do espaço livre. Não precisa de rumo nenhum.',
         corridas=[dict(csv='2-zona_morta_giro.csv',
-                       args=['--dur', '20', '--rampa-ate', '1.5',
-                             '--espaco', '1.5'])],
-        nota='É o número que decide se este robô PIVOTA. Se ele ficar parado\n'
-             'com o comando subindo, é a medida do BO-3 acontecendo — deixe\n'
-             'rodar os 20 s inteiros mesmo assim.',
+                       args=['--dur', '220', '--rampa-ate', '1.5',
+                             '--espaco', '1.5', '--dentes', '4'])],
+        nota='É o número que decide se este robô PIVOTA, e a folga é de 4%:\n'
+             'com zona morta 0,10 pivotar exige 0,96 rad/s contra teto de 1,0;\n'
+             'com 0,15 exige 1,48 e é impossível. Por isso a FAIXA importa\n'
+             'tanto quanto a média, e por isso são 4 dentes.\n'
+             'Ele vai ficar parado com o comando subindo. Não é travamento —\n'
+             'é a zona morta acontecendo, e é o que viemos medir. Deixar rodar.',
     ),
     dict(
         n=3, tipo='degrau_giro',
         titulo='Degrau de giro — quanto ele demora pra PARAR de girar (a_dec)',
         espaco='~4 m; ele termina apontando para outro lado',
-        pose='Robô no começo do espaço, apontando para o comprido.',
+        pose='Robô no ponto 0, apontando para o comprido — o MESMO ponto e o\n'
+             'MESMO rumo em todas as repetições.',
         corridas=[
             dict(csv='3-degrau_wz03.csv',
                  args=['--v', '0.3', '--wz', '0.3', '--dur', '12']),
-            dict(csv='3-degrau_wz06.csv',
+            dict(csv='3-degrau_wz06.csv', repete=3,
                  args=['--v', '0.3', '--wz', '0.6', '--dur', '12']),
             dict(csv='3-degrau_wz10.csv',
                  args=['--v', '0.3', '--wz', '1.0', '--dur', '12']),
         ],
-        nota='O número mais importante do projeto: a_dec é a causa medida do S.\n'
-             'Os três níveis mostram se ele é constante ou piora com giro forte.',
+        nota='a_dec é a causa medida do S. Os três níveis mostram se ele é\n'
+             'constante ou piora com giro forte; o nível do meio vai 3x para\n'
+             'dar a dispersão, que se aplica aos outros dois.',
     ),
     dict(
         n=4, tipo='curva',
         titulo='Curva sustentada — quanto ele curva a 1x, 2x, 3x de velocidade',
         espaco='círculo de raio v/wz (a 0,6 m/s e 0,5 rad/s são 1,2 m de raio)',
-        pose='Robô no meio do espaço livre, apontando para o comprido.',
+        pose='Robô no ponto 0, apontando para o comprido. MESMO ponto e MESMO\n'
+             'rumo nas três repetições de cada velocidade.',
         corridas=[
-            dict(csv='4-curva_v02.csv',
+            dict(csv='4-curva_v02.csv', repete=3,
                  args=['--v', '0.2', '--wz', '0.5', '--dur', '12']),
-            dict(csv='4-curva_v04.csv',
+            dict(csv='4-curva_v04.csv', repete=3,
                  args=['--v', '0.4', '--wz', '0.5', '--dur', '12']),
-            dict(csv='4-curva_v06.csv',
+            dict(csv='4-curva_v06.csv', repete=3,
                  args=['--v', '0.6', '--wz', '0.5', '--dur', '12']),
         ],
         nota='É aqui que a geometria aparece: motriz na frente, boba atrás.\n'
              'Se o giro realizado CAIR conforme a velocidade sobe, está medido,\n'
-             'e vira restrição de projeto.',
+             'e vira restrição de projeto. Derrapada é a grandeza mais dispersa\n'
+             'do banco — daí as três velocidades irem 3x cada.',
     ),
     dict(
         n=5, tipo='aceleracao_linear',
         titulo='Aceleração linear — arranca e freia quanto?',
         espaco='~4 m em reta',
-        pose='Robô no começo do espaço, apontando para o comprido.',
-        corridas=[dict(csv='5-aceleracao.csv',
+        pose='Robô no ponto 0, apontando para o comprido.',
+        corridas=[dict(csv='5-aceleracao.csv', repete=3,
                        args=['--v', '0.6', '--dur', '10'])],
         nota='Confere se os tetos do hoverboard_controllers.yaml (0,7 m/s e\n'
              '0,8 m/s²) descrevem ESTA máquina ou foram herdados sem medir.',
@@ -117,24 +140,25 @@ PASSOS = [
         titulo='Reta com cutucão — o rumo volta ou foge? E de ré? (BO-4)',
         espaco='~4 m em reta, nos DOIS sentidos',
         pose='Robô no MEIO do espaço: ele vai andar para frente numa corrida e\n'
-             'para trás na outra.',
+             'para trás na outra. Marcar o ponto 0 COM O RUMO no chão.',
         corridas=[
-            dict(csv='6-reta_frente.csv',
+            dict(csv='6-reta_frente.csv', repete=2,
                  args=['--v', '0.25', '--wz', '0.5', '--dur', '16']),
-            dict(csv='6-reta_re.csv',
+            dict(csv='6-reta_re.csv', repete=2,
                  args=['--v', '-0.25', '--wz', '0.5', '--dur', '16']),
-            dict(csv='6-reta_crua.csv',
+            dict(csv='6-reta_crua.csv', repete=3,
+                 args=['--v', '0.25', '--wz', '0', '--dur', '16']),
+            dict(csv='6-reta_crua_180.csv', gira_180=True,
                  args=['--v', '0.25', '--wz', '0', '--dur', '16']),
         ],
-        nota='FILMAR A TRASEIRA nas duas primeiras corridas. O que se procura é\n'
-             'a boba dando meia-volta na corrida de ré, e quanto o robô se\n'
+        nota='FILMAR A TRASEIRA nas corridas de frente e de ré. O que se procura\n'
+             'é a boba dando meia-volta na corrida de ré, e quanto o robô se\n'
              'desvia enquanto ela decide. É o ensaio que fecha o BO-4 e decide\n'
              'se a manobra de ré da decisão 007 é segura.\n'
-             'A 3ª corrida é a reta CRUA, sem pulso, e a leitura dela vai dizer\n'
-             '"nada a comparar" — está certo: o medir.py resume a resposta ao\n'
-             'cutucão, e aqui não há cutucão. O CSV é que interessa, e ele só\n'
-             'vale no robô: no simulador a máquina é simétrica e o desvio sai\n'
-             'zero exato. É a assimetria natural desta máquina, medida.',
+             'A reta CRUA é sem pulso, e a leitura vai dizer "nada a comparar" —\n'
+             'está certo: o medir.py resume a resposta ao cutucão, e aqui não há\n'
+             'cutucão. O CSV é que interessa, e ele só vale no robô: no simulador\n'
+             'a máquina é simétrica e o desvio sai zero exato.',
     ),
 ]
 
@@ -330,6 +354,24 @@ def roda(cmd, log):
     return p.returncode
 
 
+def expande(corridas, forcar=None):
+    """Abre cada condição nas suas N repetições, com um CSV por corrida.
+
+    Repetição só vira medida se as corridas forem INDEPENDENTES — daí cada uma
+    ter seu arquivo em vez de somarem num só. Sufixo -a, -b, -c: quem abrir a
+    pasta em casa vê na hora quantas tentativas cada condição teve.
+    """
+    saida = []
+    for c in corridas:
+        n = forcar if forcar else c.get('repete', 1)
+        base = c['csv']
+        for k in range(1, n + 1):
+            nome = base if n == 1 else base.replace(
+                '.csv', f'-{chr(ord("a") + k - 1)}.csv')
+            saida.append(dict(c, csv=nome, base=base, k=k, de=n))
+    return saida
+
+
 def espera(texto):
     try:
         input(texto)
@@ -353,6 +395,10 @@ def main():
                     help='simulador (usa /clock). No robô real, NÃO passar.')
     ap.add_argument('--sem-perguntas', action='store_true',
                     help='não pausa entre corridas — só para ensaio no simulador')
+    ap.add_argument('--repete', type=int, default=None,
+                    help='força N repetições em TODA condição, ignorando o '
+                         'protocolo. `--repete 1` encurta a sessão quando a '
+                         'bateria está acabando — ao custo de números sem faixa')
     cfg = ap.parse_args()
 
     onde = 'SIMULADOR' if cfg.sim else 'ROBÔ REAL'
@@ -427,9 +473,19 @@ def main():
             print(f'  pose  : {passo["pose"]}')
             print(f'\n  {passo["nota"]}')
 
-            for i, corrida in enumerate(passo['corridas'], 1):
+            corridas = expande(passo['corridas'], cfg.repete)
+            for i, corrida in enumerate(corridas, 1):
                 alvo = os.path.join(saida, corrida['csv'])
-                print(f'\n  corrida {i}/{len(passo["corridas"])}: {corrida["csv"]}')
+                print(f'\n  corrida {i}/{len(corridas)}: {corrida["csv"]}' +
+                      (f'   [repetição {corrida["k"]} de {corrida["de"]}]'
+                       if corrida['de'] > 1 else ''))
+                if corrida.get('gira_180'):
+                    print('  >> ESTA É A CORRIDA DE CONTROLE: mesmo ponto 0, robô')
+                    print('     GIRADO 180°. Ela é o que separa "o robô puxa pra')
+                    print('     um lado" de "o chão cai pra um lado" — média de')
+                    print('     repetições não separa isso.')
+                elif corrida['de'] > 1:
+                    print('  >> MESMO ponto 0 e MESMO rumo da anterior.')
                 if not cfg.sem_perguntas:
                     espera('  >> posicione o robô e tecle ENTER (ctrl-c aborta): ')
 
@@ -446,6 +502,16 @@ def main():
 
                 print('\n  --- leitura ---')
                 roda([sys.executable, MEDIR, passo['tipo'], alvo], log)
+
+                # Fechou um grupo de repetições: mostra as N juntas, com média e
+                # faixa. É o espalhamento que diz se o número serve — e aqui
+                # ainda dá para repetir, com o robô ligado.
+                if corrida['de'] > 1 and corrida['k'] == corrida['de']:
+                    irmas = [os.path.join(saida, c['csv']) for c in corridas
+                             if c['base'] == corrida['base']]
+                    print(f'\n  --- as {corrida["de"]} juntas ---')
+                    roda([sys.executable, MEDIR, '--resumo', passo['tipo']]
+                         + irmas, log)
 
     print('\n' + '=' * 72)
     print('  SESSÃO ENCERRADA')

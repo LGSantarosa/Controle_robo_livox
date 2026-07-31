@@ -1643,3 +1643,136 @@ nem `fetch` nem `push`. Este deploy veio de bundle; o `git fetch && git reset
 docs/dados && push" do robô) também não. Enquanto isso: código vai por bundle do
 dev, e os CSV/commits saem **do dev** (que tem chave), com os dados trazidos do
 NUC. Corrigir com uma chave de deploy no NUC registrada no GitHub.
+## 📊 2026-07-31 — O protocolo não repetia nada, e a rampa media metade do problema
+
+Sessão de véspera: o dono vai ao robô hoje. Começou como conferência do kit de
+bancada e virou uma revisão de método, provocada por duas perguntas dele que o
+protocolo não sobrevivia.
+
+### "Eles se repetem?" — não, e nenhum número tinha faixa
+
+O protocolo tinha 6 ensaios e 11 corridas, e **as 11 eram condições
+diferentes**: os "3" dos passos 3, 4 e 6 são três *valores* (wz 0,3/0,6/1,0),
+não três tentativas. Todo número sairia com n=1, sem dispersão. Num PIBIT que
+vira artigo isso não se defende — número sem espalhamento não é medida, é
+amostra.
+
+Repetir tudo ×3 dariam 33 corridas e ~50 min de bateria. O dono decidiu a
+prioridade: repete o que identifica erro (reta, curva, aceleração). Ficaram
+**27 corridas, ~30 min**, com `--repete 1` para encurtar se a bateria cair.
+
+Cada grupo de repetições agora imprime **média, faixa e dispersão** ao fechar
+(`medir.py --resumo`), e delata sozinho quando uma corrida morreu e a repetição
+encolheu — no Gazebo isso aconteceu duas vezes (relógio do simulador sob carga)
+e o aviso apareceu certo, sem eu procurar.
+
+**Uma corrida a mais que não é repetição: a reta girada 180°.** Três retas do
+mesmo ponto e mesmo rumo, com o piso em caimento, dão três desvios iguais e uma
+média confiante e errada. **Média mata erro aleatório, não erro sistemático.**
+Girado 180°, o caimento empurra para o mesmo lado do *mundo* e a assimetria do
+robô puxa para o mesmo lado do *corpo* — é a única corrida que separa robô de
+sala. O ponto 0 passa a ser marcado com fita **e com o rumo**, senão a dispersão
+medida é a mão do operador.
+
+### "A zona morta é subir a velocidade até ele sair do lugar?" — era, e era pouco
+
+Era exatamente isso: `rampa_ate · te / dur`, uma subida só. Duas limitações que
+a pergunta expôs:
+
+1. **uma corrida, uma amostra.** Limiar de atrito estático é a grandeza mais
+   dispersa do banco (depende de onde o rotor parou), e a decisão do pivô se
+   joga entre 0,10 e 0,15 com **4% de folga**. Uma amostra não diz onde na
+   faixa se está.
+2. **mede a saída e não mede a queda.** Atrito estático > dinâmico: o comando
+   que *tira* o robô do lugar é maior que o que o *mantém* andando. O primeiro é
+   o número do BO-3; o segundo é o que o piso de velocidade do seguidor precisa.
+   Só o primeiro existia.
+
+O ensaio virou **dente de serra**: sobe até sair do lugar, desce até parar,
+inverte o sentido, repete 4×. Uma corrida entrega 4 saídas + 4 quedas, nos dois
+sentidos, sem reposicionar o robô. A repetição passou para DENTRO da corrida, e
+por isso os passos 1 e 2 não repetem em corrida.
+
+**A primeira versão não cabia na sala, e foi o teste que disse.** Com o dente
+virando por tempo, o afastamento máximo da origem no ensaio linear dá **5,25 m**
+contra uma trava de 3 m que **mata a corrida** ("Estourou, para tudo"): morreria
+dentro do primeiro dente e traria uma saída só — pior que a versão antiga. Causa:
+a rampa segue subindo muito depois de já ter achado o número, e é esse trecho
+que gasta metros e segundos.
+
+Conserto: **o dente vira no evento, não no relógio.** Medido depois: excursão de
+**0,059 m** e 4 dentes em 18 s (contra 160 s da versão por tempo). É o único
+ensaio do banco em malha fechada, e é de propósito.
+
+**A taxa da rampa virou parâmetro nomeado** (`--rampa-seg`, padrão 20 s ao
+teto), porque ela *é* parte da medida: o limiar é lido na primeira amostra que
+passa de `LIMIAR_PARADO`, então rampa mais rápida infla o número pelo atraso de
+detecção. No giro a taxa de hoje já infla ~0,011 rad/s — 10% do que se quer
+distinguir. Mais dentes custam tempo, nunca precisão.
+
+### Um defeito achado no Gazebo, e o `tools/banco` ganhou testes
+
+A leitura acusava `1 dente(s) NÃO saíram do lugar` com os 4 tendo saído: ao fim
+da pausa o contador andava e uma linha chegava a ser gravada com um dente que
+nunca existiu. Consertado dos dois lados — encerrando antes de gravar, e na
+leitura, ignorando rampa cortada no meio (que é o caso real quando o teto de
+tempo corta a última).
+
+O `tools/banco/` **não tinha teste nenhum**, que é exatamente como a régua da
+bancada do planner sobreviveu errada por semanas em 29-07. Agora tem 17, e o do
+dente fantasma foi verificado por mutação: reintroduzi o defeito e ele falhou.
+Suíte: **397 verdes** (eram 380).
+
+### O que este dia NÃO prova
+
+No simulador o `ensaio.py` publica direto no `cmd_vel` do controlador e **passa
+por fora da placa fingida** (ela escuta `/cmd_vel_bruto`). Os 0,023 m/s e
+0,036 rad/s que saíram nos testes são o **piso de detecção**, não zona morta: o
+Gazebo provou o *mecanismo* do dente de serra, não o número. No robô a placa
+está no caminho, e é lá que o número existe.
+
+### Corrigido depois: a sessão 07-30 no robô já tinha respondido isto
+
+Ao juntar com o remoto apareceu a entrada 07-30 (2ª leva) — uma ida ao robô que
+eu não conhecia. Ela reescreve duas coisas desta sessão:
+
+- **O `install/` velho não era o caso, e o build importa mais ainda.** O NUC
+  nunca tinha visto este repo; foi deployado do zero por bundle e compilado
+  inteiro. Só que o giro saiu **espelhado** (esq/dir trocadas: `+0,6 rad/s`
+  girou `−78,5°`), e o conserto é justamente no `hoverboard_controllers.yaml`,
+  que o `tracao.launch.py` lê do `install/`. **Sem rebuild o swap não existe
+  para o robô** — o mecanismo que descrevi, valendo por outro motivo.
+- **O `git fetch && git reset --hard` do passo 1 não roda no NUC**: ele não tem
+  autenticação no GitHub. Folha de campo corrigida para o caminho de bundle.
+
+E o mais importante para hoje: **a zona morta não foi medida em 07-30**, parada
+pelo giro espelhado. O dente de serra que escrevi hoje vai estrear numa máquina
+que primeiro precisa passar no cutucão. A ordem virou: swap → rebuild →
+`--checar --mexer` → só então medir.
+
+Vale registrar que o cutucão fez exatamente o que se desenhou: pegou, em 5
+segundos, um defeito que **nenhum dos seis ensaios acusaria** (eles medem
+magnitude), e que teria transformado um dia inteiro de medida em lixo.
+
+### Anotado sem conserto: build e install/ podem divergir
+
+Levantei que a bitola e o raio medidos com trena moram em arquivos que o
+`tracao.launch.py` lê de `FindPackageShare` — da cópia **instalada** —, e que a
+folha de campo mandava `git reset --hard` direto para o `source`, sem build. Se
+o `install/` estiver velho, o robô sobe com 0,32/0,0825 e todos os limiares saem
+18,5% enviesados sem sintoma.
+
+**Cheguei a afirmar que o robô estava assim; não tinha como saber e o dono me
+corrigiu** — nunca vi o disco daquela máquina. O que se sustenta é o
+condicional. A folha de campo ganhou o `colcon build --packages-select
+hoverboard_driver` (idempotente, barato) e um `grep` de conferência. A defesa
+melhor — o `--checar` LER `wheel_separation` e `wheel_radius` do controlador
+vivo e anotá-los no `ambiente.txt` — ficou **por fazer**: o `ambiente.txt` grava
+o commit, que descreve o fonte, não o que está dirigindo o robô.
+
+Isso importa porque a comparação roda × lidar (ideia do dono, e o banco já a
+tinha na coluna de derrapada) mede o giro limpo, mas **não separa bitola errada
+de escorregamento**: os dois mexem no mesmo número em sentidos opostos (0,32 num
+robô de 0,270 faz girar 18,5% *a mais*; derrapar faz girar *menos*), e
+`1,185 × 0,82 ≈ 0,97` leria como "quase não derrapa". Na reta a comparação é
+limpa — sem derrapagem, o desvio roda × lidar é raio de roda puro.
