@@ -2456,3 +2456,118 @@ Todas as corridas boas são **rajadas de ~1 s e ~20 cm**. As duas únicas longas
 órfãs. Então o `MODELO_ROBO2.md` está aferido em **arranca-e-para**, não em
 percurso sustentado — e percurso é o que um seguidor faz o tempo todo. Duas
 corridas limpas num corredor fecham isso: o passo 6 e uma reta longa.
+
+## 🎛️ 2026-08-01 — O atuador medido entra no simulador, e a decisão 005 cai
+
+Sessão sem robô, em cima dos CSV de 31-07. O simulador tinha uma placa que
+engolia comando pequeno; o robô tem outra coisa, e muito pior. Agora os dois
+erram igual.
+
+### O que eu conferi sozinho, antes de mexer
+
+Refiz as contas dos CSV em vez de aceitar o laudo. A **zona morta de giro
+(0,091–0,096 rad/s) é firme** — recalculei por deslocamento de yaw com critério
+de 2°, 3° e 5° e deu 0,091 / 0,096 / 0,096, com os 4 dentes concordando.
+
+O **patamar** também se confirma, e um pouco maior do que estava escrito:
+comando de 0,10 m/s virou **0,26–0,28 m/s de borda** nas quatro rajadas. A
+assimetria de frente é consistente (+11,3% e +12,6%); a de ré não é (+6,7% e
+−0,9%), o que sustenta a leitura de que ela depende do sentido.
+
+E extraí o que faltava para fechar o modelo do atuador:
+
+```
+latencia       = 0,273 s   (n=4, faixa 0,24-0,31)
+patamar        = 3,72 rad/s de roda = 0,297 m/s de borda
+aceleracao     = 5,44 rad/s²  (0,435 m/s²)
+desaceleracao  = 4,66 rad/s²  (0,373 m/s²)
+escala real    = 0,0372 rad/s por unidade  (o driver assume 0,10472)
+```
+
+**A escala é o achado que fecha a história**: o driver superestima a roda em
+**2,8×**. É por isso que o robô sempre andou mais rápido do que se pediu, e é o
+mesmo 2,8× que aparece no patamar.
+
+### Onde eu leio diferente do laudo de 31-07
+
+**A "zona morta de giro" não é atrito, é aritmética do driver.** A compensação
+dispara em `mx > 1.0`, o que dá `wz > 0,0621 rad/s`. Medimos 0,091–0,096, e a
+diferença de 0,03 é exatamente a latência de 0,27 s sobre uma rampa de
+0,075 rad/s por segundo. O número é reprodutível e útil como propriedade **do
+sistema**, mas se move se alguém mudar `deadband_speed` ou o raio da roda. O
+atrito de verdade segue não medido.
+
+**A pergunta do pivô foi dissolvida, não respondida.** Com a compensação ligada,
+qualquer `wz` acima de 0,062 pivota, na velocidade do patamar. A aritmética que
+dizia "pivotar exige 0,96 rad/s contra teto de 1,0, folga de 4%" ficou sem
+objeto. O pivô existe; o que não existe é **controle da velocidade dele**. Isso
+mexe na premissa da decisão 009.
+
+### A decisão 005 não sobrevive ao atuador medido
+
+Passei a própria lei da 005 pelo modelo, offline:
+
+```
+        wz = sinal(e)·min(wz_max, √(2·a_dec·|e|))
+
+ erro de rumo |  a lei PEDE | a placa ENTREGA | fator
+         1°   |    0.326    |        2.204    |  6.76x
+         2°   |    0.461    |        2.204    |  4.78x
+         5°   |    0.730    |        2.204    |  3.02x
+        10°   |    1.000    |        2.204    |  2.20x
+        45°   |    1.000    |        2.204    |  2.20x
+       180°   |    1.000    |        2.204    |  2.20x
+```
+
+**A lei produz 8 valores distintos; a placa entrega 1.** De 1° a 180° de erro de
+rumo o giro é o mesmo, e é 2,2× maior que o máximo que a lei jamais pediria. A
+frenagem de rumo — o resultado central da decisão 005, validado em 10 corridas
+de simulador — **não existe neste robô** enquanto a compensação estiver ligada.
+O mesmo vale para `v = √(2·a_lin·dist)` da aproximação, e o `v_piso` fica sem
+sentido: não há velocidade abaixo do patamar para se estar.
+
+Em uma frase: **o contrato de que `cmd_vel` está em m/s é falso em toda a faixa
+que a navegação usa**, e é sobre esse contrato que a movimentação inteira foi
+escrita.
+
+### O simulador agora erra como o robô erra
+
+`placa_simulada.py` reescrito. Reproduz a conta do driver linha a linha
+(escala as duas rodas por `k = deadband_speed/mx`), depois aplica a escala real
+do firmware, a latência e a assimetria por sentido. Três modelos:
+`medido` (padrão), `cru` (compensação desligada, onde a zona morta física
+aparece) e `ideal` (fio, para comparar).
+
+Provado no Gazebo, mesma ordem de movimento nas duas placas:
+
+```
+comando      placa ideal        placa medida
+0,10 m/s ->  0,200 m em 2 s     0,548 m
+0,25 m/s ->  0,500 m            0,541 m
+0,50 m/s ->  1,000 m            0,541 m     <- as tres iguais
+```
+
+`sim.launch.py placa:=medido|cru|ideal`, e o mesmo em `pilha.launch.py`. O
+parâmetro `zona_morta:=` saiu — não descrevia mais nada.
+
+### Um tropeço meu, que é o mesmo do laboratório
+
+A primeira rodada da prova deu placa medida ≈ placa ideal, o que não fazia
+sentido. Eram **quatro `placa_simulada` órfãs** acumuladas no dia, mais quatro
+pontes de `/Odometry`, de lançamentos que eu derrubei com `pkill` de padrão
+largo. Exatamente o defeito das três pilhas do laboratório, na minha máquina.
+A corrida trazia `Failed to configure controller` no log e eu não tinha olhado.
+
+Passou a fazer parte do procedimento: contar `placa_simulada` viva **antes** de
+medir, e conferir `Failed to configure` no log. Está no script de prova.
+
+### O que NÃO foi feito
+
+A comparação da pilha inteira (Nav2 + seguidor) nas duas placas **não rodou**:
+o `base_link` não aparecia na TF e os costmaps reclamavam de raio de inflação
+menor que o inscrito (0,300 contra 0,363 — o footprint da trena é maior que o
+que o `nav2.yaml` supõe). Fica como próximo passo, e o aviso do costmap é um
+defeito de verdade, anotado.
+
+419 testes verdes (eram 407), com 8 novos travando o modelo do atuador —
+inclusive o do colapso da lei da 005, que é a afirmação mais forte desta entrada.

@@ -53,9 +53,10 @@ def generate_launch_description():
             description='"lenta" (a_dec 0,3 — pessimista, onde a movimentação '
                         'foi validada) ou "normal" (a_dec 1,5)'),
         DeclareLaunchArgument(
-            'zona_morta', default_value='0.10',
-            description='zona morta de RODA da placa simulada [m/s]; 0 = fio. '
-                        'CHUTE — o valor real sai do tools/banco (BO-3)'),
+            'placa', default_value='medido',
+            description='modelo do atuador: "medido" (a placa de 31-07, com '
+                        'compensação e patamar — o robô de verdade), "cru" '
+                        '(compensação desligada) ou "ideal" (fio, obedece tudo)'),
     ]
     mundo = LaunchConfiguration('mundo')
     gui = LaunchConfiguration('gui')
@@ -97,16 +98,19 @@ def generate_launch_description():
                          'use_sim_time': True}],
         )]
 
-    # A placa do hoverboard, fingida: engole comando de roda pequeno demais,
-    # como a de verdade. Sem ela o simulador obedece qualquer coisa e o
-    # controle é ajustado contra um atuador que não existe.
+    # A placa do hoverboard, fingida. Desde 31-07 ela não engole só comando
+    # pequeno: reproduz o PATAMAR medido no robô — todo comando entre ~0,008 e
+    # ~0,838 m/s chega na placa como a mesma coisa, porque a compensação de zona
+    # morta do driver multiplica as duas rodas até a maior vencer o deadband.
+    # Sem isso o controle é ajustado contra um atuador que não existe.
     placa = Node(
         package='robot_base',
         executable='placa_simulada',
         name='placa_simulada',
         output='both',
-        parameters=[{'zona_morta': LaunchConfiguration('zona_morta'),
+        parameters=[{'modelo': LaunchConfiguration('placa'),
                      'bitola': 0.270,  # medida com trena 2026-07-29
+                     'raio': 0.080,    # idem
                      'use_sim_time': True}],
     )
 

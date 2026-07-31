@@ -1,7 +1,7 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-07-31**.
+> Versionado na `main`. Atualizado em **2026-08-01**.
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
@@ -699,6 +699,64 @@ derrapar faz girar menos, e `1,185 × 0,82 ≈ 0,97` leria como "quase não
 derrapa". Com a calibração gravada ao lado do CSV, os dois voltam a ser
 separáveis em casa.
 
+## 🎛️ 2026-08-01 — O atuador medido entra no simulador, e a decisão 005 cai
+
+Sessão sem robô, em cima dos CSV de 31-07.
+
+- **Confirmei os números da bancada refazendo as contas.** A zona morta de giro
+  (0,091–0,096 rad/s) é firme: critérios de 2°, 3° e 5° dão 0,091/0,096/0,096,
+  com os 4 dentes concordando. O patamar também: comando de 0,10 m/s virou
+  **0,26–0,28 m/s de borda** nas quatro rajadas.
+- **Fechei o modelo do atuador** com o que faltava: latência **0,273 s** (n=4),
+  patamar **0,297 m/s de borda**, aceleração 0,435 m/s², desaceleração
+  0,373 m/s², e a escala real do firmware **0,0372 rad/s por unidade** contra os
+  0,10472 que o driver assume — **o driver superestima a roda em 2,8×**.
+- ⚠️ **A "zona morta de giro" NÃO é atrito, é aritmética do driver.** A
+  compensação dispara em `mx > 1.0`, o que dá `wz > 0,0621`; os 0,03 de
+  diferença são a latência sobre a rampa. O número descreve o **sistema**, não a
+  máquina, e se move se alguém mudar `deadband_speed`. **O atrito segue não
+  medido.**
+- ⚠️ **A pergunta do pivô foi dissolvida, não respondida.** Com a compensação
+  ligada qualquer `wz > 0,062` pivota, na velocidade do patamar. A aritmética da
+  folga de 4% ficou sem objeto: o pivô existe, o que não existe é controle da
+  velocidade dele. **Mexe na premissa da decisão 009.**
+
+### ⛔ A decisão 005 não sobrevive ao atuador medido
+
+Passando a própria lei da 005 pelo modelo: de **1° a 180°** de erro de rumo, a
+lei pede 8 valores distintos de `wz` e a placa entrega **um só** (2,204 rad/s,
+2,2× o máximo que a lei pediria). A frenagem de rumo — resultado central da 005,
+validado em 10 corridas de simulador — **não existe neste robô** com a
+compensação ligada. O mesmo vale para `v = √(2·a_lin·dist)`, e o `v_piso` fica
+sem sentido: não há velocidade abaixo do patamar.
+
+**O contrato de que `cmd_vel` está em m/s é falso em toda a faixa que a navegação
+usa** — e a movimentação inteira foi escrita sobre esse contrato.
+
+### O simulador agora erra como o robô erra
+
+`placa_simulada.py` reescrito: reproduz a conta do driver linha a linha, depois
+aplica escala real, latência e assimetria por sentido. Três modelos —
+`medido` (padrão), `cru` (compensação desligada) e `ideal` (fio).
+`sim.launch.py placa:=…` e `pilha.launch.py placa:=…`; o `zona_morta:=` saiu.
+
+Provado no Gazebo, mesma ordem nas duas placas:
+
+```
+comando      placa ideal      placa medida
+0,10 m/s ->  0,200 m em 2 s   0,548 m
+0,25 m/s ->  0,500 m          0,541 m
+0,50 m/s ->  1,000 m          0,541 m   <- as tres iguais
+```
+
+**419 testes verdes** (eram 407), 8 novos travando o modelo — inclusive o do
+colapso da lei da 005.
+
+⚠️ **Tropeço meu, igual ao do laboratório:** a primeira prova deu medida ≈ ideal
+porque havia **quatro `placa_simulada` órfãs** acumuladas, de lançamentos que
+derrubei com `pkill` de padrão largo. Contar processo vivo antes de medir entrou
+no procedimento.
+
 ## ⏳ Próximos passos
 
 **Primeiro, com o robô (virou prioridade — a movimentação depende destes
@@ -729,9 +787,29 @@ números e hoje eles são chute):**
    SIGINT e esperar). Sintoma: pinga e ACKa, RX de ~6 pacotes/3 s, `/livox/lidar`
    mudo. Cura: power-cycle do lidar. Ver a entrada 07-30 (2ª leva) do diário.
 
+**Sem o robô, e agora urgentes (01-08):**
+
+5. **Decidir o que fazer com a compensação de zona morta do driver.** É ela que
+   cria o patamar e derruba a decisão 005. Três saídas, e nenhuma é de graça:
+   (a) desligar e viver com a zona morta física — que só está bracketada entre
+   0,25 e 0,5 m/s de borda, e se for isso a velocidade mínima do robô é rápida
+   demais para chegar num ponto; (b) mapa estático melhor — **impossível**:
+   nenhum preserva razão entre rodas E magnitude abaixo do limiar físico, é o
+   que "zona morta" significa; (c) **malha fechada** por roda, que é a saída de
+   verdade e o driver já tem o que ela precisa.
+6. **`open_loop: false`** — é de graça e teria evitado a sessão perdida de 31-07.
+   O driver já exporta posição **e** velocidade por roda (é de lá que saem
+   `v_esq`/`v_dir` nos CSV); a odometria de roda hoje é o comando ecoado por
+   escolha, não por falta de encoder. Trocar dá a comparação roda × lidar.
+7. **Raio de inflação menor que o inscrito** (achado ao rodar a pilha em 01-08):
+   `0.300` configurado contra `0.363` de raio inscrito do footprint da trena. O
+   Nav2 reclama nos dois costmaps. É defeito, não aviso cosmético.
+8. **Comparar a pilha inteira nas duas placas** — não rodou em 01-08 (`base_link`
+   ausente na TF na subida). É o que mede o estrago de ponta a ponta.
+
 **Assim que os dados da bancada chegarem:**
 
-5. **Levantamento da camada de segurança do robô 1** (decisão 010) — ler
+9. **Levantamento da camada de segurança do robô 1** (decisão 010) — ler
    `collision_monitor`, `motion_guard` e `unstuck_supervisor` arquivo por
    arquivo e dizer, com número, o que sobrevive ao Mid-360. Expectativa
    preliminar: o `collision_monitor` é config + geometria deste chassi; o
@@ -742,16 +820,16 @@ números e hoje eles são chute):**
 
 **Sem o robô:**
 
-6. ~~Varrer o raio mínimo e julgar o planner.~~ **FEITO 07-29**: 48 planos, o
+10. ~~Varrer o raio mínimo e julgar o planner.~~ **FEITO 07-29**: 48 planos, o
    ranking não vira entre 0,25 m e 0,46 m, e a **decisão 008 está escrita**
    (`docs/decisoes/008-nav2-planeja-nos-seguimos.md`) e **ACEITA pelo dono**.
    O Smac Hybrid-A\* é a escolha oficial; o Theta\* sai.
-7. **Modelo 3D real do robô** no simulador (o dono vai levantar), com o
+11. **Modelo 3D real do robô** no simulador (o dono vai levantar), com o
    Mid-360 no topo. É ele que troca a fonte de obstáculos do mapa estático
    para o sensor, e corrige footprint e bitola do modelo.
-8. **Calibrar o simulador contra o robô** com os números dos ensaios —
+12. **Calibrar o simulador contra o robô** com os números dos ensaios —
    critério: mesma manobra, S de tamanho parecido.
-9. **Seguidor próprio** por cima do plano do Nav2 — destravado pela 008, é a
+13. **Seguidor próprio** por cima do plano do Nav2 — destravado pela 008, é a
    fatia grande seguinte. Carrot no plano, como no robô 1, por cima da
    movimentação da decisão 005.
 
