@@ -583,6 +583,27 @@ Véspera da ida ao robô. Duas perguntas do dono derrubaram partes do método.
   direto no `cmd_vel` do controlador e passa **por fora da placa fingida**, então
   os 0,023 m/s e 0,036 rad/s medidos são piso de detecção, não zona morta.
 
+### ✅ Fechado no mesmo dia: a conferência lê a calibração VIVA
+
+`sessao.py --checar` pergunta ao `hoverboard_base_controller` **que robô ele
+acha que está dirigindo** — `wheel_separation`, `wheel_radius` e os nomes de
+roda, do nó vivo — e compara com a trena. **Delata, não bloqueia**, e grava
+tudo no `ambiente.txt` com marcador `*** DIVERGE DA TRENA ***`.
+
+Fecha o buraco de que o `ambiente.txt` gravava só o **commit**, que descreve o
+fonte: quem dirige o robô é o `install/`. Sem esse registro, um limiar medido
+não tem como voltar a ser velocidade de roda — vira número sem unidade.
+
+Os nomes de roda entram junto porque é neles que vive a correção do **giro
+espelhado**: a conferência diz `swap APLICADO` / `NÃO aplicado` **antes** de o
+robô se mexer, provando que o rebuild pegou sem gastar bateria. Os dois estados
+e o caso divergente foram verificados ao vivo contra o Gazebo.
+
+A folha de campo virou **executável de ponta a ponta**: bloco "para quem for
+conduzir", ordem fixa, cinco coisas que não se faz, e o swap de rodas como
+script copiável (testado e revertido; **não commitado** — só entra no git
+depois de o cutucão validar, decisão de 30-07).
+
 ### Aberto: `install/` velho envenena todos os limiares
 
 A bitola e o raio da trena moram em arquivos que o `tracao.launch.py` lê de
@@ -591,12 +612,12 @@ não troca o `install/`. Se o build faltar, o robô sobe com 0,32/0,0825 e todo
 limiar sai 18,5% enviesado, sem sintoma. A folha de campo ganhou o `colcon build
 --packages-select hoverboard_driver` e um `grep` de conferência.
 
-**Por fazer**: o `--checar` LER `wheel_separation` e `wheel_radius` do
-controlador vivo e anotá-los no `ambiente.txt` — hoje ele grava o commit, que
-descreve o fonte, não o que está dirigindo o robô. Importa porque a comparação
-roda × lidar é limpa na reta (raio de roda puro) mas **não separa bitola errada
-de escorregamento** no giro: 0,32 num robô de 0,270 faz girar 18,5% a mais,
-derrapar faz girar menos, e `1,185 × 0,82 ≈ 0,97` leria como "quase não derrapa".
+**FEITO no mesmo dia** (seção acima). Importava porque a comparação roda × lidar
+é limpa na reta (raio de roda puro) mas **não separa bitola errada de
+escorregamento** no giro: 0,32 num robô de 0,270 faz girar 18,5% a mais,
+derrapar faz girar menos, e `1,185 × 0,82 ≈ 0,97` leria como "quase não
+derrapa". Com a calibração gravada ao lado do CSV, os dois voltam a ser
+separáveis em casa.
 
 ## ⏳ Próximos passos
 

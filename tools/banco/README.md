@@ -15,11 +15,40 @@ vez de opinião.
 `/Odometry` publicando — sem localização não há medida nenhuma, porque toda
 velocidade aqui é tirada da pose.
 
-Conferir antes de soltar o primeiro ensaio:
+Conferir antes de soltar o primeiro ensaio — e o jeito certo é o condutor, que
+faz isso e mais:
+
+```bash
+python3 sessao.py --checar            # não anda; recusa medir se faltar algo
+python3 sessao.py --checar --mexer    # + cutucão de sanidade (o robô se mexe)
+```
+
+Ele mede a taxa dos dois tópicos de odometria, conta os ouvintes do `cmd_vel` e
+**pergunta ao controlador que robô ele acha que está dirigindo**:
+`wheel_separation`, `wheel_radius` e os nomes de roda esquerda/direita, lidos do
+nó vivo e comparados com a trena de 29-07 (0,270 e 0,080).
+
+Isso não é preciosismo. O `tracao.launch.py` lê o YAML e o xacro via
+`FindPackageShare` — da cópia em `install/`, não do fonte. Trocar o fonte sem
+recompilar deixa os dois divergindo **em silêncio**, e a bitola entra na
+conversão comando→roda: 0,32 num robô de 0,270 desloca todo limiar medido em
+18,5%. Pior, depois, em casa, esse desvio é **indistinguível de derrapada** —
+os dois mexem no mesmo número em sentidos opostos e chegam a se cancelar.
+
+A conferência **não bloqueia** por divergência (ela pode ser deliberada); ela
+delata e **grava a calibração no `ambiente.txt`**, ao lado do commit. Commit
+descreve o fonte; estas linhas descrevem o que estava dirigindo o robô na hora,
+e é o que permite converter um limiar de volta para velocidade de roda.
+
+Os nomes de roda aparecem aí porque é neles que vive a correção do **giro
+espelhado** achado em 30-07 (`+0,6 rad/s` girou `−78,5°`) — dá para ver se o
+swap está no ar antes de o robô se mexer.
+
+Manualmente, se preferir:
 
 ```bash
 ros2 topic hz /Odometry                      # tem que estar publicando
-ros2 topic echo /Odometry --once             # pose faz sentido?
+ros2 param get /hoverboard_base_controller wheel_separation
 ```
 
 **Espaço:** uma área livre de pelo menos **5 × 3 m**. O robô anda de verdade.

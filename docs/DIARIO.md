@@ -1731,6 +1731,35 @@ por fora da placa fingida** (ela escuta `/cmd_vel_bruto`). Os 0,023 m/s e
 Gazebo provou o *mecanismo* do dente de serra, não o número. No robô a placa
 está no caminho, e é lá que o número existe.
 
+### A conferência passa a ler a calibração VIVA (a dívida da manhã, fechada)
+
+O `--checar` agora pergunta ao `hoverboard_base_controller` **que robô ele acha
+que está dirigindo**: `wheel_separation`, `wheel_radius` e os nomes de roda,
+lidos do nó vivo por `AsyncParameterClient` e comparados com a trena.
+
+Fechou o buraco que eu tinha anotado de manhã: o `ambiente.txt` gravava o
+**commit**, e commit descreve o FONTE. Quem dirige o robô é a cópia em
+`install/`, e o `tracao.launch.py` lê os dois de `FindPackageShare`. Agora a
+calibração viva vai escrita no `ambiente.txt`, com marcador `*** DIVERGE DA
+TRENA ***` quando for o caso — sem isso, um limiar medido não tem como ser
+convertido de volta em velocidade de roda, e vira número sem unidade.
+
+**Delata, não bloqueia.** Divergir pode ser deliberado; o que não pode é ninguém
+saber. Verificado nos dois sentidos contra o Gazebo, com a calibração
+adulterada em tempo de execução: com 0,32 ele acusa `+18.5%` e a sessão segue,
+com o número gravado ao lado do dado.
+
+Os nomes de roda entraram junto porque é neles que vive a correção do giro
+espelhado: a conferência agora diz `swap APLICADO` ou `NÃO aplicado` **antes**
+de o robô se mexer, o que prova que o rebuild pegou sem gastar bateria. Os dois
+estados verificados ao vivo.
+
+A folha de campo virou executável de ponta a ponta — um bloco "para quem for
+conduzir" com a ordem e cinco coisas que não se faz, e o swap de rodas como
+script copiável (testado e revertido; **não commitado**, conforme a decisão de
+30-07 de só entrar no git depois de o cutucão validar). 22 testes no banco,
+**402 verdes** no total.
+
 ### Corrigido depois: a sessão 07-30 no robô já tinha respondido isto
 
 Ao juntar com o remoto apareceu a entrada 07-30 (2ª leva) — uma ida ao robô que

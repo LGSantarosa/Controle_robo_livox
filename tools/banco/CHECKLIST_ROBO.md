@@ -7,6 +7,32 @@ estão no `README.md` ao lado; aqui é só a ordem de chegar e rodar.
 
 ---
 
+## Para quem for conduzir a sessão (assistente): leia isto primeiro
+
+Este arquivo é executável de cima a baixo. **Não há decisão de projeto a tomar
+no laboratório** — tudo já foi decidido em 30-07 e 31-07. Contexto em duas
+entradas do `docs/DIARIO.md`: **07-30 (2ª leva)**, a ida ao robô que achou o
+giro espelhado, e **07-31**, o protocolo novo.
+
+A ordem é: **bundle → build → base → `--checar` → swap → rebuild → `--checar
+--mexer` → sessão**. Cada passo abaixo, em ordem, sem pular.
+
+Cinco coisas que **não** se fazem, cada uma comprada com tempo perdido:
+
+| não faça | por quê |
+|---|---|
+| medir com o giro espelhado | a sessão inteira sai lixo, e nenhum dos 6 ensaios acusa |
+| commitar o swap antes do cutucão validar | decisão de 30-07: só entra no git depois de o robô provar |
+| `kill -9` no driver do livox | trava a sessão de dado do Mid-360; derrubar com Ctrl-C e esperar |
+| pular o `colcon build` | YAML e xacro são lidos do `install/`; sem build a correção não existe |
+| pedir para o dono relatar o console | ele só executa; tudo sai em arquivo (`leituras.txt`, CSV) |
+
+E uma que **se faz sempre**: `--checar` antes de qualquer coisa que ande. Ele
+recusa medir sem `/Odometry` e agora também diz **qual calibração a base
+carregou** — se a bitola não for 0,270, o número medido não tem unidade.
+
+---
+
 ## 1. Subir a base
 
 ⚠️ **O NUC não tem autenticação no GitHub** (dívida de infra, 07-30): `git fetch`
@@ -55,22 +81,39 @@ giro espelha — e **nenhum dos seis ensaios acusaria isso**, porque medem
 magnitude. Medir assim é medir errado, e a sessão inteira sairia lixo.
 
 O conserto, aprovado pelo dono e ainda **não aplicado** (a validação exige o robô
-andando, com alguém de olho), em
-`ros2_packages/hoverboard_driver/bringup/config/hoverboard_controllers.yaml`:
+andando, com alguém de olho). Aplicar e reconstruir, em três linhas:
 
-```yaml
-left_wheel_names:  ["right_wheel_joint"]   # eram left/right, nesta ordem
-right_wheel_names: ["left_wheel_joint"]
+```bash
+cd ~/Controle_robo_livox
+python3 - <<'PY'
+import pathlib
+p = pathlib.Path('ros2_packages/hoverboard_driver/bringup/config/hoverboard_controllers.yaml')
+t = p.read_text()
+a = 'left_wheel_names: ["left_wheel_joint"]\n    right_wheel_names: ["right_wheel_joint"]'
+b = 'left_wheel_names: ["right_wheel_joint"]\n    right_wheel_names: ["left_wheel_joint"]'
+assert a in t, 'ja trocado, ou o arquivo mudou — conferir a mao'
+p.write_text(t.replace(a, b)); print('swap aplicado')
+PY
+colcon build --packages-select hoverboard_driver && source install/setup.bash
 ```
 
-Depois: **rebuild** (acima), subir a base, e
+Reiniciar o `base.launch.py` (Ctrl-C no primeiro terminal e subir de novo) e:
 
 ```bash
 python3 tools/banco/sessao.py --checar --mexer
 ```
 
-O giro tem de sair **positivo** (anti-horário). Saiu? Seguir. Não saiu? **Parar
-e avisar** — não medir. E só commitar o swap depois que o cutucão validar.
+Duas coisas para ler na saída:
+
+- `swap esquerda/direita APLICADO` na seção **calibração viva** — prova que o
+  build pegou, antes mesmo de o robô se mexer;
+- o cutucão: o giro tem de sair **positivo** (anti-horário).
+
+Saiu positivo? Seguir para o passo 4. Continuou negativo? **Parar e avisar** —
+não é o YAML, é fiação, e medir assim é medir errado. Reverter o swap com o
+mesmo script trocando `a` e `b`.
+
+**Só commitar o swap depois que o cutucão validar** — é a regra de 30-07.
 
 Deixe esse terminal vivo. Tudo abaixo roda num **segundo terminal**, com as duas
 linhas de `source` repetidas.

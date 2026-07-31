@@ -274,6 +274,55 @@ def test_o_protocolo_tem_as_corridas_que_a_folha_de_campo_promete():
     assert total == 27
 
 
+# -------------------------------------------------------- calibração viva
+
+def test_calibracao_que_bate_com_a_trena_passa_calada():
+    linhas = sessao.laudo_calibracao(
+        {'wheel_separation': 0.270, 'wheel_radius': 0.080,
+         'left_wheel_names': ['left_wheel_joint'],
+         'right_wheel_names': ['right_wheel_joint']})
+    assert not any('ATENÇÃO' in l for l in linhas)
+
+
+def test_bitola_velha_e_delatada_com_o_desvio():
+    """0,32 num robô de 0,270 desloca TODO limiar medido em 18,5%, e depois é
+    indistinguível de derrapada. Tem que aparecer antes de medir."""
+    linhas = sessao.laudo_calibracao(
+        {'wheel_separation': 0.32, 'wheel_radius': 0.0825,
+         'left_wheel_names': ['left_wheel_joint'],
+         'right_wheel_names': ['right_wheel_joint']})
+    texto = '\n'.join(linhas)
+    assert 'ATENÇÃO' in texto
+    assert '+18.5%' in texto, texto
+    assert 'wheel_radius' in texto
+
+
+def test_delatar_nao_e_bloquear():
+    """Divergir pode ser deliberado. O que não pode é ninguém saber — o dado
+    segue interpretável porque a calibração fica gravada ao lado."""
+    linhas = sessao.laudo_calibracao({'wheel_separation': 0.32,
+                                      'wheel_radius': 0.080})
+    assert any('Não estou parando a sessão' in l for l in linhas)
+
+
+def test_reconhece_o_swap_de_rodas_nos_dois_estados():
+    normal = {'left_wheel_names': ['left_wheel_joint'],
+              'right_wheel_names': ['right_wheel_joint']}
+    trocado = {'left_wheel_names': ['right_wheel_joint'],
+               'right_wheel_names': ['left_wheel_joint']}
+    assert sessao.swap_aplicado(normal) is False
+    assert sessao.swap_aplicado(trocado) is True
+    assert sessao.swap_aplicado({}) is None
+
+
+def test_controlador_mudo_nao_finge_calibracao():
+    """Sem resposta, o certo é dizer 'desconhecida'. Assumir os valores do
+    fonte é exatamente o erro que esta conferência existe para evitar."""
+    linhas = sessao.laudo_calibracao({})
+    assert all('[ok]' not in l for l in linhas)
+    assert sum('não veio do controlador' in l for l in linhas) == 2
+
+
 def test_passo_6_tem_a_corrida_de_controle_girada():
     """Sem ela, três retas do mesmo ponto medem o caimento do piso e a média sai
     confiante e errada — média não mata erro sistemático."""

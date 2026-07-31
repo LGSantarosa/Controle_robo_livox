@@ -165,6 +165,110 @@ PASSOS = [
 
 # --------------------------------------------------------------- conferência
 
+# Medidos com trena NESTE robô em 2026-07-29 (ver ESTADO_PROJETO.md). Não são
+# preferência de projeto: são a régua contra a qual se confere o que a base
+# realmente carregou.
+TRENA = {'wheel_separation': 0.270, 'wheel_radius': 0.080}
+
+CONTROLADOR = 'hoverboard_base_controller'
+PARAMS = ['wheel_separation', 'wheel_radius',
+          'left_wheel_names', 'right_wheel_names']
+
+
+def calibracao_viva(no, timeout=5.0):
+    """Pergunta ao controlador QUE ROBÔ ele acha que está dirigindo.
+
+    Existe porque o `ambiente.txt` gravava o **commit**, e commit descreve o
+    FONTE. Quem dirige o robô é a cópia em `install/`: o `tracao.launch.py` lê
+    o YAML e o xacro via `FindPackageShare`. Trocar o fonte sem recompilar deixa
+    os dois divergindo em silêncio, e aí:
+
+      · a bitola entra na conversão comando→roda, então um valor errado desloca
+        TODO limiar medido (0,32 num robô de 0,270 são 18,5%);
+      · pior, esse desvio é indistinguível de derrapada depois, em casa: os dois
+        mexem no mesmo número em sentidos opostos e podem se cancelar.
+
+    Também devolve os nomes de roda, que é onde vive a correção do giro
+    espelhado de 30-07 — dá para ver, antes de medir, se o swap está no ar.
+
+    NÃO bloqueia. Divergir pode ser deliberado; o que não pode é ninguém saber.
+    O número vai para o `ambiente.txt`, e aí o dado continua interpretável mesmo
+    se a calibração estiver errada.
+    """
+    import rclpy
+    from rclpy.parameter import parameter_value_to_python
+    from rclpy.parameter_client import AsyncParameterClient
+
+    linhas, calib = [], {}
+    cli = AsyncParameterClient(no, CONTROLADOR)
+    if not cli.wait_for_services(timeout_sec=timeout):
+        linhas.append(f'  [aviso] {CONTROLADOR} não respondeu ao serviço de '
+                      f'parâmetros.')
+        linhas.append('          Os ensaios rodam, mas fica sem registro de QUAL '
+                      'calibração os gerou.')
+        return linhas, calib
+
+    fut = cli.get_parameters(PARAMS)
+    rclpy.spin_until_future_complete(no, fut, timeout_sec=timeout)
+    res = fut.result()
+    if res is None:
+        linhas.append('  [aviso] o pedido de parâmetros não voltou a tempo.')
+        return linhas, calib
+
+    for nome, valor in zip(PARAMS, res.values):
+        try:
+            calib[nome] = parameter_value_to_python(valor)
+        except Exception:
+            calib[nome] = None
+
+    return linhas + laudo_calibracao(calib), calib
+
+
+def swap_aplicado(calib):
+    """As rodas estão trocadas no YAML? É onde vive a correção do giro
+    espelhado achado em 30-07 (`+0,6 rad/s` girou `−78,5°`)."""
+    esq = calib.get('left_wheel_names') or []
+    dir_ = calib.get('right_wheel_names') or []
+    if not esq or not dir_:
+        return None
+    return 'right' in str(esq[0]) and 'left' in str(dir_[0])
+
+
+def laudo_calibracao(calib):
+    """Compara o que a base carregou com a trena. Parte pura, para poder ser
+    testada sem subir ROS — a lógica é o que erra, não o transporte."""
+    linhas = []
+    for nome, esperado in TRENA.items():
+        v = calib.get(nome)
+        if v is None:
+            linhas.append(f'  [aviso] {nome} não veio do controlador')
+        elif abs(v - esperado) < 1e-6:
+            linhas.append(f'  [ok] {nome} = {v:.4f}  (bate com a trena)')
+        else:
+            linhas.append(f'  [ATENÇÃO] {nome} = {v:.4f}, e a trena mediu '
+                          f'{esperado:.4f}')
+            linhas.append(f'            desvio de {100 * (v - esperado) / esperado:+.1f}% '
+                          f'— ou o build faltou, ou alguém mudou de propósito.')
+            linhas.append(f'            Não estou parando a sessão: fica '
+                          f'gravado no ambiente.txt e o')
+            linhas.append(f'            dado continua interpretável. Mas confira '
+                          f'antes de medir.')
+
+    trocado = swap_aplicado(calib)
+    if trocado is not None:
+        linhas.append(f'  [info] rodas: esquerda={list(calib["left_wheel_names"])}'
+                      f'  direita={list(calib["right_wheel_names"])}')
+        if trocado:
+            linhas.append('         -> swap esquerda/direita APLICADO (a correção '
+                          'do giro espelhado de 30-07)')
+        else:
+            linhas.append('         -> swap NÃO aplicado (ordem original). Se o '
+                          'cutucão acusar giro')
+            linhas.append('            invertido, é este o arquivo a mexer: '
+                          'hoverboard_controllers.yaml')
+    return linhas
+
+
 def confere(sim=False, mexer=False):
     """Prova que a base está de pé ANTES de qualquer medida.
 
@@ -249,6 +353,14 @@ def confere(sim=False, mexer=False):
         linhas.append(f'  [ok] /hoverboard_base_controller/cmd_vel tem '
                       f'{n_sub} ouvinte(s)')
 
+    # Que robô a base acha que está dirigindo. Vem antes do cutucão de
+    # propósito: se os nomes de roda estiverem trocados, isso explica de
+    # antemão um giro invertido, em vez de virar mistério com o robô andando.
+    linhas.append('')
+    linhas.append('  --- calibração viva (o que o controlador carregou) ---')
+    l_calib, calib = calibracao_viva(no)
+    linhas += l_calib
+
     if ok and mexer:
         linhas.append('')
         linhas.append('  --- cutucão de sanidade (o robô VAI se mexer) ---')
@@ -256,7 +368,7 @@ def confere(sim=False, mexer=False):
 
     no.destroy_node()
     rclpy.shutdown()
-    return ok, linhas
+    return ok, linhas, calib
 
 
 def _cutucao(no, pub, ultimo, sim):
@@ -415,7 +527,7 @@ def main():
               'a mão no disjuntor.')
 
     print('\n--- conferência da base ---')
-    ok, linhas = confere(sim=cfg.sim, mexer=cfg.mexer)
+    ok, linhas, calib = confere(sim=cfg.sim, mexer=cfg.mexer)
     for l in linhas:
         print(l)
 
@@ -455,6 +567,22 @@ def main():
             f.write(f'piso   : {piso}\n')
             f.write(f'bateria: {bat}\n')
             f.write(f'obs    : {obs}\n')
+            # A calibração VIVA, não a do fonte. O commit acima descreve o que
+            # está no git; estas linhas descrevem o que estava dirigindo o robô
+            # na hora. Sem elas, um limiar medido não tem como ser convertido
+            # de volta para velocidade de roda, e vira número sem unidade.
+            f.write('\n[calibração que o controlador carregou]\n')
+            if calib:
+                for k in PARAMS:
+                    f.write(f'{k:22s}: {calib.get(k)}\n')
+                for k, esperado in TRENA.items():
+                    v = calib.get(k)
+                    if v is not None and abs(v - esperado) > 1e-6:
+                        f.write(f'*** DIVERGE DA TRENA: {k} = {v} '
+                                f'(medido {esperado}) ***\n')
+            else:
+                f.write('(o controlador não respondeu — calibração DESCONHECIDA '
+                        'nesta sessão)\n')
         print(f'  anotado em {amb}')
 
     # ------------------------------------------------------------ os passos
