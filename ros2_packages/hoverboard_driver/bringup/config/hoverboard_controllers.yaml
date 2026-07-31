@@ -10,8 +10,8 @@ controller_manager:
 
 hoverboard_base_controller:
   ros__parameters:
-    left_wheel_names: ["left_wheel_joint"]
-    right_wheel_names: ["right_wheel_joint"]
+    left_wheel_names: ["right_wheel_joint"]
+    right_wheel_names: ["left_wheel_joint"]
 
     # MEDIDOS COM TRENA NESTE ROBÔ em 2026-07-29. Antes: separation 0.32 e
     # radius 0.0825, ambos herdados e nunca medidos aqui. Com 0.32 o robô
