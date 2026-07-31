@@ -2366,3 +2366,44 @@ E quatro vezes o olho do dono arbitrou certo: o giro à esquerda, o "no giro ele
 não se mexeu", o "de ré reto e de frente pendendo", e os ~270°. **Num banco de
 ensaios sem padrão de referência, a testemunha humana é o instrumento mais
 confiável que existe** — e é barata. Usar mais, e mais cedo.
+
+### Adendo 6 da 4ª leva: os "saltos do LIO" eram TRÊS pilhas rodando juntas
+
+A `curva` foi refeita e saiu contaminada de novo (salto de 1,344 m, yaw do LIO
++18,0° contra +45,5° das rodas). Em vez de queimar mais corrida, fui olhar o que
+estava vivo no NUC:
+
+```
+ros2_control_node      : 1
+livox_ros_driver2_node : 3     <-- 6273, 7043, 7858
+fastlio_mapping        : 3     <-- 6274, 7044, 7859
+```
+
+**Três pilhas de localização completas em paralelo**, publicando as três em
+`/livox/lidar`, `/livox/imu` e `/Odometry`. Órfãs das minhas derrubadas de base:
+usei `pkill -f ros2_control_node` dentro do comando ssh, o padrão casou com a
+**própria linha de comando do ssh** e matou a sessão antes de relançar. Repeti
+três vezes.
+
+Três FAST-LIO com origens diferentes publicando no mesmo tópico é exatamente a
+assinatura observada: saltos de magnitude quase CONSTANTE (~1,33 a 1,41 m) entre
+corridas diferentes — que eu, erradamente, li como "o sensor perde rastreio".
+
+Depois de matar os órfãos por PID e relançar UMA pilha:
+
+```
+antes (3 pilhas)  : saltos de 1,35 m
+so matando orfaos : salto 0,140 m, deriva 0,078 m em 15 s  (mapa ja sujo)
+apos relancar     : salto 0,0051 m, deriva 0,0018 m em 15 s, yaw -0,10°
+```
+
+**O LIO é excelente.** Melhor que a medida da manhã. Todo o episódio de
+"instabilidade do sensor" foi sujeira que eu deixei no robô.
+
+Procedimento, para não repetir: matar por PID, conferir com `ps` que a lista
+saiu **vazia**, e só então lançar — em chamada ssh separada. Antes de confiar em
+qualquer medida de `/Odometry`, verificar que existe **exatamente um**
+`fastlio_mapping` e **um** `livox_ros_driver2_node`.
+
+Corridas a descartar por contaminação: `pivo-wz030-r2`, `curva-v010-wz030`,
+`curva-r2`, `zm-linear-r2` (esta também falhou por gatilho de amostra única).
