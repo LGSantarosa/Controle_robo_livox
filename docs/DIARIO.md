@@ -1912,3 +1912,117 @@ Está anotado como próximo passo 5 do `ESTADO_PROJETO.md`, com gatilho explíci
 roda **quando os dados da bancada chegarem**, porque os polígonos e os limites de
 velocidade a re-derivar dependem da zona morta e do `a_dec` medidos. Fazer antes
 seria produzir número para trocar depois.
+
+## 🎯 2026-07-31 (3ª leva) — Os dois primeiros números do robô, e o LIO caindo
+
+Sessão de bancada com o robô ligado. **Saíram as duas zonas mortas medidas** —
+os primeiros números do robô 2 que não são herança nem chute. E o caminho até
+elas derrubou três coisas que a gente achava que sabia.
+
+### O giro espelhado não existia: quem mentia era o sensor
+
+O bloqueio aberto desde 30-07 dizia "esquerda/direita trocadas". O commit
+`368ea13` trocou `left`/`right` no `hoverboard_controllers.yaml` e o cutucão
+"confirmou" (+59,3° pós-swap contra −78,5° antes).
+
+Confirmação visual com o dono atrás do robô, base **sem** swap: comando de giro
+à esquerda → **o nariz foi para a esquerda**, fisicamente correto, enquanto o
+LIO reportava −68,2° com rótulo "direita". O yaw do LIO vem com **sinal
+invertido**. O alerta de "giro invertido" do cutucão é falso alarme por
+construção: ele compara o comando com esse yaw.
+
+Ou seja, o swap consertava um sintoma inexistente e quebrava um robô que já
+estava certo — com o swap, os +59,3° do LIO correspondiam a um giro físico para
+a direita. Revertido em `595cf80`.
+
+**Lição de método, e é a mesma da bitola:** o cutucão validou o swap porque
+media com o instrumento defeituoso. Validação por instrumento suspeito confirma
+o que você quiser. O que desempatou foi o olho do dono.
+
+### O LIO não erra só o sinal: ele fabrica movimento
+
+O primeiro ensaio de zona morta de giro rodou com o gatilho no `/Odometry`, e o
+CSV guarda as duas odometrias no mesmo instante:
+
+| | LIO (`/Odometry`) | roda (encoder) |
+|---|---|---|
+| excursão de yaw | **+143,8°** | +8,7° |
+| `wz` máximo | **2,9 rad/s** | 0,139 rad/s |
+| deriva xy num pivô | 0,23 m | — |
+
+O comando nunca passou de 0,106 rad/s, e o LIO marcou 0,75 rad/s **durante a
+pausa, com comando exatamente zero**. Depois, medido direto: com o robô parado,
+o ruído de `wz_pose` chega a **0,0326 rad/s** — e o gatilho do dente de serra
+dispara em `SAIU = 0,03`. **O ruído do LIO parado é maior que o limiar de
+disparo.** O ensaio não tinha como não disparar no ruído.
+
+Daí `ensaio.py --fonte {lio,roda}` e `medir.py --fonte`: escolhe quem **vira o
+dente**, com as duas fontes sempre no CSV. O padrão continua `lio` — encoder
+mede o EIXO, não o robô, e não enxerga derrapagem; é medida pior, que só se usa
+enquanto o LIO estiver quebrado.
+
+### O erro que quase virou número publicado
+
+Com o gatilho na roda, o ensaio de giro devolveu **0,032 rad/s**, dentes
+apertados (desvio 0,003), quantização 15× abaixo do limiar, giro líquido
+coerente e alternando. Tudo dizia "medida boa".
+
+**O dono, olhando: "no giro ele não se mexeu."**
+
+E estava certo. `SAIU = 0,03` significa coisas diferentes nos dois ensaios: na
+reta são 0,03 m/s de borda de roda; no giro eram 0,03 rad/s = **0,0040 m/s** de
+borda. O ensaio de giro estava ~7× mais sensível e mediu **rastejo de eixo** —
+os "2° por dente" eram folga mecânica, não pivô. Reanálise dos dois CSVs num
+critério físico comum confirmou: no giro a borda da roda **nunca cruzou nem
+0,006 m/s**.
+
+Corrigido: o gatilho do giro passa a comparar `wz·L/2`, e `medir.py` recebe a
+mesma conversão via `--bitola` — quem vira o dente e quem lê o CSV têm de
+concordar sobre o que é "imóvel". Travado em teste
+(`test_rastejo_de_eixo_no_giro_nao_vira_zona_morta`).
+
+Se o dono não estivesse olhando, 0,032 rad/s ia pro YAML com quatro dentes
+concordando e uma tabela bonita atrás. **Dispersão baixa não é validade** — os
+quatro dentes concordavam porque mediam a mesma folga.
+
+### Os números
+
+Refeito o giro com o critério certo: 43° a 47° líquidos por dente, sentido
+alternando, **confirmado a olho pelo dono**.
+
+```
+zona_morta_linear = 0,021 m/s    (queda 0,014)   dentes 0,018 0,023 0,021 0,022
+zona_morta_giro   = 0,131 rad/s  (queda 0,106)   dentes 0,116 0,142 0,117 0,148
+```
+
+Em velocidade de borda de roda, que é o que a roda sente:
+
+| | comando | borda de roda | faixa |
+|---|---|---|---|
+| reta | 0,021 m/s | **0,021 m/s** | 0,018–0,023 |
+| giro | 0,131 rad/s | **0,0177 m/s** | 0,0157–0,0200 |
+
+**As faixas se sobrepõem: a zona morta é propriedade da RODA, não da manobra.**
+Girar parado não é o pior caso — o `tools/banco/README.md` afirmava que era, e a
+frase foi corrigida junto com esta entrada. Era herança do skid-steer de 4 rodas
+do robô 1, exatamente o que o `CLAUDE.md` manda não herdar. Aqui a herança
+sobreviveu disfarçada de comentário técnico, e só caiu porque foi medida.
+
+CSVs: `2026-07-31-zona-morta-giro.csv` (o inválido, do LIO — guardado de
+propósito: o contraste está no arquivo), `-giro-roda.csv` (o do rastejo),
+`-giro-borda.csv` e `-linear-roda.csv` (os válidos).
+
+### O que esta sessão NÃO entrega, e por quê
+
+`curva`, `reta` e `degrau_giro` **não** rodaram. Não é escolha de ritmo: os três
+medem coisa que odometria de roda não pode ver. `curva` mede derrapagem, que é
+por definição roda girando sem o robô ir junto; `reta` é laudo sobre o rumo do
+corpo assentar; `degrau_giro` mede a desaceleração depois de cortar o comando,
+justo quando a roda desliza livre. Rodá-los pela roda produziria número com cara
+de resultado.
+
+Todos dependem de pose confiável, e o LIO tem sinal de yaw invertido **e** ruído
+de 0,033 rad/s parado. **Esse é o próximo bloqueio, e agora ele é o caminho
+crítico do banco inteiro.** Suspeita a investigar (não confirmada): extrínseco
+ou orientação da IMU do Mid-360 mal configurados explicariam sinal trocado e
+divergência em movimento pequeno de uma vez só.

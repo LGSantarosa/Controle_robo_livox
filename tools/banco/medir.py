@@ -4,9 +4,14 @@
     python3 medir.py zona_morta_linear zm_lin.csv
     python3 medir.py degrau_giro deg_10.csv
     python3 medir.py curva curva_v04_wz05.csv
+    python3 medir.py --fonte roda zona_morta_giro zm_giro.csv
 
 Cada leitura devolve o parâmetro que vai para o YAML da movimentação, com a
 evidência ao lado — não um veredito solto.
+
+`--fonte` tem de repetir o que o `ensaio.py` usou naquela corrida (`lio` é o
+padrão dos dois). Não é preferência de leitura: é a mesma escolha, do outro
+lado do CSV.
 """
 import csv
 import math
@@ -45,8 +50,15 @@ def espalhamento(vs):
     return m, dp, min(vs), max(vs)
 
 
-def zona_morta(r, campo_cmd, campo_med, unidade):
+def zona_morta(r, campo_cmd, campo_med, unidade, escala=1.0):
     """Limiares de SAÍDA e de QUEDA, um par por dente do dente de serra.
+
+    `escala` converte o campo medido para a grandeza em que LIMIAR_PARADO faz
+    sentido — velocidade de BORDA DE RODA. Na reta é 1,0 (o campo já é m/s de
+    roda); no giro é L/2, porque comparar rad/s cru contra o mesmo limiar torna
+    o ensaio de giro ~7x mais sensível e faz a leitura achar rastejo de eixo
+    onde o robô não saiu do lugar (31-07). Tem de ser a MESMA conversão que o
+    ensaio.py usou para virar o dente.
 
     Duas medidas diferentes, e o projeto precisa das duas:
 
@@ -63,9 +75,12 @@ def zona_morta(r, campo_cmd, campo_med, unidade):
     atrito não é um número, é uma distribuição, e a decisão do pivô se joga
     dentro dela.
     """
+    def med(l):
+        return abs(l[campo_med]) * escala
+
     tem_dente = r and r[0].get('dente') is not None
     if not tem_dente:
-        return _zona_morta_rampa_unica(r, campo_cmd, campo_med, unidade)
+        return _zona_morta_rampa_unica(r, campo_cmd, campo_med, unidade, escala)
 
     # Segmenta por (dente, fase): o ensaio já marcou onde cada rampa começa.
     # Rampa interrompida no meio (teto de tempo, trava de espaço) não vale como
@@ -81,9 +96,9 @@ def zona_morta(r, campo_cmd, campo_med, unidade):
 
         achou = None
         for i, l in enumerate(sobe):
-            if abs(l[campo_med]) > LIMIAR_PARADO:
+            if med(l) > LIMIAR_PARADO:
                 seg = sobe[i:i + 8]
-                if len(seg) == 8 and all(abs(k[campo_med]) > LIMIAR_PARADO / 2
+                if len(seg) == 8 and all(med(k) > LIMIAR_PARADO / 2
                                          for k in seg):
                     achou = l
                     break
@@ -98,7 +113,7 @@ def zona_morta(r, campo_cmd, campo_med, unidade):
 
         # A queda é a ÚLTIMA amostra ainda em movimento da descida: abaixo dela
         # o comando já não sustenta o movimento.
-        movendo = [l for l in desce if abs(l[campo_med]) > LIMIAR_PARADO]
+        movendo = [l for l in desce if med(l) > LIMIAR_PARADO]
         if movendo and achou:
             quedas.append((d, abs(movendo[-1][campo_cmd]), movendo[-1]['t']))
 
@@ -168,13 +183,14 @@ def zona_morta(r, campo_cmd, campo_med, unidade):
     return m
 
 
-def _zona_morta_rampa_unica(r, campo_cmd, campo_med, unidade):
+def _zona_morta_rampa_unica(r, campo_cmd, campo_med, unidade, escala=1.0):
     """Leitura dos CSV antigos, de rampa única e subida só. Mantida para os
     dados já gravados continuarem legíveis."""
     for i, l in enumerate(r):
-        if abs(l[campo_med]) > LIMIAR_PARADO:
+        if abs(l[campo_med]) * escala > LIMIAR_PARADO:
             seg = r[i:i + 25]
-            if len(seg) == 25 and all(abs(k[campo_med]) > LIMIAR_PARADO / 2 for k in seg):
+            if len(seg) == 25 and all(abs(k[campo_med]) * escala > LIMIAR_PARADO / 2
+                                      for k in seg):
                 print(f'  ZONA MORTA = {abs(l[campo_cmd]):.3f} {unidade}  '
                       f'(rampa única — UMA amostra, sem faixa)')
                 print(f'    (saiu do lugar em t={l["t"]:.2f} s, '
@@ -327,7 +343,7 @@ def reta(r):
         print('  -> o rumo assentou e ficou: as motrizes dominam. ESTÁVEL')
 
 
-def resumo(tipo, arqs):
+def resumo(tipo, arqs, fonte='lio', bitola=0.270):
     """As N repetições de uma condição, juntas: média, faixa e dispersão.
 
     Existe porque uma corrida é uma amostra, e a leitura corrida a corrida não
@@ -338,8 +354,9 @@ def resumo(tipo, arqs):
     Não reimplementa nenhuma medida: chama a mesma leitura de sempre em cada
     arquivo e junta o que ela devolveu. Uma medida, um lugar.
     """
-    print(f'\n=== RESUMO {tipo} — {len(arqs)} corridas')
-    if tipo not in LEITURAS:
+    leituras = LEITURAS(fonte, bitola)
+    print(f'\n=== RESUMO {tipo} — {len(arqs)} corridas, fonte={fonte}')
+    if tipo not in leituras:
         # `reta` é o caso: a leitura dela é um laudo (o rumo assentou ou não),
         # não uma grandeza. Média de laudo não existe, e dizer "nenhuma corrida
         # devolveu número" soa como falha quando não é.
@@ -353,7 +370,7 @@ def resumo(tipo, arqs):
         except FileNotFoundError:
             print(f'  [falta] {os.path.basename(a)} — corrida não gravou')
             continue
-        v = LEITURAS[tipo](r) if tipo in LEITURAS else None
+        v = leituras[tipo](r) if tipo in leituras else None
         if v is not None:
             vals.append((os.path.basename(a), v))
 
@@ -406,32 +423,73 @@ UNIDADES = {
     'aceleracao_linear': 'aceleração de arranque [m/s²]',
 }
 
-LEITURAS = {
-    'zona_morta_linear': _silencioso(lambda r: zona_morta(r, 'cmd_v', 'v_pose', 'm/s')),
-    'zona_morta_giro': _silencioso(lambda r: zona_morta(r, 'cmd_wz', 'wz_pose', 'rad/s')),
-    'degrau_giro': _silencioso(a_dec),
-    'curva': _silencioso(curva),
-    'aceleracao_linear': _silencioso(aceleracao),
-}
+def LEITURAS(fonte='lio', bitola=0.270):
+    """As leituras agregáveis, amarradas à fonte escolhida.
+
+    É função, e não dicionário fixo, porque `--fonte` não pode valer só na
+    leitura de uma corrida: o resumo que junta as N repetições tem de ler o
+    MESMO sinal, senão a média sai do LIO enquanto as corridas saíram da roda,
+    e ninguém percebe — divergência silenciosa é o defeito que este banco
+    inteiro existe para não ter.
+    """
+    s = '_roda' if fonte == 'roda' else '_pose'
+    return {
+        'zona_morta_linear': _silencioso(
+            lambda r: zona_morta(r, 'cmd_v', 'v' + s, 'm/s')),
+        'zona_morta_giro': _silencioso(
+            lambda r: zona_morta(r, 'cmd_wz', 'wz' + s, 'rad/s', bitola / 2)),
+        'degrau_giro': _silencioso(a_dec),
+        'curva': _silencioso(curva),
+        'aceleracao_linear': _silencioso(aceleracao),
+    }
 
 
 def main():
-    if len(sys.argv) >= 2 and sys.argv[1] == '--resumo':
-        if len(sys.argv) < 4:
-            print('uso: medir.py --resumo <tipo> <csv> [csv...]')
+    # `--fonte roda` lê as colunas derivadas da odometria de roda em vez das do
+    # LIO. Tem de casar com o `--fonte` do ensaio: quem virou o dente e quem lê
+    # o limiar precisam concordar sobre o que é "andando", senão a leitura
+    # procura a saída num sinal que não foi o que disparou a troca de fase.
+    argv = list(sys.argv[1:])
+    bitola = 0.270
+    if '--bitola' in argv:
+        i = argv.index('--bitola')
+        try:
+            bitola = float(argv[i + 1])
+        except (IndexError, ValueError):
+            print('uso: medir.py [--bitola M] [--fonte lio|roda] <tipo> <csv>')
             raise SystemExit(1)
-        resumo(sys.argv[2], sys.argv[3:])
+        del argv[i:i + 2]
+    fonte = 'lio'
+    if '--fonte' in argv:
+        i = argv.index('--fonte')
+        if i + 1 >= len(argv) or argv[i + 1] not in ('lio', 'roda'):
+            print('uso: medir.py [--fonte lio|roda] <tipo> <csv>')
+            raise SystemExit(1)
+        fonte = argv[i + 1]
+        del argv[i:i + 2]
+
+    if argv and argv[0] == '--resumo':
+        if len(argv) < 3:
+            print('uso: medir.py [--fonte lio|roda] --resumo <tipo> <csv> [csv...]')
+            raise SystemExit(1)
+        resumo(argv[1], argv[2:], fonte, bitola)
         return
-    if len(sys.argv) != 3:
+    if len(argv) != 2:
         print(__doc__)
         raise SystemExit(1)
-    tipo, arq = sys.argv[1], sys.argv[2]
+    sufixo = '_roda' if fonte == 'roda' else '_pose'
+    cv, cwz = 'v' + sufixo, 'wz' + sufixo
+    tipo, arq = argv[0], argv[1]
     r = le(arq)
-    print(f'=== {tipo}  ({arq}, {len(r)} amostras)')
+    if fonte == 'roda' and not any(cwz in l for l in r[:1]):
+        print(f'{arq} não tem coluna {cwz} — CSV anterior ao --fonte',
+              file=sys.stderr)
+        raise SystemExit(1)
+    print(f'=== {tipo}  ({arq}, {len(r)} amostras, fonte={fonte})')
     if tipo == 'zona_morta_linear':
-        zona_morta(r, 'cmd_v', 'v_pose', 'm/s')
+        zona_morta(r, 'cmd_v', cv, 'm/s')
     elif tipo == 'zona_morta_giro':
-        zm = zona_morta(r, 'cmd_wz', 'wz_pose', 'rad/s')
+        zm = zona_morta(r, 'cmd_wz', cwz, 'rad/s', bitola / 2)
         if zm:
             print(f'    -> em m/s de roda, com bitola L: zona_morta = {zm:.3f}·L/2')
     elif tipo == 'degrau_giro':

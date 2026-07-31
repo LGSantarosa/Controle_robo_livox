@@ -36,12 +36,31 @@
   leva). A base foi reconstruída (com um conserto de `launch_ros` no
   `tracao.launch.py`, commitado) e **volta a subir**: `--checar` passou,
   `/Odometry` a 9,9 Hz, placa e lidar de pé (este só depois de um power-cycle).
-  ⛔ **BLOQUEIO ABERTO: giro espelhado.** O cutucão de sanidade
-  (`--checar --mexer`) mostrou reta no sentido certo mas **giro invertido**
-  (comando anti-horário → girou horário): esquerda/direita trocadas no YAML/fiação.
-  A zona morta (item nº 1) NÃO foi medida — seria medida espelhada. Fix preparado
-  e não aplicado (trocar `left`/`right` em `hoverboard_controllers.yaml`), a
-  validar com o cutucão amanhã antes de qualquer ensaio. Ver DIARIO 07-30 2ª leva.
+  ✅ **07-31: o giro espelhado não existia — e as duas zonas mortas saíram.**
+  O robô sempre esteve certo; quem mente é o LIO, com o **yaw de sinal
+  invertido**. Confirmado a olho, com o dono atrás do robô: comando à esquerda →
+  nariz à esquerda, enquanto o LIO dizia "direita". O swap de `left`/`right`
+  (`368ea13`) consertava sintoma inexistente e foi revertido (`595cf80`).
+  Medidos no robô, com `--fonte roda`, confirmados a olho pelo dono:
+
+  ```
+  zona_morta_linear = 0,021 m/s    (queda 0,014)
+  zona_morta_giro   = 0,131 rad/s  (queda 0,106)
+  ```
+
+  Em borda de roda dão 0,021 e 0,0177 m/s, faixas sobrepostas: **a zona morta é
+  propriedade da roda, não da manobra** — girar parado NÃO é o pior caso, ao
+  contrário do que o `tools/banco/README.md` herdou do robô 1.
+
+  ⛔ **BLOQUEIO ABERTO: o LIO não é confiável, e agora é o caminho crítico.**
+  Dois defeitos: **sinal de yaw invertido** e **ruído de 0,033 rad/s com o robô
+  parado** (maior que o limiar de disparo do banco, 0,03). Ele chegou a fabricar
+  143,8° de excursão e 2,9 rad/s num pivô real de 8,7°, e 0,75 rad/s durante uma
+  pausa com comando ZERO. Enquanto isso não for consertado, `curva`, `reta` e
+  `degrau_giro` **não podem rodar**: os três medem derrapagem ou rumo do corpo,
+  que odometria de roda não pode ver por definição. Suspeita a investigar, NÃO
+  confirmada: extrínseco ou orientação da IMU do Mid-360 mal configurados
+  explicariam sinal trocado e divergência de uma vez só. Ver DIARIO 07-31 3ª leva.
 
 ### Medidas ✅ CONFERIDAS COM TRENA (2026-07-29)
 

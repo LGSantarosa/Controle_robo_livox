@@ -63,16 +63,29 @@ derrapada e zona morta — medir no carpete e rodar no cimento invalida tudo.
 ### 1. Zona morta de GIRO — *o robô gira parado com quanto?*
 
 ```bash
-python3 ensaio.py --ensaio zona_morta_giro --csv zm_giro.csv --dur 220 --rampa-ate 1.5 --dentes 4
-python3 medir.py zona_morta_giro zm_giro.csv
+python3 ensaio.py --ensaio zona_morta_giro --csv zm_giro.csv --dur 220 --rampa-ate 1.5 --dentes 4 --fonte roda
+python3 medir.py --fonte roda zona_morta_giro zm_giro.csv
 ```
 
 **Dente de serra**, girando no lugar (linear zerada): a rampa sobe até o robô
 girar, desce até ele parar, inverte o sentido e repete 4x. Espaço: raio de 1 m
 livre em volta; ele não sai do lugar. O `--dur` é teto de tempo, não duração.
 
-É o **pior caso** da zona morta: as duas rodas ficam pequenas ao mesmo tempo, e
-em sentidos opostos, então é aqui que ela morde com força total.
+> **Corrigido em 31-07: girar NÃO é o pior caso.** Esta seção dizia que sim —
+> "as duas rodas ficam pequenas ao mesmo tempo, então é aqui que ela morde com
+> força total". Medido no robô, em velocidade de borda de roda, a reta sai em
+> 0,021 m/s e o giro em 0,0177 m/s, com as faixas se sobrepondo: **a zona morta
+> é propriedade da roda, não da manobra.** A frase era herança do skid-steer de
+> 4 rodas do robô 1, onde o atrito de arrastar quatro rodas de lado realmente
+> fazia do giro o pior caso. Aqui ela sobreviveu disfarçada de comentário
+> técnico até alguém medir. Ver `DIARIO.md`, 31-07 (3ª leva).
+
+O gatilho deste ensaio compara **velocidade de borda de roda** (`wz·L/2`), não
+`wz` cru — por isso o `--bitola` (padrão 0,270, a trena de 29-07) tem de bater
+nos dois comandos. Comparar `wz` contra o mesmo limiar da reta deixa o ensaio de
+giro ~7x mais sensível, e ele passa a medir **rastejo de eixo**: em 31-07 isso
+devolveu 0,032 rad/s, com quatro dentes concordando, enquanto o dono via o robô
+**parado**. O número certo, com o critério corrigido, é 4x maior.
 
 Devolve **dois** números, e o projeto precisa dos dois — **saída** (do repouso,
 atrito estático, o número do BO-3) e **queda** (já andando, sempre menor, que é

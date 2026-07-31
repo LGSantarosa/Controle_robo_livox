@@ -15,6 +15,20 @@ odometria do Gazebo mostrou-se ruidoso (marcava 0,077 rad/s com o rumo
 parado); a pose é limpa nos dois lados. O twist é gravado assim mesmo, em
 coluna separada, para quem quiser comparar.
 
+QUAL POSE, decidido por `--fonte`. O padrão (`lio`) é `/Odometry`, e é o certo
+sempre que o LIO estiver de pé: ele mede o CORPO, incluindo derrapagem. Mas em
+31-07 o LIO do robô 2 fabricou 143,8° de excursão e 2,9 rad/s num pivô que os
+encoders mediram como 8,7° — com o comando nunca passando de 0,106 rad/s, e
+0,75 rad/s registrados durante a pausa com comando ZERO. Nessa condição o dente
+de serra dispara no ruído e o ensaio não mede nada.
+
+`--fonte roda` troca o gatilho para `/hoverboard_base_controller/odom`. É uma
+medida PIOR por natureza — encoder não enxerga derrapagem, então ele mede a
+roda, não o robô — e por isso não é o padrão. Para zona morta, porém, é a
+pergunta certa: o limiar é "a partir de que comando o atuador destrava", e
+quem responde isso é o eixo. As duas fontes vão para o CSV nas duas corridas;
+o que `--fonte` escolhe é só quem VIRA O DENTE.
+
 SEGURANÇA (o robô é real e pesa 10 kg):
   --espaco   distância máxima da origem, em metros. Estourou, para tudo.
   --dur      teto de tempo. Estourou, para tudo.
@@ -74,8 +88,10 @@ class Ensaio(Node):
         self.pose = None
         self.roda = None
         self.hist = deque()          # (t, x, y, yaw) para diferenciar
+        self.hist_roda = deque()     # a mesma coisa, pela odometria de roda
         self.t0 = None
         self.p0 = None
+        self.p0_roda = None
         self.t_ant = -1.0
         self.linhas = []
         self.fim = False
@@ -100,14 +116,19 @@ class Ensaio(Node):
     def agora(self):
         return self.get_clock().now().nanoseconds * 1e-9
 
-    def derivada(self, t, x, y, yaw):
-        """Velocidade linear e de guinada tiradas da POSE, numa janela curta."""
-        self.hist.append((t, x, y, yaw))
-        while len(self.hist) > 1 and t - self.hist[0][0] > JANELA_S:
-            self.hist.popleft()
-        if len(self.hist) < 2:
+    def derivada(self, hist, t, x, y, yaw):
+        """Velocidade linear e de guinada tiradas da POSE, numa janela curta.
+
+        `hist` é a fila da fonte (LIO ou roda): as duas são diferenciadas do
+        mesmo jeito, na mesma janela, para que os números do CSV sejam
+        comparáveis entre si — foi essa comparação que denunciou o LIO em 31-07.
+        """
+        hist.append((t, x, y, yaw))
+        while len(hist) > 1 and t - hist[0][0] > JANELA_S:
+            hist.popleft()
+        if len(hist) < 2:
             return 0.0, 0.0
-        t1, x1, y1, yaw1 = self.hist[0]
+        t1, x1, y1, yaw1 = hist[0]
         dt = t - t1
         if dt < 1e-6:
             return 0.0, 0.0
@@ -217,7 +238,15 @@ class Ensaio(Node):
         if e == 'zona_morta_giro':
             # Girando parado é o pior caso da zona morta: as duas rodas ficam
             # na banda proibida ao mesmo tempo.
-            return 0.0, self.dente_de_serra(te, wz_pose)
+            #
+            # O gatilho compara VELOCIDADE DE BORDA DE RODA (wz·L/2), não wz.
+            # Em 31-07 ele comparava wz cru contra o mesmo SAIU=0,03 da reta —
+            # que na reta são 0,03 m/s de roda e no giro eram 0,0040 m/s: sete
+            # vezes mais sensível. O ensaio derrubava a rampa no rastejo do
+            # eixo (2° de encoder por dente, com o dono vendo o robô PARADO) e
+            # devolvia 0,032 rad/s, um limiar de folga mecânica. Convertendo,
+            # os dois ensaios passam a perguntar a mesma coisa da mesma roda.
+            return 0.0, self.dente_de_serra(te, wz_pose * self.cfg.bitola / 2)
 
         if e == 'degrau_giro':
             # 2 s reto, 2 s de giro constante, resto SEM comando de giro.
@@ -267,13 +296,22 @@ class Ensaio(Node):
     # ---------------- laço ----------------
 
     def passo(self):
-        if self.pose is None:
+        # Espera a fonte que VIRA O DENTE. A outra é registro: se ela faltar, o
+        # ensaio anda mesmo assim e o CSV fica com a coluna vazia — mas rodar
+        # sem quem decide seria medir o relógio.
+        if self.pose is None and self.cfg.fonte == 'lio':
+            return
+        if self.roda is None and self.cfg.fonte == 'roda':
             return
         t = self.agora()
         if self.t0 is None:
             self.t0 = t
-            self.p0 = (self.pose.pose.pose.position.x,
-                       self.pose.pose.pose.position.y)
+            if self.pose is not None:
+                self.p0 = (self.pose.pose.pose.position.x,
+                           self.pose.pose.pose.position.y)
+            if self.roda is not None:
+                self.p0_roda = (self.roda.pose.pose.position.x,
+                                self.roda.pose.pose.position.y)
         te = t - self.t0
 
         if te < self.t_ant - 1e-6:
@@ -281,20 +319,39 @@ class Ensaio(Node):
             return
         self.t_ant = te
 
-        p = self.pose.pose.pose
-        x, y = p.position.x, p.position.y
-        yaw = yaw_de(p.orientation)
+        x = y = yaw = None
+        v_pose = wz_pose = 0.0
+        if self.pose is not None:
+            p = self.pose.pose.pose
+            x, y = p.position.x, p.position.y
+            yaw = yaw_de(p.orientation)
+            v_pose, wz_pose = self.derivada(self.hist, t, x, y, yaw)
 
-        # Trava de espaço: o robô é real e o laboratório tem parede.
-        if math.hypot(x - self.p0[0], y - self.p0[1]) > self.cfg.espaco:
-            self.parar(f'estourou o espaço de {self.cfg.espaco:.1f} m')
-            return
+        xr = yr = yaw_r = None
+        v_roda = wz_roda = 0.0
+        if self.roda is not None:
+            pr = self.roda.pose.pose
+            xr, yr = pr.position.x, pr.position.y
+            yaw_r = yaw_de(pr.orientation)
+            v_roda, wz_roda = self.derivada(self.hist_roda, t, xr, yr, yaw_r)
+
+        # Trava de espaço: o robô é real e o laboratório tem parede. Vale a
+        # fonte MAIS ALARMISTA das duas, de propósito — a que erra para longe
+        # só custa um ensaio interrompido; a que erra para perto custa parede.
+        for pos, p0 in ((( x, y), self.p0), ((xr, yr), self.p0_roda)):
+            if pos[0] is None or p0 is None:
+                continue
+            if math.hypot(pos[0] - p0[0], pos[1] - p0[1]) > self.cfg.espaco:
+                self.parar(f'estourou o espaço de {self.cfg.espaco:.1f} m')
+                return
         if te > self.cfg.dur:
             self.parar('concluído')
             return
 
-        v_pose, wz_pose = self.derivada(t, x, y, yaw)
-        cv, cw = self.comando(te, v_pose, wz_pose)
+        if self.cfg.fonte == 'roda':
+            cv, cw = self.comando(te, v_roda, wz_roda)
+        else:
+            cv, cw = self.comando(te, v_pose, wz_pose)
         if self.fim:                      # o dente de serra pode encerrar aqui
             return
         self.publica(cv, cw)
@@ -306,15 +363,21 @@ class Ensaio(Node):
             # teria de readivinhar onde cada rampa começou e acabou.
             'dente': self.dente,
             'fase': self.fase,
-            'x': round(x, 4), 'y': round(y, 4), 'yaw': round(yaw, 4),
+            'x': round(x, 4) if x is not None else '',
+            'y': round(y, 4) if y is not None else '',
+            'yaw': round(yaw, 4) if yaw is not None else '',
             'cmd_v': round(cv, 4), 'cmd_wz': round(cw, 4),
             'v_pose': round(v_pose, 4), 'wz_pose': round(wz_pose, 4),
-            'v_twist': round(self.pose.twist.twist.linear.x, 4),
-            'wz_twist': round(self.pose.twist.twist.angular.z, 4),
-            'x_roda': round(self.roda.pose.pose.position.x, 4) if self.roda else '',
-            'y_roda': round(self.roda.pose.pose.position.y, 4) if self.roda else '',
-            'yaw_roda': (round(yaw_de(self.roda.pose.pose.orientation), 4)
-                         if self.roda else ''),
+            'v_twist': (round(self.pose.twist.twist.linear.x, 4)
+                        if self.pose else ''),
+            'wz_twist': (round(self.pose.twist.twist.angular.z, 4)
+                         if self.pose else ''),
+            'x_roda': round(xr, 4) if xr is not None else '',
+            'y_roda': round(yr, 4) if yr is not None else '',
+            'yaw_roda': round(yaw_r, 4) if yaw_r is not None else '',
+            # Derivadas da roda, na MESMA janela das do LIO. Colunas novas no
+            # fim: o medir.py lê por nome, então CSV antigo continua legível.
+            'v_roda': round(v_roda, 4), 'wz_roda': round(wz_roda, 4),
         })
 
     def parar(self, motivo):
@@ -335,7 +398,9 @@ class Ensaio(Node):
         for _ in range(5):
             self.publica(0.0, 0.0)
         if not self.linhas:
-            print('sem dados — o /Odometry chegou?', file=sys.stderr)
+            fonte = ('/Odometry' if self.cfg.fonte == 'lio'
+                     else '/hoverboard_base_controller/odom')
+            print(f'sem dados — o {fonte} chegou?', file=sys.stderr)
             return
         with open(self.cfg.csv, 'w', newline='') as f:
             w = csv.DictWriter(f, fieldnames=list(self.linhas[0].keys()))
@@ -376,6 +441,18 @@ def main():
                     help='segundos de 0 até --rampa-ate: é a TAXA da rampa. '
                          'Subir mais rápido infla o limiar medido pelo atraso '
                          'de detecção — mexer aqui é mexer no número')
+    ap.add_argument('--bitola', type=float, default=0.270,
+                    help='bitola [m], da trena de 29-07. Converte o giro em '
+                         'velocidade de borda de roda, que é o que o gatilho '
+                         'da zona morta compara. Tem de bater com o '
+                         'wheel_separation do controlador (sessao.py --checar '
+                         'delata) e com o --bitola do medir.py')
+    ap.add_argument('--fonte', choices=['lio', 'roda'], default='lio',
+                    help='quem vira o dente de serra: a pose do LIO (padrão, '
+                         'mede o CORPO e enxerga derrapagem) ou a odometria de '
+                         'roda (mede o EIXO; use quando o LIO estiver ruidoso '
+                         'demais para servir de gatilho). As duas vão para o '
+                         'CSV sempre — isto escolhe só quem DECIDE')
     ap.add_argument('--taxa', type=float, default=50.0, help='malha do banco [Hz]')
     ap.add_argument('--sim', action='store_true',
                     help='usar tempo de simulação (no robô real, NÃO passar)')

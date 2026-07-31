@@ -9,6 +9,7 @@ Nada aqui sobe ROS. O `dente_de_serra` só toca atributos do próprio objeto, o
 que permite exercitá-lo com um dublê e testar a LÓGICA, não a plumbing.
 """
 import argparse
+import csv
 import importlib.util
 import math
 import os
@@ -179,8 +180,13 @@ def test_cada_dente_parte_do_repouso():
 
 # ------------------------------------------------------------------- leitura
 
-def csv_dente(saidas, quedas, campo_cmd='cmd_v', campo_med='v_pose'):
-    """Monta um CSV sintético com limiares conhecidos, um par por dente."""
+def csv_dente(saidas, quedas, campo_cmd='cmd_v', campo_med='v_pose', movendo=0.1):
+    """Monta um CSV sintético com limiares conhecidos, um par por dente.
+
+    `movendo` é o valor do campo medido quando o robô anda. Nos ensaios de giro
+    ele precisa ser bem maior: o campo é rad/s e a leitura o converte para borda
+    de roda (x L/2), então 0,1 rad/s viram 0,0135 m/s — parado, para o limiar.
+    """
     # A cauda acima do limiar precisa ter folga: a leitura exige 8 amostras
     # seguidas em movimento antes de aceitar que ele saiu do lugar (é o que
     # descarta solavanco).
@@ -190,11 +196,11 @@ def csv_dente(saidas, quedas, campo_cmd='cmd_v', campo_med='v_pose'):
         for cmd in [i * 0.01 for i in range(1, topo)]:
             t += 0.02
             r.append({'t': round(t, 3), 'dente': float(d), 'fase': 'sobe',
-                      campo_cmd: cmd, campo_med: 0.1 if cmd >= zs else 0.0})
+                      campo_cmd: cmd, campo_med: movendo if cmd >= zs else 0.0})
         for cmd in [i * 0.01 for i in range(topo - 1, 0, -1)]:
             t += 0.02
             r.append({'t': round(t, 3), 'dente': float(d), 'fase': 'desce',
-                      campo_cmd: cmd, campo_med: 0.1 if cmd >= zq else 0.0})
+                      campo_cmd: cmd, campo_med: movendo if cmd >= zq else 0.0})
     return r
 
 
@@ -371,3 +377,52 @@ def test_passo_6_tem_a_corrida_de_controle_girada():
     confiante e errada — média não mata erro sistemático."""
     p6 = next(p for p in sessao.PASSOS if p['n'] == 6)
     assert any(c.get('gira_180') for c in p6['corridas'])
+
+
+def test_fonte_roda_le_as_colunas_da_roda():
+    """O `--fonte roda` existe porque em 31-07 o LIO fabricou 143,8° de giro num
+    pivô que os encoders mediram como 8,7°. Se a leitura ignorasse a escolha e
+    fosse na coluna do LIO assim mesmo, o ensaio trocaria de gatilho e o número
+    continuaria vindo do sinal quebrado."""
+    r = csv_dente([0.15] * 4, [0.10] * 4, campo_cmd='cmd_wz',
+                  campo_med='wz_roda', movendo=0.3)
+    m = medir.LEITURAS('roda')['zona_morta_giro'](r)
+    assert m == pytest.approx(0.15, abs=0.011)
+
+
+def test_fonte_lio_continua_o_padrao():
+    """A roda não enxerga derrapagem: ela mede o EIXO, não o robô. Só serve
+    enquanto o LIO estiver quebrado, então o padrão não pode escorregar."""
+    r = csv_dente([0.20] * 4, [0.15] * 4)
+    assert medir.LEITURAS()['zona_morta_linear'](r) == pytest.approx(0.20, abs=0.011)
+    assert medir.LEITURAS('lio')['zona_morta_linear'](r) is not None
+
+
+def test_resumo_respeita_a_fonte(tmp_path, capsys):
+    """A divergência silenciosa que este banco existe para não ter: as corridas
+    lidas da roda e a média das N repetições saindo do LIO, sem ninguém avisar."""
+    arqs = []
+    for i in range(3):
+        r = csv_dente([0.15] * 4, [0.10] * 4, campo_cmd='cmd_wz',
+                      campo_med='wz_roda', movendo=0.3)
+        p = tmp_path / f'c{i}.csv'
+        with open(p, 'w', newline='') as f:
+            w = csv.DictWriter(f, fieldnames=list(r[0].keys()))
+            w.writeheader()
+            w.writerows(r)
+        arqs.append(str(p))
+    medir.resumo('zona_morta_giro', arqs, 'roda')
+    saida = capsys.readouterr().out
+    assert 'fonte=roda' in saida
+    assert 'nenhuma corrida devolveu número' not in saida
+
+
+def test_rastejo_de_eixo_no_giro_nao_vira_zona_morta():
+    """O defeito de 31-07, travado. O giro comparava rad/s cru contra o mesmo
+    LIMIAR_PARADO da reta, então 0,03 rad/s (= 0,004 m/s de borda de roda)
+    contavam como 'andando'. O ensaio devolveu 0,032 rad/s enquanto o dono via
+    o robô PARADO: era folga do eixo, 2° de encoder por dente. Convertido para
+    borda de roda, o mesmo dado tem de dizer que ele não saiu do lugar."""
+    r = csv_dente([0.032] * 4, [0.012] * 4, campo_cmd='cmd_wz',
+                  campo_med='wz_roda', movendo=0.035)
+    assert medir.LEITURAS('roda')['zona_morta_giro'](r) is None

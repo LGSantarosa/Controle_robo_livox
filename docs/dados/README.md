@@ -20,3 +20,22 @@ planner.
 | arquivo | o que é |
 |---|---|
 | `2026-07-29-varredura-raio-planner.csv` | 48 planos de `tools/planner/varredura_raio.py`: 6 casos × 4 raios mínimos (0,25 · 0,34 · 0,37 · 0,46) × Theta\* e Smac Hybrid-A\*, na pista de `tools/mundo/gera_pista.py`. Sem robô, sem simulador, sem sensor. Colunas: comprimento, desvio sobre a linha reta, giro, raio mínimo do caminho, inversões (a ré do Reeds-Shepp), trechos curtos demais para medir e tempo do planner. O Theta\* sai IDÊNTICO nos quatro raios — é a testemunha de que a varredura mexeu só no que devia. |
+
+## Bancada no robô real — 2026-07-31
+
+Primeiros números medidos no robô 2. Todos com `--fonte roda` (o `/Odometry` do
+LIO estava inutilizável: yaw invertido e ruído de 0,033 rad/s com o robô
+parado). Todo CSV traz as **duas** odometrias no mesmo instante — é a coluna
+`yaw_roda` contra a `yaw` que denuncia o LIO.
+
+| arquivo | o que é |
+|---|---|
+| `2026-07-31-zona-morta-giro.csv` | **INVÁLIDO, guardado de propósito.** Gatilho no LIO. Ele fabricou 143,8° de excursão e 2,9 rad/s num pivô que os encoders mediram como 8,7°, e marcou 0,75 rad/s durante a pausa com comando ZERO. É a evidência do defeito do LIO, no mesmo arquivo que a odometria de roda correta. Lido pelo LIO dá 0,068 rad/s com um dente destoando 79%. |
+| `2026-07-31-zona-morta-giro-roda.csv` | **INVÁLIDO, guardado de propósito.** Gatilho na roda, mas comparando `wz` cru contra o limiar da reta — ~7x sensível demais. Devolveu 0,032 rad/s com desvio de 0,003 e quantização 15x abaixo do limiar: parecia medida boa, e o dono viu o robô **parado**. Era rastejo de eixo (2° por dente, folga mecânica); a borda da roda nunca cruzou 0,006 m/s. O CSV que mostra que dispersão baixa não é validade. |
+| `2026-07-31-zona-morta-giro-borda.csv` | **VÁLIDO.** Gatilho em velocidade de borda de roda (`wz·L/2`). Giro líquido de 43° a 47° por dente, sentido alternando, confirmado a olho pelo dono. **Zona morta de giro = 0,131 rad/s** (queda 0,106). |
+| `2026-07-31-zona-morta-linear-roda.csv` | **VÁLIDO.** Avanço de 4,7 a 6,6 cm por dente, 2 à frente e 2 de ré, confirmado a olho. **Zona morta linear = 0,021 m/s** (queda 0,014). |
+
+Os dois válidos, juntos, sustentam o achado: em borda de roda a reta sai em
+0,021 m/s e o giro em 0,0177 m/s, faixas sobrepostas — **a zona morta é
+propriedade da roda, não da manobra**, ao contrário do que o `tools/banco/`
+afirmava por herança do robô 1.
