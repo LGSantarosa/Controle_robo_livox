@@ -24,10 +24,13 @@
         <!-- ⚠️ Compensação de zona morta do firmware. LIGADA o robô não obedece
              a cmd_vel em magnitude na faixa baixa (o fator de escala cresce
              quando o comando diminui), e nenhum ensaio do tools/banco vale.
-             DESLIGADA ele provavelmente não sai do lugar em comando pequeno —
-             isso é a zona morta de verdade, não regressão.
-             Ver DIARIO 07-31 4ª leva. -->
-        <param name="deadband_enable">false</param>
+             DESLIGADA ele NÃO SAI DO LUGAR na faixa útil — medido em 31-07:
+             v=0,25 andou 2 mm em 1,5 s, e v=0,50 ficou 0,9 s plantado antes de
+             destravar. A zona morta real do atuador engole toda a faixa de
+             operação, então esta compensação não é gambiarra descartável: é
+             ela que torna o robô utilizável. Fica LIGADA, e é o sistema COM ela
+             que o Gazebo tem de imitar. Ver DIARIO 07-31 4ª leva. -->
+        <param name="deadband_enable">true</param>
         <param name="deadband_speed">100.0</param>
       </hardware>
       <joint name="${prefix}left_wheel_joint">
