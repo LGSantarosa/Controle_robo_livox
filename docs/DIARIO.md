@@ -2157,3 +2157,63 @@ desvio é real e grande; a magnitude ainda não está firme.
 **Próximo passo, e ele não precisa de comando nenhum:** com o robô ligado, girar
 cada roda com a mão e ler `/hoverboard/{left,right}_wheel/position`. Separa
 "encoder morto" de "roda não acionada" em 30 segundos, sem o robô andar.
+
+### Adendo 2 da 4ª leva: o desvio medido no atuador, e o driver que o robô não lia
+
+Com a compensação religada e o sinal de realimentação por roda corrigido, quatro
+rajadas curtas (1,0 s, volta a zero entre cada uma) pelo LIO:
+
+| corrida | comando | v realizada | desvio sob comando | desvio na inércia |
+|---|---|---|---|---|
+| 1 frente | +0,10 | 0,173 m/s | −9,2° | −13,9° |
+| 2 ré | −0,25 | 0,180 m/s | **+0,5°** | −7,7° |
+| 3 frente (pós-ré) | +0,10 | 0,224 m/s | −6,9° | −20,1° |
+
+**Patamar único, confirmado:** comandos de 0,10 e 0,25 deram 0,17–0,22 m/s. Na
+faixa baixa o `cmd_vel` escolhe SENTIDO, não módulo — é a compensação de zona
+morta inflando tudo até o mesmo teto. É o comportamento central que o Gazebo
+tem de imitar.
+
+**O desvio existe só para a frente, e é reprodutível** (−9,2° e −6,9°); de ré ele
+anda reto. Virar a boba com uma ré antes NÃO removeu o desvio.
+
+Gravando as duas rodas na rajada de frente:
+
+```
+ t=0,00  v_esq 0,000  v_dir 0,000   <- 0,4 s parado (latencia p/ destravar)
+ t=0,40       +1,571       +1,571   <- arrancam JUNTAS
+ t=0,98       +3,979       +3,246   <- dif +0,733
+ --- corte ---
+ t=1,26       +3,351       +2,199   <- dif AUMENTA: +1,152
+ t=1,84       +0,733        0,000   <- direita parou, esquerda ainda gira
+```
+
+**A roda direita gira 20–25% mais devagar que a esquerda com o mesmo comando**
+(~38 RPM contra ~31), e no corte a diferença cresce: a direita para meio segundo
+antes. Isso é o desvio, medido no atuador em vez de inferido, e explica por que o
+desvio na inércia era maior que o desvio sob comando.
+
+Ressalvas: a velocidade vem quantizada em 1 RPM (0,105 rad/s); e as 100 unidades
+que o driver manda viram ~38 RPM na roda, então o campo `speed` do firmware não
+é RPM — a escala real não foi identificada.
+
+**Hipótese aberta (do dono):** a boba. Ela não está descartada — arrasto
+assimétrico carrega uma roda mais que a outra, e sem malha fechada isso vira
+roda mais lenta. O teste que separa é gravar as rodas numa rajada DE RÉ: se lá
+elas girarem iguais, é carga; se a direita seguir mais lenta, é placa/motor.
+
+### O parâmetro que o robô nunca leu
+
+Editei `hoverboard_driver.ros2_control.xacro`, commitei, deployei por bundle,
+recompilei e relancei a base — e o robô ignorou. O `robot_base` declara o
+`ros2_control` do hoverboard **inline** no `robo2.urdf.xacro` e nunca inclui o
+xacro do pacote do driver. Os `feedback_sign` só pegaram por eu tê-los posto
+como default no C++.
+
+Custou três ciclos de deploy até eu olhar o `robot_description` de verdade.
+Parâmetro novo do driver vai no `robo2.urdf.xacro`, e agora há um aviso no
+próprio bloco.
+
+Também anotado: `pkill -f ros2_control_node` dentro de um comando ssh casa com a
+**própria linha de comando do ssh** e mata a sessão antes de relançar a base.
+Matar por PID, ou usar o truque do colchete.
