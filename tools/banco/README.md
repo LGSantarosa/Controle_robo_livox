@@ -63,29 +63,34 @@ derrapada e zona morta — medir no carpete e rodar no cimento invalida tudo.
 ### 1. Zona morta de GIRO — *o robô gira parado com quanto?*
 
 ```bash
-python3 ensaio.py --ensaio zona_morta_giro --csv zm_giro.csv --dur 220 --rampa-ate 1.5 --dentes 4 --fonte roda
-python3 medir.py --fonte roda zona_morta_giro zm_giro.csv
+python3 ensaio.py --ensaio zona_morta_giro --csv zm_giro.csv --dur 220 --rampa-ate 1.5 --dentes 4 --janela 0.5
+python3 medir.py zona_morta_giro zm_giro.csv
 ```
 
 **Dente de serra**, girando no lugar (linear zerada): a rampa sobe até o robô
 girar, desce até ele parar, inverte o sentido e repete 4x. Espaço: raio de 1 m
 livre em volta; ele não sai do lugar. O `--dur` é teto de tempo, não duração.
 
-> **Corrigido em 31-07: girar NÃO é o pior caso.** Esta seção dizia que sim —
-> "as duas rodas ficam pequenas ao mesmo tempo, então é aqui que ela morde com
-> força total". Medido no robô, em velocidade de borda de roda, a reta sai em
-> 0,021 m/s e o giro em 0,0177 m/s, com as faixas se sobrepondo: **a zona morta
-> é propriedade da roda, não da manobra.** A frase era herança do skid-steer de
-> 4 rodas do robô 1, onde o atrito de arrastar quatro rodas de lado realmente
-> fazia do giro o pior caso. Aqui ela sobreviveu disfarçada de comentário
-> técnico até alguém medir. Ver `DIARIO.md`, 31-07 (3ª leva).
+> ⛔ **Não use `--fonte roda` neste robô (31-07, 4ª leva).** O controlador está
+> com `open_loop: True`, e `/hoverboard_base_controller/odom` devolve o comando
+> integrado, não medida. Uma leva inteira de números medidos assim foi
+> retratada — ela reproduzia o próprio limiar de detecção. Meça pelo LIO, com
+> `--janela 0.5` (a pose vem a 10 Hz; 0,2 s pegam duas amostras e viram ruído
+> inventado).
 
-O gatilho deste ensaio compara **velocidade de borda de roda** (`wz·L/2`), não
-`wz` cru — por isso o `--bitola` (padrão 0,270, a trena de 29-07) tem de bater
-nos dois comandos. Comparar `wz` contra o mesmo limiar da reta deixa o ensaio de
-giro ~7x mais sensível, e ele passa a medir **rastejo de eixo**: em 31-07 isso
-devolveu 0,032 rad/s, com quatro dentes concordando, enquanto o dono via o robô
-**parado**. O número certo, com o critério corrigido, é 4x maior.
+> **Sobre "girar é o pior caso": continua NÃO verificado.** Uma tentativa de
+> refutar a frase em 31-07 usou dado inválido e foi retratada junto. A medida
+> boa que sobrou (giro ≈ 0,095 rad/s, linear ≈ 0,023 m/s) não compara de forma
+> limpa, porque a linear **não tem patamar** — ele rasteja antes de andar, e o
+> valor depende de quanto deslocamento se exige (0,029 a 8 cm, 0,040 a 20 cm).
+> Fica em aberto. De todo jeito o `CLAUDE.md` proíbe herdar o número do robô 1.
+
+> 🔴 **E o pressuposto do ensaio inteiro caiu:** `cmd_vel` não é velocidade
+> neste robô, é acelerador. Sem malha fechada de roda, ele **acelera enquanto o
+> comando estiver ligado** — 0,30 rad/s comandados viraram 3,94 rad/s em 1,35 s.
+> A rampa do dente de serra assume que um comando sustentado dá velocidade
+> sustentada, e isso é falso aqui. O protocolo precisa ser repensado antes de
+> valer como caracterização; ver DIARIO 07-31 4ª leva.
 
 Devolve **dois** números, e o projeto precisa dos dois — **saída** (do repouso,
 atrito estático, o número do BO-3) e **queda** (já andando, sempre menor, que é

@@ -41,26 +41,43 @@
   invertido**. Confirmado a olho, com o dono atrás do robô: comando à esquerda →
   nariz à esquerda, enquanto o LIO dizia "direita". O swap de `left`/`right`
   (`368ea13`) consertava sintoma inexistente e foi revertido (`595cf80`).
-  Medidos no robô, com `--fonte roda`, confirmados a olho pelo dono:
+  Medidos pelo LIO, por deslocamento de pose, confirmados a olho pelo dono:
 
   ```
-  zona_morta_linear = 0,021 m/s    (queda 0,014)
-  zona_morta_giro   = 0,131 rad/s  (queda 0,106)
+  zona_morta_giro   ≈ 0,095 rad/s   faixa 0,084 – 0,105   <- firme (tem patamar)
+  zona_morta_linear ≈ 0,023 m/s     faixa 0,020 – 0,025   <- com ressalva
   ```
 
-  Em borda de roda dão 0,021 e 0,0177 m/s, faixas sobrepostas: **a zona morta é
-  propriedade da roda, não da manobra** — girar parado NÃO é o pior caso, ao
-  contrário do que o `tools/banco/README.md` herdou do robô 1.
+  A linear sobe com o critério de deslocamento (0,029 a 8 cm, 0,040 a 20 cm):
+  não tem patamar, ele rasteja antes de andar. O giro tem patamar e duas
+  corridas independentes concordam.
 
-  ⛔ **BLOQUEIO ABERTO: o LIO não é confiável, e agora é o caminho crítico.**
-  Dois defeitos: **sinal de yaw invertido** e **ruído de 0,033 rad/s com o robô
-  parado** (maior que o limiar de disparo do banco, 0,03). Ele chegou a fabricar
-  143,8° de excursão e 2,9 rad/s num pivô real de 8,7°, e 0,75 rad/s durante uma
-  pausa com comando ZERO. Enquanto isso não for consertado, `curva`, `reta` e
-  `degrau_giro` **não podem rodar**: os três medem derrapagem ou rumo do corpo,
-  que odometria de roda não pode ver por definição. Suspeita a investigar, NÃO
-  confirmada: extrínseco ou orientação da IMU do Mid-360 mal configurados
-  explicariam sinal trocado e divergência de uma vez só. Ver DIARIO 07-31 3ª leva.
+  ⚠️ **Uma leva anterior de números (0,021 m/s e 0,131 rad/s) foi RETRATADA** —
+  media o próprio limiar de detecção, via odometria em `open_loop`. Ver DIARIO
+  07-31 4ª leva antes de usar qualquer número da 3ª leva.
+
+  🔴 **`cmd_vel` NÃO é velocidade — é acelerador.** `open_loop: True` no
+  `hoverboard_base_controller`, e não há malha fechada de velocidade de roda: o
+  robô **acelera enquanto o comando estiver ligado**, sem estabilizar. Comando
+  de 0,30 rad/s por 1,5 s levou o giro de 0 a **3,94 rad/s** (13× o comando) e
+  ainda deu 85° de inércia depois do corte. Isso invalida qualquer leitura que
+  assuma "comando = velocidade realizada", e é o primeiro fato a levar para o
+  Gazebo.
+
+  ```
+  aceleração angular ≈ 2,9 rad/s²    desaceleração ≈ 2,2 rad/s²
+  ```
+
+  ⚠️ **`/hoverboard_base_controller/odom` não mede nada** (é o comando
+  integrado). Odometria real só pelos encoders crus,
+  `/hoverboard/{left,right}_wheel/position` a 46 Hz — ou pondo `open_loop:
+  false`. **Anomalia aberta:** acumulado de `-70,1 rad` na esquerda contra
+  `-0,607 rad` na direita; testar girando cada roda com a mão.
+
+  ✅ **O LIO é bom.** 20 s parado: deriva de yaw +0,05°, excursão 0,54°, xy
+  0,009 m, a 10 Hz. Bateu com o olho do dono nas três vezes em que foram
+  confrontados. O "ruído" que eu acusei era `JANELA_S = 0,2 s` sobre pose a
+  10 Hz — derivada curta demais, não sensor. Usar `--janela 0.5` no robô.
 
 ### Medidas ✅ CONFERIDAS COM TRENA (2026-07-29)
 

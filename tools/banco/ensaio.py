@@ -15,19 +15,20 @@ odometria do Gazebo mostrou-se ruidoso (marcava 0,077 rad/s com o rumo
 parado); a pose é limpa nos dois lados. O twist é gravado assim mesmo, em
 coluna separada, para quem quiser comparar.
 
-QUAL POSE, decidido por `--fonte`. O padrão (`lio`) é `/Odometry`, e é o certo
-sempre que o LIO estiver de pé: ele mede o CORPO, incluindo derrapagem. Mas em
-31-07 o LIO do robô 2 fabricou 143,8° de excursão e 2,9 rad/s num pivô que os
-encoders mediram como 8,7° — com o comando nunca passando de 0,106 rad/s, e
-0,75 rad/s registrados durante a pausa com comando ZERO. Nessa condição o dente
-de serra dispara no ruído e o ensaio não mede nada.
+QUAL POSE, decidido por `--fonte`. Use `lio` (o padrão), sempre.
 
-`--fonte roda` troca o gatilho para `/hoverboard_base_controller/odom`. É uma
-medida PIOR por natureza — encoder não enxerga derrapagem, então ele mede a
-roda, não o robô — e por isso não é o padrão. Para zona morta, porém, é a
-pergunta certa: o limiar é "a partir de que comando o atuador destrava", e
-quem responde isso é o eixo. As duas fontes vão para o CSV nas duas corridas;
-o que `--fonte` escolhe é só quem VIRA O DENTE.
+⛔ `--fonte roda` está QUEBRADO neste robô e só continua aqui para o simulador.
+O controlador está com `open_loop: True`, então
+`/hoverboard_base_controller/odom` NÃO MEDE NADA: ele integra o comando
+publicado e devolve. Medir a zona morta com ele em 31-07 devolveu exatamente o
+limiar de detecção de volta (0,021 m/s medidos contra LIMIAR_PARADO = 0,020) —
+uma tautologia com cara de resultado, com os quatro dentes concordando. Enquanto
+`open_loop` for true, odometria de roda de verdade só pelos encoders crus,
+`/hoverboard/{left,right}_wheel/position`.
+
+O texto que estava aqui acusava o LIO de fabricar movimento. Era falso: a
+comparação era contra esse comando ecoado. Medido depois, com o robô parado 20 s,
+o LIO deriva 0,05° de yaw e 0,009 m. O ruído era da DERIVADA (ver JANELA_S).
 
 SEGURANÇA (o robô é real e pesa 10 kg):
   --espaco   distância máxima da origem, em metros. Estourou, para tudo.
@@ -48,6 +49,12 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy
 
 # Janela da diferenciação da pose. Curta demais amplifica ruído, longa demais
 # atrasa a medida e estraga justamente o que queremos medir (a rampa de giro).
+#
+# 0,2 s era o valor do simulador, onde a pose vem a 50 Hz — 10 amostras por
+# janela. No robô o /Odometry do FAST-LIO vem a 10 Hz, e 0,2 s pegam DUAS: em
+# 31-07 isso transformou 0,54° de tremor de pose (medido, robô parado 20 s) em
+# 0,033 rad/s de "ruído", maior que o limiar de disparo do dente de serra. O
+# sensor estava bom; a derivada é que era curta demais. Ajustar por `--janela`.
 JANELA_S = 0.2
 
 # Limiares do dente de serra da zona morta. `PAROU` é o mesmo LIMIAR_PARADO do
@@ -87,6 +94,7 @@ class Ensaio(Node):
 
         self.pose = None
         self.roda = None
+        self.janela = cfg.janela
         self.hist = deque()          # (t, x, y, yaw) para diferenciar
         self.hist_roda = deque()     # a mesma coisa, pela odometria de roda
         self.t0 = None
@@ -124,7 +132,7 @@ class Ensaio(Node):
         comparáveis entre si — foi essa comparação que denunciou o LIO em 31-07.
         """
         hist.append((t, x, y, yaw))
-        while len(hist) > 1 and t - hist[0][0] > JANELA_S:
+        while len(hist) > 1 and t - hist[0][0] > self.janela:
             hist.popleft()
         if len(hist) < 2:
             return 0.0, 0.0
@@ -441,6 +449,10 @@ def main():
                     help='segundos de 0 até --rampa-ate: é a TAXA da rampa. '
                          'Subir mais rápido infla o limiar medido pelo atraso '
                          'de detecção — mexer aqui é mexer no número')
+    ap.add_argument('--janela', type=float, default=JANELA_S,
+                    help='janela da derivação da pose [s]. 0,2 serve para o '
+                         'simulador (50 Hz); no robô, com /Odometry a 10 Hz, '
+                         'use 0,5 — janela curta vira ruído inventado')
     ap.add_argument('--bitola', type=float, default=0.270,
                     help='bitola [m], da trena de 29-07. Converte o giro em '
                          'velocidade de borda de roda, que é o que o gatilho '

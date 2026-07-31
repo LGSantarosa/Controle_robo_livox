@@ -2026,3 +2026,134 @@ de 0,033 rad/s parado. **Esse é o próximo bloqueio, e agora ele é o caminho
 crítico do banco inteiro.** Suspeita a investigar (não confirmada): extrínseco
 ou orientação da IMU do Mid-360 mal configurados explicariam sinal trocado e
 divergência em movimento pequeno de uma vez só.
+
+## ⚠️ 2026-07-31 (4ª leva) — Retratação: os números da 3ª leva são inválidos
+
+Esta entrada **desmente a anterior**. Fica registrada em vez de editada porque o
+erro é o resultado mais útil do dia.
+
+### O que estava errado
+
+**`open_loop: True` no `hoverboard_base_controller`.** Confirmado por
+`ros2 param get`. Com ele, `/hoverboard_base_controller/odom` **não mede nada**:
+integra o comando publicado e devolve. Não é odometria de roda, é o comando
+ecoado.
+
+Foi nisso que a 3ª leva construiu o `--fonte roda`. Consequências:
+
+- **As duas zonas mortas da 3ª leva são artefato.** O limiar de detecção linear
+  é `LIMIAR_PARADO = 0,020 m/s` e a "medida" deu **0,021 m/s**: era o próprio
+  limiar, ecoado. No giro, limiar equivalente 0,148 rad/s, "medida" 0,131.
+- **A "quantização de encoder de 0,0004 rad"** que serviu de prova de qualidade
+  era o `round(..., 4)` do próprio `ensaio.py` ao escrever o CSV.
+- **A condenação do LIO caiu junto.** "O LIO fabricou 143,8° num pivô de 8,7°"
+  comparava o LIO com o comando ecoado. Referência falsa.
+
+### O LIO estava bom o tempo todo
+
+Medido, robô parado, 20 s, sem comando: `/Odometry` a 10,0 Hz, deriva de yaw
+**+0,05°**, excursão **0,54°**; deriva xy 0,009 m. O gyro tem viés de
+−0,0223 rad/s e o FAST-LIO o remove (seriam 25° em 20 s).
+
+O "ruído de 0,033 rad/s" que motivou o `--fonte` era **derivada**, não sensor:
+`JANELA_S = 0,2 s` sobre pose a 10 Hz pega DUAS amostras, e 0,54° em 0,2 s dão
+0,047 rad/s. O comentário do próprio arquivo avisa que janela curta amplifica
+ruído. Agora é `--janela` (use 0,5 no robô).
+
+O dono disse desde o começo para confiar no LIO. Estava certo, e a insistência
+custou a sessão.
+
+### Três vezes o LIO bateu com o olho do dono
+
+- `giro-roda.csv`: dono disse "no giro ele não se mexeu"; LIO mediu 0,03° a
+  0,21° por dente. **Não moveu.**
+- `linear-roda.csv`: dono viu 4 movimentos; LIO mediu 0,66 a 0,78 m por dente.
+  (O comando ecoado dizia 5 cm.)
+- rajada de `wz=0,3` por 1,5 s: dono disse "quase 180, uns 190"; LIO mediu
+  109,3° sob comando + 85,4° de inércia = **194,7°**.
+
+### Os números, refeitos pelo LIO por DESLOCAMENTO de pose
+
+Critério: deslocamento acumulado desde o início do dente, limiar 2° / 3 cm
+(contra ruído de 0,54° / 1,9 cm). Estável entre 2° e 5°, e as duas corridas de
+giro independentes concordam:
+
+```
+zona morta de GIRO   ≈ 0,095 rad/s    faixa 0,084 – 0,105
+zona morta LINEAR    ≈ 0,023 m/s      faixa 0,020 – 0,025
+```
+
+A linear vem com ressalva: o número **sobe** com o critério (0,025 a 5 cm,
+0,029 a 8 cm, 0,040 a 20 cm). Não tem patamar — na reta ele rasteja antes de
+andar. O giro tem patamar, e por isso é o número firme dos dois.
+
+### O achado que reescreve o modelo: `cmd_vel` é acelerador, não velocidade
+
+Rajada única, `wz = 0,30 rad/s` por 1,5 s, pivô no lugar:
+
+```
+t=0,02  wz=+0,012      t=0,97  wz=+2,574
+t=0,39  wz=+1,110      t=1,34  wz=+3,941   <- pico, 13x o comando
+--- corte ---
+t=1,85  wz=+1,613      t=2,39  wz=+0,211    t=2,75  parado
+```
+
+**O robô não persegue o comando: acelera enquanto o comando estiver ligado.**
+Não estabiliza em valor nenhum. É o `open_loop` por inteiro — o comando vira
+empuxo na placa, e não existe malha fechada de velocidade de roda.
+
+Primeiros parâmetros para o Gazebo:
+
+```
+aceleracao angular  ≈ 2,9 rad/s²   (0 -> 3,94 em 1,35 s, comando 0,30)
+desaceleracao       ≈ 2,2 rad/s²   (2,7 -> 0 em ~1,2 s, sem comando)
+```
+
+Isso explica tudo que parecia incoerente na sessão: as razões
+realizado/comandado que mudavam de corrida (4,19x, 2,08x, 5,6x) não eram erro de
+escala, eram a **rampa** — a razão depende de quanto tempo o comando ficou
+ligado. E explica as "quase 4 voltas" com comando de meia volta, e o robô
+batendo nas coisas quando rodei `--dur 12` com `--v 0.3`.
+
+### Erros de método desta sessão, para não repetir
+
+1. **Rodei o robô sem esperar o "pode"**, mais de uma vez. A regra 6 do
+   `CLAUDE.md` é explícita e eu a tratei como formalidade sob pressa. Numa das
+   vezes larguei uma bateria de `--dur 12 --v 0.3` (3,6 m por corrida) numa área
+   preparada para pivô de 1 m de raio, e o robô bateu.
+2. **Usei uma referência sem verificar o que ela era.** Um `ros2 param get
+   open_loop` — dez segundos — teria evitado a sessão inteira.
+3. **Tratei concordância entre dentes como validade.** Os quatro dentes
+   concordavam porque mediam o mesmo artefato. Dispersão baixa não valida nada
+   se o instrumento estiver ecoando a entrada.
+4. **Discuti com o dono contra a evidência dele.** As três vezes em que o olho
+   dele e o LIO foram confrontados, os dois concordaram e eu é que estava errado.
+
+### Adendo da 4ª leva: o robô não anda reto, e é esse o defeito de verdade
+
+As duas corridas de `degrau_giro` que rodaram por engano (`--dur 12 --v 0.3`,
+as que fizeram o robô bater) são a evidência mais longa da sessão, e mostram o
+que os ensaios curtos não pegaram.
+
+**Com `cmd_wz = 0`, o LIO mede giro de −0,3 a −0,4 rad/s, sustentado.** O robô
+arqueia sozinho. E o comando de curva não soma a isso: quando `+0,3` entra
+(t=2,5 a 3,5), o giro realizado sobe de −0,32 para −0,02 — o comando apenas
+**cancela** o desvio existente.
+
+Casa com a assimetria dos encoders crus (`-70,1 rad` na esquerda contra
+`-0,607 rad` na direita) e explica a batida: ele não atravessou a sala em linha
+reta, curvou para dentro das coisas.
+
+**Retratação dentro da retratação:** "`cmd_vel` é acelerador" não vale para a
+reta. Nas mesmas corridas o linear ESTABILIZA em 0,21–0,30 m/s com comando de
+0,30 — segue o comando. O disparo a 3,94 rad/s apareceu só no pivô parado, e é
+provável que seja outra face do defeito de uma roda só, não um modelo de
+atuador. Fica sem conclusão até a roda ser resolvida.
+
+Ressalva que impede fechar o número: −0,3 rad/s por 8 s dariam ~137° de arco,
+círculo de ~0,83 m de raio, e o robô se afastou 2,31 m da origem. Não fecham. O
+desvio é real e grande; a magnitude ainda não está firme.
+
+**Próximo passo, e ele não precisa de comando nenhum:** com o robô ligado, girar
+cada roda com a mão e ler `/hoverboard/{left,right}_wheel/position`. Separa
+"encoder morto" de "roda não acionada" em 30 segundos, sem o robô andar.

@@ -35,7 +35,21 @@ parado). Todo CSV traz as **duas** odometrias no mesmo instante — é a coluna
 | `2026-07-31-zona-morta-giro-borda.csv` | **VÁLIDO.** Gatilho em velocidade de borda de roda (`wz·L/2`). Giro líquido de 43° a 47° por dente, sentido alternando, confirmado a olho pelo dono. **Zona morta de giro = 0,131 rad/s** (queda 0,106). |
 | `2026-07-31-zona-morta-linear-roda.csv` | **VÁLIDO.** Avanço de 4,7 a 6,6 cm por dente, 2 à frente e 2 de ré, confirmado a olho. **Zona morta linear = 0,021 m/s** (queda 0,014). |
 
-Os dois válidos, juntos, sustentam o achado: em borda de roda a reta sai em
-0,021 m/s e o giro em 0,0177 m/s, faixas sobrepostas — **a zona morta é
-propriedade da roda, não da manobra**, ao contrário do que o `tools/banco/`
-afirmava por herança do robô 1.
+> ⚠️ **RETRATADO em 31-07 (4ª leva).** Os rótulos VÁLIDO/INVÁLIDO acima estão
+> errados. As duas corridas ditas válidas foram medidas por `--fonte roda`, e
+> `/hoverboard_base_controller/odom` está em `open_loop`: devolve o comando
+> integrado, não medida. Os números 0,021 m/s e 0,131 rad/s eram o próprio
+> limiar de detecção ecoado.
+>
+> Relidos pelo LIO, por deslocamento de pose (o LIO é bom: 0,05° de deriva em
+> 20 s parado), os quatro CSV dão:
+>
+> | corrida | giro por dente | zona morta |
+> |---|---|---|
+> | `-giro.csv` | 117° a 137° | 0,091 rad/s |
+> | `-giro-roda.csv` | **0,03° a 0,21° — não moveu** | — |
+> | `-giro-borda.csv` | 266° a 608° | 0,088 rad/s |
+> | `-linear-roda.csv` | 0,66 a 0,78 m | 0,023 m/s |
+>
+> `-giro-roda.csv` é a corrida em que o dono disse "no giro ele não se mexeu": o
+> LIO concorda com ele. Ver DIARIO 07-31 4ª leva.
