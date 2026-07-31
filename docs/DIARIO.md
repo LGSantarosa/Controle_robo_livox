@@ -2217,3 +2217,51 @@ próprio bloco.
 Também anotado: `pkill -f ros2_control_node` dentro de um comando ssh casa com a
 **própria linha de comando do ssh** e mata a sessão antes de relançar a base.
 Matar por PID, ou usar o truque do colchete.
+
+### Adendo 3 da 4ª leva: o par de pivô, e a repetição que corrigiu os números
+
+Repetidas as rajadas de reta com as rodas gravadas (n=2 por sentido), as médias
+sobre a janela 0,6–1,0 s corrigem o que eu tinha afirmado por olhômetro em cima
+do pico:
+
+| corrida | esq vs dir sob comando | tempo até parar (esq / dir) |
+|---|---|---|
+| frente #1 | +11,3% | 0,90 s / 0,70 s |
+| frente #2 | +12,0% | 1,00 s / 0,62 s |
+| ré #1 | +7,2% | 0,70 s / 0,76 s |
+| ré #2 | −0,8% | 0,67 s / 0,67 s |
+
+Não são os "20–25%" que eu disse: são **11–12% de frente e ~0% de ré**. E a
+frenagem só é desigual indo para a frente (esquerda demora 0,2–0,4 s a mais).
+Isso derruba a minha afirmação de que "aparece nos dois sentidos, logo não é a
+boba" — a assimetria da RETA é dependente de sentido, o que mantém a boba como
+candidata. **Confirmado a olho pelo dono: de ré sai reto, de frente pende para
+a direita.** Aceito como fenômeno medido; a causa fica em aberto.
+
+**Par de pivô** (`wz = ±0,30`, 1,0 s, rodas gravadas):
+
+| | `+0,30` | `−0,30` |
+|---|---|---|
+| giro sob comando | +60,2° | −48,9° |
+| giro na inércia | +87,5° | −101,2° |
+| **giro TOTAL** | **+147,7°** | **−150,0°** |
+| realizado/comandado | 3,50× | 2,84× |
+| deslocou o centro | 0,139 m | 0,071 m |
+| esq vs dir | +15,9% | +11,4% |
+| esq parou em | 1,20 s | 0,59 s → dir |
+| dir parou em | 0,59 s | 1,35 s |
+
+Para o simulador:
+
+1. **O giro total é simétrico** (147,7° contra 150,0°) — o Gazebo não precisa de
+   assimetria de rotação.
+2. **A esquerda é 11–16% mais forte nos DOIS sentidos de giro** — diferente da
+   reta, onde só aparece indo para a frente.
+3. **Quem para por último é sempre a roda que gira para TRÁS.** Regra limpa.
+4. **60% do giro acontece depois do corte** (~90–100°), e o pivô não é puro:
+   sai 7 a 14 cm do lugar.
+5. O giro também é inflado pela compensação: 2,8–3,5× o comandado.
+
+Falha de instrumento anotada: o `rajada_rodas.py` gravava só `cmd_v`, então o
+CSV `2026-07-31-pivo-wz030.csv` não registra o `wz` comandado (está só no nome
+do arquivo). Corrigido para as corridas seguintes.
