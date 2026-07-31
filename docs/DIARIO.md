@@ -2314,3 +2314,55 @@ velocidade sustentada. Com o patamar único isso é FALSO na faixa baixa — rod
 protocolo como está mede o patamar, não o robô. Os ensaios de zona morta
 precisam ou de rampa repensada, ou de rodar com a compensação desligada, que é
 onde a zona morta física existe.
+
+### Adendo 5 da 4ª leva: o LIO estava certo o tempo todo, e o instrumento era eu
+
+Girei até **o LIO** acusar 180° e cortei; ele girou mais na inércia. As três
+fontes no fim:
+
+```
+olho do dono   ~270°  ("meia volta + 1/4, parou de lado")
+LIO             264,6°
+rodas           257,5°
+```
+
+**O LIO está validado** — terceira conferência independente do dia contra o olho
+do dono, agora com referência angular precisa em vez de "uns 190°". O dono
+insistiu nisso desde o começo da sessão e estava certo.
+
+**Retratação do "fator 1,25".** Eu havia mostrado LIO ÷ rodas ≈ 1,22–1,29 em
+todas as corridas, translação e rotação, e concluído erro de escala no encoder.
+Era buraco de gravação meu:
+
+```python
+finally:
+    for _ in range(10): n.manda(0.0, 0.0); time.sleep(0.02)   # 0,2 s SEM gravar
+```
+
+Esses 0,2 s são exatamente o trecho em que o robô ainda está em velocidade quase
+máxima logo após o corte. A integral das rodas os perdia; o LIO, medido de ponta
+a ponta, não. A 0,3 m/s dá ~6 cm — e as diferenças observadas eram 6,7 e 7,2 cm.
+O teste do 180° integra continuamente e as duas fontes fecham em 2,8%.
+
+Consequência: **as distâncias e velocidades medidas pelo LIO voltam a valer**,
+inclusive a zona morta linear de 0,023 m/s. Corrigido o `rajada_rodas.py`.
+
+Fica em aberto, sem explicação: em algumas corridas o `/Odometry` traz episódios
+de amostras ~1,4 m deslocadas (10–20% das amostras, valores repetidos entre
+corridas). Não é ruído aleatório e não afeta o yaw. Corrida com episódio desses
+tem o deslocamento inutilizado e deve ser descartada — hoje isso atingiu
+`pivo-wz030-r2` e `curva-v010-wz030`.
+
+### O placar de instrumentos desta sessão
+
+Três vezes eu acusei o sensor e três vezes o defeito era meu:
+
+1. "ruído de 0,033 rad/s" → era `JANELA_S` de 0,2 s sobre pose a 10 Hz.
+2. "o LIO fabrica movimento" → eu comparava com odometria em `open_loop`, que é
+   o comando ecoado.
+3. "o LIO infla 25%" → buraco de 0,2 s no meu logger.
+
+E quatro vezes o olho do dono arbitrou certo: o giro à esquerda, o "no giro ele
+não se mexeu", o "de ré reto e de frente pendendo", e os ~270°. **Num banco de
+ensaios sem padrão de referência, a testemunha humana é o instrumento mais
+confiável que existe** — e é barata. Usar mais, e mais cedo.
