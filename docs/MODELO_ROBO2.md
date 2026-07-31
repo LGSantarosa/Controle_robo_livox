@@ -102,6 +102,14 @@ compensação e deveriam sofrer o mesmo `k`. Não explicado.
 
 ## 6. O que este modelo NÃO cobre
 
+> ⚠️ **O limite mais importante: este modelo foi aferido em rajadas de ~1 s e
+> ~20 cm.** Não há nenhuma corrida longa e limpa. As duas únicas de 12 s
+> bateram e rodaram com o LIO poluído por pilhas órfãs. Ou seja: o modelo
+> descreve **arranca-e-para**, não percurso sustentado — que é justamente o que
+> um seguidor de caminho faz. Ao validar controle em trajetos de metros, o
+> simulador estará extrapolando.
+
+
 - comportamento acima de 0,838 m/s (onde o comando volta a ser proporcional)
 - `reta` com cutucão — se o rumo se recupera de uma perturbação ou diverge
 - repetição a n=3: o protocolo pede três corridas por condição; temos 1 ou 2

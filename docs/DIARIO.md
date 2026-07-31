@@ -2407,3 +2407,52 @@ qualquer medida de `/Odometry`, verificar que existe **exatamente um**
 
 Corridas a descartar por contaminação: `pivo-wz030-r2`, `curva-v010-wz030`,
 `curva-r2`, `zm-linear-r2` (esta também falhou por gatilho de amostra única).
+
+### Fechamento da 4ª leva: 7 corridas vazias, e o que fica para a próxima
+
+Tentadas as versões encurtadas dos passos 3, 4 e 5 (a_dec por pivô a `wz` 0,3 /
+0,6 / 1,0; curva a `v` 0,2 / 0,4 / 0,6; aceleração a `v` 0,6). **As sete saíram
+vazias** — zero pose, zero roda girando: a rede caiu e o NUC ficou inalcançável.
+O robô não se mexeu em nenhuma. Os arquivos foram apagados para não sujarem o
+conjunto.
+
+**Defeito de instrumento que isso expôs, e é o mais perigoso de todos:** os
+scripts de rajada **não percebem que o robô sumiu**. Publicam em `cmd_vel`,
+gravam linhas em branco e terminam imprimindo `COMANDO ... 205 amostras`, com
+cara de sucesso. Se a queda tivesse acontecido no meio de uma corrida boa, o
+número teria vindo pela metade sem aviso. **Antes da próxima sessão: checar
+`/Odometry` vivo no início e no fim de cada rajada, e abortar se não estiver.**
+
+### Onde o banco realmente está: 2 passos de 6
+
+| passo | corridas | estado |
+|---|---|---|
+| 1 — zona morta de giro | 1 | ✅ feito |
+| 2 — zona morta linear | 1 | ✅ feito |
+| 3 — degrau de giro (`wz` 0,3/0,6/1,0) | 3 | ❌ nenhuma |
+| 4 — curva (`v` 0,2/0,4/0,6) | 3 | ❌ nenhuma |
+| 5 — aceleração linear | 1 | ❌ |
+| 6 — reta com cutucão | 4 | ❌ nenhuma |
+
+O `a_dec` (~3,05 rad/s²) e a curva (`v=0,10`) que estão no `MODELO_ROBO2.md` são
+**substitutos** derivados de rajadas curtas, não os ensaios 3 e 4.
+
+**Os passos 3, 4 e 5 precisam ser REESCRITOS antes de rodar.** Os três varrem
+velocidade — "quanto ele curva a 1×, 2×, 3×" — e 0,2 / 0,4 / 0,6 m/s caem todas
+dentro do patamar da compensação, então as três dariam o mesmo resultado. Do
+jeito que estão, não conseguem responder à própria pergunta neste robô. A
+varredura tem de subir acima de 0,838 m/s, onde o comando volta a ser
+proporcional — e isso exige espaço que a bancada de hoje não tinha.
+
+O passo 6 continua válido como está e é o mais importante dos que faltam: ele
+pergunta se o rumo se recupera de uma perturbação ou foge, e o desvio de 9° em
+18 cm que medimos torna essa pergunta urgente. Precisa de corredor (4 corridas
+de ~4 m).
+
+### O limite honesto do modelo de hoje
+
+Todas as corridas boas são **rajadas de ~1 s e ~20 cm**. As duas únicas longas
+(12 s) são justamente as que bateram, e rodaram com o LIO poluído pelas pilhas
+órfãs. Então o `MODELO_ROBO2.md` está aferido em **arranca-e-para**, não em
+percurso sustentado — e percurso é o que um seguidor faz o tempo todo. Duas
+corridas limpas num corredor fecham isso: o passo 6 e uma reta longa.
