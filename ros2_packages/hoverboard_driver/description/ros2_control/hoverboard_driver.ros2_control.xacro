@@ -11,6 +11,24 @@
         <param name="wheel_radius">0.080</param>
         <param name="max_velocity">1.0</param>
         <param name="device">/dev/ttyUSB0</param>
+
+        <!-- MEDIDO 2026-07-31, empurrando o robô reto com a mão: a esquerda
+             contou +4,681 rad e a direita -4,974. Os dois motores do hoverboard
+             são espelhados, então reportam sentidos opostos para o mesmo
+             movimento. Sem o sinal por roda a realimentação da direita fica
+             invertida em relação ao comando dela, e nenhuma malha fechada é
+             possível. -->
+        <param name="feedback_sign_left">1.0</param>
+        <param name="feedback_sign_right">-1.0</param>
+
+        <!-- ⚠️ Compensação de zona morta do firmware. LIGADA o robô não obedece
+             a cmd_vel em magnitude na faixa baixa (o fator de escala cresce
+             quando o comando diminui), e nenhum ensaio do tools/banco vale.
+             DESLIGADA ele provavelmente não sai do lugar em comando pequeno —
+             isso é a zona morta de verdade, não regressão.
+             Ver DIARIO 07-31 4ª leva. -->
+        <param name="deadband_enable">false</param>
+        <param name="deadband_speed">100.0</param>
       </hardware>
       <joint name="${prefix}left_wheel_joint">
         <command_interface name="velocity"/>

@@ -158,6 +158,26 @@ namespace hoverboard_driver
     double wheel_radius;
     double max_velocity = 0.0;
     int direction_correction = 1;
+
+    // Sinal da realimentacao de CADA roda, separado. Os dois motores do
+    // hoverboard sao montados espelhados, entao speedL_meas e speedR_meas saem
+    // com sinais OPOSTOS para o mesmo movimento do robo. Medido em 31-07
+    // empurrando o robo reto com a mao: esquerda +4,681 rad, direita -4,974.
+    // Aplicar o mesmo direction_correction nos dois (como estava) deixa a
+    // realimentacao da direita invertida em relacao ao comando dela — e isso
+    // impede QUALQUER malha fechada: o PID veria erro crescente e iria a fundo.
+    double feedback_sign_left = 1.0;
+    double feedback_sign_right = -1.0;
+
+    // Compensacao de zona morta do firmware. Escala as duas rodas ate a de
+    // maior magnitude alcancar `deadband_speed`, para vencer a inercia.
+    // Efeito colateral medido em 31-07: o fator k = deadband/mx e tanto maior
+    // quanto MENOR o comando, entao o robo tem praticamente uma velocidade so
+    // na faixa baixa e nao obedece a cmd_vel em magnitude. Enquanto isto estiver
+    // ligado nao da para caracterizar nada — dai o liga/desliga por parametro.
+    bool deadband_enable = true;
+    double deadband_speed = 100.0;
+
     std::string port;
 
     rclcpp::Time last_read;

@@ -179,6 +179,28 @@ namespace hoverboard_driver
     wheel_radius = std::stod(info_.hardware_parameters["wheel_radius"]);
     max_velocity = std::stod(info_.hardware_parameters["max_velocity"]);
     port = info_.hardware_parameters["device"];
+
+    // Opcionais: se nao vierem no xacro, valem os defaults do cabecalho. O
+    // `.count()` antes do `[]` e de proposito — `operator[]` num map insere a
+    // chave vazia, e `std::stod("")` lanca.
+    auto param_num = [this](const std::string &nome, double atual) {
+      return info_.hardware_parameters.count(nome)
+                 ? std::stod(info_.hardware_parameters.at(nome))
+                 : atual;
+    };
+    feedback_sign_left = param_num("feedback_sign_left", feedback_sign_left);
+    feedback_sign_right = param_num("feedback_sign_right", feedback_sign_right);
+    deadband_speed = param_num("deadband_speed", deadband_speed);
+    deadband_enable =
+        info_.hardware_parameters.count("deadband_enable")
+            ? (info_.hardware_parameters.at("deadband_enable") == "true" ||
+               info_.hardware_parameters.at("deadband_enable") == "1")
+            : deadband_enable;
+
+    RCLCPP_INFO(rclcpp::get_logger("hoverboard_driver"),
+                "sinal da realimentacao: esq %+.0f  dir %+.0f | zona morta: %s (%.0f)",
+                feedback_sign_left, feedback_sign_right,
+                deadband_enable ? "LIGADA" : "desligada", deadband_speed);
     hw_positions_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
     hw_velocities_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
     hw_commands_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
@@ -401,8 +423,14 @@ namespace hoverboard_driver
         hardware_publisher->publish_temp((double)msg.boardTemp / 10.0);
 
         // Convert RPM to RAD/S (mantem o sinal p/ saber sentido)
-        hw_velocities_[left_wheel] = direction_correction * (msg.speedL_meas * 0.10472);
-        hw_velocities_[right_wheel] = direction_correction * (msg.speedR_meas * 0.10472);
+        // Sinal POR RODA: os motores sao espelhados e reportam sentidos opostos
+        // para o mesmo movimento do robo (medido, empurrando reto: esq +4,681
+        // rad / dir -4,974). Sem isto a realimentacao da direita nunca casa com
+        // o comando dela.
+        hw_velocities_[left_wheel] =
+            direction_correction * feedback_sign_left * (msg.speedL_meas * 0.10472);
+        hw_velocities_[right_wheel] =
+            direction_correction * feedback_sign_right * (msg.speedR_meas * 0.10472);
         hardware_publisher->publish_vel(left_wheel, hw_velocities_[left_wheel]);
         hardware_publisher->publish_vel(right_wheel, hw_velocities_[right_wheel]);
 
@@ -461,7 +489,11 @@ namespace hoverboard_driver
     // calculate PID values
     double pid_outputs[2];
     pid_outputs[0] = pids[0](hw_velocities_[left_wheel], hw_commands_[left_wheel], period);
-    pid_outputs[1] = pids[1](hw_velocities_[left_wheel], hw_commands_[right_wheel], period);
+    // Era hw_velocities_[left_wheel] aqui tambem — copia-e-cola. O PID da roda
+    // direita realimentava com a velocidade da ESQUERDA. Inofensivo enquanto a
+    // saida do PID esta desligada (ver set_speed abaixo), fatal para quem religar.
+    pid_outputs[1] = pids[1](hw_velocities_[right_wheel], hw_commands_[right_wheel], period);
+    (void)pid_outputs;  // malha aberta hoje: set_speed usa hw_commands_ direto
 
     // Convert PID outputs in RAD/S to RPM
     //double set_speed[2] = {
@@ -478,11 +510,23 @@ namespace hoverboard_driver
     // (o que fazia a roda de DENTRO girar demais -> curva aberta / "balao"),
     // escala as DUAS juntas ate a de MAIOR magnitude vencer o deadband. Assim a
     // roda de dentro fica proporcionalmente lenta e a curva fecha.
-    const double DEADBAND_SPEED = 100.0;  // unidades do firmware; 70 era marginal (nao vencia a inercia); 100 = move confiavel
+    //
+    // ⚠️ 31-07: ISTO DESTROI A CARACTERIZACAO, e por isso virou parametro.
+    // O fator k = deadband_speed/mx e tanto MAIOR quanto MENOR o comando, entao
+    // toda a faixa baixa de cmd_vel chega no board com a mesma magnitude: o robo
+    // deixa de obedecer ao comando em modulo e passa a ter praticamente uma
+    // velocidade so. Medido: pivo de wz=0,30 rad/s girou a 3,94 rad/s de pico
+    // (13x), e as "zonas mortas" medidas no banco eram so o ponto em que a rampa
+    // cruzava mx > 1 e o k chutava tudo para o teto — um DEGRAU, nao um limiar
+    // de atrito. Ver DIARIO 07-31 4a leva.
+    //
+    // Com `deadband_enable=false` o comando vai cru e o robo provavelmente nao
+    // sai do lugar em comando pequeno. Isso NAO e regressao: e a zona morta de
+    // verdade aparecendo, que e justamente o que o banco precisa medir.
     double mx = std::fmax(std::fabs(set_speed[0]), std::fabs(set_speed[1]));
-    if (mx > 1.0 && mx < DEADBAND_SPEED)
+    if (deadband_enable && mx > 1.0 && mx < deadband_speed)
     {
-      double k = DEADBAND_SPEED / mx;
+      double k = deadband_speed / mx;
       set_speed[0] *= k;
       set_speed[1] *= k;
     }
