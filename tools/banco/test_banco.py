@@ -204,6 +204,26 @@ def test_le_um_limiar_por_dente_e_devolve_a_media():
     assert m == pytest.approx(0.23, abs=0.011)
 
 
+def test_primeiro_dente_destoante_e_separado_em_vez_de_diluido(capsys):
+    """Só o dente #0 parte de repouso longo; os outros, da pausa curta. Atrito
+    estático cresce com o tempo parado, então são condições diferentes — e a
+    média dos quatro esconderia justamente o caso do BO-3 (robô parado, mandaram
+    andar). Visto no Gazebo em 31-07: #0 em 0,203 contra 0,059 dos demais."""
+    r = csv_dente([0.40, 0.20, 0.20, 0.20], [0.15] * 4)
+    medir.zona_morta(r, 'cmd_v', 'v_pose', 'm/s')
+    saida = capsys.readouterr().out
+    assert 'o dente #0' in saida and 'destoa' in saida
+    assert 'repouso LONGO' in saida
+
+
+def test_primeiro_dente_alinhado_nao_gera_ruido(capsys):
+    """Se todos concordam, não há nada a separar — e o aviso não pode virar
+    barulho de fundo que se aprende a ignorar."""
+    r = csv_dente([0.20, 0.21, 0.20, 0.19], [0.15] * 4)
+    medir.zona_morta(r, 'cmd_v', 'v_pose', 'm/s')
+    assert 'destoa' not in capsys.readouterr().out
+
+
 def test_queda_sai_menor_que_saida(capsys):
     """Atrito dinâmico < estático. Se sair invertido, a leitura tem que gritar,
     porque é sinal de rampa rápida demais ou de pouca amostra."""
@@ -265,6 +285,29 @@ def test_repete_forcado_encurta_a_sessao():
     fora = sessao.expande([dict(csv='4-curva_v02.csv', repete=3, args=[])],
                           forcar=1)
     assert len(fora) == 1 and fora[0]['csv'] == '4-curva_v02.csv'
+
+
+def test_o_giro_e_o_primeiro_ensaio_da_sessao():
+    """Decisão de 31-07, e não é ordem de gosto: o ensaio de giro responde a
+    pergunta do pivô DIRETAMENTE (o menor wz que gira o robô parado É o limiar
+    do pivô, sem converter por bitola). Sessão cortada perde o que está por
+    último, e em 30-07 a sessão foi bloqueada sem medir nada."""
+    assert sessao.PASSOS[0]['tipo'] == 'zona_morta_giro'
+    assert sessao.PASSOS[1]['tipo'] == 'zona_morta_linear'
+
+
+def test_os_numeros_dos_passos_batem_com_a_posicao():
+    """`--so N` e `--de N` indexam por este campo, e a folha de campo cita os
+    números. Um passo renumerado sem o resto manda o dono rodar outro ensaio."""
+    assert [p['n'] for p in sessao.PASSOS] == list(range(1, len(sessao.PASSOS) + 1))
+
+
+def test_o_csv_diz_a_que_passo_pertence():
+    """O prefixo numérico do CSV é como a pasta se lê em casa. Se ele
+    descolar do passo, o dado fica ambíguo meses depois."""
+    for p in sessao.PASSOS:
+        for c in p['corridas']:
+            assert c['csv'].startswith(f'{p["n"]}-'), (p['n'], c['csv'])
 
 
 def test_o_protocolo_tem_as_corridas_que_a_folha_de_campo_promete():

@@ -583,6 +583,24 @@ Véspera da ida ao robô. Duas perguntas do dono derrubaram partes do método.
   direto no `cmd_vel` do controlador e passa **por fora da placa fingida**, então
   os 0,023 m/s e 0,036 rad/s medidos são piso de detecção, não zona morta.
 
+### O giro vira o ensaio 1, e o dente #0 é um caso à parte
+
+**Ordem invertida a pedido do dono**: a zona morta de **giro** passa a ser o
+passo 1. Ela responde a pergunta do pivô **diretamente** — o menor `wz` que gira
+o robô parado *é* o limiar do pivô, sem converter por bitola. Pelo linear só se
+chega lá por `2·zm/L`, confiando de novo num número medido. Some o risco de
+sessão cortada (em 30-07 não se mediu nada): o que fica por último se perde.
+O linear ganhou papel melhor — **conferência do passo 1**, já que os dois medem
+o mesmo atrito por caminhos diferentes e têm de fechar por `2·zm/L`.
+
+**O dente #0 destoa, e é física.** Na validação no Gazebo, dispersão de 82% no
+passo 1 (#0 em 0,188 rad/s contra 0,035 dos demais). Só o #0 parte de repouso
+longo; os outros, da pausa de 1 s. Atrito estático cresce com o tempo parado, e
+a média dos quatro misturaria as duas condições **bem no número do BO-3**. O
+`medir.py` separa e diz qual usar para cada caso, em vez de corrigir a média —
+qual serve depende de quanto tempo o robô fica parado em operação, o que é
+decisão de projeto.
+
 ### ✅ Fechado no mesmo dia: a conferência lê a calibração VIVA
 
 `sessao.py --checar` pergunta ao `hoverboard_base_controller` **que robô ele

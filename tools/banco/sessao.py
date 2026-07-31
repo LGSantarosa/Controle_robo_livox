@@ -44,6 +44,17 @@ MEDIR = os.path.join(AQUI, 'medir.py')
 # A ordem é a do README e não é gosto: a zona morta vem primeiro porque é ela
 # que decide se o robô anda, e um robô que não sai do lugar invalida todo
 # ensaio seguinte sem dar erro nenhum.
+#
+# E dentro dela, o GIRO na frente do linear (invertido em 31-07, a pedido do
+# dono). Três razões, em ordem de peso:
+#   1. o ensaio de giro responde a pergunta do pivô DIRETAMENTE — o menor wz
+#      que gira o robô parado É o limiar do pivô, em rad/s. Pelo linear só se
+#      chega lá convertendo por 2·zm/L, isto é, confiando na bitola de novo;
+#   2. sessão cortada perde o que estiver por último, e em 30-07 a sessão foi
+#      bloqueada sem medir nada — o risco não é hipotético;
+#   3. é o mais barato de montar: gira parado, raio de 1 m, sem corredor.
+# O argumento contrário ("andar reto é mais manso que girar") já está coberto
+# pelo cutucão, que anda E gira antes de qualquer ensaio.
 
 # `repete` é o número de corridas IDÊNTICAS da mesma condição, e existe porque
 # uma corrida só não é medida — é uma amostra. Média de 3 mata o erro
@@ -59,34 +70,44 @@ MEDIR = os.path.join(AQUI, 'medir.py')
 
 PASSOS = [
     dict(
-        n=1, tipo='zona_morta_linear',
-        titulo='Zona morta linear — o robô sai do lugar com quanto?',
-        espaco='~3 m em linha reta à frente (ele vai e volta, quase não sai do lugar)',
-        pose='Robô parado, apontando para o lado livre mais comprido.',
-        corridas=[dict(csv='1-zona_morta_linear.csv',
-                       args=['--dur', '180', '--rampa-ate', '0.35',
-                             '--espaco', '3.0', '--dentes', '4'])],
-        nota='DENTE DE SERRA: sobe até ele sair do lugar, desce até ele parar,\n'
-             'inverte o sentido e repete 4x. Uma corrida dá 4 medidas de saída\n'
-             'e 4 de queda, nos dois sentidos — a repetição está DENTRO dela.\n'
-             'Os 180 s são teto de tempo, não duração: ele fecha os 4 dentes\n'
-             'muito antes. Se NÃO sair do lugar, isso não é falha do ensaio,\n'
-             'é o resultado; refazer com --rampa-ate 0.6.',
-    ),
-    dict(
-        n=2, tipo='zona_morta_giro',
-        titulo='Zona morta de giro — e girando parado? (o item nº 1 do projeto)',
+        n=1, tipo='zona_morta_giro',
+        titulo='Zona morta de GIRO — o item nº 1 do projeto, e o primeiro a sair',
         espaco='raio de 1 m livre em volta',
         pose='Robô parado, no meio do espaço livre. Não precisa de rumo nenhum.',
-        corridas=[dict(csv='2-zona_morta_giro.csv',
+        corridas=[dict(csv='1-zona_morta_giro.csv',
                        args=['--dur', '220', '--rampa-ate', '1.5',
                              '--espaco', '1.5', '--dentes', '4'])],
-        nota='É o número que decide se este robô PIVOTA, e a folga é de 4%:\n'
-             'com zona morta 0,10 pivotar exige 0,96 rad/s contra teto de 1,0;\n'
-             'com 0,15 exige 1,48 e é impossível. Por isso a FAIXA importa\n'
-             'tanto quanto a média, e por isso são 4 dentes.\n'
-             'Ele vai ficar parado com o comando subindo. Não é travamento —\n'
-             'é a zona morta acontecendo, e é o que viemos medir. Deixar rodar.',
+        nota='PRIMEIRO de todos, e não por importância: porque ele responde a\n'
+             'pergunta do pivô DIRETAMENTE. O que sai daqui é o menor wz que\n'
+             'gira o robô parado, que É o limiar do pivô, em rad/s, sem passar\n'
+             'por bitola nenhuma. O ensaio linear chega no mesmo lugar por\n'
+             'conversão (2·zm/L), ou seja, confiando de novo num número medido.\n'
+             'Some a isso o risco de sessão cortada (em 30-07 não se mediu\n'
+             'NADA): o que estiver em segundo lugar é o que se perde. E é o\n'
+             'ensaio mais barato de montar — gira parado, não precisa corredor.\n'
+             'A FAIXA importa tanto quanto a média: a decisão do pivô se joga\n'
+             'dentro dela, com folga de 4%. Por isso são 4 dentes.\n'
+             'Ele vai ficar parado com o comando subindo, 4 vezes, alternando o\n'
+             'sentido. Não é travamento — é a zona morta acontecendo, e é o que\n'
+             'viemos medir. Deixar rodar.',
+    ),
+    dict(
+        n=2, tipo='zona_morta_linear',
+        titulo='Zona morta linear — o mesmo limiar, pela outra porta',
+        espaco='~3 m em linha reta à frente (ele vai e volta, quase não sai do lugar)',
+        pose='Robô parado, apontando para o lado livre mais comprido.',
+        corridas=[dict(csv='2-zona_morta_linear.csv',
+                       args=['--dur', '180', '--rampa-ate', '0.35',
+                             '--espaco', '3.0', '--dentes', '4'])],
+        nota='DENTE DE SERRA, como o passo 1. Andando reto a velocidade da roda\n'
+             'é a velocidade do robô, então o que sai daqui é o limiar da roda\n'
+             'em m/s DIRETO, sem bitola no meio — e é ele que entra no piso de\n'
+             'velocidade do seguidor (v_piso).\n'
+             'Vale também como CONFERÊNCIA do passo 1: os dois medem o mesmo\n'
+             'atrito por caminhos diferentes, e têm de fechar por 2·zm/L. Se não\n'
+             'fecharem, ou a bitola está errada ou as duas rodas não são iguais.\n'
+             'Se NÃO sair do lugar, isso não é falha do ensaio, é o resultado;\n'
+             'refazer com --rampa-ate 0.6.',
     ),
     dict(
         n=3, tipo='degrau_giro',

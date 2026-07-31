@@ -33,7 +33,7 @@ carregou** — se a bitola não for 0,270, o número medido não tem unidade.
 
 ---
 
-## 1. Subir a base
+## 1. Levar o código e subir a base
 
 ⚠️ **O NUC não tem autenticação no GitHub** (dívida de infra, 07-30): `git fetch`
 e `git push` não funcionam lá. Código vai do dev por **bundle**, e os commits
@@ -55,6 +55,9 @@ source install/setup.bash
 ros2 launch robot_base base.launch.py
 ```
 
+Deixe esse terminal vivo. Tudo abaixo roda num **segundo terminal**, com as duas
+linhas de `source` repetidas.
+
 **Por que o build, sempre.** A bitola (0,270), o raio (0,080) e os nomes de roda
 esquerda/direita moram no `hoverboard_controllers.yaml` e no xacro do
 `hoverboard_driver`, e o `tracao.launch.py` lê os dois de `FindPackageShare` —
@@ -63,69 +66,18 @@ ou seja, da cópia **instalada**, não do fonte. Trocar o fonte não troca o
 e todos os limiares saem enviesados sem sinal nenhum de que algo está errado.
 É barato e idempotente.
 
-Conferir em vez de confiar:
-
-```bash
-grep -E 'wheel_(separation|radius)|wheel_names' \
-  install/hoverboard_driver/share/hoverboard_driver/config/hoverboard_controllers.yaml
-# separation 0.270, radius 0.080, e o swap esquerda/direita aplicado
-```
-
----
-
-## 0. ANTES DE TUDO: o giro está espelhado (bloqueio de 07-30)
-
-O cutucão de 30-07 pegou: comando de **+0,6 rad/s girou −78,5°**. Esquerda e
-direita estão trocadas. A reta sai certa (as duas rodas no mesmo sentido) e só o
-giro espelha — e **nenhum dos seis ensaios acusaria isso**, porque medem
-magnitude. Medir assim é medir errado, e a sessão inteira sairia lixo.
-
-O conserto, aprovado pelo dono e ainda **não aplicado** (a validação exige o robô
-andando, com alguém de olho). Aplicar e reconstruir, em três linhas:
-
-```bash
-cd ~/Controle_robo_livox
-python3 - <<'PY'
-import pathlib
-p = pathlib.Path('ros2_packages/hoverboard_driver/bringup/config/hoverboard_controllers.yaml')
-t = p.read_text()
-a = 'left_wheel_names: ["left_wheel_joint"]\n    right_wheel_names: ["right_wheel_joint"]'
-b = 'left_wheel_names: ["right_wheel_joint"]\n    right_wheel_names: ["left_wheel_joint"]'
-assert a in t, 'ja trocado, ou o arquivo mudou — conferir a mao'
-p.write_text(t.replace(a, b)); print('swap aplicado')
-PY
-colcon build --packages-select hoverboard_driver && source install/setup.bash
-```
-
-Reiniciar o `base.launch.py` (Ctrl-C no primeiro terminal e subir de novo) e:
-
-```bash
-python3 tools/banco/sessao.py --checar --mexer
-```
-
-Duas coisas para ler na saída:
-
-- `swap esquerda/direita APLICADO` na seção **calibração viva** — prova que o
-  build pegou, antes mesmo de o robô se mexer;
-- o cutucão: o giro tem de sair **positivo** (anti-horário).
-
-Saiu positivo? Seguir para o passo 4. Continuou negativo? **Parar e avisar** —
-não é o YAML, é fiação, e medir assim é medir errado. Reverter o swap com o
-mesmo script trocando `a` e `b`.
-
-**Só commitar o swap depois que o cutucão validar** — é a regra de 30-07.
-
-Deixe esse terminal vivo. Tudo abaixo roda num **segundo terminal**, com as duas
-linhas de `source` repetidas.
-
 ## 2. Conferir antes de medir — e antes de andar
 
 ```bash
 python3 tools/banco/sessao.py --checar
 ```
 
-Ele diz `Conferência ok` ou **reprova e para**. Reprovou, o mais provável é o
-lidar: sem nuvem não há `/Odometry`, e sem `/Odometry` não há medida nenhuma.
+Ele diz `Conferência ok` ou **reprova e para**, e imprime a **calibração viva**:
+o que o controlador carregou de `wheel_separation`, `wheel_radius` e nomes de
+roda. Isso responde, sem adivinhação, se o build do passo 1 pegou.
+
+Reprovou? O mais provável é o lidar: sem nuvem não há `/Odometry`, e sem
+`/Odometry` não há medida nenhuma.
 
 ```bash
 # IP do lidar — a varredura é a fonte da verdade, não o número commitado
@@ -143,16 +95,49 @@ Causa provável: o Mid-360 **tranca a sessão de dado** quando o driver morre no
 meio do handshake. Cura: **power-cycle do lidar**. Prevenção: derrubar o driver
 com Ctrl-C e esperar — **nunca `kill -9`** no meio da subida.
 
-## 3. Cutucão de sanidade — com o robô LIVRE
+## 3. O BLOQUEIO: corrigir o giro espelhado, e provar que corrigiu
+
+O cutucão de 30-07 pegou: comando de **+0,6 rad/s girou −78,5°**. Esquerda e
+direita estão trocadas. A reta sai certa (as duas rodas no mesmo sentido) e só o
+giro espelha — e **nenhum dos seis ensaios acusaria isso**, porque medem
+magnitude. Medir assim é medir errado, e a sessão inteira sairia lixo.
+
+O conserto, aprovado pelo dono e ainda **não aplicado** (a validação exige o robô
+andando, com alguém de olho). Aplicar e reconstruir:
+
+```bash
+cd ~/Controle_robo_livox
+python3 - <<'PY'
+import pathlib
+p = pathlib.Path('ros2_packages/hoverboard_driver/bringup/config/hoverboard_controllers.yaml')
+t = p.read_text()
+a = 'left_wheel_names: ["left_wheel_joint"]\n    right_wheel_names: ["right_wheel_joint"]'
+b = 'left_wheel_names: ["right_wheel_joint"]\n    right_wheel_names: ["left_wheel_joint"]'
+assert a in t, 'ja trocado, ou o arquivo mudou — conferir a mao'
+p.write_text(t.replace(a, b)); print('swap aplicado')
+PY
+colcon build --packages-select hoverboard_driver && source install/setup.bash
+```
+
+Reiniciar o `base.launch.py` (Ctrl-C no primeiro terminal e subir de novo), e
+então, **com o robô LIVRE e alguém de olho**:
 
 ```bash
 python3 tools/banco/sessao.py --checar --mexer
 ```
 
-Ele anda 2 s e gira 2 s, e confere o **sinal** do que aconteceu. Serve para pegar
-roda trocada na fiação: um robô assim anda certo e gira ao contrário, e nenhum
-dos seis ensaios acusa isso — eles medem tamanho, não sentido. Se acusar
-inversão, **parar aqui**: a sessão inteira sairia espelhada.
+Ele anda 2 s e gira 2 s, e confere o **sinal** do que aconteceu. Duas coisas
+para ler na saída:
+
+- `swap esquerda/direita APLICADO` na seção **calibração viva** — prova que o
+  build pegou, antes mesmo de o robô se mexer;
+- o cutucão: o giro tem de sair **positivo** (anti-horário).
+
+Saiu positivo? Seguir para o passo 4. Continuou negativo? **Parar e avisar** —
+não é o YAML, é fiação, e medir assim é medir errado. Reverter o swap com o
+mesmo script trocando `a` e `b`.
+
+**Só commitar o swap depois que o cutucão validar** — é a regra de 30-07.
 
 ## 4. A sessão
 
@@ -170,12 +155,19 @@ Ordem, tempo e espaço — **27 corridas**:
 
 | passo | o que mede | corridas | espaço |
 |---|---|---|---|
-| 1 | zona morta linear | 1 (dente de serra) | 3 m reto |
-| 2 | **zona morta de giro** ← item nº 1 | 1 (dente de serra) | raio de 1 m |
+| 1 | **zona morta de GIRO** ← item nº 1 | 1 (dente de serra) | raio de 1 m |
+| 2 | zona morta linear | 1 (dente de serra) | 3 m reto |
 | 3 | `a_dec` (degrau de giro) | 5 — o nível do meio **×3** | 4 m |
 | 4 | curva por velocidade | 9 — cada velocidade **×3** | círculo de 1,2 m de raio |
 | 5 | aceleração linear | 3 (**×3**) | 4 m |
 | 6 | reta com cutucão, ida × ré | 8 — inclui 1 girada 180° | 4 m nos dois sentidos |
+
+**O giro é o passo 1** porque ele responde a pergunta do pivô **direto**: o
+menor `wz` que gira o robô parado *é* o limiar do pivô, em rad/s, sem bitola no
+meio. Pelo linear só se chega lá convertendo por `2·zm/L` — confiando de novo
+num número medido. Some o risco de sessão cortada (em 30-07 não se mediu nada):
+o que fica por último é o que se perde. **Se der para rodar só um ensaio hoje,
+é este.**
 
 Uns 30 min de robô andando, mais o reposicionamento.
 
@@ -206,18 +198,25 @@ Parou no meio (bateria, alguém entrou na sala)? Retoma sem perder o que já foi
 
 ```bash
 python3 tools/banco/sessao.py --de 4     # do passo 4 em diante
-python3 tools/banco/sessao.py --so 2     # só o passo 2
+python3 tools/banco/sessao.py --so 1     # só o passo 1 (zona morta de giro)
 python3 tools/banco/sessao.py --repete 1 # bateria acabando: 1 corrida por
                                          # condição (números sem faixa)
 ```
 
 ## 5. Dois ensaios que pedem atenção humana
 
-**Passo 2 — o robô fica parado com o comando subindo, e volta a ficar.** Não é
-travamento e não é para interromper: é a zona morta acontecendo, e é exatamente
-o número que viemos buscar. São 4 dentes, então isso acontece 4 vezes,
-alternando o sentido do giro. A corrida acaba sozinha quando o 4º fechar — o
-teto de tempo (220 s) quase nunca é atingido.
+**Passos 1 e 2 — dois números vão sair de cada um, não um.** A leitura separa
+a **saída** (do repouso) da **queda** (já andando, sempre menor), e separa
+também o **dente #0** dos demais quando ele destoa: só ele parte de repouso
+longo, e atrito estático cresce com o tempo parado. Não é ruído — é o caso do
+BO-3 aparecendo. Não precisa fazer nada com isso no laboratório além de deixar
+rodar; só não se assuste com a faixa larga.
+
+**Passos 1 e 2 — o robô fica parado com o comando subindo, e volta a ficar.**
+Não é travamento e não é para interromper: é a zona morta acontecendo, e é
+exatamente o número que viemos buscar. São 4 dentes, então isso acontece 4
+vezes em cada passo, alternando o sentido. A corrida acaba sozinha quando o 4º
+fechar — o teto de tempo (220 s) quase nunca é atingido.
 
 **Passo 6 — filmar a traseira** nas 4 primeiras corridas (`frente-a`, `frente-b`,
 `re-a`, `re-b`). O que se procura é a **boba dando meia-volta** quando o robô

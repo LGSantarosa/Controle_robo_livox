@@ -115,6 +115,27 @@ def zona_morta(r, campo_cmd, campo_med, unidade):
     print(f'    {len(saidas)} dente(s): ' +
           '  '.join(f'#{d}={v:.3f}' for d, v, _ in saidas))
     print(f'    faixa {lo:.3f} a {hi:.3f}  (desvio {dp:.3f})')
+
+    # O dente #0 parte de um repouso LONGO; os demais, da pausa curta entre
+    # dentes. Atrito estático cresce com o tempo parado, então os dois são
+    # condições físicas diferentes e a média dos quatro mistura as duas — bem
+    # no número do BO-3, que é "o robô estava parado e mandaram andar".
+    # Não corrijo a média: separo e mostro, porque qual dos dois usar depende
+    # de quanto tempo o robô fica parado na operação real.
+    if len(saidas) >= 3:
+        primeiro = saidas[0][1]
+        resto = sorted(v for _, v, _ in saidas[1:])
+        mediana = resto[len(resto) // 2]
+        if mediana > 0 and abs(primeiro - mediana) / mediana > 0.30:
+            print(f'    [!] o dente #0 ({primeiro:.3f}) destoa dos outros '
+                  f'(mediana {mediana:.3f}).')
+            print(f'        Ele é o único que parte de repouso LONGO; os demais '
+                  f'partem da pausa')
+            print(f'        curta entre dentes, e atrito estático cresce com o '
+                  f'tempo parado.')
+            print(f'        Para arrancar depois de o robô ficar parado, use '
+                  f'{primeiro:.3f};')
+            print(f'        para arrancar em manobra encadeada, {mediana:.3f}.')
     if sem_saida:
         print(f'    [atenção] {len(sem_saida)} dente(s) NÃO saíram do lugar até '
               f'o teto da rampa —')

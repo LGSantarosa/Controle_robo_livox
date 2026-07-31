@@ -1760,6 +1760,44 @@ script copiável (testado e revertido; **não commitado**, conforme a decisão d
 30-07 de só entrar no git depois de o cutucão validar). 22 testes no banco,
 **402 verdes** no total.
 
+### O giro passa a ser o ensaio 1, a pedido do dono
+
+Pergunta dele: *"se não sabemos a zona morta ainda, por que esse não vira o
+teste 1?"* — e o giro estava em segundo, atrás do linear. Invertido, por três
+razões em ordem de peso:
+
+1. **o ensaio de giro responde a pergunta do pivô DIRETAMENTE.** O menor `wz`
+   que gira o robô parado *é* o limiar do pivô, em rad/s. Pelo linear só se
+   chega lá convertendo por `2·zm/L` — confiando de novo na bitola, que é
+   justamente o tipo de dependência que a trena de 29-07 ensinou a desconfiar;
+2. **sessão cortada perde o que está por último**, e em 30-07 a sessão foi
+   bloqueada sem medir nada. O risco não é hipotético;
+3. é o mais barato de montar — gira parado, raio de 1 m, sem corredor.
+
+O argumento contrário ("andar reto é mais manso do que girar como primeira
+coisa") já estava coberto pelo cutucão, que anda **e** gira antes de qualquer
+ensaio. O linear ganhou um papel novo e melhor: **conferência do passo 1**, já
+que os dois medem o mesmo atrito por caminhos diferentes e têm de fechar por
+`2·zm/L`. Não fecharam, ou a bitola está errada ou as duas rodas não são iguais.
+
+Travado em teste (`test_o_giro_e_o_primeiro_ensaio_da_sessao`), junto com dois
+que impedem a numeração dos passos e os prefixos dos CSV de descolarem.
+
+### O dente #0 destoa, e é física, não ruído
+
+A corrida de validação no Gazebo entregou dispersão de **82%** no passo 1: dente
+#0 em 0,188 rad/s contra 0,035 dos outros três. No simulador é o robô assentando
+na física, mas o efeito tem nome e é real no robô: **atrito estático cresce com o
+tempo parado**. O dente #0 parte de repouso longo; os demais, da pausa de 1 s
+entre dentes. São condições físicas diferentes, e a média das quatro as mistura
+bem no número do BO-3 — que é exatamente "o robô estava parado e mandaram andar".
+
+O `medir.py` passou a **separar em vez de diluir**: quando o #0 destoa mais de
+30% da mediana dos outros, ele mostra os dois e diz qual serve para cada caso
+(arrancar do repouso × arrancar em manobra encadeada). Não corrige a média —
+qual dos dois usar depende de quanto tempo o robô fica parado na operação real,
+e isso é decisão de projeto, não de leitura.
+
 ### Corrigido depois: a sessão 07-30 no robô já tinha respondido isto
 
 Ao juntar com o remoto apareceu a entrada 07-30 (2ª leva) — uma ida ao robô que
