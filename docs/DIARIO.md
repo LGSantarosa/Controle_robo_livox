@@ -2265,3 +2265,52 @@ Para o simulador:
 Falha de instrumento anotada: o `rajada_rodas.py` gravava só `cmd_v`, então o
 CSV `2026-07-31-pivo-wz030.csv` não registra o `wz` comandado (está só no nome
 do arquivo). Corrigido para as corridas seguintes.
+
+### Adendo 4 da 4ª leva: o patamar fecha o modelo, e o que AINDA falta
+
+Rajada de `v=0,80` por 0,40 s saiu **inconclusiva por erro de desenho meu**: a
+latência para destravar é ~0,35 s e eu escolhi comando de 0,40 s, sobrando 0,16 s
+de acionamento. O pico de 40 RPM aconteceu já na inércia. Andou 4,7 cm sob
+comando, 25,9 cm no total.
+
+A resposta veio do código, sem mexer no robô. A compensação só age com
+`mx < 100`, e para `v = 0,80`:
+
+```
+roda = 0,80/0,080 = 10,0 rad/s   ->   set_speed = 10,0/0,10472 = 95,5   (<100)
+```
+
+Ainda é inflado. O patamar termina em `100 unidades = 10,472 rad/s = 0,838 m/s`,
+e o teto do robô é 1,0. **Todo comando entre ~0,008 e ~0,838 m/s vira a mesma
+coisa na placa** — o patamar cobre a faixa útil inteira. Bate com o medido (0,10
+e 0,25 deram a mesma velocidade).
+
+Modelo do atuador para o Gazebo:
+
+```
+|cmd| < 0,008 m/s     -> nao move
+0,008 a 0,838 m/s     -> mesma velocidade (~0,2 m/s medidos), ~0,35 s de latencia
+> 0,838 m/s           -> comando passa proporcional (NAO TESTADO)
+```
+
+**A zona morta, e são duas.** Efetiva (compensação ligada, releitura pelo LIO por
+deslocamento de pose): linear ≈ **0,023 m/s** (faixa 0,020–0,025) e giro ≈
+**0,095 rad/s** (faixa 0,084–0,105). Conferem com o previsto pelo código (0,0084
+e 0,062) dentro do atraso de detecção da rampa. O linear é o fraco: **não tem
+patamar** (0,029 a 8 cm de critério, 0,040 a 20 cm), então é "onde começou a
+rastejar". O giro tem patamar e duas corridas concordando. Crua (compensação
+desligada): só bracketada entre **0,25 e 0,5 m/s**.
+
+**O que NÃO foi feito, para não fechar a sessão fingindo completude:**
+
+- repetição: linear n=1, giro n=2, pivô n=1 por sentido. O protocolo pede 3.
+- `curva` sustentada (giro realizado × comandado em movimento, e derrapagem).
+- `reta` com cutucão (se o rumo assenta ou foge após perturbação).
+- `degrau_giro` / `a_dec` angular, que o `collision_monitor` e o seguidor pedem.
+- comportamento acima de 0,838 m/s.
+
+**Dívida de método:** o `tools/banco` pressupõe que comando sustentado dá
+velocidade sustentada. Com o patamar único isso é FALSO na faixa baixa — rodar o
+protocolo como está mede o patamar, não o robô. Os ensaios de zona morta
+precisam ou de rampa repensada, ou de rodar com a compensação desligada, que é
+onde a zona morta física existe.
