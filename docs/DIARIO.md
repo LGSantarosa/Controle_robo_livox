@@ -1843,3 +1843,72 @@ de escorregamento**: os dois mexem no mesmo número em sentidos opostos (0,32 nu
 robô de 0,270 faz girar 18,5% *a mais*; derrapar faz girar *menos*), e
 `1,185 × 0,82 ≈ 0,97` leria como "quase não derrapa". Na reta a comparação é
 limpa — sem derrapagem, o desvio roda × lidar é raio de roda puro.
+
+## 🧭 2026-07-31 (2ª leva) — Trocar de repositório? A pergunta se dissolve na apuração
+
+Pergunta do dono, com o robô prestes a entregar os primeiros números:
+
+> vale continuar neste repositório ou pegar o `Controle_robo_web`, que já está
+> pronto, e só adaptar a navegação? Aquele já foi todo o sofrimento que talvez a
+> gente sofra tudo aqui de novo.
+
+Fui apurar antes de opinar, e o dado mudou a pergunta: **este repositório já É o
+`Controle_robo_web`.** Clone com histórico completo (decisão 000), 537 commits, e
+o que se chamaria de "reaproveitar o resto" está no working tree hoje —
+`nav2_params_legacy.yaml` (368 linhas), `unstuck_supervisor.py` (1433),
+`motion_guard.py` (683), a árvore de comportamento, o `path_follower` dele. A
+demolição de 14-07 tirou só o que era do robô 1 *como missão*. Migrar de volta
+seria refazer a demolição e reimportar MEGA, LD06 e knobs de skid-steer.
+
+**Mas o medo dele está certo, e o desperdício está acontecendo aqui dentro.**
+Evidência: em 29-07 brigamos com a inflação do Nav2, medimos, e chegamos em
+`inflation_radius: 0.30`. O arquivo do robô 1, dois diretórios ao lado, diz
+`0.25`, testado em campo. Rederivamos por experimento o que estava escrito. Trocar
+de repositório não conserta isso — o arquivo estaria igualmente por ler.
+
+Registrado na **decisão 010**: ficar, e reaproveitar a camada de segurança do
+robô 1 adaptando-a ao Mid-360 em vez de reescrevê-la. Herdar estrutura e
+raciocínio; **re-derivar os números**, porque todos nasceram de um chassi de 4
+rodas — o `collision_monitor` de lá justifica o `angular_limit` com uma zona
+morta de **1,7**, que o `CLAUDE.md` proíbe herdar explicitamente.
+
+### O dono cortou uma simplificação minha, e tinha razão
+
+Eu havia tratado a camada de segurança como bloco. Ele: *"unstuck, motion guard,
+collision monitor são ótimos, não precisam morrer, só serem adaptados para um
+sensor MELHOR"*. Fui ver o acoplamento de cada um, e são três casos distintos:
+
+- **`collision_monitor`** — nó do Nav2, aceita `pointcloud` nativamente. É
+  **config** mais a geometria deste chassi (os polígonos de lá são ±0,25 de
+  meia-largura contra os 0,433 × 0,455 medidos aqui). O mais barato e o que mais
+  ganha com 3D: o anel planar não via obstáculo acima nem abaixo do plano.
+- **`motion_guard`** — assina `scan_safe` **e** `map`, e a parte do
+  `OccupancyGrid` está lá para caçar "fantasma de vidro" do LD06. Com sensor
+  melhor isso não é adaptado, é **deletado**. Boa notícia, mas sobrevive menos
+  código do que parece.
+- **`unstuck_supervisor`** — a ideia é agnóstica e é das melhores do robô 1
+  (recuperar por *não progrediu*, medindo espaço livre antes de dar ré); tanto que
+  a decisão 009 já é isso reescrito. As 1433 linhas é que são moldadas em
+  varredura planar: vão traseiro por ângulo, corredor retangular, varredura
+  girada por −θ.
+
+### O risco que ninguém tinha nomeado ainda
+
+**Nuvem 3D não é drop-in de varredura 2D, e num aspecto é pior.** O Mid-360 tem
+padrão de varredura não repetitivo: num quadro de 100 ms a cobertura é esparsa e
+desigual, não um anel uniforme de bins angulares. Código que pergunta "qual o
+alcance mínimo neste setor angular" recebe resposta instável. Melhor em
+informação, mais difícil nesse padrão de acesso.
+
+Saídas a decidir com dado: acumular quadros, ou projetar um **anel sintético** só
+para a camada de segurança. Isso reabre, em escopo restrito, o `/scan` derivado
+que a 003 descartou — e vale dizer em voz alta que são coisas diferentes: derivar
+2D para **não bater** não é derivar 2D para **se localizar**.
+
+### O levantamento fica agendado, não feito
+
+Tudo acima saiu de `grep`, tamanhos e cabeçalhos — **não** de leitura a fundo.
+Está anotado como próximo passo 5 do `ESTADO_PROJETO.md`, com gatilho explícito:
+roda **quando os dados da bancada chegarem**, porque os polígonos e os limites de
+velocidade a re-derivar dependem da zona morta e do `a_dec` medidos. Fazer antes
+seria produzir número para trocar depois.

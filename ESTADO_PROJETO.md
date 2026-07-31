@@ -667,18 +667,29 @@ números e hoje eles são chute):**
    SIGINT e esperar). Sintoma: pinga e ACKa, RX de ~6 pacotes/3 s, `/livox/lidar`
    mudo. Cura: power-cycle do lidar. Ver a entrada 07-30 (2ª leva) do diário.
 
+**Assim que os dados da bancada chegarem:**
+
+5. **Levantamento da camada de segurança do robô 1** (decisão 010) — ler
+   `collision_monitor`, `motion_guard` e `unstuck_supervisor` arquivo por
+   arquivo e dizer, com número, o que sobrevive ao Mid-360. Expectativa
+   preliminar: o `collision_monitor` é config + geometria deste chassi; o
+   `motion_guard` **encolhe** (parte dele existe para caçar "fantasma de vidro"
+   do LD06); o `unstuck_supervisor` tem a ideia agnóstica e 1433 linhas moldadas
+   em varredura planar. Roda DEPOIS dos dados porque os polígonos e limites a
+   re-derivar dependem da zona morta e do `a_dec` medidos.
+
 **Sem o robô:**
 
-4. ~~Varrer o raio mínimo e julgar o planner.~~ **FEITO 07-29**: 48 planos, o
+6. ~~Varrer o raio mínimo e julgar o planner.~~ **FEITO 07-29**: 48 planos, o
    ranking não vira entre 0,25 m e 0,46 m, e a **decisão 008 está escrita**
    (`docs/decisoes/008-nav2-planeja-nos-seguimos.md`) e **ACEITA pelo dono**.
    O Smac Hybrid-A\* é a escolha oficial; o Theta\* sai.
-5. **Modelo 3D real do robô** no simulador (o dono vai levantar), com o
+7. **Modelo 3D real do robô** no simulador (o dono vai levantar), com o
    Mid-360 no topo. É ele que troca a fonte de obstáculos do mapa estático
    para o sensor, e corrige footprint e bitola do modelo.
-6. **Calibrar o simulador contra o robô** com os números dos ensaios —
+8. **Calibrar o simulador contra o robô** com os números dos ensaios —
    critério: mesma manobra, S de tamanho parecido.
-7. **Seguidor próprio** por cima do plano do Nav2 — destravado pela 008, é a
+9. **Seguidor próprio** por cima do plano do Nav2 — destravado pela 008, é a
    fatia grande seguinte. Carrot no plano, como no robô 1, por cima da
    movimentação da decisão 005.
 
