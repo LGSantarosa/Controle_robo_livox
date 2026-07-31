@@ -83,8 +83,27 @@
   pilhas órfãs publicando em `/Odometry` produziram saltos de ~1,35 m e custaram
   horas de diagnóstico errado.
 
-  ❌ **Não medido:** faixa acima de 0,838 m/s; `reta` com cutucão (recuperação de
-  rumo após perturbação); repetição a n=3.
+  ❌ **O banco está em 2 passos de 6.** Feitos: zona morta de giro e linear.
+  Faltam degrau de giro (3 corridas), curva (3), aceleração (1) e reta com
+  cutucão (4). O `a_dec` e a curva do `MODELO_ROBO2.md` são **substitutos**
+  tirados de rajadas curtas, não os ensaios.
+
+  ⚠️ **Passos 3, 4 e 5 precisam ser REESCRITOS antes de rodar.** Os três varrem
+  velocidade (0,2 / 0,4 / 0,6 m/s) e as três caem dentro do patamar da
+  compensação — dariam o mesmo resultado. A varredura tem de subir acima de
+  0,838 m/s, e isso exige espaço.
+
+  ⚠️ **O modelo só está aferido em rajadas de ~1 s e ~20 cm.** Não há corrida
+  longa e limpa: as duas de 12 s bateram e rodaram com o LIO poluído. Ele
+  descreve arranca-e-para, não percurso sustentado.
+
+  🔧 **Dívida de instrumento:** os scripts de rajada não percebem que o robô
+  sumiu — publicam, gravam linhas em branco e terminam com cara de sucesso (7
+  corridas assim em 07-31, quando a rede caiu). Pôr checagem de `/Odometry` vivo
+  antes e depois de cada rajada, e abortar.
+
+  ➡️ **Próxima sessão, se houver corredor: duas corridas fecham o maior buraco**
+  — o passo 6 (reta com cutucão) e uma reta longa limpa.
 
 ### Medidas ✅ CONFERIDAS COM TRENA (2026-07-29)
 
