@@ -232,6 +232,28 @@
         <param name="wheel_radius">${roda_raio}</param>
         <param name="max_velocity">1.0</param>
         <param name="device">/dev/ttyUSB0</param>
+
+        <!-- ⚠️ ESTE é o bloco que o robô lê. O `hoverboard_driver` também tem
+             um `.ros2_control.xacro` no pacote dele, e ele NÃO é incluído aqui
+             — em 31-07 editei aquele arquivo e o robô ignorou, porque a
+             descrição do robô 2 declara o hardware inline. Parâmetro novo do
+             driver tem de ser acrescentado AQUI. -->
+
+        <!-- Sinal da realimentação, por roda. Os dois motores do hoverboard são
+             montados espelhados: medido empurrando o robô reto com a mão, a
+             esquerda contou +4,681 rad e a direita -4,974. Sem isto a
+             realimentação da direita fica invertida em relação ao comando dela
+             e nenhuma malha fechada é possível. -->
+        <param name="feedback_sign_left">1.0</param>
+        <param name="feedback_sign_right">-1.0</param>
+
+        <!-- Compensação de zona morta do firmware. LIGADA de propósito: sem ela
+             o robô NÃO SAI DO LUGAR na faixa útil (medido em 31-07: v=0,25 andou
+             2 mm em 1,5 s; v=0,50 ficou 0,9 s plantado antes de destravar). A
+             zona morta real do atuador engole a faixa de operação inteira, então
+             é o sistema COM ela que o Gazebo tem de imitar. -->
+        <param name="deadband_enable">true</param>
+        <param name="deadband_speed">100.0</param>
       </hardware>
       <joint name="left_wheel_joint">
         <command_interface name="velocity"/>
