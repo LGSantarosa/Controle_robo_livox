@@ -1,10 +1,40 @@
 # 005 — Lei de frenagem de rumo, piso de linear e detector de plantão
 
 **Data:** 2026-07-27
-**Estado:** aceita
+**Estado:** ⚠️ **EM XEQUE desde 2026-08-01** — a lei está certa; o atuador não a
+executa. Ver o aviso abaixo antes de usar qualquer coisa daqui.
 **Depende de:** [003](003-base-ros2control-e-lio.md), [004](004-simulador-fiel-ao-defeito.md)
 
 ---
+
+> ## ⚠️ 2026-08-01 — o atuador medido não executa esta lei
+>
+> Com a compensação de zona morta do driver ligada (como o robô está hoje), a
+> lei desta decisão **degenera em liga-desliga**. Passando-a pelo atuador medido
+> em 31-07, de **1° a 180°** de erro de rumo:
+>
+> ```
+>  erro de rumo |  a lei PEDE | a placa ENTREGA
+>          1°   |    0.326    |        2.204
+>          5°   |    0.730    |        2.204
+>         45°   |    1.000    |        2.204
+>        180°   |    1.000    |        2.204
+> ```
+>
+> A lei produz um contínuo; a placa entrega **um valor só**, 2,2× maior que o
+> máximo que a lei jamais pediria. A distância de frenagem de rumo
+> `wz²/(2·a_dec)` que motivou esta decisão continua existindo — o que não existe
+> é a capacidade de pedir um `wz` menor.
+>
+> O mesmo vale para `v = √(2·a_lin·dist)` da aproximação (decisão 006) e para o
+> `v_piso`, que fica sem sentido: não há velocidade abaixo do patamar.
+>
+> **Isto não invalida o raciocínio desta decisão** — invalida a premissa de que
+> `cmd_vel` chega no atuador em m/s. A lei volta a valer no dia em que o
+> comando voltar a controlar módulo (ver passos 5 e 6 do `ESTADO_PROJETO.md`).
+> Travado em `test_placa_simulada.py::test_a_lei_de_frenagem_da_005_degenera_em_liga_desliga`.
+
+
 
 ## Contexto
 

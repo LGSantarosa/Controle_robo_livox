@@ -364,7 +364,11 @@ def main():
     # A zona morta entra nos DOIS lados de propósito. Pôr o chute pessimista
     # só no controlador, com a planta otimista, mede uma máquina que não
     # existe: o controlador se defenderia de um defeito que a planta não tem.
-    zona_morta = '0.10' if cfg.perfil == 'sim' else '0.15'
+    # 31-07: a placa deixou de ser "zona morta em m/s" e passou a ser um modelo
+    # de atuador. O perfil otimista vira a placa IDEAL (obedece tudo) e o
+    # pessimista vira a placa MEDIDA no robô — que é bem pior que a zona morta
+    # de 0,15 que se supunha, porque nela o comando nem controla módulo.
+    placa = 'ideal' if cfg.perfil == 'sim' else 'medido'
     sufixo = '_sim' if cfg.perfil == 'sim' else ''
     csv_saida = cfg.csv or (
         f'docs/dados/{time.strftime("%Y-%m-%d")}-bancada-gazebo-'
@@ -382,7 +386,7 @@ def main():
     try:
         procs.sobe(['ros2', 'launch', 'robot_base', 'sim.launch.py',
                     'gui:=false', f'planta:={cfg.planta}',
-                    f'zona_morta:={zona_morta}'], 'gazebo + tração')
+                    f'placa:={placa}'], 'gazebo + tração')
         if not espera_odometria(no):
             print('ERRO: /Odometry nunca chegou — o simulador não subiu.',
                   file=sys.stderr)

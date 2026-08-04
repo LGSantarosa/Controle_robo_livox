@@ -66,7 +66,7 @@ def generate_launch_description():
     sim = LaunchConfiguration('sim')
     mapa = LaunchConfiguration('mapa')
     rviz = LaunchConfiguration('rviz')
-    zona_morta = LaunchConfiguration('zona_morta')
+    placa = LaunchConfiguration('placa')
 
     # O perfil da movimentação segue o do simulador quando `sim:=true`: os dois
     # arquivos diferem na zona morta suposta, e rodar o controlador pessimista
@@ -84,9 +84,9 @@ def generate_launch_description():
         DeclareLaunchArgument('mapa', default_value=MAPA_PADRAO),
         DeclareLaunchArgument('rviz', default_value='true'),
         DeclareLaunchArgument(
-            'zona_morta', default_value='0.10',
-            description='zona morta de RODA da placa simulada [m/s]. CHUTE — '
-                        'o valor real sai do tools/banco (BO-3)'),
+            'placa', default_value='medido',
+            description='modelo do atuador simulado: "medido" (a placa de '
+                        '31-07, com patamar), "cru" ou "ideal"'),
 
         # ---------------------------------------------------- o simulador
         IncludeLaunchDescription(
@@ -97,7 +97,7 @@ def generate_launch_description():
             # Nasce num ponto LIVRE da pista: a origem cai dentro da parede do
             # perímetro, que começa em 0.
             launch_arguments={'mundo': MUNDO_PADRAO, 'x': '2.0', 'y': '5.0',
-                              'zona_morta': zona_morta}.items(),
+                              'placa': placa}.items(),
         ),
 
         # ---------------------------------------------------------- Nav2

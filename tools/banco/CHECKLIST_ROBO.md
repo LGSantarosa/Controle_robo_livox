@@ -163,9 +163,9 @@ desempatou nas duas vezes em que o instrumento mentiu.
 
 | passo | o que mede | estado |
 |---|---|---|
-| 1 | zona morta de GIRO | ✅ 07-31 — 0,095 rad/s (faixa 0,084–0,105) |
+| 1 | zona morta de GIRO | ✅ 07-31 — 0,095 rad/s. ⚠️ **não é atrito** (08-01): é o disparo da compensação + latência da rampa. O atrito segue não medido |
 | 2 | zona morta linear | ✅ 07-31 — 0,023 m/s, **sem patamar** (é "onde rasteja") |
-| 3 | `a_dec` (degrau de giro) | ✅ 08-04, `n=3` — usar a **cauda**, ~1,0 rad/s² |
+| 3 | `a_dec` (degrau de giro) | ✅ 08-04, `n=3` — ~1,0 rad/s² na cauda; vale como **limite de precisão de rumo** (~47° de sobrepasso por pivô), não como ganho |
 | 4 | curva por velocidade | ❌ **precisa ser reescrito** |
 | 5 | aceleração linear | ❌ **precisa ser reescrito** |
 | 6 | reta com cutucão | ✅ 08-04 **em forma corrigida** — ver abaixo |
