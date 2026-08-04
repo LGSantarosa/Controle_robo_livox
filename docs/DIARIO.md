@@ -2998,3 +2998,17 @@ caso ff-errado-25% é coberto por teste de unidade; curva comandada passa
 intocada por unidade, não exercitada na bancada.
 
 13 testes novos na lei (453 verdes no total). Fatias 2-5 abertas.
+
+### O aceite do dono fecha a fatia 1 (e as condições de validade, ditas)
+
+Demonstração com GUI: mesmo comando que fechou o círculo de 494°, agora
+pelo compensador — ida de 4,00 m com 0,0° de giro, volta DE RÉ de 3,99 m
+com 0,0°, bico terminando onde começou. Veredito do dono: **"ficou
+perfeito, se esse código funcionar no robô estamos voando alto."**
+
+Às perguntas dele ("vai funcionar pra sempre? em toda aplicação?"), a
+resposta registrada: NÃO incondicionalmente — as condições estão na 011
+(LIO vivo, senão passa reto e grita; planta até ~25% do ff, senão re-medir;
+compensação do driver ligada, senão a 011 reabre) — e vale para TUDO que
+passar pela porta, que hoje é opcional (fatia 5 a torna obrigatória).
+O juiz de verdade segue sendo a fatia 4, no robô.
