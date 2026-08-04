@@ -992,10 +992,46 @@ números e hoje eles são chute):**
 11. **Modelo 3D real do robô** no simulador (o dono vai levantar), com o
    Mid-360 no topo. É ele que troca a fonte de obstáculos do mapa estático
    para o sensor, e corrige footprint e bitola do modelo.
-12. **Calibrar o simulador contra o robô** — ~~critério: mesma manobra, S de
-   tamanho parecido~~. **O critério deixou de ser impressão e virou número**
-   (08-04): as seis corridas de reta do robô são o alvo. Plano em três passos,
-   nesta ordem, tudo sem robô:
+12. ~~**Calibrar o simulador contra o robô**~~ ✅ **FEITO 08-04 (2ª leva)** —
+   **12a e 12b fechados; 12c segue aberto.** O simulador arca como o robô arca,
+   medido com o mesmo instrumento nos dois lados (n=3 por sentido):
+
+   ```
+                   SIMULADOR        ROBO (04-08)
+   frente          -0,817 1/m       -0,838 1/m
+   re              -0,109           -0,113
+   razao               7,5x             7,4x
+   ```
+
+   As três caem dentro da dispersão do próprio robô. Dado e leitura em
+   `docs/dados/2026-08-04-aceitacao-simulador/`; entrada 08-04 (2ª leva) do
+   diário. Antes disso ele dava −0,419 de frente e **zero** de ré.
+
+   🔴 **O ponto de partida escrito abaixo estava errado**: dizia que o
+   simulador reproduzia "~1×". Isso era de 28-07 — a reescrita de 01-08 já
+   tinha assimetria por sentido. O real era **∞×** (ré perfeitamente reta).
+
+   🔴 **Um defeito meu, que só a corrida no Gazebo pegou:** inverti os
+   parâmetros com `curvatura = wz/v` (v com sinal) enquanto a bancada mede
+   `Δyaw/caminho` (sem sinal). As duas convenções concordam de frente e **se
+   opõem de ré** — o simulador arcava para o lado errado indo de ré, com a
+   **suíte verde**, porque o helper do teste usava a mesma convenção do erro.
+   Régua e objeto medidos com o mesmo viés, igual à régua do planner em 29-07.
+   Conserto de raiz: os parâmetros do nó passaram a ser a **curvatura medida** e
+   a assimetria de roda é **derivada** (`a = −2cL/(2s + cL)`), então o sinal da
+   ré sai sozinho.
+
+   ⚠️ **`rendimento_giro: 0.80`** (novo): o Gazebo entrega 80% do giro pedido —
+   é derrapagem do contato simulado (bate com os 79–86% de 29-07), **não é do
+   robô**. Mexer em atrito, massa ou planta do Gazebo obriga a **refazer a
+   corrida de aceitação**.
+
+   ⚠️ **`ensaio.py` ganhou `--topico`**, e no simulador ele é obrigatório: sem
+   `--topico /cmd_vel_bruto` o ensaio publica direto no controlador e **passa
+   por fora da placa fingida** — era a limitação anotada em 31-07 ("o Gazebo
+   provou o mecanismo, não o número").
+
+   **Plano original, para registro:**
 
    **12a. Injetar o arco dependente de SENTIDO** no `placa_simulada.py` (ou logo
    acima dele): `−0,82 1/m` indo para a frente, `−0,10 1/m` de ré. O atuador
@@ -1028,6 +1064,17 @@ números e hoje eles são chute):**
    controlador parecer mais repetível do que vai ser — que é a forma clássica de
    o simulador enganar. Fica por último porque é decisão de projeto, não de
    ajuste.
+
+   ⏳ **SEGUE ABERTO, e agora com número dos dois lados** (08-04, 2ª leva):
+
+   ```
+                    dispersao SIM   dispersao ROBO
+   frente                4%              21%
+   re                    0%              37%   (0,0002 contra 0,04 absoluto)
+   ```
+
+   O simulador é determinista demais. Decidir se entra ruído, e de que tipo,
+   é decisão de projeto — não foi tomada.
 
    **O que o simulador NÃO vai cobrir, e é para estar escrito no `README` dele:**
    acima de **0,838 m/s** nunca foi medido (é onde o comando volta a ser
@@ -1119,9 +1166,20 @@ inertes o standdown de porta no `unstuck_supervisor` e o `cone_pose_fix.py`.
   também está excluído, porque daria a mesma curvatura nos dois sentidos.
 
   **Isso vira o critério (c) em teste com número:** o simulador tem de
-  reproduzir **8,3× de assimetria entre frente e ré**. Hoje ele reproduz ~1×
-  (ré e ida deram idênticas), então a distância entre modelo e robô está
-  medida, não mais suposta.
+  reproduzir **8,3× de assimetria entre frente e ré**. ~~Hoje ele reproduz ~1×
+  (ré e ida deram idênticas)~~ — essa frase era de 28-07 e já estava vencida.
+
+  ✅ **CRITÉRIO (c) ATENDIDO em 08-04 (2ª leva)**: o simulador entrega **7,5×**
+  contra **7,4×** do robô, com as curvaturas dos dois sentidos dentro da
+  dispersão da máquina (`docs/dados/2026-08-04-aceitacao-simulador/`).
+
+  ⚠️ **Mas o BO-4 NÃO fecha com isso**, e é importante não confundir: o arco
+  entra no simulador **disfarçado de assimetria de roda**, porque a placa só
+  tem rodas para escrever. Metade do arco de frente, no robô, **não está nas
+  rodas** — a assimetria necessária é 24,8% e o encoder de 31-07 mediu 11–12%.
+  O modelo reproduz o **sintoma**; o critério (b) (a causa do garfo não
+  alinhar) segue intocado, e o preço é que **o encoder simulado mente** — o que
+  quebra no dia em que ligarem `open_loop: false`.
 
   ⚠️ **Falta ainda o vídeo da traseira** — foi filmado em 08-04 mas não trazido
   para o repo. É a única evidência direta do garfo, e sem ela o critério (b)

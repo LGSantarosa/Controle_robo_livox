@@ -1,0 +1,96 @@
+corrida de ACEITACAO do simulador — 2026-08-04
+==============================================
+
+O passo 12b do ESTADO: o simulador tem de reproduzir o arco que o robô fez em
+04-08. Nao e impressao, e numero — e o numero e a CURVATURA.
+
+maquina    : PC de desenvolvimento (nao o NUC)
+Gazebo     : Harmonic, headless (gui:=false), planta padrao "lenta"
+placa      : placa_simulada modelo "medido"
+comando    : ensaio.py --ensaio reta --v +-0.25 --wz 0 --dur 12 --espaco 1.2
+             --janela 0.5 --sim --topico /cmd_vel_bruto
+leitura    : medir.py --resumo curvatura
+processos  : conferido 1 placa_simulada viva antes de cada leva (em 01-08
+             quatro placas orfas falsearam uma prova inteira)
+
+⚠️ O `--topico /cmd_vel_bruto` e obrigatorio e e NOVO. O ensaio.py publicava
+direto em /hoverboard_base_controller/cmd_vel, que no simulador passa POR FORA
+da placa fingida — foi o que fez a validacao de 31-07 provar "o mecanismo, nao
+o numero". Sem essa flag esta corrida mediria um robo sem atuador.
+
+
+RESULTADO — n=3 por sentido
+----------------------------
+                    SIMULADOR          ROBO (04-08)      alvo do modelo
+  frente          -0.817 1/m          -0.838 1/m           -0.817
+                  faixa -0.86 a -0.79  faixa -0.93 a -0.75
+  re              -0.109 1/m          -0.113 1/m           -0.098
+                  faixa -0.109 a -0.109
+  razao frente/re      7.5x                7.4x                8.3x
+
+As tres grandezas caem dentro da dispersao do proprio robo. O simulador deixou
+de ser "parecido" e passou a ser comparavel por numero.
+
+Antes desta sessao ele dava -0.419 de frente e ZERO de re (razao infinita).
+
+
+O QUE A CORRIDA PEGOU, E QUE NENHUM TESTE PEGOU
+------------------------------------------------
+A primeira tentativa (arquivos ANTES-sinal-errado-*.csv) saiu com a re
+arcando para o LADO ERRADO:
+
+  frente  -0.654 1/m   (sinal certo, 80% da magnitude)
+  re      +0.088 1/m   <-- SINAL TROCADO, alvo era -0.098
+
+Causa: duas convencoes de curvatura que concordam de frente e se OPOEM de re.
+
+  wz / v        (v com sinal)     -> usada ao inverter os parametros
+  Δyaw / caminho (caminho sem sinal) -> usada pela bancada, no medir.py
+
+Na re, v e negativo e caminho e positivo: o mesmo movimento le com sinais
+opostos. A suite estava VERDE porque o helper do teste usava a convencao
+errada, a mesma do erro. Regua e coisa medida junto com o objeto — foi o
+mesmo tipo de defeito da regua do planner em 29-07.
+
+Conserto: os parametros do no passaram a ser a CURVATURA MEDIDA
+(curvatura_frente / curvatura_re) e a assimetria de roda e DERIVADA por
+
+    a = -2cL / (2s + cL)        s = +1 frente, -1 re
+
+O `s` no denominador faz a assimetria sair NEGATIVA na re sozinha. Ninguem
+mais escreve sinal a mao.
+
+
+A DERRAPAGEM DO GAZEBO ENTROU COMO PARAMETRO
+---------------------------------------------
+Mesmo com o sinal certo, o corpo simulado arcava ~20% menos do que a placa
+pedia: medido -0.654 contra -0.817 pedidos = 80%. Bate com o deficit de giro
+medido em 29-07 (79-86%), que e derrapagem do contato simulado — nao e do
+robo.
+
+Entrou como `rendimento_giro: 0.80`. No robo real o equivalente e 1.0.
+
+⚠️ Isso e uma correcao DO SIMULADOR, dentro do modelo do atuador. Se alguem
+mexer no atrito das rodas, na massa ou na planta do Gazebo, este numero muda e
+esta corrida precisa ser refeita.
+
+
+O QUE ESTA CORRIDA NAO FECHA
+-----------------------------
+1. DISPERSAO (item 12c). O simulador e determinista demais:
+       frente  4% de dispersao contra 21% do robo
+       re      0% (0.0002 em absoluto) contra 37% do robo (0.04 absoluto)
+   Um simulador que devolve sempre o mesmo numero faz qualquer controlador
+   parecer mais repetivel do que vai ser. Decisao de projeto, ainda aberta.
+
+2. So foi medido a 0.25 m/s, dentro do patamar da compensacao. Acima de
+   0.838 m/s nada nunca foi medido, nem no robo nem aqui.
+
+3. O MECANISMO continua fora do modelo (BO-4). O arco entra pelas rodas
+   porque a placa so tem rodas para escrever; metade dele, no robo, nao esta
+   nas rodas. Consequencia registrada no cabecalho do placa_simulada.py: o
+   encoder simulado MENTE, e isso quebra no dia em que ligarem open_loop:false.
+
+4. Percurso de 1.2 m, como o do robo. A corrida frente-a do robo (3.7 m) deu
+   curvatura mais forte (-1.15): pode ser que o arco APERTE com a distancia.
+   Nao investigado nem la nem aqui.

@@ -2755,3 +2755,133 @@ comando. Piso, não sintonia — nenhum ganho conserta isso.
 compensação (`mx > 1.0` → `wz > 0,0621`) somado à latência sobre a rampa, não
 atrito. Descreve o sistema, não a máquina. **O atrito segue não medido**, e com
 a compensação ligada 08-04 também não conseguiu medi-lo.
+
+## 🪞 2026-08-04 (2ª leva) — O simulador passa a arcar como o robô arca
+
+Sessão sem robô, em cima dos seis CSV de reta da leva da manhã. É o passo 12
+do ESTADO (calibrar o simulador contra o robô), e ele fechou — com um defeito
+meu no meio que só a corrida no Gazebo pegou.
+
+**Dado:** `docs/dados/2026-08-04-aceitacao-simulador/` (CSV + `leitura.txt`).
+
+### O ponto de partida não era o que o ESTADO dizia
+
+O item 12 afirmava que o simulador reproduzia "~1×" de assimetria entre frente
+e ré. Isso era verdade em **28-07**; a reescrita do `placa_simulada.py` de
+01-08 já tinha posto assimetria dependente de sentido. Medido de verdade,
+rodando as funções do nó:
+
+```
+                 simulador de ontem      robô (04-08)
+frente               -0,419 1/m           -0,838 1/m
+ré                    0,000               -0,113
+razão                    ∞                    7,4x
+```
+
+Não era 1×, era **infinito** — ré perfeitamente reta. E errava nas duas
+pontas em sentidos opostos do erro.
+
+### Refiz as medidas do robô do CSV cru, e o registro se sustenta
+
+Par matched (b,c), `curvatura = Δyaw/caminho`: frente **−0,838**, ré
+**−0,113**, razão **7,4×**, parcela só-de-frente **86%**. Contra o registrado
+(−0,817 / −0,098 / 8,3× / 88%). A diferença é janela de amostras e cabe dentro
+dos 21% de dispersão do próprio robô. **O `ambiente.txt` de manhã é confiável.**
+
+### O achado: metade do arco de frente não está nas rodas
+
+Invertendo `curvatura = −2a/(L(2+a))`, a assimetria de roda necessária é
+**24,8% de frente**. O encoder de 31-07 mediu **11–12%**. Ou seja: o corpo arca
+o dobro do que as velocidades de roda explicam. É a quarta evidência
+independente apontando para um termo de **corpo** (a boba), e num nível que nem
+31-07 nem a leva da manhã tinham cruzado.
+
+Consequência escrita no cabeçalho do nó: o arco entra **disfarçado de roda**,
+porque a placa só tem rodas para escrever. O **encoder simulado passa a
+mentir** (25% onde o robô tem 11–12%), o que é inofensivo hoje (`open_loop`) e
+**quebra no dia em que ligarem `open_loop: false`** — que é item aberto.
+
+### 🔴 O defeito: duas convenções de curvatura, e a ré espelhada
+
+Primeira corrida de aceitação no Gazebo:
+
+```
+frente  -0,654 1/m   sinal certo, 80% da magnitude
+ré      +0,088 1/m   SINAL TROCADO (alvo -0,098)
+```
+
+Causa: inverti os parâmetros com `curvatura = wz/v` (v **com** sinal) enquanto
+a bancada mede `Δyaw/caminho` (caminho **sem** sinal). De frente as duas
+concordam; **de ré elas dão sinais opostos**. O robô simulado arcava para o
+lado errado indo de ré.
+
+**A suíte estava verde** — porque o helper do teste usava a mesma convenção
+errada do defeito. É o mesmo tipo de erro da régua do planner em 29-07: régua e
+objeto medidos juntos, com o mesmo viés, e o erro fica invisível. **Só a
+corrida no Gazebo pegou.**
+
+Conserto de raiz: os parâmetros do nó deixaram de ser assimetria e passaram a
+ser a **curvatura medida** (`curvatura_frente`, `curvatura_re`, os números da
+bancada copiados sem conversão). A assimetria de roda é **derivada**:
+
+```
+a = -2cL / (2s + cL)          s = +1 frente, -1 ré
+```
+
+O `s` no denominador faz a assimetria sair **negativa na ré** sozinha. Ninguém
+mais escreve sinal à mão, e o arquivo passou a conter os números da bancada em
+vez de números convertidos.
+
+### A derrapagem do Gazebo virou parâmetro nomeado
+
+Com o sinal certo, o corpo simulado ainda arcava **80%** do que a placa pedia
+(−0,654 contra −0,817). Bate com o déficit de giro medido em 29-07 (79–86%) —
+é derrapagem do contato simulado, **não é do robô**. Entrou como
+`rendimento_giro: 0.80`, com o aviso de que no robô real o equivalente é 1,0 e
+de que mexer em atrito/massa/planta do Gazebo obriga a refazer esta corrida.
+
+### O resultado, n=3 por sentido
+
+```
+                SIMULADOR        ROBÔ (04-08)
+frente          -0,817 1/m       -0,838 1/m
+ré              -0,109           -0,113
+razão               7,5x             7,4x
+```
+
+As três grandezas caem dentro da dispersão do próprio robô.
+
+### Duas dívidas de instrumento pagas no caminho
+
+- **`ensaio.py --topico`**: ele publicava direto em
+  `/hoverboard_base_controller/cmd_vel`, que no simulador **passa por fora da
+  placa fingida**. Era a limitação anotada em 31-07 ("o Gazebo provou o
+  mecanismo, não o número"). Sem essa flag a corrida de aceitação mediria um
+  robô sem atuador.
+- **O dublê do `test_placa_simulada.py` copiava os defaults do nó à mão.**
+  Mudei o fonte e os 8 testes seguiram verdes descrevendo o robô antigo. Passou
+  a ler o `declare_parameters` do fonte via `ast`; mutação confirma (repondo
+  0,12, dois testes quebram).
+
+### A curvatura virou instrumento (`medir.py curvatura`)
+
+Ela só existia como prosa no `ambiente.txt` da manhã. Agora roda igual em CSV
+do robô e do simulador, que é o que torna os dois comparáveis, e tem regressão
+contra os seis CSV crus versionados. Mutação: trocando o acúmulo de yaw pelo
+`atan2` entre pontas, o arco de 242° lê **+0,555** — magnitude e sinal errados,
+o defeito de `7a0c364`. O teste pega.
+
+**440 testes verdes** (eram 429).
+
+### O que NÃO fechou
+
+1. **Dispersão (12c) segue aberta, e agora com número**: o simulador dá 4% de
+   dispersão de frente contra 21% do robô, e **0%** na ré contra 37%. Ele é
+   determinista demais e faz qualquer controlador parecer mais repetível do que
+   vai ser.
+2. Medido só a **0,25 m/s**, dentro do patamar. Acima de 0,838 m/s ninguém
+   mediu nada, nem no robô nem aqui.
+3. O **mecanismo** continua fora (BO-4): o modelo reproduz o sintoma.
+4. Percurso de 1,2 m. A corrida de 3,7 m do robô deu arco mais forte (−1,15):
+   a hipótese "o arco aperta com a distância" não foi testada em nenhum dos
+   dois lados.
