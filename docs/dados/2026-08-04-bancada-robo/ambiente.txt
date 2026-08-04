@@ -195,3 +195,49 @@ de ~10 m, que o seguidor tem de fechar em malha fechada de rumo.
 
 6-reta_re-c.csv       --v -0.25 --wz 0 --dur 12 --espaco 1.2 --janela 0.5
                       317 amostras. Repeticao matched de re (bico a -178°).
+
+
+=========================================================================
+PASSO 3 — DEGRAU DE GIRO (a_dec angular), n=1
+=========================================================================
+Rodado com --v 0 (PIVO PURO), e nao com o --v 0.3 do protocolo. Razao: com a
+curvatura de frente medida hoje (-0.82 1/m), andar a 0.3 m/s injeta -0.25 rad/s
+de guinada espuria que CONTINUA depois do corte. O ensaio leria "ele nunca para
+de girar" e devolveria a_dec errado — o defeito disfarcado de fisica.
+
+O patamar da compensacao (que mata os passos 4 e 5) NAO atinge este ensaio: o
+a_dec e medido com o comando em ZERO, e compensacao so age enquanto ha comando.
+
+Calculado do yaw DESENROLADO, nao pelo medir.py — ele usa o mesmo atan2 que
+enrola em +-180°, e o pivo passa disso com folga.
+
+  comando 0.6 rad/s -> pico real 2.226 rad/s      (3.7x inflado; 31-07 viu 2.8-3.5x)
+  o pico acontece 0.40 s DEPOIS do corte          (a latencia da placa, de novo)
+  inercia: 53.0° em 1.48 s
+
+  a_dec EFETIVO (preve o sobrepasso total) = 2.68 rad/s^2
+  a_dec medio                              = 1.50 rad/s^2
+
+  perfil, e NAO e constante:
+    2.23 -> 1.90 rad/s   a = 1.09
+    1.90 -> 1.20         a = 2.33
+    1.20 -> 0.58         a = 2.07
+    0.58 -> 0.24         a = 1.14
+    0.24 -> 0.03         a = 0.70   <- a CAUDA
+
+O substituto do MODELO_ROBO2.md (3.05, de rajada curta) nao errou o valor
+EFETIVO (2.68 medido, 12% abaixo). Mas a lei de frenagem assume a_dec constante,
+e na CAUDA — onde o robo tem de assentar no rumo — ela vale 0.70, ou seja 4x
+menos que o substituto.
+
+Encosta direto no achado de 27-07 no simulador: "errar o a_dec para baixo e de
+graca; chutar para cima traz o S de volta" (com 5x otimista o S voltava).
+=> O SEGUIDOR DEVE USAR A CAUDA (~0.7 a 1.1 rad/s^2), nao o efetivo e muito
+   menos o substituto de 3.05.
+
+RESSALVA: n=1. E a varredura em wz (0.3/0.6/1.0) do protocolo nao foi feita —
+provavelmente colapsa, porque o pivo sai inflado igual nos tres niveis.
+
+
+3-degrau_giro-a.csv   --ensaio degrau_giro --v 0 --wz 0.6 --dur 9 --espaco 1.0
+                      --janela 0.5.  451 amostras, concluido (nao bateu trava).
