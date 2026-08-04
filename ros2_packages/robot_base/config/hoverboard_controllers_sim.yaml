@@ -68,11 +68,29 @@ hoverboard_base_controller:
     linear.x.max_jerk: 0.0
     linear.x.min_jerk: 0.0
 
+    # ⚠️ AQUI O SIMULADOR DIVERGE DO ROBÔ DE PROPÓSITO — e é para não divergir
+    # no que importa. No robô a ordem da cadeia é
+    #
+    #     cmd_vel -> diff_drive_controller (corta em 1,0) -> DRIVER (compensa
+    #     a zona morta, e o patamar sobe para ~2,20 rad/s) -> rodas
+    #
+    # ou seja o corte acontece ANTES da compensação, e a compensação passa por
+    # cima dele: em 04-08 o robô girou 2,23 / 2,51 / 2,25 rad/s com este mesmo
+    # 1,0 no arquivo. No simulador a placa fingida é um nó SEPARADO e vem
+    # ANTES do controlador, então o corte cai DEPOIS da compensação e desfaz
+    # justamente o que a placa existe para modelar.
+    #
+    # Medido com 1,0 aqui: pico de 0,45 rad/s contra 2,33 do robô — 5x menos,
+    # e o pivô do simulador virava outra máquina.
+    #
+    # 2,204 é o patamar (100 unidades x 0,0372 rad/s/unidade, sobre a bitola);
+    # 3,0 deixa folga para não raspar no teto. Mudar `deadband_speed` ou
+    # `escala_real` na placa move o patamar e este número tem de acompanhar.
     angular.z.has_velocity_limits: true
     angular.z.has_acceleration_limits: true
     angular.z.has_jerk_limits: false
-    angular.z.max_velocity: 1.0
-    angular.z.min_velocity: -1.0
+    angular.z.max_velocity: 3.0
+    angular.z.min_velocity: -3.0
     angular.z.max_acceleration: 1.5
     angular.z.min_acceleration: -1.5
     angular.z.max_jerk: 0.0
