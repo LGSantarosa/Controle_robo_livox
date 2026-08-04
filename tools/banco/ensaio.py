@@ -94,6 +94,13 @@ class Ensaio(Node):
 
         self.pose = None
         self.roda = None
+        # QUANDO cada fonte falou pela última vez. Guardar só a mensagem não
+        # basta: se o /Odometry morre no meio da corrida, `self.pose` congela no
+        # último valor, a derivada passa a dar 0,0 e o ensaio termina inteiro
+        # com pose repetida e cara de sucesso. Foi o que aconteceu em 31-07,
+        # quando a rede caiu e 7 corridas fecharam com "205 amostras".
+        self.t_pose = None
+        self.t_roda = None
         self.janela = cfg.janela
         self.hist = deque()          # (t, x, y, yaw) para diferenciar
         self.hist_roda = deque()     # a mesma coisa, pela odometria de roda
@@ -104,6 +111,7 @@ class Ensaio(Node):
         self.linhas = []
         self.fim = False
         self.motivo = 'concluído'
+        self.normal = True       # o fim foi um fim, ou foi um aborto?
 
         # Estado do dente de serra (só os ensaios de zona morta usam).
         self.dente = 0
@@ -117,9 +125,11 @@ class Ensaio(Node):
 
     def cb_pose(self, msg):
         self.pose = msg
+        self.t_pose = self.agora()
 
     def cb_roda(self, msg):
         self.roda = msg
+        self.t_roda = self.agora()
 
     def agora(self):
         return self.get_clock().now().nanoseconds * 1e-9
@@ -184,7 +194,7 @@ class Ensaio(Node):
             dt = 1.0 / c.taxa
 
         if self.dente >= c.dentes:
-            self.parar(f'{c.dentes} dentes concluídos')
+            self.parar(f'{c.dentes} dentes concluídos', normal=True)
             return 0.0
 
         taxa = c.rampa_ate / c.rampa_seg
@@ -229,7 +239,7 @@ class Ensaio(Node):
                 # andar antes de parar gravava uma linha de um dente que nunca
                 # existiu, e a leitura a contava como "não saiu do lugar".
                 if self.dente >= c.dentes:
-                    self.parar(f'{c.dentes} dentes concluídos')
+                    self.parar(f'{c.dentes} dentes concluídos', normal=True)
                     return 0.0
                 self.fase, self.gatilho = 'sobe', None
 
@@ -327,6 +337,20 @@ class Ensaio(Node):
             return
         self.t_ant = te
 
+        # Trava de dado parado: a corrida já começou, então a fonte que vira o
+        # dente TEM de continuar falando. Congelada, ela não devolve erro
+        # nenhum — devolve velocidade zero, que é uma leitura plausível, e é
+        # justamente por isso que a corrida inteira sai com cara de medida.
+        # Vale só para a fonte que decide; a outra é registro, e o CSV já
+        # aceita coluna vazia.
+        fonte, t_fonte = (('/hoverboard_base_controller/odom', self.t_roda)
+                          if self.cfg.fonte == 'roda'
+                          else ('/Odometry', self.t_pose))
+        if t_fonte is not None and t - t_fonte > self.cfg.sem_dado:
+            self.parar(f'{fonte} calou por {t - t_fonte:.1f} s — corrida '
+                       f'ABORTADA, o que já foi gravado não é medida')
+            return
+
         x = y = yaw = None
         v_pose = wz_pose = 0.0
         if self.pose is not None:
@@ -353,7 +377,7 @@ class Ensaio(Node):
                 self.parar(f'estourou o espaço de {self.cfg.espaco:.1f} m')
                 return
         if te > self.cfg.dur:
-            self.parar('concluído')
+            self.parar('concluído', normal=True)
             return
 
         if self.cfg.fonte == 'roda':
@@ -388,8 +412,13 @@ class Ensaio(Node):
             'v_roda': round(v_roda, 4), 'wz_roda': round(wz_roda, 4),
         })
 
-    def parar(self, motivo):
+    def parar(self, motivo, normal=False):
+        """`normal=True` só para os dois fins legítimos (teto de tempo e dentes
+        fechados). Todo o resto é aborto, e aborto tem de chegar ao `sessao.py`
+        como código de saída — ele já para e pergunta (`sessao.py`, o `if
+        roda(cmd, log) != 0`); o que faltava era alguém devolver o erro."""
         self.motivo = motivo
+        self.normal = normal
         self.publica(0.0, 0.0)
         self.fim = True
 
@@ -409,6 +438,7 @@ class Ensaio(Node):
             fonte = ('/Odometry' if self.cfg.fonte == 'lio'
                      else '/hoverboard_base_controller/odom')
             print(f'sem dados — o {fonte} chegou?', file=sys.stderr)
+            self.normal = False
             return
         with open(self.cfg.csv, 'w', newline='') as f:
             w = csv.DictWriter(f, fieldnames=list(self.linhas[0].keys()))
@@ -449,6 +479,12 @@ def main():
                     help='segundos de 0 até --rampa-ate: é a TAXA da rampa. '
                          'Subir mais rápido infla o limiar medido pelo atraso '
                          'de detecção — mexer aqui é mexer no número')
+    ap.add_argument('--sem-dado', dest='sem_dado', type=float, default=1.0,
+                    help='segundos sem mensagem nova da fonte antes de ABORTAR '
+                         'a corrida [s]. O /Odometry vem a 10 Hz no robô, '
+                         'então 1,0 s são 10 amostras perdidas — e como a '
+                         '--janela no robô é 0,5 s, um buraco desse tamanho já '
+                         'invalida toda derivada da janela')
     ap.add_argument('--janela', type=float, default=JANELA_S,
                     help='janela da derivação da pose [s]. 0,2 serve para o '
                          'simulador (50 Hz); no robô, com /Odometry a 10 Hz, '
@@ -477,11 +513,16 @@ def main():
             rclpy.spin_once(no, timeout_sec=0.1)
     except KeyboardInterrupt:
         no.motivo = 'interrompido no teclado'
+        no.normal = False
     finally:
         no.grava()
+        ok = no.normal
         no.destroy_node()
         rclpy.shutdown()
+    # Corrida abortada sai com erro para o `sessao.py` PARAR e perguntar. Sem
+    # isso ela some no meio de 27 corridas e só aparece na análise, em casa.
+    return 0 if ok else 1
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

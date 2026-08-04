@@ -13,6 +13,8 @@ import csv
 import importlib.util
 import math
 import os
+import types
+from collections import deque
 
 import pytest
 
@@ -47,8 +49,9 @@ class Dubles:
         self.fim = False
         self.motivo = None
 
-    def parar(self, motivo):
+    def parar(self, motivo, normal=False):
         self.motivo = motivo
+        self.normal = normal
         self.fim = True
 
 
@@ -426,3 +429,127 @@ def test_rastejo_de_eixo_no_giro_nao_vira_zona_morta():
     r = csv_dente([0.032] * 4, [0.012] * 4, campo_cmd='cmd_wz',
                   campo_med='wz_roda', movendo=0.035)
     assert medir.LEITURAS('roda')['zona_morta_giro'](r) is None
+
+
+# ----------------------------------------------------- trava de dado parado
+
+class PoseFalsa:
+    """O mínimo de `nav_msgs/Odometry` que o `passo()` lê."""
+
+    def __init__(self, x=0.0, y=0.0, yaw=0.0):
+        q = types.SimpleNamespace(x=0.0, y=0.0,
+                                  z=math.sin(yaw / 2), w=math.cos(yaw / 2))
+        self.pose = types.SimpleNamespace(pose=types.SimpleNamespace(
+            position=types.SimpleNamespace(x=x, y=y), orientation=q))
+        self.twist = types.SimpleNamespace(twist=types.SimpleNamespace(
+            linear=types.SimpleNamespace(x=0.0),
+            angular=types.SimpleNamespace(z=0.0)))
+
+
+class DublesPasso:
+    """Dublê do nó para exercitar o `passo()` sem subir ROS.
+
+    O relógio é nosso (`relogio`), então dá para simular a fonte calando: basta
+    andar com o tempo e NÃO mexer no `t_pose`.
+    """
+
+    def __init__(self, **kw):
+        cfg = dict(ensaio='reta', fonte='lio', espaco=4.0, dur=20.0,
+                   sem_dado=1.0, taxa=50.0, v=0.3, wz=0.5, bitola=0.270,
+                   rampa_ate=1.0, rampa_seg=20.0, dentes=4, janela=0.5)
+        cfg.update(kw)
+        self.cfg = argparse.Namespace(**cfg)
+        self.relogio = 0.0
+        self.pose = PoseFalsa()
+        self.roda = None
+        self.t_pose = 0.0
+        self.t_roda = None
+        self.janela = self.cfg.janela
+        self.hist = deque()
+        self.hist_roda = deque()
+        self.t0 = self.p0 = self.p0_roda = None
+        self.t_ant = -1.0
+        self.linhas = []
+        self.fim = False
+        self.motivo = 'concluído'
+        self.normal = True
+        self.dente, self.fase, self.nivel = 0, 'sobe', 0.0
+        self.te_cmd = self.gatilho = None
+        self.eventos = []
+        self.publicados = []
+
+    def agora(self):
+        return self.relogio
+
+    def publica(self, v, wz):
+        self.publicados.append((v, wz))
+
+    derivada = ensaio.Ensaio.derivada
+    comando = ensaio.Ensaio.comando
+    parar = ensaio.Ensaio.parar
+
+
+passo = ensaio.Ensaio.passo
+
+
+def roda_passo(no, segundos, fonte_viva=True, dt=0.02):
+    """Avança a corrida. `fonte_viva=False` congela a pose, como a rede caindo."""
+    fim = no.relogio + segundos
+    while no.relogio < fim and not no.fim:
+        no.relogio += dt
+        if fonte_viva:
+            # 0,05 m/s: devagar de propósito, senão a corrida longa bate na
+            # trava de ESPAÇO (4 m) antes do teto de tempo e o teste passaria a
+            # medir a trava errada.
+            no.pose = PoseFalsa(x=0.05 * no.relogio)
+            no.t_pose = no.relogio
+        passo(no)
+
+
+def test_fonte_que_cala_no_meio_aborta_a_corrida():
+    """O defeito de 31-07: a rede caiu, `self.pose` congelou no último valor, a
+    derivada passou a devolver 0,0 — leitura plausível — e as corridas fecharam
+    inteiras com 'concluído' e cara de sucesso. Sete saíram assim."""
+    no = DublesPasso(dur=20.0, sem_dado=1.0)
+    roda_passo(no, 3.0)
+    assert not no.fim and len(no.linhas) > 100, 'a corrida tem de ter começado'
+
+    roda_passo(no, 5.0, fonte_viva=False)
+    assert no.fim, 'fonte calada tem de ABORTAR, não completar a corrida'
+    assert 'calou' in no.motivo and '/Odometry' in no.motivo
+    assert not no.normal, 'aborto tem de virar código de saída para o sessao.py'
+    assert no.publicados[-1] == (0.0, 0.0), 'e o robô tem de parar'
+
+
+def test_aborta_antes_de_gravar_a_corrida_inteira():
+    """Não basta abortar: tem de abortar CEDO. Se ele só percebesse no fim, o
+    CSV já teria os 20 s e a corrida passaria por medida na análise."""
+    no = DublesPasso(dur=20.0, sem_dado=1.0)
+    roda_passo(no, 2.0)
+    n_vivo = len(no.linhas)
+    roda_passo(no, 10.0, fonte_viva=False)
+    congeladas = (len(no.linhas) - n_vivo) * 0.02
+    # Uma volta de malha de folga sobre a trava; e MUITO longe dos 10 s que
+    # sobravam de corrida, que é o que ele gravaria sem a trava.
+    assert congeladas <= no.cfg.sem_dado + 0.02, (
+        f'gravou {congeladas:.2f} s de pose congelada; a trava é de '
+        f'{no.cfg.sem_dado} s')
+
+
+def test_fonte_viva_nao_e_abortada():
+    """A trava não pode matar corrida boa: com a fonte falando, os 20 s inteiros
+    têm de rodar e terminar como fim NORMAL."""
+    no = DublesPasso(dur=20.0, sem_dado=1.0)
+    roda_passo(no, 25.0)
+    assert no.fim and no.motivo == 'concluído'
+    assert no.normal, 'fim normal não pode virar erro para o sessao.py'
+
+
+def test_corrida_que_nem_comecou_nao_dispara_a_trava():
+    """Antes da primeira mensagem não há o que estar parado — quem trata esse
+    caso é o `grava()`, que já diz 'sem dados'. A trava aqui só confundiria."""
+    no = DublesPasso()
+    no.pose = None
+    no.t_pose = None
+    roda_passo(no, 5.0, fonte_viva=False)
+    assert not no.fim and no.linhas == []
