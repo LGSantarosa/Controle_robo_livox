@@ -2942,3 +2942,16 @@ planta, teto ou atrito — está escrito no `leitura.txt` e agora aqui.
 
 O sobrepasso segue 2× (atraso de desliga, pendência estrutural conhecida) e a
 dispersão segue 0–3% contra 21–37% do robô (12c). 440 testes verdes.
+
+### O veredito do dono, ao vivo (fecha a 4ª leva)
+
+Demonstração com GUI, as três manobras em malha aberta na frente do dono:
+reto por 35 s (fechou círculo de 1,27 m, girou 494°), ré (16° em 3 m,
+raio 10,9 m) e pivô (2,39 rad/s com comando de 0,6). Julgamento dele, nas
+palavras dele: **"está igualzinho — se isso foi um comando de ir reto é
+exatamente assim que ele faz. A ré também. O giro no lugar exatamente como
+na vida real."**
+
+O critério da decisão 004 ("o simulador só serve se errar como o robô erra")
+está cumprido nas três manobras medidas, por número E por olho. Próximo
+passo decidido pelo dono: malha fechada de rumo em cima deste modelo.
