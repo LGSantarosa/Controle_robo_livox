@@ -42,9 +42,44 @@ atuador e curvatura de corpo, as duas dependentes do sentido.
 Confirmado a olho pelo dono, que reconheceu o comportamento como o que o robo
 faz de verdade.
 
-RESSALVAS: n=1 de cada lado. A corrida de re foi mais curta (1.29 m contra
-3.74 m) porque a trava cortou. Falta a corrida de controle girada 180°, que e
-a unica que separa o robo da SALA (caimento do piso).
+RESSALVAS DO PRIMEIRO PAR (-a): n=1 de cada lado, a corrida de re saiu mais
+curta, e — o problema serio — as duas partiram de RUMOS DIFERENTES (frente a
++0°, re a +89°). Com rumos diferentes, caimento de piso entra na comparacao.
+O par -a sozinho NAO sustenta a conclusao. Corrigido pelo par -b, abaixo.
+
+
+O PAR MATCHED (-b): O ARCO E DO ROBO, NAO DA SALA
+--------------------------------------------------
+Repetido o par com a mesma trava (--espaco 1.2) e, por acaso feliz, na
+geometria que faz o controle de caimento:
+
+             bico aponta p/   anda p/ o mundo em   curvatura NO CORPO
+  FRENTE -b       +2°               -22°                -0.73 1/m
+  RE -b         +180°                -5°                -0.12 1/m
+
+As duas sairam do MESMO ponto 0 e andaram na MESMA direcao do mundo (logo,
+sobre o mesmo pedaco de chao), com o corpo girado 180° entre elas.
+
+O teste do caimento: se o arco fosse do piso, a forca lateral e fixa NO MUNDO;
+girando o corpo 180°, o lado direito do robo vira o esquerdo, e a curvatura NO
+CORPO teria de TROCAR DE SINAL. Ela nao trocou — as duas sao negativas.
+=> o arco esta preso ao CORPO. E o robo, nao a sala.
+
+E a dependencia do sentido sobrevive ao controle: razao frente/re = 6.3x.
+
+Dispersao entre repeticoes de frente, mesmo rumo: -1.15 (-a) contra -0.73 (-b),
+57% de diferenca. E dispersao real; n=1 nao fecha, e o par -b tambem e n=1.
+
+TRES evidencias independentes apontam para a boba:
+  1. hoje, corpo: arca so de frente, com piso controlado (6.3x);
+  2. 31-07, atuador: encoders com esquerda 11-12% mais rapida SO de frente
+     (~0% de re) — medido na roda, nao passa por piso nem por rumo;
+  3. o olho do dono, repetidamente: "de re sai reto, de frente pende".
+A boba e a unica peca que troca de papel entre os dois sentidos (arrastada
+atras indo pra frente, dianteira indo de re).
+
+EM ABERTO: POR QUE a boba faz isso — geometria (trail, alinhamento do garfo) ou
+atrito no pivo. E a repeticao: o par matched e n=1.
 
 
 O QUE ESTA SESSAO DERRUBOU (defeitos de instrumento, nao do robo)
@@ -91,3 +126,10 @@ CORRIDAS
 
 6-reta_re-a.csv       --v -0.25 --wz 0 --dur 12 --espaco 1.2 --janela 0.5
                       318 amostras, cortada pela trava de espaco.
+
+6-reta_frente-b.csv   --v 0.25 --wz 0 --dur 12 --espaco 1.2 --janela 0.5
+                      308 amostras. Repeticao de frente, MESMO rumo da -a.
+
+6-reta_re-b.csv       --v -0.25 --wz 0 --dur 12 --espaco 1.2 --janela 0.5
+                      301 amostras. Bico a 180°, andando de re -> mesma
+                      direcao de mundo da frente-b. E a corrida de CONTROLE.
