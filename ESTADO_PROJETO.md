@@ -1,7 +1,7 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-07-31**.
+> Versionado na `main`. Atualizado em **2026-08-04**.
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
@@ -62,9 +62,12 @@
 
   🔴 **O robô não anda reto indo para a FRENTE** — roda esquerda 11–12% mais
   rápida e demorando 0,2–0,4 s a mais para parar, dando −9,2°/−6,9° de desvio em
-  ~18 cm. **De ré sai reto** (+0,5°, rodas simétricas). Confirmado a olho pelo
-  dono. Causa em aberto: a dependência do sentido aponta para algo mecânico (a
-  roda boba é a candidata); motor fraco apareceria nos dois sentidos.
+  ~18 cm. De ré as rodas saem simétricas (+0,5°). Confirmado a olho pelo dono.
+  **↑ MEDIDO EM PERCURSO LONGO em 08-04, e é maior do que isso** — ver o bloco
+  de 08-04 abaixo: de frente ele descreve um **círculo de 1,22 m de raio**; de
+  ré desvia 8,3× menos, mas **não** é reto (raio 10,2 m). A causa deixou de ser
+  "em aberto": o arco está preso ao corpo (controle de piso feito) e 88% dele é
+  o termo que só existe indo para a frente.
 
   ✅ **O LIO é excelente** — parado, deriva **1,8 mm em 15 s**. Bateu com o olho
   do dono em todas as conferências do dia, inclusive numa de ~270°. As três
@@ -83,27 +86,111 @@
   pilhas órfãs publicando em `/Odometry` produziram saltos de ~1,35 m e custaram
   horas de diagnóstico errado.
 
-  ❌ **O banco está em 2 passos de 6.** Feitos: zona morta de giro e linear.
-  Faltam degrau de giro (3 corridas), curva (3), aceleração (1) e reta com
-  cutucão (4). O `a_dec` e a curva do `MODELO_ROBO2.md` são **substitutos**
-  tirados de rajadas curtas, não os ensaios.
+  ~~❌ **O banco está em 2 passos de 6.**~~ **↑ 08-04: são 4 de 6** — ver abaixo.
 
-  ⚠️ **Passos 3, 4 e 5 precisam ser REESCRITOS antes de rodar.** Os três varrem
+  ⚠️ **Passos 4 e 5 precisam ser REESCRITOS antes de rodar.** Os dois varrem
   velocidade (0,2 / 0,4 / 0,6 m/s) e as três caem dentro do patamar da
   compensação — dariam o mesmo resultado. A varredura tem de subir acima de
-  0,838 m/s, e isso exige espaço.
+  0,838 m/s, e isso exige espaço. (O passo 3 **não** tinha esse problema e
+  rodou em 08-04: o `a_dec` é medido com o comando em ZERO, e a compensação só
+  age enquanto há comando.)
 
-  ⚠️ **O modelo só está aferido em rajadas de ~1 s e ~20 cm.** Não há corrida
-  longa e limpa: as duas de 12 s bateram e rodaram com o LIO poluído. Ele
-  descreve arranca-e-para, não percurso sustentado.
+  ~~⚠️ **O modelo só está aferido em rajadas de ~1 s e ~20 cm.**~~ **↑ FECHADO
+  para o desvio de rumo em 08-04**: seis corridas de 1,3 a 3,7 m, limpas, com
+  uma pilha só de localização. Segue aberto para velocidade sustentada acima do
+  patamar.
 
-  🔧 **Dívida de instrumento:** os scripts de rajada não percebem que o robô
-  sumiu — publicam, gravam linhas em branco e terminam com cara de sucesso (7
-  corridas assim em 07-31, quando a rede caiu). Pôr checagem de `/Odometry` vivo
-  antes e depois de cada rajada, e abortar.
+  ~~🔧 **Dívida de instrumento:** os scripts de rajada não percebem que o robô
+  sumiu.~~ **↑ PAGA em 08-04 para o `ensaio.py`** (`7d7fad8`): fonte que cala
+  por mais de `--sem-dado` (1,0 s) **aborta** a corrida e sai com código 1, que
+  o `sessao.py` já sabia tratar e nunca recebia. 4 testes. **Segue aberta no
+  `rajada_rodas.py`.**
 
-  ➡️ **Próxima sessão, se houver corredor: duas corridas fecham o maior buraco**
-  — o passo 6 (reta com cutucão) e uma reta longa limpa.
+## 🎯 2026-08-04 — O bloqueio era do instrumento, e o robô anda em círculo
+
+Nove corridas. **O banco foi de 2 passos de 6 para 4.** Detalhes na entrada
+08-04 do `docs/DIARIO.md`; dados crus e leitura em
+`docs/dados/2026-08-04-bancada-robo/` (com `ambiente.txt`).
+
+  🔴 **O DESVIO DE RUMO, medido em percurso longo e com controle de piso**
+  (`n=2` matched por sentido, `--espaco 1.2`):
+
+  ```
+  FRENTE   curvatura −0,817 1/m   raio  1,22 m   faixa −0,73 a −0,90
+  RÉ       curvatura −0,098 1/m   raio 10,19 m   faixa −0,08 a −0,12
+                                            razão frente/ré = 8,3x
+  ```
+
+  **O arco é do ROBÔ, não da sala.** Nas quatro corridas o corpo ficou a ~0°
+  (frente) ou ~180° (ré) andando para a mesma faixa de direção do mundo — mesmo
+  pedaço de chão, corpo girado. Caimento de piso é força fixa **no mundo** e
+  faria a curvatura **no corpo** trocar de sinal. Ela saiu negativa nas quatro.
+
+  Isso **exclui motor/placa fraca de um lado** (daria a mesma curvatura nos dois
+  sentidos). Sobra causa dependente do sentido de marcha — a assinatura da roda
+  boba, arrastada atrás indo pra frente e dianteira indo de ré. Encaixa com os
+  encoders de 31-07 (esquerda 11–12% mais rápida **só** de frente).
+
+  **Lê como duas parcelas somadas**, e a consequência é de projeto:
+
+  ```
+  constante nos dois sentidos  ~ −0,10 1/m  (raio 10,2 m) — sobrevive à ré
+  só de frente (a boba)        ~ −0,72 1/m  = 88% do arco de frente
+  ```
+
+  ➡️ **Consertar a boba NÃO deixa o robô reto.** Sobra raio de ~10 m, que o
+  seguidor tem de fechar em malha fechada de rumo.
+
+  🔴 **`a_dec` MEDIDO (passo 3, `n=3`), e ele NÃO é constante:**
+
+  ```
+  a_dec EFETIVO  média 3,26   faixa 2,68–4,32   dispersão 50%
+  a_dec CAUDA    média 1,03   faixa 0,88–1,12   dispersão 24%
+  pico de wz     média 2,33   faixa 2,23–2,51   dispersão 12%
+  ```
+
+  **O número que o seguidor deve usar é a CAUDA, ~1,0 rad/s²** — 3× menor que os
+  3,05 do `MODELO_ROBO2.md`. O `a_dec` efetivo espalha 50% entre corridas iguais
+  e não serve como constante de projeto (é `wz²/(2·Δθ)`, o pico entra ao
+  quadrado); os 3,05 caem dentro da faixa dele, então o substituto não errou o
+  *valor efetivo* — errou o *uso*. A cauda é onde o robô assenta no rumo, e é o
+  lado seguro do erro por 27-07 ("errar para baixo é de graça, para cima traz o
+  S de volta").
+
+  ⚠️ **Latência da placa depois do corte: 0,40 / 0,56 / 0,60 s** (média ~0,52 s),
+  mais que os ~0,35 s que o registro trazia.
+
+  ✅ **O "giro espelhado" que bloqueou 30-07 NÃO EXISTE** — era o `atan2` do
+  cutucão enrolando em ±180°. Com o patamar, `+0,6 rad/s` por 2 s gira bem mais
+  que meia volta: `281,5° − 360° = −78,5°`, o número exato do bloqueio. Hoje leu
+  −71,0° e o dono viu o nariz ir **para a esquerda varrendo bastante** = 289°
+  enrolados. **O swap de rodas NÃO deve ser aplicado. O estado atual é o certo.**
+
+  ✅ **O yaw do LIO NÃO tem sinal invertido** — a retratação da 3ª leva de 31-07
+  era ela própria incorreta, tirada do mesmo enrolamento (`−68,2 + 360 =
+  291,8°`). Conferido no dado cru daquele dia: comando `+0,30` → yaw desenrolado
+  `+147,7°`; comando `−0,30` → `−150,0°`. Os sinais concordam, e esses números já
+  estavam na tabela do diário — ninguém cruzou as duas partes do registro.
+
+  ❌ **O passo 6 não pode rodar como está escrito**, por dois motivos
+  independentes: não existe reta de referência (o robô faz círculo, então "o rumo
+  volta ou foge?" não tem sentido) e o pulso de perturbação dura 0,5 s contra uma
+  latência de ~0,5 s. Medido: wz médio −0,405 antes, −0,358 durante, −0,369
+  depois. O que rodou hoje foram **retas puras medindo curvatura**, que é a
+  pergunta que este robô sabe responder.
+
+  ⚠️ **A trava de `--espaco` é RADIAL e roda por cima da odometria em
+  `open_loop`.** Na primeira corrida ela achou que o robô tinha andado 2,98 m em
+  linha reta enquanto o LIO sabia que ele estava a 1,79 m da origem, fazendo
+  círculo — **cortou pelo motivo errado, e o robô bateu numa cadeira**. Ela não
+  protege contra excursão lateral. Num robô que arca, dimensionar por `--espaco`
+  pequeno é o jeito de limitar o **disco varrido**.
+
+  🔧 **Por consertar:** o `atan2` que enrola, no cutucão do `sessao.py` e no
+  `medir.py`. É o defeito que custou a sessão de 30-07 inteira.
+
+  ⚠️ **Piso e bateria não foram informados** nas nove corridas — o `ambiente.txt`
+  registra `NÃO INFORMADO`. Sem eles a sessão não se compara com a próxima.
 
 ### Medidas ✅ CONFERIDAS COM TRENA (2026-07-29)
 
@@ -709,20 +796,26 @@ números e hoje eles são chute):**
    o novo item nº 1 é a **zona morta** — é ela que agora decide se o robô
    consegue pivotar (ver a nota superada acima), e a folga no melhor caso é de
    4%. Medir a rodinha da boba junto, se der.
-2. **PRIMEIRO: corrigir o giro espelhado** (bloqueio 07-30). Trocar
-   `left`/`right` em `hoverboard_driver/bringup/config/hoverboard_controllers.yaml`,
-   **rebuild do `hoverboard_driver`** (o YAML é lido do `install/`, não do fonte
-   — sem rebuild o swap não existe para o robô) e **revalidar com
-   `sessao.py --checar --mexer`**: o giro tem de sair anti-horário (+). Só então
-   medir. Medir espelhado é medir errado.
-3. **Rodar a sessão de bancada** — `python3 tools/banco/sessao.py`, com a folha
-   de campo `tools/banco/CHECKLIST_ROBO.md` na mão. **27 corridas, ~30 min**:
-   zona morta em dente de serra, `a_dec`, curva por velocidade, aceleração, **e
-   o ensaio 6 (reta com cutucão, ida × ré + uma girada 180°)**, que valida a
-   manobra da decisão 007 e ataca o BO-4. **Filmar a traseira nas 4 primeiras
-   corridas do passo 6** — é a única medida possível da boba, porque o simulador
-   não tem uma. O dono só roda; os CSV vêm por bundle/ssh (o NUC não tem
-   autenticação no GitHub — ver a dívida de infra na entrada 07-30 do diário).
+2. ~~**PRIMEIRO: corrigir o giro espelhado** (bloqueio 07-30).~~
+   🛑 **NÃO FAZER. O giro espelhado NÃO EXISTE** (08-04) — era o `atan2` do
+   cutucão enrolando em ±180°. O swap foi aplicado (`368ea13`) e **revertido**
+   (`595cf80`); **o estado atual, SEM swap, é o correto**. Aplicar aquele script
+   quebra um robô que está certo. Quem for conduzir: o `--checar --mexer` ainda
+   vai gritar `giro INVERTIDO` — é alarme falso por construção, ignorar.
+3. ~~**Rodar a sessão de bancada** (27 corridas).~~ **PARCIALMENTE FEITO**: o
+   banco está em **4 de 6** (zona morta de giro e linear em 07-31; `a_dec` e
+   desvio de rumo em 08-04). Falta:
+   - **passos 4 e 5** (curva e aceleração), que **precisam ser reescritos** — a
+     varredura de velocidade cai inteira dentro do patamar da compensação e tem
+     de subir acima de 0,838 m/s, o que exige espaço;
+   - **filmar a boba** — o vídeo da traseira em corrida de ré é a única medida
+     possível dela, e não foi trazido para o repo.
+   ⚠️ Rodar pelo `sessao.py` **não serve como está**: ele não deixa passar
+   `--espaco` por fora (padrão 4,0 m, que num robô que arca é excursão lateral
+   demais) e o passo 6 dele está morto. Conduzir corrida a corrida pelo
+   `ensaio.py` com `--espaco` pequeno, como em 08-04.
+   O dono só roda; os CSV vêm por bundle/ssh (o NUC não tem autenticação no
+   GitHub — ver a dívida de infra na entrada 07-30 do diário).
 4. **IP do lidar** — confirmado em `192.168.1.169` na sessão de 07-30, igual ao
    config. Mas o Mid-360 pode ficar **mudo mesmo com o IP certo**: ele tranca a
    sessão de dado se o driver morrer no meio do handshake (não usar `kill -9`;
@@ -819,7 +912,28 @@ inertes o standdown de porta no `unstuck_supervisor` e o `cone_pose_fix.py`.
   ré (decisão 007), que no simulador não testa nada — lá ré e ida deram
   idênticas porque não há boba para virar.
 
-  **Fecha quando:** (a) ensaio 6 do banco rodado no robô real, ida × ré, com a
-  boba filmada; (b) a causa do garfo não alinhar identificada no modelo; (c)
-  simulador reproduzindo o ângulo de boba medido no robô, ou a decisão 004
-  corrigida para dizer o que ele de fato reproduz.
+  **Fecha quando:** (a) ~~ensaio 6 do banco rodado no robô real, ida × ré, com a
+  boba filmada~~ **PARCIALMENTE FEITO 08-04** — ver abaixo; (b) a causa do garfo
+  não alinhar identificada no modelo; (c) simulador reproduzindo o ângulo de
+  boba medido no robô, ou a decisão 004 corrigida para dizer o que ele de fato
+  reproduz.
+
+  ✅ **08-04: o alvo de comparação existe, e é um número.** Ida × ré rodados no
+  robô real com controle de piso (`n=2` cada): de frente ele arca com curvatura
+  **−0,817 1/m** (raio 1,22 m), de ré **−0,098 1/m** (raio 10,2 m) — 8,3× de
+  diferença, e **88% do arco de frente é o termo que só existe indo para a
+  frente**. O arco está preso ao **corpo**, não ao mundo (as quatro corridas
+  saíram com curvatura de mesmo sinal, com o corpo girado 180° entre os
+  sentidos), o que exclui caimento de piso; e motor/placa fraca de um lado
+  também está excluído, porque daria a mesma curvatura nos dois sentidos.
+
+  **Isso vira o critério (c) em teste com número:** o simulador tem de
+  reproduzir **8,3× de assimetria entre frente e ré**. Hoje ele reproduz ~1×
+  (ré e ida deram idênticas), então a distância entre modelo e robô está
+  medida, não mais suposta.
+
+  ⚠️ **Falta ainda o vídeo da traseira** — foi filmado em 08-04 mas não trazido
+  para o repo. É a única evidência direta do garfo, e sem ela o critério (b)
+  não anda. E o dono confirmou, empurrando o robô **com a mão** e com ele
+  desligado, que o desvio **se repete** — ou seja, o fenômeno não depende de
+  acionamento, o que é um dado forte a favor de causa geométrica.

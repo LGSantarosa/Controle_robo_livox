@@ -2456,3 +2456,154 @@ Todas as corridas boas são **rajadas de ~1 s e ~20 cm**. As duas únicas longas
 órfãs. Então o `MODELO_ROBO2.md` está aferido em **arranca-e-para**, não em
 percurso sustentado — e percurso é o que um seguidor faz o tempo todo. Duas
 corridas limpas num corredor fecham isso: o passo 6 e uma reta longa.
+
+## 🎯 2026-08-04 — O bloqueio era do instrumento, e o robô anda em círculo
+
+Sessão de bancada com o robô ligado, conduzida por ssh no NUC; o dono só executa
+o físico. **Nove corridas.** O banco foi de 2 passos de 6 para 4, e o resultado
+principal não estava no protocolo: **o robô descreve um círculo indo para a
+frente, e a causa depende do sentido de marcha.**
+
+### O briefing estava desatualizado, e seguir o checklist quebraria o robô
+
+O dono abriu a sessão pedindo para medir a zona morta ("item nº 1, não foi
+medida") e para seguir o `CHECKLIST_ROBO.md` na ordem, sem pular — incluindo
+**aplicar o swap esquerda/direita**. As duas premissas são do fim de 30-07 e a
+sessão de 31-07 à tarde já as tinha desmentido. O checklist é da *manhã* de
+31-07: ele é anterior à própria sessão que preparava.
+
+Conferido no repo antes de tocar em nada: a zona morta está medida (giro 0,095
+rad/s, linear 0,023 m/s), o swap foi aplicado (`368ea13`) e **revertido**
+(`595cf80`), e o YAML de hoje está sem swap — o estado correto. Aplicar aquele
+script quebraria um robô que está certo. **Parado e reportado antes de agir**,
+que é a regra 1 do `CLAUDE.md` valendo contra o pedido do próprio dono.
+
+### O "giro espelhado" de 30-07 era enrolamento de ângulo
+
+Antes de rodar o cutucão, olhei o que ele calcula:
+
+```python
+giro = math.atan2(math.sin(yaw() - a0), math.cos(yaw() - a0))
+```
+
+Isso **enrola em ±180°**. E o cutucão manda `+0,6 rad/s por 2,0 s` — com o
+patamar da compensação, muito mais que meia volta. A conta fecha exata:
+`281,5° − 360° = −78,5°`, que é o número do bloqueio de 30-07.
+
+Rodado hoje com o dono de testemunha: leu **−71,0°**, e ele viu **o nariz ir
+para a esquerda varrendo bastante**. São `289°` enrolados. O robô gira certo.
+
+### E a retratação de 31-07 sobre o LIO era ela própria incorreta
+
+A 3ª leva de 31-07 concluiu que o **yaw do LIO vem com sinal invertido**, a
+partir de "o LIO reportava −68,2° com rótulo direita". Mas `−68,2 + 360 =
+291,8°` — é o mesmo enrolamento, diagnosticado como sinal trocado.
+
+O teste do sinal, com o dado de hoje: giro físico anti-horário de 289°. Se o
+yaw estivesse certo, `atan2` devolve −71° (foi o que deu); se estivesse
+invertido, devolveria +71°. Conferido também no dado cru de 31-07, desenrolando:
+
+```
+pivo-wz030.csv     comando +0,30  ->  yaw desenrolado  +147,7°
+pivo-wz030neg.csv  comando −0,30  ->  yaw desenrolado  −150,0°
+```
+
+Sinal do comando e sinal do yaw **concordam**. E esses números já estavam na
+tabela do diário de 31-07 — ninguém cruzou as duas partes do próprio registro.
+**O LIO está certo.** É a quarta vez que ele é acusado e a quarta vez que o
+defeito é do instrumento de leitura.
+
+### O resultado do dia: o arco é do robô, e 88% dele é a boba
+
+O passo 6 pergunta se o rumo se recupera de uma perturbação. **Não dá para
+perguntar isso neste robô**, por dois motivos independentes que a primeira
+corrida expôs: não existe reta de referência (ele faz círculo), e o pulso de
+perturbação dura 0,5 s contra uma latência de placa de ~0,5 s — não perturba
+nada (wz médio −0,405 antes, −0,358 durante, −0,369 depois).
+
+Rodadas então retas puras, medindo **curvatura**. Com `n=2` matched por sentido:
+
+```
+FRENTE   média −0,817 1/m   raio  1,22 m   faixa −0,73 a −0,90
+RÉ       média −0,098 1/m   raio 10,19 m   faixa −0,08 a −0,12
+                                              razão frente/ré = 8,3x
+```
+
+**Controle de piso, e ele funcionou por acaso feliz.** O dono posicionou a
+corrida de ré com o bico a 180°, o que faz o robô andar na *mesma direção do
+mundo* que a corrida de frente, sobre o mesmo pedaço de chão, com o corpo
+girado. Se o arco fosse caimento, a força é fixa no mundo e a curvatura **no
+corpo** trocaria de sinal. Ela saiu negativa nas **quatro** corridas.
+**O arco é do robô, não da sala.**
+
+O que isso exclui: motor ou placa fraca de um lado daria a mesma curvatura nos
+dois sentidos. Sobra causa dependente do sentido de marcha — a assinatura de uma
+roda boba, arrastada atrás indo para frente e dianteira indo de ré. Encaixa com
+os encoders de 31-07 (esquerda 11–12% mais rápida **só** de frente, ~0% de ré),
+que medem no atuador e não passam por piso nem por rumo.
+
+**O dono corrigiu uma frase minha, e a correção melhorou o resultado**: eu
+escrevi "de ré ele anda praticamente reto"; ele disse que a ré desvia sim, muito
+menos, e está certo — raio de 10 m ainda dá 70–90° em 10 m de percurso. Isso lê
+como **duas parcelas somadas**: ~−0,10 1/m constante nos dois sentidos e ~−0,72
+1/m só de frente, ou seja **88% do arco de frente é o termo da boba**.
+Consequência de projeto: consertar a boba não deixa o robô reto.
+
+### O `a_dec` medido, e ele não é constante
+
+O passo 3 roda apesar do patamar da compensação — o `a_dec` é medido **com o
+comando em zero**, e compensação só age com comando. Rodado como **pivô puro**
+(`--v 0`, não o `--v 0.3` do protocolo): com a curvatura de frente de hoje,
+andar durante o ensaio injetaria −0,25 rad/s de guinada espúria que continua
+depois do corte, e o `a_dec` sairia errado — o defeito disfarçado de física.
+
+Calculado do yaw **desenrolado**, porque o `medir.py` usa o mesmo `atan2`. `n=3`:
+
+```
+a_dec EFETIVO  média 3,26   faixa 2,68–4,32   dispersão 50%
+a_dec CAUDA    média 1,03   faixa 0,88–1,12   dispersão 24%
+pico de wz     média 2,33   faixa 2,23–2,51   dispersão 12%
+```
+
+**O `a_dec` efetivo não serve como constante de projeto** — espalha 50% entre
+corridas iguais, porque é `wz²/(2·Δθ)` e o pico entra ao quadrado. Os 3,05 do
+`MODELO_ROBO2.md` caem dentro da faixa dele, então o substituto de rajada curta
+não errou o *valor efetivo*; errou o *uso*.
+
+O que o seguidor precisa é a **cauda: ~1,0 rad/s²**, onde o robô tem de assentar
+no rumo e desacelera 3× menos que o substituto diz. E é o lado seguro do erro
+pelo próprio achado de 27-07 ("errar para baixo é de graça; para cima traz o S
+de volta").
+
+Latência depois do corte, medida nas três: **0,40 / 0,56 / 0,60 s**, mais que os
+~0,35 s que o registro trazia.
+
+### Erros meus nesta sessão
+
+1. **Dimensionei a primeira corrida só pela distância à frente.** A trava de
+   `--espaco` é **radial** e, num robô que faz círculo de 0,9 m, ele varre 1,8 m
+   para os lados sem "estourar" nada. O corredor era estreito e **o robô bateu
+   numa cadeira**. Pior: quem disparou a trava foi a odometria em `open_loop`,
+   que achava ter andado 2,98 m em linha reta enquanto o LIO sabia que ele estava
+   a 1,79 m da origem. Cortou pelo motivo errado. Corrigido nas seguintes com
+   `--espaco 1.2`, que limita o **disco varrido**.
+2. **Comparei um par não-matched e escrevi conclusão em cima dele.** As corridas
+   `-a` partiram de rumos 89° diferentes, o que deixa caimento de piso entrar. Só
+   vi ao olhar o rumo inicial no CSV, depois de já ter commitado. Corrigido pelo
+   par `-b`.
+3. **Chamei de "dispersão de 57%" o que era diferença de configuração** (a `-a`
+   rodou com `--espaco 3.0`, com pulso e por 3,74 m). A dispersão matched é 21%.
+
+### O que ficou de instrumento, e uma dívida paga antes de medir
+
+Antes de subir o robô, consertado o defeito que perdeu 7 corridas em 31-07: o
+`ensaio.py` guardava a última mensagem e nunca olhava **quando** ela chegou —
+fonte morta congelava a pose, a derivada dava 0,0 (leitura plausível, não erro)
+e a corrida fechava inteira com cara de sucesso. Agora aborta em `--sem-dado`
+(1,0 s) e sai com código 1, que o `sessao.py` já sabia tratar e nunca recebia.
+4 testes; 415 verdes.
+
+**Ainda por consertar:** o `atan2` que enrola, no cutucão do `sessao.py` e no
+`medir.py`. É o defeito que custou a sessão de 30-07 inteira e quase custou a de
+hoje.
+
