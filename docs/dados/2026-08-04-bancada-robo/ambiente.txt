@@ -1,0 +1,93 @@
+sessao de bancada no robo real — 2026-08-04
+===========================================
+
+commit do fonte E do install/ no NUC : 7d7fad8
+maquina                              : NUC (bara), Ubuntu 24.04 + ROS 2 Jazzy
+rede                                 : hotspot de celular, latencia 43–1078 ms
+                                       (a medida NAO passa pela wifi: ensaio,
+                                       FAST-LIO e placa rodam todos no NUC)
+piso                                 : NAO INFORMADO
+bateria                              : NAO INFORMADO
+
+calibracao VIVA (lida do hoverboard_base_controller, nao do arquivo)
+--------------------------------------------------------------------
+wheel_separation = 0.2700   bate com a trena
+wheel_radius     = 0.0800   bate com a trena
+rodas: esquerda=['left_wheel_joint']  direita=['right_wheel_joint']
+       -> swap NAO aplicado. E o estado CORRETO (ver abaixo).
+
+pilha de localizacao: exatamente 1 fastlio_mapping + 1 livox_ros_driver2_node
+/Odometry a 10.0 Hz   |   odom (open_loop) a 9.0–9.7 Hz   |   cmd_vel: 1 ouvinte
+
+
+O RESULTADO DO DIA: o desvio de rumo depende do SENTIDO DE MARCHA
+-----------------------------------------------------------------
+                curvatura      raio      caminho/afastam.   giro
+  FRENTE      -1.15 1/m      0.87 m          2.09x        -242° em 3.74 m
+  RE          -0.16 1/m      6.18 m          1.08x         -14° em 1.29 m
+
+Sete vezes de diferenca. De re ele anda praticamente reto (1.08x, onde reta
+perfeita e 1.00x); de frente descreve um circulo de 0.87 m de raio para a
+DIREITA, sustentado por 3.74 m de percurso.
+
+Isso EXCLUI motor/placa fraca de um lado como causa dominante: uma roda mais
+fraca daria a mesma razao de velocidades — logo a mesma curvatura — nos dois
+sentidos. Sobra causa dependente do sentido de marcha, que e a assinatura de
+uma roda BOBA (arrastada atras indo pra frente, dianteira indo de re).
+
+Encaixa com o encoder de 31-07, que ja tinha achado o mesmo padrao um nivel
+abaixo: esquerda 11–12% mais rapida SO de frente, ~0% de re. Assimetria de
+atuador e curvatura de corpo, as duas dependentes do sentido.
+
+Confirmado a olho pelo dono, que reconheceu o comportamento como o que o robo
+faz de verdade.
+
+RESSALVAS: n=1 de cada lado. A corrida de re foi mais curta (1.29 m contra
+3.74 m) porque a trava cortou. Falta a corrida de controle girada 180°, que e
+a unica que separa o robo da SALA (caimento do piso).
+
+
+O QUE ESTA SESSAO DERRUBOU (defeitos de instrumento, nao do robo)
+------------------------------------------------------------------
+1. O "giro espelhado" que bloqueou 30-07 NAO EXISTE. O cutucao mede o giro com
+   atan2(sin(dyaw),cos(dyaw)), que ENROLA em +-180°. Com o patamar da
+   compensacao, o comando de +0.6 rad/s por 2 s gira bem mais que meia volta.
+   Hoje: cutucao leu -71.0°, e o dono viu o nariz ir para a ESQUERDA varrendo
+   bastante -> era +289° enrolado. Em 30-07 leu -78.5° = +281.5° enrolado.
+   O swap de rodas foi aplicado (368ea13) e revertido (595cf80); o estado atual,
+   SEM swap, e o certo. NAO MEXER.
+
+2. O yaw do LIO NAO tem sinal invertido. A 3a leva de 31-07 concluiu que tinha,
+   a partir de "-68.2° com rotulo direita" — que e o mesmo enrolamento
+   (-68.2 + 360 = +291.8°). Verificado no dado cru de 31-07, desenrolando o yaw:
+     pivo-wz030.csv     comando +0.30 -> yaw desenrolado +147.7°
+     pivo-wz030neg.csv  comando -0.30 -> yaw desenrolado -150.0°
+   Sinal do comando e sinal do yaw CONCORDAM. Esses numeros ja estavam na
+   tabela do diario de 31-07; ninguem cruzou as duas partes do registro.
+
+3. O passo 6 NAO PODE ser rodado como esta neste robo, por dois motivos
+   independentes:
+   a) nao existe reta de referencia — "o rumo volta ou foge?" nao tem sentido
+      num robo que descreve um circulo de 0.87 m;
+   b) o pulso de perturbacao dura 0.5 s e a latencia para destravar a placa e
+      ~0.35 s, sobrando ~0.15 s de acionamento. Medido hoje: wz medio -0.405
+      antes do pulso, -0.358 durante, -0.369 depois. O pulso nao perturba nada.
+
+4. A trava de --espaco e RADIAL e usa a fonte mais alarmista, que aqui e a
+   odometria em open_loop (o comando ecoado). Na corrida de frente ela achou
+   que o robo tinha andado 2.98 m em linha reta enquanto o LIO sabia que ele
+   estava a 1.79 m da origem, fazendo circulo. Ela cortou pelo motivo errado e
+   NAO protege contra excursao lateral: o robo bateu numa cadeira.
+   Dimensionar por --espaco pequeno (1.2) e o jeito de limitar o disco varrido.
+
+
+CORRIDAS
+--------
+6-reta_frente-a.csv   --v 0.25 --wz 0.5 --dur 16 --espaco 3.0 --janela 0.5
+                      704 amostras, cortada pela trava de espaco.
+                      Bateu numa cadeira: espaco livre era 3 m A FRENTE, e ele
+                      varreu para os lados. Erro de dimensionamento do
+                      condutor, nao do robo. O dado vale.
+
+6-reta_re-a.csv       --v -0.25 --wz 0 --dur 12 --espaco 1.2 --janela 0.5
+                      318 amostras, cortada pela trava de espaco.
