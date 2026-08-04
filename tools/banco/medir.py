@@ -385,6 +385,70 @@ def reta(r):
         print('  -> o rumo assentou e ficou: as motrizes dominam. ESTÁVEL')
 
 
+def curvatura(r, sufixo=''):
+    """Quanto o robô arca andando RETO, em 1/m — o desvio de rumo de 04-08.
+
+    Este robô não anda reto: comandado `--v 0.25 --wz 0`, ele descreve um
+    círculo. A grandeza que descreve isso não é o rumo final (que depende de
+    quanto tempo a corrida durou) nem o desvio em metros (que depende da
+    distância): é a **curvatura**, giro por metro percorrido, que é constante
+    ao longo do arco e por isso compara corridas de comprimentos diferentes.
+
+        curvatura = Δyaw_desenrolado / caminho_percorrido      [1/m]
+
+    O yaw é **acumulado amostra a amostra**, não `atan2` da diferença entre
+    pontas: em 04-08 uma corrida girou 242°, e `atan2` teria devolvido −118°.
+    É o mesmo defeito consertado no `a_dec` e no cutucão (`7a0c364`).
+
+    Imprime junto o **rumo do corpo** e a **direção do mundo**, porque é o par
+    que separa robô de sala. Se o arco fosse caimento de piso, a força seria
+    fixa NO MUNDO: andando com o corpo girado 180° sobre o mesmo chão, a
+    curvatura NO CORPO trocaria de sinal. Em 04-08 não trocou, nas quatro
+    corridas do par matched — o arco está preso ao corpo.
+
+    O afastamento sai da excursão radial MÁXIMA, não do deslocamento final:
+    num robô que faz círculo é o **disco varrido** que decide se ele bate na
+    parede, e foi por confundir os dois que a trava de `--espaco` cortou pelo
+    motivo errado e o robô bateu numa cadeira.
+    """
+    cx, cy, cyaw = 'x' + sufixo, 'y' + sufixo, 'yaw' + sufixo
+    if not r or cx not in r[0]:
+        print(f'  CSV sem coluna {cx} — nada a medir')
+        return None
+
+    m = [l for l in r if abs(l['cmd_v']) > 1e-9]
+    if len(m) < 20:
+        print('  sem trecho comandado suficiente (rodar com --v e --wz 0)')
+        return None
+
+    caminho, giro, ant = 0.0, 0.0, None
+    x0, y0 = m[0][cx], m[0][cy]
+    afast = 0.0
+    for l in m:
+        if ant is not None:
+            caminho += math.hypot(l[cx] - ant[cx], l[cy] - ant[cy])
+            giro += norm(l[cyaw] - ant[cyaw])     # acumula: não enrola
+        afast = max(afast, math.hypot(l[cx] - x0, l[cy] - y0))
+        ant = l
+
+    if caminho < 0.05:
+        print(f'  robô andou só {caminho:.3f} m — curvatura não tem sentido')
+        return None
+
+    c = giro / caminho
+    sentido = 'RÉ' if m[0]['cmd_v'] < 0 else 'FRENTE'
+    mundo = math.degrees(math.atan2(ant[cy] - y0, ant[cx] - x0))
+    print(f'  {sentido} a {m[0]["cmd_v"]:.2f} m/s comandado, '
+          f'{caminho:.2f} m percorridos em {len(m)} amostras')
+    print(f'  girou {math.degrees(giro):.1f}° -> curvatura = {c:.3f} 1/m'
+          + (f', raio {abs(1 / c):.2f} m' if abs(c) > 1e-6 else ''))
+    print(f'  bico a {math.degrees(m[0][cyaw]):.0f}°, andou para {mundo:.0f}° '
+          f'do mundo  (o par que separa robô de sala)')
+    print(f'  disco varrido: afastamento máximo {afast:.2f} m, '
+          f'caminho/afastamento {caminho / afast:.2f}x')
+    return c
+
+
 def resumo(tipo, arqs, fonte='lio', bitola=0.270):
     """As N repetições de uma condição, juntas: média, faixa e dispersão.
 
@@ -463,6 +527,7 @@ UNIDADES = {
     'degrau_giro': 'a_dec [rad/s²]',
     'curva': 'giro realizado ÷ comandado [1,0 = entrega o que se pede]',
     'aceleracao_linear': 'aceleração de arranque [m/s²]',
+    'curvatura': 'curvatura andando reto [1/m] (negativo = arca para a direita)',
 }
 
 def LEITURAS(fonte='lio', bitola=0.270):
@@ -483,6 +548,8 @@ def LEITURAS(fonte='lio', bitola=0.270):
         'degrau_giro': _silencioso(a_dec),
         'curva': _silencioso(curva),
         'aceleracao_linear': _silencioso(aceleracao),
+        'curvatura': _silencioso(
+            lambda r: curvatura(r, '_roda' if fonte == 'roda' else '')),
     }
 
 
@@ -542,6 +609,8 @@ def main():
         aceleracao(r)
     elif tipo == 'reta':
         reta(r)
+    elif tipo == 'curvatura':
+        curvatura(r, '_roda' if fonte == 'roda' else '')
     else:
         print(f'tipo desconhecido: {tipo}')
 

@@ -664,3 +664,80 @@ def test_giro_acumulado_conta_varias_voltas():
     for y in ys[1:]:
         g.soma(y)
     assert math.degrees(g.total) == pytest.approx(760.0, abs=2.0)
+
+
+# ------------------------------------------- curvatura: o arco de 04-08
+
+DADOS_0804 = os.path.join(AQUI, '..', '..', 'docs', 'dados',
+                          '2026-08-04-bancada-robo')
+
+
+def csv_arco(curv, caminho=1.2, cmd_v=0.25, n=200, yaw0=0.0):
+    """Arco perfeito de curvatura conhecida, para conferir a régua.
+
+    Anda `caminho` metros com curvatura `curv` [1/m]. De ré (`cmd_v` < 0) o
+    corpo aponta para trás da direção de viagem — que é o que o robô faz e o
+    que a leitura tem de continuar medindo igual.
+    """
+    r = []
+    for i in range(n):
+        s = caminho * i / (n - 1)
+        a = curv * s
+        if abs(curv) > 1e-9:
+            x, y = math.sin(a) / curv, (1 - math.cos(a)) / curv
+        else:
+            x, y = s, 0.0
+        rot = yaw0 + (math.pi if cmd_v < 0 else 0.0)
+        r.append({'t': round(0.1 * i, 3), 'cmd_v': cmd_v, 'cmd_wz': 0.0,
+                  'x': x * math.cos(yaw0) - y * math.sin(yaw0),
+                  'y': x * math.sin(yaw0) + y * math.cos(yaw0),
+                  'yaw': medir.norm(a + rot)})
+    return r
+
+
+def test_curvatura_le_um_arco_conhecido(capsys):
+    """A régua antes da medida: arco de raio 1,22 m tem de ler −0,82 1/m."""
+    assert medir.curvatura(csv_arco(-0.817)) == pytest.approx(-0.817, rel=0.02)
+    assert medir.curvatura(csv_arco(-0.098)) == pytest.approx(-0.098, rel=0.02)
+
+
+def test_curvatura_nao_enrola_passando_de_180(capsys):
+    """O defeito de `7a0c364`, na régua nova. A corrida `frente-a` girou 242°;
+    com `atan2` entre as pontas ela leria −118°, com o SINAL TROCADO. Aqui o
+    arco gira 242° em 3,7 m = −1,14 1/m."""
+    r = csv_arco(-1.143, caminho=3.7, n=800)
+    assert medir.curvatura(r) == pytest.approx(-1.143, rel=0.02)
+
+
+def test_curvatura_de_reta_de_verdade_da_zero(capsys):
+    """Se a régua não souber ver reta, ela não sabe ver arco."""
+    assert abs(medir.curvatura(csv_arco(0.0))) < 1e-6
+
+
+def test_curvatura_ignora_o_robo_parado(capsys):
+    """Antes e depois do comando o robô está parado, e o LIO ainda treme. Essas
+    amostras não andam caminho nenhum: entrando na conta, viram giro dividido
+    por ~zero e explodem a curvatura."""
+    r = csv_arco(-0.817)
+    parado = [dict(r[-1], t=r[-1]['t'] + 0.1 * i, cmd_v=0.0,
+                   yaw=r[-1]['yaw'] + 0.02 * i) for i in range(1, 30)]
+    assert medir.curvatura(r + parado) == pytest.approx(-0.817, rel=0.02)
+
+
+def test_curvatura_reproduz_o_robo_medido_em_0804(capsys):
+    """Regressão contra o dado CRU do robô, não contra um número copiado.
+
+    Estes CSV estão versionados; se a régua mudar de resposta, ou ela quebrou
+    ou o alvo do simulador mudou — e as duas coisas têm de doer aqui.
+    """
+    def med(nome):
+        return medir.curvatura(medir.le(os.path.join(DADOS_0804, nome)))
+
+    frente = [med(f'6-reta_frente-{r}.csv') for r in 'bc']
+    re = [med(f'6-reta_re-{r}.csv') for r in 'bc']
+    mf, mr = sum(frente) / 2, sum(re) / 2
+
+    assert mf == pytest.approx(-0.84, abs=0.03), 'arco de frente'
+    assert mr == pytest.approx(-0.11, abs=0.03), 'arco de ré'
+    assert mf / mr == pytest.approx(7.4, abs=1.5), 'a assinatura da boba'
+    assert mf < 0 and mr < 0, 'os dois sentidos arcam para o mesmo lado do corpo'
