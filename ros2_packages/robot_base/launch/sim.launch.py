@@ -103,16 +103,31 @@ def generate_launch_description():
     # ~0,838 m/s chega na placa como a mesma coisa, porque a compensação de zona
     # morta do driver multiplica as duas rodas até a maior vencer o deadband.
     # Sem isso o controle é ajustado contra um atuador que não existe.
-    placa = Node(
-        package='robot_base',
-        executable='placa_simulada',
-        name='placa_simulada',
-        output='both',
-        parameters=[{'modelo': LaunchConfiguration('placa'),
-                     'bitola': 0.270,  # medida com trena 2026-07-29
-                     'raio': 0.080,    # idem
-                     'use_sim_time': True}],
-    )
+    def placa_fn(contexto, *_a, **_k):
+        # O `rendimento_giro` (quanto do giro pedido o contato do Gazebo
+        # entrega) é propriedade da PLANTA, não da placa: os limites de
+        # aceleração do perfil mudam o transiente e com ele a derrapagem.
+        # Medido nas corridas de aceitação de 04-08, mesma manobra nas duas:
+        #   lenta   realizou 80% do pedido  (deficit ja visto em 29-07: 79-86%)
+        #   normal  realizou 93%            (pedido -1,021, realizado -0,949)
+        # Com um valor unico (0,80) a planta normal arcava -0,95 contra -0,84
+        # do robo — 13% forte e FORA da faixa da maquina. Por isso ele mora
+        # aqui, ao lado da escolha de planta, e nao num default do no.
+        perfil = LaunchConfiguration('planta').perform(contexto).lower()
+        rendimento = 0.80 if perfil == 'lenta' else 0.93
+        return [Node(
+            package='robot_base',
+            executable='placa_simulada',
+            name='placa_simulada',
+            output='both',
+            parameters=[{'modelo': LaunchConfiguration('placa'),
+                         'bitola': 0.270,  # medida com trena 2026-07-29
+                         'raio': 0.080,    # idem
+                         'rendimento_giro': rendimento,
+                         'use_sim_time': True}],
+        )]
+
+    placa = OpaqueFunction(function=placa_fn)
 
     # Spawn com z acima do solo: o robô assenta nas rodas na primeira iteração
     # da física. Nascer exatamente na altura final faz as rodas penetrarem o

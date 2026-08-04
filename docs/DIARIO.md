@@ -2908,3 +2908,37 @@ máquina real.
 
 **Deixa para depois**: é mudança estrutural (entra no loop da placa fingida,
 não é parametrização) e o passo 1 (arco) já fechou — as três medidas rodam.
+
+## 🪞 2026-08-04 (4ª leva) — Os dois "bate" eram de plantas diferentes
+
+O dono pediu para ver funcionando, e a desconfiança estava certa: o resumo da
+3ª leva somava dois ✅ que nunca valeram juntos. O arco (−0,817) tinha sido
+aceito na planta **lenta**; o pico de wz (2,25) na planta **normal** — e
+ninguém re-rodou a aceitação do arco na normal depois de recomendá-la.
+Re-rodada: **−0,95 de frente, 13% forte e fora da faixa do robô.**
+
+Causa: `rendimento_giro=0,80` foi calibrado na lenta. A derrapagem do contato
+depende do transiente, e o transiente depende dos limites de aceleração do
+perfil — na normal o Gazebo realiza 93% do giro pedido, não 80%. O rendimento
+é propriedade da **planta**, então mudou de endereço: sai de número solto e
+passa a ser escolhido pelo `sim.launch.py` junto com o perfil (lenta → 0,80,
+normal → 0,93).
+
+Re-aceitação na normal, n=3 por sentido, ao vivo para o dono
+(`docs/dados/2026-08-04-aceitacao-simulador/normal-*.csv`):
+
+```
+                SIMULADOR              ROBÔ (04-08)
+frente        -0,803 (3% disp)       -0,838  faixa -0,75 a -0,93   DENTRO
+ré            -0,095 (0% disp)       -0,113  faixa -0,09 a -0,14   DENTRO
+razão f/r          8,5x                  7,4x
+pico de wz     2,17 rad/s             2,33   faixa 2,23-2,51       na borda
+sobrepasso       97°                    49°                        ABERTO
+```
+
+A lição de método, registrada porque vai se repetir: **"bate" só conta na
+configuração em que se vai usar.** Aceitação re-rodada a cada mudança de
+planta, teto ou atrito — está escrito no `leitura.txt` e agora aqui.
+
+O sobrepasso segue 2× (atraso de desliga, pendência estrutural conhecida) e a
+dispersão segue 0–3% contra 21–37% do robô (12c). 440 testes verdes.

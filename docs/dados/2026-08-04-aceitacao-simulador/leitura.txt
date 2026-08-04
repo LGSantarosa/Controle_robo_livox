@@ -94,3 +94,37 @@ O QUE ESTA CORRIDA NAO FECHA
 4. Percurso de 1.2 m, como o do robo. A corrida frente-a do robo (3.7 m) deu
    curvatura mais forte (-1.15): pode ser que o arco APERTE com a distancia.
    Nao investigado nem la nem aqui.
+
+
+=========================================================================
+ADENDO (mesma noite) — a aceitacao NAO valia na planta normal, agora vale
+=========================================================================
+
+Os sim-*.csv acima rodaram na planta LENTA (o padrao do launch na epoca).
+A 3a leva subiu o teto angular e recomendou a planta NORMAL — e ninguem
+re-rodou a aceitacao nela. Re-rodada, a frente saiu -0,95: 13% forte e FORA
+da faixa do robo. Dois "bate" medidos em plantas diferentes nao somam um
+simulador que bate.
+
+Causa: o rendimento_giro=0,80 foi calibrado na planta lenta. A derrapagem
+do contato depende do transiente, que depende dos limites de aceleracao do
+perfil. Medido na normal: pedido -1,021, realizado -0,949 -> 0,93.
+
+O rendimento passou a morar no sim.launch.py, ao lado da escolha de planta:
+lenta -> 0,80, normal -> 0,93.
+
+RESULTADO na planta NORMAL, rendimento 0,93 (normal-*.csv, n=3):
+
+                  SIMULADOR              ROBO (04-08)
+  frente        -0,803  (3% disp)      -0,838  faixa -0,75 a -0,93   DENTRO
+  re            -0,095  (0% disp)      -0,113  faixa -0,09 a -0,14   DENTRO
+  razao f/r          8,5x                  7,4x                      ok
+  pico de wz     2,17 rad/s             2,33   faixa 2,23-2,51       na borda
+  sobrepasso       97°                    49°                        ABERTO
+
+O sobrepasso segue 2x o do robo — e o atraso de desliga da placa (~0,5 s
+real contra ~0,16 s aqui), pendencia estrutural ja registrada. O pico fica
+3% abaixo da borda inferior da faixa; nao foi cacado porque a folga que
+falta e menor que a dispersao do proprio robo no mesmo numero.
+
+A aceitacao da planta LENTA (sim-*.csv) continua valida com 0,80.
