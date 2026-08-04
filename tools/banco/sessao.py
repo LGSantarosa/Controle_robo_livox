@@ -184,6 +184,32 @@ PASSOS = [
 ]
 
 
+class GiroAcumulado:
+    """Soma giro DESENROLADO, amostra a amostra.
+
+    Existe porque `yaw_final − yaw_inicial` passado por `atan2` **enrola em
+    ±180°**, e este robô gira muito mais que meia volta num cutucão de 2 s (o
+    patamar da compensação infla o pivô 2,8 a 3,7×). Enrolado, um giro real de
+    `+281,5°` é lido como `−78,5°` — com o SINAL TROCADO. Foi exatamente esse
+    número que bloqueou a sessão de 30-07 como "giro espelhado", e que quase
+    levou alguém a trocar as rodas de um robô que estava certo (ver DIARIO
+    04-08).
+
+    Somando entre amostras consecutivas o problema some: a 10 Hz duas amostras
+    só distariam 180° se o robô girasse a 31 rad/s.
+    """
+
+    def __init__(self, yaw0):
+        self.total = 0.0
+        self._ant = yaw0
+
+    def soma(self, yaw):
+        self.total += math.atan2(math.sin(yaw - self._ant),
+                                 math.cos(yaw - self._ant))
+        self._ant = yaw
+        return self.total
+
+
 # --------------------------------------------------------------- conferência
 
 # Medidos com trena NESTE robô em 2026-07-29 (ver ESTADO_PROJETO.md). Não são
@@ -412,6 +438,25 @@ def _cutucao(no, pub, ultimo, sim):
         return p.x, p.y
 
     def solta(v, wz, seg):
+        """Solta o comando por `seg`, zera, e espera a inércia acabar.
+
+        Devolve o giro ACUMULADO no percurso inteiro, desenrolado.
+
+        Por que acumulado, e não `yaw_final − yaw_inicial`: essa diferença passa
+        por `atan2` e **enrola em ±180°**. Com o patamar da compensação este robô
+        gira muito mais que meia volta num cutucão de 2 s, e o resultado era lido
+        com o SINAL TROCADO — `+281,5°` virava `−78,5°`, que foi exatamente o
+        falso "giro espelhado" que bloqueou a sessão de 30-07 inteira e quase
+        levou alguém a trocar as rodas de um robô que estava certo (04-08).
+
+        Somando amostra a amostra o problema some: a 10 Hz, duas amostras
+        consecutivas só distariam 180° se o robô girasse a 31 rad/s.
+        """
+        giro = GiroAcumulado(yaw())
+
+        def acumula():
+            giro.soma(yaw())
+
         t0 = time.monotonic()
         while time.monotonic() - t0 < seg:
             m = TwistStamped()
@@ -420,18 +465,22 @@ def _cutucao(no, pub, ultimo, sim):
             m.twist.angular.z = float(wz)
             pub.publish(m)
             rclpy.spin_once(no, timeout_sec=0.02)
+            acumula()
         for _ in range(10):
             pub.publish(TwistStamped())
             rclpy.spin_once(no, timeout_sec=0.02)
+            acumula()
         t0 = time.monotonic()
         while time.monotonic() - t0 < 1.0:
             rclpy.spin_once(no, timeout_sec=0.05)
+            acumula()
+        return giro.total
 
     saida = []
 
     x0, y0 = pos()
     a0 = yaw()
-    solta(0.25, 0.0, 2.0)
+    solta(0.25, 0.0, 2.0)   # o giro acumulado da reta não interessa aqui
     x1, y1 = pos()
     avanco = (x1 - x0) * math.cos(a0) + (y1 - y0) * math.sin(a0)
     lateral = -(x1 - x0) * math.sin(a0) + (y1 - y0) * math.cos(a0)
@@ -449,12 +498,15 @@ def _cutucao(no, pub, ultimo, sim):
         saida.append('          ou a placa não está recebendo. Conferir o serial '
                      'antes de seguir.')
 
-    a0 = yaw()
-    solta(0.0, 0.6, 2.0)
-    giro = math.atan2(math.sin(yaw() - a0), math.cos(yaw() - a0))
+    giro = solta(0.0, 0.6, 2.0)
     if giro > 0.15:
         saida.append(f'  [ok] comando de +0,6 rad/s girou {math.degrees(giro):+.1f}° '
                      f'— anti-horário, como manda a regra da mão direita')
+        if abs(giro) > math.pi:
+            saida.append(f'         (mais de meia volta: {abs(giro) / (2 * math.pi):.2f} '
+                         f'voltas. É o patamar da compensação inflando o giro —')
+            saida.append('          esperado neste robô, e é por isso que este número '
+                         'é ACUMULADO e não\n          a diferença entre as pontas.)')
     elif giro < -0.15:
         saida.append(f'  [FALHA] comando de +0,6 rad/s girou '
                      f'{math.degrees(giro):+.1f}° — sentido INVERTIDO.')

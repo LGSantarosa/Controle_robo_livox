@@ -203,7 +203,25 @@ def _zona_morta_rampa_unica(r, campo_cmd, campo_med, unidade, escala=1.0):
 
 
 def a_dec(r):
-    """Desaceleração angular: wz no instante do corte, e quanto ainda girou."""
+    """Desaceleração angular: de quanto ele vinha girando, e quanto ainda girou.
+
+    Dois cuidados que a versão anterior não tinha, os dois medidos em 04-08:
+
+    1. **A janela começa no PICO, não no corte.** A placa leva 0,40 a 0,60 s para
+       parar de empurrar depois que o comando zera, e nesse trecho o robô ainda
+       ACELERA (comando 0,6 rad/s → pico de 2,23 rad/s chegando 0,40 s após o
+       corte). Medir a partir do corte inclui trecho acionado, que não é
+       desaceleração, e o `a_dec` sai inflado.
+
+    2. **O yaw é acumulado DESENROLADO.** Antes ele era `atan2(sin(Δ), cos(Δ))`
+       entre as duas pontas, que enrola em ±180°. É o mesmo defeito que fez o
+       cutucão ler +281,5° como −78,5° e bloquear a sessão de 30-07 inteira.
+       Aqui ele não mordeu em 04-08 só porque a inércia deu 42–53°; com comando
+       maior morde, e devolve `a_dec` errado sem sintoma nenhum.
+
+    Devolve o a_dec EFETIVO (o que prevê o sobrepasso total). Imprime junto o da
+    CAUDA, que é outro número e é o que a lei de frenagem precisa — ver abaixo.
+    """
     corte = None
     for i in range(1, len(r)):
         if abs(r[i - 1]['cmd_wz']) > 1e-6 and abs(r[i]['cmd_wz']) < 1e-6:
@@ -212,28 +230,52 @@ def a_dec(r):
     if corte is None:
         print('  não achei o corte do comando de giro no CSV')
         return None
-    wz_corte = r[corte - 1]['wz_pose']
-    yaw_corte = r[corte]['yaw']
-    # rumo em que ele efetivamente parou de girar
+
+    # Início real da frenagem: onde |wz| foi máximo DEPOIS do corte.
+    pico = max(range(corte, len(r)), key=lambda i: abs(r[i]['wz_pose']))
+    wz_pico = abs(r[pico]['wz_pose'])
+    atraso = r[pico]['t'] - r[corte]['t']
+
+    # Onde ele efetivamente parou de girar, a partir do pico.
     parou = None
-    for l in r[corte:]:
-        if abs(l['wz_pose']) < LIMIAR_PARADO:
-            parou = l
+    for i in range(pico, len(r)):
+        if abs(r[i]['wz_pose']) < LIMIAR_PARADO:
+            parou = i
             break
     if parou is None:
         print('  ele não parou de girar dentro do ensaio — aumentar --dur')
         return None
-    dyaw = abs(math.atan2(math.sin(parou['yaw'] - yaw_corte),
-                          math.cos(parou['yaw'] - yaw_corte)))
+
+    # Yaw ACUMULADO entre pico e parada: soma das diferenças entre amostras
+    # consecutivas, cada uma normalizada. Duas amostras a 10 Hz nunca distam
+    # 180°, então aqui a normalização é segura — é entre as PONTAS que não é.
+    dyaw = abs(sum(norm(r[i]['yaw'] - r[i - 1]['yaw'])
+                   for i in range(pico + 1, parou + 1)))
+    dt = r[parou]['t'] - r[pico]['t']
     if dyaw < 1e-3:
         print('  girou de menos depois do corte para medir')
         return None
-    a = wz_corte ** 2 / (2.0 * dyaw)
-    print(f'  a_dec = {a:.3f} rad/s²')
-    print(f'    (cortou com wz={wz_corte:.3f} rad/s e ainda girou '
-          f'{math.degrees(dyaw):.1f}° em {parou["t"] - r[corte]["t"]:.2f} s)')
-    print(f'  -> SOBREPASSO do controlador velho seria {wz_corte**2/(2*a):.3f} rad '
-          f'({math.degrees(wz_corte**2/(2*a)):.0f}°)')
+
+    a = wz_pico ** 2 / (2.0 * dyaw)
+    print(f'  a_dec EFETIVO = {a:.3f} rad/s²')
+    print(f'    (pico de {wz_pico:.3f} rad/s, {atraso:.2f} s DEPOIS do corte; '
+          f'girou {math.degrees(dyaw):.1f}° em {dt:.2f} s)')
+    if atraso > 0.15:
+        print(f'    a placa seguiu empurrando {atraso:.2f} s após o comando zerar '
+              f'— por isso a janela começa no pico')
+
+    # A desaceleração NÃO é constante (medido em 04-08: sobe até ~2,3 no meio e
+    # cai para ~0,7 no fim). A lei de frenagem assume que é, e quem manda no
+    # assentamento é a CAUDA — errar a_dec para baixo é de graça, para cima traz
+    # o S de volta (27-07). Por isso os dois números saem, e não só a média.
+    ia = pico + int((parou - pico) * 0.66)
+    if parou > ia:
+        cauda = ((abs(r[ia]['wz_pose']) - abs(r[parou]['wz_pose']))
+                 / (r[parou]['t'] - r[ia]['t']))
+        print(f'  a_dec da CAUDA = {cauda:.3f} rad/s²  <- é ESTE que o seguidor usa')
+        print(f'    (último terço da frenagem, onde ele tem de assentar no rumo)')
+    print(f'  -> SOBREPASSO a partir de {wz_pico:.2f} rad/s: '
+          f'{math.degrees(dyaw):.0f}°')
     return a
 
 

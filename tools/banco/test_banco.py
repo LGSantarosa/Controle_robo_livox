@@ -553,3 +553,114 @@ def test_corrida_que_nem_comecou_nao_dispara_a_trava():
     no.t_pose = None
     roda_passo(no, 5.0, fonte_viva=False)
     assert not no.fim and no.linhas == []
+
+
+# ------------------------------------------- o angulo que enrola (30-07)
+
+def csv_degrau(pico, dyaw_graus, atraso=0.4, dt=0.02, t_corte=4.0):
+    """CSV sintético de degrau de giro com PICO conhecido depois do corte.
+
+    Reproduz o robô de verdade: o comando zera em `t_corte` mas a placa segue
+    empurrando por `atraso`, e só então ele desacelera. `dyaw_graus` é o giro da
+    frenagem — passe mais de 180° para exercitar o enrolamento.
+    """
+    r, t, yaw = [], 0.0, 0.0
+    def linha(cmd_wz, wz):
+        nonlocal t, yaw
+        yaw += wz * dt
+        r.append({'t': round(t, 3), 'cmd_wz': cmd_wz, 'wz_pose': wz,
+                  'yaw': math.atan2(math.sin(yaw), math.cos(yaw)),  # SEMPRE enrolado
+                  'cmd_v': 0.0, 'v_pose': 0.0, 'x': 0.0, 'y': 0.0})
+        t += dt
+    # No corte ele ainda NAO esta no pico — e essa a razao de o pico existir.
+    # Platô achatado aqui faria o max() cair no proprio corte e o teste nao
+    # exercitaria nada.
+    wz_corte = 0.7 * pico
+    while t < t_corte:                       # acelerando sob comando
+        linha(0.6, wz_corte * t / t_corte)
+    t0 = t
+    while t - t0 < atraso:                   # comando zerado, mas AINDA SOBE
+        linha(0.0, wz_corte + (pico - wz_corte) * (t - t0) / atraso)
+    # frenagem: rampa linear ate zero, ajustada para dar o dyaw pedido
+    alvo = math.radians(dyaw_graus)
+    dur = 2.0 * alvo / pico                  # area do triangulo = alvo
+    t0 = t
+    while t - t0 < dur:
+        linha(0.0, pico * max(0.0, 1.0 - (t - t0) / dur))
+    for _ in range(30):
+        linha(0.0, 0.0)
+    return r
+
+
+def test_a_dec_nao_enrola_quando_a_inercia_passa_de_180():
+    """O defeito de 30-07 vivendo no medir.py. A versão antiga fazia
+    atan2(sin(yaw_fim - yaw_corte), ...), que le 200° como -160° — e devolve um
+    a_dec com sinal e magnitude errados, sem sintoma nenhum."""
+    r = csv_degrau(pico=2.0, dyaw_graus=200.0)
+    a = medir.a_dec(r)
+    assert a is not None
+    esperado = 2.0 ** 2 / (2 * math.radians(200.0))
+    assert a == pytest.approx(esperado, rel=0.10), (
+        f'a_dec {a:.3f} contra {esperado:.3f}: a inercia de 200° foi lida enrolada')
+
+
+def test_a_dec_mede_do_PICO_e_nao_do_corte():
+    """A placa segue empurrando ~0,5 s depois do comando zerar (medido 04-08:
+    0,40/0,56/0,60 s). Medir do corte inclui trecho ACIONADO, que nao e
+    desaceleracao, e infla o a_dec."""
+    r = csv_degrau(pico=2.0, dyaw_graus=60.0, atraso=0.5)
+    a = medir.a_dec(r)
+    esperado = 2.0 ** 2 / (2 * math.radians(60.0))
+    assert a == pytest.approx(esperado, rel=0.10)
+
+
+def test_a_dec_curto_continua_valendo():
+    """A trava nao pode quebrar o caso normal, abaixo de 180°."""
+    r = csv_degrau(pico=1.5, dyaw_graus=45.0)
+    a = medir.a_dec(r)
+    assert a == pytest.approx(1.5 ** 2 / (2 * math.radians(45.0)), rel=0.10)
+
+
+def _gira(total_graus, passo_graus=5.0):
+    """Sequência de yaw ENROLADO para um giro contínuo de `total_graus`.
+
+    Termina no ângulo EXATO — com passo fixo o último degrau ficava de fora e o
+    teste comparava 280° contra 281,5°, acusando o acumulador por um defeito do
+    próprio dublê.
+    """
+    n = max(1, int(math.ceil(abs(total_graus) / passo_graus)))
+    return [math.atan2(math.sin(math.radians(total_graus * i / n)),
+                       math.cos(math.radians(total_graus * i / n)))
+            for i in range(n + 1)]
+
+
+def test_cutucao_le_giro_de_mais_de_meia_volta_com_o_sinal_CERTO():
+    """O defeito que bloqueou 30-07. Um giro anti-horário de 281,5° era lido
+    como −78,5° — sinal trocado — e diagnosticado como 'rodas espelhadas'. O
+    conserto quase aplicado teria quebrado um robô que estava certo."""
+    ys = _gira(281.5)
+    g = sessao.GiroAcumulado(ys[0])
+    for y in ys[1:]:
+        g.soma(y)
+    assert math.degrees(g.total) == pytest.approx(281.5, abs=1.0)
+    assert g.total > 0, 'anti-horário tem de sair POSITIVO, não negativo'
+
+
+def test_cutucao_pega_o_sentido_de_verdade_se_ele_estiver_invertido():
+    """A trava não pode cegar o cutucão: rodas de fato trocadas ainda têm de ser
+    acusadas. Aqui o robô gira HORÁRIO com comando anti-horário."""
+    ys = _gira(-281.5)
+    g = sessao.GiroAcumulado(ys[0])
+    for y in ys[1:]:
+        g.soma(y)
+    assert g.total < 0, 'giro invertido de verdade tem de continuar sendo pego'
+    assert math.degrees(g.total) == pytest.approx(-281.5, abs=1.0)
+
+
+def test_giro_acumulado_conta_varias_voltas():
+    """Este robô chega a girar mais de uma volta num cutucão de 2 s."""
+    ys = _gira(760.0)
+    g = sessao.GiroAcumulado(ys[0])
+    for y in ys[1:]:
+        g.soma(y)
+    assert math.degrees(g.total) == pytest.approx(760.0, abs=2.0)
