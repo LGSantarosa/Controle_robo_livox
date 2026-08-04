@@ -26,9 +26,12 @@ O RESULTADO DO DIA: o desvio de rumo depende do SENTIDO DE MARCHA
   FRENTE      -1.15 1/m      0.87 m          2.09x        -242° em 3.74 m
   RE          -0.16 1/m      6.18 m          1.08x         -14° em 1.29 m
 
-Sete vezes de diferenca. De re ele anda praticamente reto (1.08x, onde reta
-perfeita e 1.00x); de frente descreve um circulo de 0.87 m de raio para a
+Sete vezes de diferenca. De frente descreve um circulo de 0.87 m de raio para a
 DIREITA, sustentado por 3.74 m de percurso.
+
+A RE NAO E RETA, e o dono corrigiu essa frase: ela desvia MUITO menos, nao
+zero. Raio de 6.2 a 8.6 m, que em 10 m de percurso ainda da 70 a 90° — um
+seguidor sente isso.
 
 Isso EXCLUI motor/placa fraca de um lado como causa dominante: uma roda mais
 fraca daria a mesma razao de velocidades — logo a mesma curvatura — nos dois
@@ -133,3 +136,21 @@ CORRIDAS
 6-reta_re-b.csv       --v -0.25 --wz 0 --dur 12 --espaco 1.2 --janela 0.5
                       301 amostras. Bico a 180°, andando de re -> mesma
                       direcao de mundo da frente-b. E a corrida de CONTROLE.
+
+
+O DESVIO TEM DUAS PARCELAS (leitura, nao medida fechada — n=2 por sentido)
+---------------------------------------------------------------------------
+Os dois sentidos desviam para o MESMO lado do corpo (sempre a direita), o que
+sugere soma de dois termos em vez de um so:
+
+  constante nos dois sentidos   ~ -0.14 1/m     (o que a re isola)
+  so de frente                  ~ -0.59 a -1.01 1/m
+                                  ---------------
+  frente total                  ~ -0.73 a -1.15 1/m
+
+Ou seja ~85% do arco de frente e o termo dependente do sentido (a boba), e
+~15% e um residuo que sobrevive a re — esse sim candidato a motor, placa ou
+geometria das motrizes.
+
+Consequencia de projeto: consertar a boba NAO deixa o robo reto. Sobra um raio
+de ~7 m, que o seguidor tem de fechar em malha fechada de rumo.
