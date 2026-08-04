@@ -10,6 +10,16 @@
 
 ---
 
+🟢 **SIMULADOR AGORA BATE COM O ROBÔ EM ARCO E EM PICO DE WZ (04-08):**
+- **Arco (1ª leva)**: frente −0,817 1/m (robô −0,838), ré −0,109 (robô −0,113)
+- **Pico de wz (3ª leva, planta normal)**: 2,25 rad/s (robô 2,33)
+- As duas maiores grandezas de fidelidade estão dentro da dispersão da máquina.
+- **Terceira pendência (sobrepasso):** o simulador desacelera 2× mais rápido por
+  falta do atraso de desliga da placa (~0,5 s) — entrada estrutural, não é
+  parametrização. Deixa para depois da dispersão (item 12c).
+
+---
+
 ## O robô
 
 - **Tração**: 2 rodas de hoverboard (diferencial) **na frente** + roda boba
@@ -887,6 +897,38 @@ porque havia **quatro `placa_simulada` órfãs** acumuladas, de lançamentos que
 derrubei com `pkill` de padrão largo. Contar processo vivo antes de medir entrou
 no procedimento.
 
+## 🪞 Pendências abertas por 04-08
+
+**Item 12 (calibração do simulador):** o passo 12a (arco) fechou, 12b (aceitação)
+está medido e dentro da dispersão do robô. Ficou aberto:
+
+- **12c — Dispersão**: o simulador dá 4% de frente contra 21% do robô, e **0%**
+  na ré contra 37%. Determinista demais faz controlador parecer mais repetível
+  do que vai ser. É decisão de projeto (injetar ruído, de que tipo), não foi
+  tomada. Deixa para quando o controlador já estiver operacional.
+
+- **Atraso de desliga da placa** (novo achado em 04-08, 3ª leva): a placa
+  empurra ~0,51 s DEPOIS do comando zerar. O parâmetro `latencia` da
+  `placa_simulada` modela o atraso de liga (aquele que trava por 0,27 s no
+  arranque), não o de desliga. Com só a latência de liga, o Gazebo desacelera
+  2× mais rápido que o robô (sobrepasso 94° contra 49°). Precisaria entrar na
+  lógica do `cb` do nó, não é parametrização.
+
+- **Teto de aceleração angular** (corrigido em 04-08, 3ª leva): `angular.z.max_acceleration`
+  com valores baixos (0,3 na planta lenta) limitava o pico indiretamente. Com a
+  planta normal (1,5) ele sobe de 0,45 para 2,25 rad/s e agora bate. Mas o
+  sobrepasso sai 2× maior por falta do atraso de desliga.
+
+- **Velocidade sustentada acima do patamar**: nunca foi medida acima de 0,838 m/s
+  em nenhum dos dois lados (é onde o comando volta a ser proporcional).
+  Recomputado mas não validado em hardware.
+
+- **Mecanismo (BO-4)**: o arco entra disfarçado de assimetria de roda,
+  porque a placa só tem rodas para escrever. Prova de que entra: 24,8% de
+  assimetria necessária contra 11–12% medidos pelo encoder. O encoder
+  simulado mente e **quebra no dia em que ligarem `open_loop: false`**.
+  Reproduz o sintoma, não o mecanismo.
+
 ## ⏳ Próximos passos
 
 **Primeiro, com o robô (virou prioridade — a movimentação depende destes
@@ -924,6 +966,14 @@ números e hoje eles são chute):**
    sessão de dado se o driver morrer no meio do handshake (não usar `kill -9`;
    SIGINT e esperar). Sintoma: pinga e ACKa, RX de ~6 pacotes/3 s, `/livox/lidar`
    mudo. Cura: power-cycle do lidar. Ver a entrada 07-30 (2ª leva) do diário.
+
+**O simulador está pronto para rodar controlador:**
+
+  Rodá-lo com `planta:=normal` (padrão; a_dec 1,5 rad/s²). A `lenta` (0,3)
+  era propositalmente pessimista para validar a lei de frenagem da decisão 005
+  — não é a planta do robô real. Com a normal o pico de wz sai 2,25 rad/s
+  (robô tem 2,33), que agora bate. O sobrepasso fica 2× maior por falta do
+  atraso de desliga, mas isso não vai descer antes de modelar esse atraso.
 
 **Sem o robô, e agora urgentes (01-08):**
 

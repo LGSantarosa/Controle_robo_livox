@@ -2885,3 +2885,26 @@ o defeito de `7a0c364`. O teste pega.
 4. Percurso de 1,2 m. A corrida de 3,7 m do robô deu arco mais forte (−1,15):
    a hipótese "o arco aperta com a distância" não foi testada em nenhum dos
    dois lados.
+
+## 🪞 2026-08-04 (3ª leva) — O teto de aceleração angular e o atraso de desliga
+
+Continuação da aceitação, investigando por que o pico de wz saia 5× menor no
+simulador (0,45 contra 2,33 rad/s do robô), mesmo com a placa now modelada.
+
+Suspeitei do `angular.z.max_velocity: 1.0` do diff_drive_controller (sabia que
+no robô ele cede à compensação da placa e a deixa subir para ~2.2). No
+simulador a compensação é um nó SEPARADO que vem ANTES do controlador,
+então o corte caía DEPOIS dela e desfazia o que ela faz — o patamar
+simplesmente não passava.
+
+Levantei para 3.0. O pico subiu de 0,45 para 2,25 — agora bate com o robô.
+
+Mas com aceleração angular em 1,5 rad/s² (planta normal), o sobrepasso ficou
+94° contra 49° do robô — 2× maior. Investigando: a placa real **empurra
+0,51 s DEPOIS do comando zerar** (latência de desliga), medido em 04-08. No
+simulador com só o parâmetro `latencia` ela para em **0,24 s** — metade. Sem
+modelar esse atraso de desliga, o Gazebo desacelera mais rápido do que a
+máquina real.
+
+**Deixa para depois**: é mudança estrutural (entra no loop da placa fingida,
+não é parametrização) e o passo 1 (arco) já fechou — as três medidas rodam.
