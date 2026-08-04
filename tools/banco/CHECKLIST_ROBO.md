@@ -32,7 +32,6 @@ Seis coisas que **não** se fazem, cada uma comprada com tempo perdido:
 | não faça | por quê |
 |---|---|
 | 🛑 **aplicar o swap esquerda/direita** | **o giro espelhado NÃO EXISTE** — era `atan2` enrolando em ±180°. O estado atual (sem swap) é o correto. Aplicado em `368ea13`, revertido em `595cf80` |
-| acreditar no veredito de giro do `--checar --mexer` | ele compara comando com um yaw que enrola; **vai gritar `INVERTIDO` e é alarme falso por construção** |
 | dimensionar corrida só pela distância à frente | a trava `--espaco` é **radial** e não vê excursão lateral. Em 04-08 o robô fez círculo e **bateu numa cadeira** num corredor "de 3 m livres" |
 | `kill -9` no driver do livox | trava a sessão de dado do Mid-360; derrubar com Ctrl-C e esperar |
 | pular o `colcon build` | YAML e xacro são lidos do `install/`; sem build a correção não existe |
@@ -143,10 +142,16 @@ ir para a esquerda varrendo bastante** — `289°` enrolados. O robô gira certo
 O swap chegou a ser aplicado (`368ea13`) e foi **revertido** (`595cf80`). O
 estado de hoje, **sem swap**, é o correto.
 
-**O que esperar do `--checar --mexer`:** a parte linear é útil (ele confere se o
-robô anda para a frente com comando positivo). A parte do giro **vai acusar
-`sentido INVERTIDO` toda vez** — é alarme falso por construção, enquanto o
-`atan2` não for consertado. Ignorar, e **não** mexer nas rodas por causa dele.
+✅ **CONSERTADO em 04-08** (`7a0c364`): o cutucão passou a **acumular** o giro
+amostra a amostra em vez de diferenciar as pontas, então ele agora julga o giro
+real. Um pivô de mais de meia volta é lido como tal e **aprovado**, e ele avisa
+quantas voltas deu. Giro de fato invertido continua sendo pego — travado em
+teste, verificado por mutação.
+
+**Então o veredito de giro do `--checar --mexer` voltou a valer.** Se ele acusar
+`sentido INVERTIDO` agora, **é para levar a sério** — mas confirme com o olho de
+alguém atrás do robô antes de mexer em qualquer coisa. Foi o olho do dono que
+desempatou nas duas vezes em que o instrumento mentiu.
 
 ## 4. A sessão — o que ainda falta, e o que NÃO roda
 
@@ -303,7 +308,7 @@ O vídeo vai por fora (é grande demais para o repo).
 | `/Odometry` não publica | IP do lidar — varredura acima |
 | ninguém escuta `cmd_vel` | `base.launch.py` caiu; olhar o primeiro terminal |
 | robô não sai do lugar no passo 1 | pode ser o resultado. Repetir com `--rampa-ate 0.6` |
-| **gira ao contrário no cutucão** | 🛑 **é o `atan2` enrolando. NÃO mexer nas rodas** — ver a seção 3 |
+| **gira ao contrário no cutucão** | desde `7a0c364` o cutucão não enrola mais, então **é para levar a sério** — mas confirme com o olho de alguém atrás do robô ANTES de mexer nas rodas |
 | ensaio corta cedo | trava de distância (`--espaco`); num robô que arca isso é o normal |
 | corrida aborta com "calou por N s" | a fonte morreu. É a trava nova (`--sem-dado`) fazendo o que deve — o CSV parcial vale, a corrida não |
 | saltos de ~1,35 m no `/Odometry` | **mais de uma pilha de localização viva**. Contar com `pgrep` |

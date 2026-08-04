@@ -186,8 +186,14 @@ Nove corridas. **O banco foi de 2 passos de 6 para 4.** Detalhes na entrada
   protege contra excursão lateral. Num robô que arca, dimensionar por `--espaco`
   pequeno é o jeito de limitar o **disco varrido**.
 
-  🔧 **Por consertar:** o `atan2` que enrola, no cutucão do `sessao.py` e no
-  `medir.py`. É o defeito que custou a sessão de 30-07 inteira.
+  ✅ **CONSERTADO no mesmo dia** (`7a0c364`): o `atan2` que enrolava, no cutucão
+  do `sessao.py` e no `a_dec` do `medir.py`. Os dois passam a **acumular** o yaw
+  amostra a amostra. No `medir.py` veio junto um segundo defeito entrelaçado: a
+  janela de frenagem começava no **corte** e não no **pico**, incluindo os 0,4–0,6 s
+  em que a placa ainda empurra e o robô ainda ACELERA — consertar só o `atan2`
+  deixaria a função devolvendo número errado com cara de consertada. Ele passa a
+  imprimir também o `a_dec` da **cauda**. 6 testes, os 4 principais verificados
+  por mutação. Suíte: **421 verdes**.
 
   ⚠️ **Piso e bateria não foram informados** nas nove corridas — o `ambiente.txt`
   registra `NÃO INFORMADO`. Sem eles a sessão não se compara com a próxima.
