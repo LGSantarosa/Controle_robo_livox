@@ -154,3 +154,44 @@ geometria das motrizes.
 
 Consequencia de projeto: consertar a boba NAO deixa o robo reto. Sobra um raio
 de ~7 m, que o seguidor tem de fechar em malha fechada de rumo.
+
+
+=========================================================================
+RESULTADO FECHADO DA SESSAO — n=2 matched por sentido (--espaco 1.2)
+=========================================================================
+  FRENTE  media -0.817 1/m  raio  1.22 m  faixa -0.73 a -0.90  (b, c)
+  RE      media -0.098 1/m  raio 10.19 m  faixa -0.08 a -0.12  (b, c)
+
+  razao frente/re = 8.3x
+
+  parcela constante (o que a re isola)  ~ -0.10 1/m   raio 10.2 m
+  parcela so-de-frente (a boba)         ~ -0.72 1/m   = 88% do arco de frente
+
+Dispersao: frente 21%, re 37%. A porcentagem da re ENGANA — e percentual sobre
+numero quase nulo. Em absoluto a re espalha 0.04 1/m contra 0.17 da frente: e o
+lado MAIS estavel dos dois.
+
+CONTROLE DE PISO, agora com n=2: nas quatro corridas o bico ficou a ~0°
+(frente) ou ~180° (re), todas andando para a mesma faixa de direcao do mundo
+(-3° a -32°), e a curvatura NO CORPO saiu negativa nas QUATRO. Caimento de piso
+teria trocado o sinal ao girar o corpo. Nao trocou, quatro vezes.
+=> o arco e do ROBO.
+
+Anotado sem investigar (o dono pediu foco no protocolo): a frente-a, que foi a
+corrida mais longa (3.74 m contra 1.30 m), deu a curvatura mais forte (-1.15
+contra media -0.82). Pode ser que o arco APERTE com a distancia percorrida.
+Pergunta para outra sessao.
+
+Tambem do dono, teste com a mao (robo desligado, empurrado a mao): o desvio SE
+REPETE. Mecanismo da boba (geometria do garfo x atrito no pivo) fica em aberto
+por decisao de escopo, nao por falta de acesso.
+
+CONSEQUENCIA DE PROJETO: consertar a boba nao deixa o robo reto — sobra um raio
+de ~10 m, que o seguidor tem de fechar em malha fechada de rumo.
+
+
+6-reta_frente-c.csv   --v 0.25 --wz 0 --dur 12 --espaco 1.2 --janela 0.5
+                      335 amostras. Repeticao matched de frente.
+
+6-reta_re-c.csv       --v -0.25 --wz 0 --dur 12 --espaco 1.2 --janela 0.5
+                      317 amostras. Repeticao matched de re (bico a -178°).
