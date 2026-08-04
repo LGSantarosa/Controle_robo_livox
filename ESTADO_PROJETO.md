@@ -897,6 +897,39 @@ porque havia **quatro `placa_simulada` órfãs** acumuladas, de lançamentos que
 derrubei com `pkill` de padrão largo. Contar processo vivo antes de medir entrou
 no procedimento.
 
+## 🎯 O TRABALHO ATUAL: decisão 011 — malha fechada de rumo (o "PID")
+
+Aprovada pelo dono em 04-08 ("focar tudo nesse PID"). Plano em 5 fatias;
+registro completo em `docs/decisoes/011-malha-fechada-de-rumo-em-reta.md`.
+
+- ✅ **Fatia 1 — reta e ré no Gazebo: FEITA E ACEITA (04-08, 5ª leva).**
+  `compensador_rumo` (nó novo no `robot_motion`, lei pura em
+  `lei_de_reta.py`): entra `cmd_vel` desejado, sai `cmd_vel` corrigido,
+  yaw do `/Odometry` fechando a malha. ff medido (−0,817/−0,098) + PI
+  (kp=1,0, ki=0,5). Bancada n=3 por sentido:
+
+  ```
+                   SEM              COM           critério
+  frente         -0,82 1/m       -0,0025 1/m       <0,05    passa 20x
+  ré             -0,11           -0,0003           <0,05    passa
+  ```
+
+  Dados: `docs/dados/2026-08-04-fatia1-compensador/`. O Ki existe para
+  zerar o RUMO, não a curvatura (sem ele o robô anda reto, mas ~6° torto)
+  — descoberto pelo próprio teste, travado em teste.
+
+- ⏳ **Fatia 2 — atraso de desliga na placa fingida** (~0,5 s medido no robô,
+  ~0,16 s no Gazebo hoje). Estrutural, pré-requisito da fatia 3.
+- ⏳ **Fatia 3 — pivô por corte previsto.** NÃO é PID (a placa entrega um wz
+  só); é decidir quando cortar, com ~49° de sobrepasso como dado. Só se
+  sintoniza DEPOIS da fatia 2 (hoje o Gazebo sobrepassa 99° contra 49°).
+- ⏳ **Fatia 4 — robô real.** Mesmo protocolo da bancada de 04-08, o dono
+  conduz, `ensaio.py --topico /compensador_rumo/cmd_vel`. É quem julga de
+  verdade: no Gazebo o ff é exato por construção; no robô a planta do dia
+  difere do ff em até 21% e o integrador é quem paga.
+- ⏳ **Fatia 5 — integração permanente** no módulo de movimento (launch,
+  prioridade humana no mux, delator do BO-3 nesta camada).
+
 ## 🪞 Pendências abertas por 04-08
 
 **Item 12 (calibração do simulador):** o passo 12a (arco) fechou, 12b (aceitação)
