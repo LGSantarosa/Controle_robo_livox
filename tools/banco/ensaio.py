@@ -86,8 +86,7 @@ class Ensaio(Node):
         self.cfg = cfg
 
         qos = QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE)
-        self.pub = self.create_publisher(
-            TwistStamped, '/hoverboard_base_controller/cmd_vel', qos)
+        self.pub = self.create_publisher(TwistStamped, cfg.topico, qos)
         self.create_subscription(Odometry, '/Odometry', self.cb_pose, qos)
         self.create_subscription(
             Odometry, '/hoverboard_base_controller/odom', self.cb_roda, qos)
@@ -504,6 +503,15 @@ def main():
     ap.add_argument('--taxa', type=float, default=50.0, help='malha do banco [Hz]')
     ap.add_argument('--sim', action='store_true',
                     help='usar tempo de simulação (no robô real, NÃO passar)')
+    # No robô o comando entra no controlador e a placa DE VERDADE está depois
+    # dele, no fio. No simulador a placa fingida é um nó à parte, escutando
+    # `/cmd_vel_bruto` — publicar direto no controlador PASSA POR FORA dela e
+    # mede um robô sem atuador. Foi o que aconteceu em 31-07 ("o Gazebo provou
+    # o mecanismo, não o número"). Com isto o ensaio pode entrar pela mesma
+    # porta que a navegação usa, e aí os dois lados ficam comparáveis.
+    ap.add_argument('--topico', default='/hoverboard_base_controller/cmd_vel',
+                    help='onde publicar o comando. No simulador, use '
+                         '/cmd_vel_bruto para atravessar a placa fingida')
     cfg = ap.parse_args()
 
     rclpy.init()
