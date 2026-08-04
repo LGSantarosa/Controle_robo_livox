@@ -901,8 +901,10 @@ números e hoje eles são chute):**
    🛑 **NÃO FAZER. O giro espelhado NÃO EXISTE** (08-04) — era o `atan2` do
    cutucão enrolando em ±180°. O swap foi aplicado (`368ea13`) e **revertido**
    (`595cf80`); **o estado atual, SEM swap, é o correto**. Aplicar aquele script
-   quebra um robô que está certo. Quem for conduzir: o `--checar --mexer` ainda
-   vai gritar `giro INVERTIDO` — é alarme falso por construção, ignorar.
+   quebra um robô que está certo. O `atan2` foi **consertado** em `7a0c364`, então
+   o veredito de giro do `--checar --mexer` voltou a valer — se ele acusar agora,
+   é para levar a sério, mas confirme com o olho de alguém atrás do robô antes de
+   mexer em qualquer coisa.
 3. ~~**Rodar a sessão de bancada** (27 corridas).~~ **PARCIALMENTE FEITO**: o
    banco está em **4 de 6** (zona morta de giro e linear em 07-31; `a_dec` e
    desvio de rumo em 08-04). Falta:
@@ -943,6 +945,33 @@ números e hoje eles são chute):**
 8. **Comparar a pilha inteira nas duas placas** — não rodou em 01-08 (`base_link`
    ausente na TF na subida). É o que mede o estrago de ponta a ponta.
 
+**Pontas soltas de 08-04 (baratas, e cada uma já custou algo):**
+
+8a. **`rajada_rodas.py` ainda não percebe que o robô sumiu.** O `ensaio.py` foi
+   consertado (`7d7fad8`: aborta em `--sem-dado` e sai com código 1), o outro
+   não. Foi esse defeito que gravou 7 corridas em branco com cara de sucesso em
+   31-07. Mesmo conserto, mesmo teste.
+
+8b. **Trazer o vídeo da traseira** filmado em 08-04. É a única evidência direta
+   do garfo da boba e o único caminho para o critério (b) do BO-4. Vai por fora
+   do repo (grande demais) — mas o `ambiente.txt` tem de dizer onde ele está.
+
+8c. **Registrar piso e bateria** das nove corridas de 08-04, se ainda der para
+   lembrar. Estão como `NÃO INFORMADO`, e sem eles a sessão não se compara com a
+   próxima.
+
+8d. **Reescrever os passos 4 e 5 do banco** antes da próxima ida ao robô. Os dois
+   varrem 0,2 / 0,4 / 0,6 m/s e as três caem dentro do patamar — medem o driver,
+   não o robô. A varredura tem de subir acima de 0,838 m/s, e isso muda o espaço
+   que a sessão precisa. **Reescrever em casa é barato; descobrir no laboratório
+   custa a sessão.**
+
+8e. **`sessao.py` não conduz mais uma sessão deste robô.** Não deixa passar
+   `--espaco` por fora (padrão 4,0 m, que num robô que arca é excursão lateral
+   demais), o passo 6 dele está morto e os passos 4 e 5 medem o patamar. Ou
+   ganha `--espaco`/`--dur` por fora, ou o protocolo passa a ser conduzido pelo
+   `ensaio.py` corrida a corrida — que foi o que funcionou em 08-04.
+
 **Assim que os dados da bancada chegarem:**
 
 9. **Levantamento da camada de segurança do robô 1** (decisão 010) — ler
@@ -963,8 +992,49 @@ números e hoje eles são chute):**
 11. **Modelo 3D real do robô** no simulador (o dono vai levantar), com o
    Mid-360 no topo. É ele que troca a fonte de obstáculos do mapa estático
    para o sensor, e corrige footprint e bitola do modelo.
-12. **Calibrar o simulador contra o robô** com os números dos ensaios —
-   critério: mesma manobra, S de tamanho parecido.
+12. **Calibrar o simulador contra o robô** — ~~critério: mesma manobra, S de
+   tamanho parecido~~. **O critério deixou de ser impressão e virou número**
+   (08-04): as seis corridas de reta do robô são o alvo. Plano em três passos,
+   nesta ordem, tudo sem robô:
+
+   **12a. Injetar o arco dependente de SENTIDO** no `placa_simulada.py` (ou logo
+   acima dele): `−0,82 1/m` indo para a frente, `−0,10 1/m` de ré. O atuador
+   (patamar, latência de liga e de desliga, escala do firmware) **já está** lá
+   desde 01-08 e ficou validado em hardware em 08-04 — o que falta é o corpo.
+
+   ⚠️ **Isto entra FENOMENOLÓGICO, e o comentário no código tem de dizer isso.**
+   Não dá para derivar o arco da geometria enquanto o BO-4 estiver aberto: a boba
+   do simulador é um patim (multiplicar o atrito dela por 16 mudou o rumo em
+   0,4%). Consequência que precisa estar escrita ao lado do número: o modelo
+   **reproduz o sintoma, não o mecanismo**, então serve para desenvolver
+   controlador e **não** serve para responder "e se" — outra carga, outro piso,
+   ou depois de consertar a boba.
+
+   **12b. Escrever a corrida de ACEITAÇÃO** contra
+   `docs/dados/2026-08-04-bancada-robo/`. Mesma manobra, alvo numérico:
+
+   ```
+   frente:  razão caminho/afastamento  2,09x em 3,7 m de percurso
+   ré:      1,08x
+   razão frente/ré da curvatura:        8,3x
+   ```
+
+   Vira teste, não impressão — e o primeiro valor dele é medir **o quanto o
+   simulador de hoje já está longe**, antes de mexer em qualquer coisa.
+
+   **12c. Só então decidir se entra DISPERSÃO.** Medida em 08-04: 21% na
+   curvatura de frente e 50% no `a_dec` efetivo, entre corridas idênticas. Um
+   simulador determinístico devolve sempre o mesmo número e faz qualquer
+   controlador parecer mais repetível do que vai ser — que é a forma clássica de
+   o simulador enganar. Fica por último porque é decisão de projeto, não de
+   ajuste.
+
+   **O que o simulador NÃO vai cobrir, e é para estar escrito no `README` dele:**
+   acima de **0,838 m/s** nunca foi medido (é onde o comando volta a ser
+   proporcional); o **atrito real** segue não medido (os 0,095 rad/s são
+   aritmética do driver, não atrito); e as nove corridas de 08-04 saíram com
+   **piso e bateria não registrados**, então a rigor não se sabe a que condição
+   os números pertencem.
 13. **Seguidor próprio** por cima do plano do Nav2 — destravado pela 008, é a
    fatia grande seguinte. Carrot no plano, como no robô 1, por cima da
    movimentação da decisão 005.
