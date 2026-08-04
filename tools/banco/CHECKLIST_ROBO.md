@@ -84,9 +84,13 @@ linhas de `source` repetidas.
 esquerda/direita moram no `hoverboard_controllers.yaml` e no xacro do
 `hoverboard_driver`, e o `tracao.launch.py` lê os dois de `FindPackageShare` —
 ou seja, da cópia **instalada**, não do fonte. Trocar o fonte não troca o
-`install/`. Sem o build, a correção do giro espelhado **não existe para o robô**,
-e todos os limiares saem enviesados sem sinal nenhum de que algo está errado.
-É barato e idempotente.
+`install/`, e `git reset --hard` também não. Se o build faltar, o robô sobe com
+a bitola herdada (0,32) e **todos os limiares saem 18,5% enviesados, sem sintoma
+nenhum**. É barato e idempotente — o `--checar` do passo 2 confirma o que a base
+de fato carregou.
+
+(Os scripts do `tools/banco/` são Python solto, rodam do fonte e **não** precisam
+de build. O build é para o que o `tracao.launch.py` lê do `install/`.)
 
 ## 2. Conferir antes de medir — e antes de andar
 
