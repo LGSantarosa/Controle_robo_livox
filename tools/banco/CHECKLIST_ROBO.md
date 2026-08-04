@@ -3,33 +3,56 @@
 Uma página, para levar ao laboratório. O protocolo e o *porquê* de cada ensaio
 estão no `README.md` ao lado; aqui é só a ordem de chegar e rodar.
 
-**Robô LIGADO. Área livre de 5 × 3 m. Alguém de olho, com a mão no disjuntor.**
+**Robô LIGADO. Alguém de olho, com a mão no disjuntor.**
+
+⚠️ **Área livre em TODAS as direções, não só à frente.** Este robô arca com raio
+de ~1,2 m indo para a frente: ele varre um disco, não um corredor. Em 04-08 ele
+bateu numa cadeira num espaço com "3 m livres à frente". O tamanho do disco você
+escolhe no `--espaco` de cada corrida.
 
 ---
 
 ## Para quem for conduzir a sessão (assistente): leia isto primeiro
 
-Este arquivo é executável de cima a baixo. **Não há decisão de projeto a tomar
-no laboratório** — tudo já foi decidido em 30-07 e 31-07. Contexto em duas
-entradas do `docs/DIARIO.md`: **07-30 (2ª leva)**, a ida ao robô que achou o
-giro espelhado, e **07-31**, o protocolo novo.
+> ⚠️ **REVISADO EM 04-08.** A versão anterior deste arquivo mandava **aplicar um
+> swap esquerda/direita** que quebraria um robô que está certo, e descrevia um
+> passo 6 que não roda nesta máquina. Se você está lendo uma cópia que ainda tem
+> a seção "corrigir o giro espelhado", **pare e vá ler a entrada 08-04 do
+> `docs/DIARIO.md`**.
 
-A ordem é: **bundle → build → base → `--checar` → swap → rebuild → `--checar
---mexer` → sessão**. Cada passo abaixo, em ordem, sem pular.
+Contexto obrigatório em três entradas do `docs/DIARIO.md`: **07-31 (4ª leva)**,
+que é a retratação onde os números viraram válidos; **08-04**, esta revisão; e
+`docs/dados/2026-08-04-bancada-robo/ambiente.txt`, com os números vivos.
 
-Cinco coisas que **não** se fazem, cada uma comprada com tempo perdido:
+A ordem é: **bundle → build → base → `--checar` → conferir UMA pilha →
+corridas**. Sem swap, sem rebuild de correção — não há correção pendente.
+
+Seis coisas que **não** se fazem, cada uma comprada com tempo perdido:
 
 | não faça | por quê |
 |---|---|
-| medir com o giro espelhado | a sessão inteira sai lixo, e nenhum dos 6 ensaios acusa |
-| commitar o swap antes do cutucão validar | decisão de 30-07: só entra no git depois de o robô provar |
+| 🛑 **aplicar o swap esquerda/direita** | **o giro espelhado NÃO EXISTE** — era `atan2` enrolando em ±180°. O estado atual (sem swap) é o correto. Aplicado em `368ea13`, revertido em `595cf80` |
+| acreditar no veredito de giro do `--checar --mexer` | ele compara comando com um yaw que enrola; **vai gritar `INVERTIDO` e é alarme falso por construção** |
+| dimensionar corrida só pela distância à frente | a trava `--espaco` é **radial** e não vê excursão lateral. Em 04-08 o robô fez círculo e **bateu numa cadeira** num corredor "de 3 m livres" |
 | `kill -9` no driver do livox | trava a sessão de dado do Mid-360; derrubar com Ctrl-C e esperar |
 | pular o `colcon build` | YAML e xacro são lidos do `install/`; sem build a correção não existe |
 | pedir para o dono relatar o console | ele só executa; tudo sai em arquivo (`leituras.txt`, CSV) |
 
-E uma que **se faz sempre**: `--checar` antes de qualquer coisa que ande. Ele
-recusa medir sem `/Odometry` e agora também diz **qual calibração a base
-carregou** — se a bitola não for 0,270, o número medido não tem unidade.
+E duas que **se fazem sempre**:
+
+1. **`--checar`** antes de qualquer coisa que ande. Ele recusa medir sem
+   `/Odometry` e diz **qual calibração a base carregou** — se a bitola não for
+   0,270, o número medido não tem unidade.
+2. **Conferir que existe exatamente UMA pilha de localização.** Em 07-31 três
+   pilhas órfãs produziram saltos de 1,35 m e custaram horas:
+   ```bash
+   pgrep -c -f "[f]astlio_mapping"        # tem de ser 1
+   pgrep -c -f "[l]ivox_ros_driver2_node" # tem de ser 1
+   ```
+   O colchete não é frescura: `pgrep -f fastlio` casa com a **própria linha de
+   comando do ssh**. E derrubar a base com `pkill -f ros2_control_node` dentro
+   de um ssh mata a própria sessão antes de relançar — foi assim que as três
+   órfãs nasceram. Matar por PID.
 
 ---
 
@@ -95,81 +118,89 @@ Causa provável: o Mid-360 **tranca a sessão de dado** quando o driver morre no
 meio do handshake. Cura: **power-cycle do lidar**. Prevenção: derrubar o driver
 com Ctrl-C e esperar — **nunca `kill -9`** no meio da subida.
 
-## 3. O BLOQUEIO: corrigir o giro espelhado, e provar que corrigiu
+## 3. 🛑 NÃO HÁ BLOQUEIO. O giro espelhado não existe.
 
-O cutucão de 30-07 pegou: comando de **+0,6 rad/s girou −78,5°**. Esquerda e
-direita estão trocadas. A reta sai certa (as duas rodas no mesmo sentido) e só o
-giro espelha — e **nenhum dos seis ensaios acusaria isso**, porque medem
-magnitude. Medir assim é medir errado, e a sessão inteira sairia lixo.
+Esta seção mandava trocar `left`/`right` no `hoverboard_controllers.yaml`.
+**Não faça isso.** O que ela chamava de bloqueio era um defeito do instrumento.
 
-O conserto, aprovado pelo dono e ainda **não aplicado** (a validação exige o robô
-andando, com alguém de olho). Aplicar e reconstruir:
+O cutucão calcula o giro assim:
 
-```bash
-cd ~/Controle_robo_livox
-python3 - <<'PY'
-import pathlib
-p = pathlib.Path('ros2_packages/hoverboard_driver/bringup/config/hoverboard_controllers.yaml')
-t = p.read_text()
-a = 'left_wheel_names: ["left_wheel_joint"]\n    right_wheel_names: ["right_wheel_joint"]'
-b = 'left_wheel_names: ["right_wheel_joint"]\n    right_wheel_names: ["left_wheel_joint"]'
-assert a in t, 'ja trocado, ou o arquivo mudou — conferir a mao'
-p.write_text(t.replace(a, b)); print('swap aplicado')
-PY
-colcon build --packages-select hoverboard_driver && source install/setup.bash
+```python
+giro = math.atan2(math.sin(yaw() - a0), math.cos(yaw() - a0))
 ```
 
-Reiniciar o `base.launch.py` (Ctrl-C no primeiro terminal e subir de novo), e
-então, **com o robô LIVRE e alguém de olho**:
+Isso **enrola em ±180°**. E ele manda `+0,6 rad/s por 2,0 s` — com o patamar da
+compensação, muito mais que meia volta. A conta fecha exata com o número que
+bloqueou 30-07:
 
-```bash
-python3 tools/banco/sessao.py --checar --mexer
+```
+giro real +281,5°  −  360°  =  −78,5°     <- o "sentido INVERTIDO"
 ```
 
-Ele anda 2 s e gira 2 s, e confere o **sinal** do que aconteceu. Duas coisas
-para ler na saída:
+Confirmado em 04-08 com o dono de testemunha: leu **−71,0°** e ele viu **o nariz
+ir para a esquerda varrendo bastante** — `289°` enrolados. O robô gira certo.
 
-- `swap esquerda/direita APLICADO` na seção **calibração viva** — prova que o
-  build pegou, antes mesmo de o robô se mexer;
-- o cutucão: o giro tem de sair **positivo** (anti-horário).
+O swap chegou a ser aplicado (`368ea13`) e foi **revertido** (`595cf80`). O
+estado de hoje, **sem swap**, é o correto.
 
-Saiu positivo? Seguir para o passo 4. Continuou negativo? **Parar e avisar** —
-não é o YAML, é fiação, e medir assim é medir errado. Reverter o swap com o
-mesmo script trocando `a` e `b`.
+**O que esperar do `--checar --mexer`:** a parte linear é útil (ele confere se o
+robô anda para a frente com comando positivo). A parte do giro **vai acusar
+`sentido INVERTIDO` toda vez** — é alarme falso por construção, enquanto o
+`atan2` não for consertado. Ignorar, e **não** mexer nas rodas por causa dele.
 
-**Só commitar o swap depois que o cutucão validar** — é a regra de 30-07.
+## 4. A sessão — o que ainda falta, e o que NÃO roda
 
-## 4. A sessão
+**Estado do banco depois de 04-08: 4 passos de 6.**
+
+| passo | o que mede | estado |
+|---|---|---|
+| 1 | zona morta de GIRO | ✅ 07-31 — 0,095 rad/s (faixa 0,084–0,105) |
+| 2 | zona morta linear | ✅ 07-31 — 0,023 m/s, **sem patamar** (é "onde rasteja") |
+| 3 | `a_dec` (degrau de giro) | ✅ 08-04, `n=3` — usar a **cauda**, ~1,0 rad/s² |
+| 4 | curva por velocidade | ❌ **precisa ser reescrito** |
+| 5 | aceleração linear | ❌ **precisa ser reescrito** |
+| 6 | reta com cutucão | ✅ 08-04 **em forma corrigida** — ver abaixo |
+
+⚠️ **`sessao.py` NÃO serve como está para conduzir isto.** Três motivos:
+não deixa passar `--espaco` por fora (o padrão de 4,0 m é excursão lateral demais
+num robô que arca); o passo 6 dele está morto; e os passos 4 e 5 dele medem o
+patamar em vez do robô. **Conduza corrida a corrida pelo `ensaio.py`**, como em
+04-08:
 
 ```bash
-python3 tools/banco/sessao.py
+python3 tools/banco/ensaio.py --ensaio reta \
+  --csv docs/dados/AAAA-MM-DD-bancada-robo/nome.csv \
+  --v 0.25 --wz 0 --dur 12 --espaco 1.2 --janela 0.5
 ```
 
-Ele pergunta piso e bateria (entram no `ambiente.txt` — sem isso a medida não se
-compara com a próxima sessão), e então roda os seis passos, pausando antes de
-cada corrida para você reposicionar o robô. Cada corrida grava o CSV **e imprime
-a leitura na hora**, então dá para repetir um ensaio esquisito ainda com o robô
-ligado.
+`--janela 0.5` **sempre no robô**: o padrão de 0,2 s sobre pose a 10 Hz pega
+duas amostras e amplifica ruído — foi o que gerou a falsa acusação de "ruído de
+0,033 rad/s" contra o LIO em 07-31.
 
-Ordem, tempo e espaço — **27 corridas**:
+**Por que 4 e 5 não rodam.** Os dois varrem velocidade em 0,2 / 0,4 / 0,6 m/s, e
+**as três caem dentro do patamar da compensação**: todo comando entre ~0,008 e
+~0,838 m/s vira a mesma coisa na placa. As três corridas dariam o mesmo número,
+com cara de varredura. A varredura tem de subir acima de 0,838 m/s, e isso exige
+espaço que a bancada não teve.
 
-| passo | o que mede | corridas | espaço |
-|---|---|---|---|
-| 1 | **zona morta de GIRO** ← item nº 1 | 1 (dente de serra) | raio de 1 m |
-| 2 | zona morta linear | 1 (dente de serra) | 3 m reto |
-| 3 | `a_dec` (degrau de giro) | 5 — o nível do meio **×3** | 4 m |
-| 4 | curva por velocidade | 9 — cada velocidade **×3** | círculo de 1,2 m de raio |
-| 5 | aceleração linear | 3 (**×3**) | 4 m |
-| 6 | reta com cutucão, ida × ré | 8 — inclui 1 girada 180° | 4 m nos dois sentidos |
+**Por que o 3 rodou apesar disso:** o `a_dec` é medido **com o comando em ZERO**,
+e a compensação só age enquanto há comando. Rodar como **pivô puro** (`--v 0`) —
+o `--v 0.3` do protocolo injeta guinada espúria pela curvatura de frente, que
+continua depois do corte e vira `a_dec` falso.
 
-**O giro é o passo 1** porque ele responde a pergunta do pivô **direto**: o
-menor `wz` que gira o robô parado *é* o limiar do pivô, em rad/s, sem bitola no
-meio. Pelo linear só se chega lá convertendo por `2·zm/L` — confiando de novo
-num número medido. Some o risco de sessão cortada (em 30-07 não se mediu nada):
-o que fica por último é o que se perde. **Se der para rodar só um ensaio hoje,
-é este.**
+**O passo 6 não pode ser rodado como está escrito**, por dois motivos
+independentes achados em 04-08:
 
-Uns 30 min de robô andando, mais o reposicionamento.
+- **não existe reta de referência.** "O rumo volta ou foge depois da
+  perturbação?" não tem sentido num robô que descreve um círculo de 1,22 m de
+  raio indo para a frente;
+- **o pulso é menor que a latência do atuador.** O cutucão dura 0,5 s e a placa
+  leva ~0,5 s para destravar. Medido: wz médio −0,405 antes, −0,358 durante,
+  −0,369 depois. Não perturba nada.
+
+O que rodar no lugar dele: **retas puras medindo curvatura**, `--wz 0`, ida e
+ré, com o corpo girado 180° entre os sentidos (isso faz o controle de caimento
+de piso de graça). Ver `docs/dados/2026-08-04-bancada-robo/ambiente.txt`.
 
 **Por que repetido.** Uma corrida é uma amostra, não uma medida: sem faixa não
 dá para dizer se o número serve. Cada grupo de repetições imprime **média,
@@ -180,12 +211,28 @@ aí vale repetir ali mesmo, com o robô ligado.
 Todas as repetições de uma condição saem do mesmo ponto e do mesmo rumo — senão
 a dispersão que a gente medir é a sua mão, não a máquina.
 
-**A corrida girada 180° do passo 6 não é repetição, é controle.** Média de três
-corridas iguais mata erro aleatório e **não mata erro sistemático**: se o chão
-tem caimento, as três desviam igual e a média sai confiante e errada. Girado
-180°, o caimento empurra para o mesmo lado do *mundo* e a assimetria do robô
-puxa para o mesmo lado do *corpo* — comparando as duas, dá para dizer qual dos
-dois você mediu. É a única corrida que separa robô de sala.
+**A corrida girada 180° não é repetição, é controle.** Média de três corridas
+iguais mata erro aleatório e **não mata erro sistemático**: se o chão tem
+caimento, as três desviam igual e a média sai confiante e errada. Girado 180°, o
+caimento empurra para o mesmo lado do *mundo* e a assimetria do robô puxa para o
+mesmo lado do *corpo* — comparando as duas, dá para dizer qual dos dois você
+mediu. É a única corrida que separa robô de sala.
+
+⚠️ **E o rumo inicial é parte da condição, não detalhe.** Em 04-08 o primeiro par
+frente × ré foi comparado com **89° de diferença de rumo entre as duas corridas**,
+o que deixa caimento de piso entrar na comparação, e a conclusão foi escrita em
+cima disso antes de alguém olhar. **Confira o rumo inicial no CSV** (`yaw` da
+primeira amostra) antes de comparar duas corridas — se não baterem, não são
+comparáveis.
+
+🚨 **DIMENSIONE PELO DISCO VARRIDO, NÃO PELA DISTÂNCIA À FRENTE.** A trava
+`--espaco` é **radial** e usa a fonte mais alarmista — que neste robô é a
+odometria em `open_loop`, ou seja o **comando ecoado**, que acha que ele andou em
+linha reta. Em 04-08 ela disse "2,98 m" enquanto o LIO sabia que o robô estava a
+1,79 m da origem fazendo círculo, e **o robô bateu numa cadeira** num espaço com
+"3 m livres à frente". Um robô que arca com raio de 1,2 m varre um disco.
+Ponha `--espaco` pequeno (1,0 a 1,2): isso limita a distância do ponto 0 **em
+todas as direções**, e é a única garantia que existe.
 
 **Os ensaios 1 e 2 não repetem em corrida, e é de propósito.** O dente de serra
 sobe até ele sair do lugar, desce até ele parar, inverte o sentido e repete 4
@@ -218,22 +265,34 @@ exatamente o número que viemos buscar. São 4 dentes, então isso acontece 4
 vezes em cada passo, alternando o sentido. A corrida acaba sozinha quando o 4º
 fechar — o teto de tempo (220 s) quase nunca é atingido.
 
-**Passo 6 — filmar a traseira** nas 4 primeiras corridas (`frente-a`, `frente-b`,
-`re-a`, `re-b`). O que se procura é a **boba dando meia-volta** quando o robô
-anda de ré, e o quanto ele se desvia enquanto ela decide. É o único jeito de
-fechar o BO-4: o simulador não tem boba de verdade, então esse vídeo é a medida.
-Filmar as duas de frente também — sem elas não há com o que comparar.
+**Filmar a traseira nas corridas de ré, e nas de frente para comparar.** O que
+se procura é a **boba dando meia-volta**, e o quanto o robô se desvia enquanto
+ela decide. É o único jeito de fechar o critério (b) do BO-4: o simulador não
+tem boba de verdade, então esse vídeo é a medida. **Em 04-08 foi filmado e não
+foi trazido para o repo — é o item mais barato que está faltando.**
 
 ## 6. Mandar os dados
 
-Tudo caiu em `docs/dados/AAAA-MM-DD-bancada-robo/` — CSVs, `ambiente.txt` e
-`leituras.txt` (o que a tela respondeu, salvo).
+Tudo cai em `docs/dados/AAAA-MM-DD-bancada-robo/`.
+
+⚠️ **O NUC não tem autenticação no GitHub.** Os CSVs vêm por `scp` para o dev, e
+o commit sai **do dev**:
 
 ```bash
+scp 'bara@<ip>:~/Controle_robo_livox/docs/dados/AAAA-MM-DD-bancada-robo/*.csv' \
+    docs/dados/AAAA-MM-DD-bancada-robo/
 git add docs/dados/ && git commit -m "bancada: dados crus da sessão no robô" && git push
 ```
 
-O vídeo do passo 6 vai por fora (é grande demais para o repo).
+**Escreva o `ambiente.txt` à mão** se não usar o `sessao.py` — ele é quem
+registra piso, bateria, commit e a calibração viva. Sem isso um limiar medido
+não volta a ser velocidade de roda; vira número sem unidade. (Em 04-08 piso e
+bateria ficaram `NÃO INFORMADO` nas nove corridas.)
+
+**Salve durante a sessão, não no fim.** Bateria e rede caem; em 04-08 os dados
+foram commitados em quatro levas, à medida que saíam.
+
+O vídeo vai por fora (é grande demais para o repo).
 
 ---
 
@@ -244,8 +303,11 @@ O vídeo do passo 6 vai por fora (é grande demais para o repo).
 | `/Odometry` não publica | IP do lidar — varredura acima |
 | ninguém escuta `cmd_vel` | `base.launch.py` caiu; olhar o primeiro terminal |
 | robô não sai do lugar no passo 1 | pode ser o resultado. Repetir com `--rampa-ate 0.6` |
-| gira ao contrário no cutucão | rodas trocadas — **parar e avisar** |
-| ensaio corta cedo | trava de distância (`--espaco`); o robô saiu da área |
+| **gira ao contrário no cutucão** | 🛑 **é o `atan2` enrolando. NÃO mexer nas rodas** — ver a seção 3 |
+| ensaio corta cedo | trava de distância (`--espaco`); num robô que arca isso é o normal |
+| corrida aborta com "calou por N s" | a fonte morreu. É a trava nova (`--sem-dado`) fazendo o que deve — o CSV parcial vale, a corrida não |
+| saltos de ~1,35 m no `/Odometry` | **mais de uma pilha de localização viva**. Contar com `pgrep` |
+| ssh cai no meio da corrida | use `-o ServerAliveInterval=15`. A medida não passa pela wifi — o CSV está sendo escrito no NUC |
 
 Nada disso precisa de conserto no laboratório. **Mande os CSVs mesmo assim** —
-ensaio que falhou também é dado, e o `leituras.txt` diz por quê.
+ensaio que falhou também é dado.
