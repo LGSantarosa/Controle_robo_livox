@@ -3012,3 +3012,36 @@ resposta registrada: NÃO incondicionalmente — as condições estão na 011
 compensação do driver ligada, senão a 011 reabre) — e vale para TUDO que
 passar pela porta, que hoje é opcional (fatia 5 a torna obrigatória).
 O juiz de verdade segue sendo a fatia 4, no robô.
+
+## 📐 2026-08-04 (6ª leva) — A fatia 2 morre na medição: o gap era do instrumento
+
+A fatia 2 (modelar o atraso de desliga da placa) abriu pelo método: medir
+antes de mexer. E a medição derrubou a própria fatia.
+
+O gap que eu reportava ("sobrepasso 99° no Gazebo contra 49° no robô")
+comparava o sobrepasso A PARTIR DO PICO — que reparte diferente nos dois
+lados (robô: empurra 0,5 s, freia forte ~3,3 rad/s²; simulador: empurra
+0,16 s, freia suave ~1,5). Mas o número que o corte previsto consome é o
+GIRO TOTAL entre "comando zerou" e "parou", fase de empurrão INCLUÍDA. O
+`medir.py degrau_giro` passou a imprimi-lo, e ele diz outra coisa:
+
+```
+                giro total do corte à parada     tempo até parar
+ROBÔ            102° / 114° / 124°  (~113°)      1,94–2,02 s
+SIMULADOR       117° / 120° / 117°  (~118°)      1,82–1,86 s
+```
+
+**O simulador está DENTRO da faixa do robô.** Dois erros de forma se
+cancelando num acerto de total — coincidência dos limites da planta, mas
+medida e estável (n=3 dos dois lados, planta normal).
+
+Consequência: **a fatia 2 sai do caminho crítico.** O corte previsto
+(fatia 3) pode ser sintonizado no simulador de hoje, com uma condição de
+projeto que fica registrada: o controlador do pivô deve usar SÓ o giro
+total e a detecção de parada — NÃO a forma da frenagem (pico, wz no meio
+do caminho), porque a forma é onde o simulador ainda mente. Se o projeto
+da fatia 3 precisar da forma, a fatia 2 volta.
+
+É a segunda vez no mesmo dia que a régua respondia outra pergunta que não
+a feita (a primeira: caminho/afastamento no critério do 12b). A lição já
+estava escrita em 29-07 na régua do planner; agora tem dois exemplos.

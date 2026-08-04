@@ -276,6 +276,16 @@ def a_dec(r):
         print(f'    (último terço da frenagem, onde ele tem de assentar no rumo)')
     print(f'  -> SOBREPASSO a partir de {wz_pico:.2f} rad/s: '
           f'{math.degrees(dyaw):.0f}°')
+
+    # O número do CORTE PREVISTO (fatia 3 da 011): quanto o robô ainda vira
+    # entre "o comando zerou" e "parou de verdade" — fase de empurrão da
+    # placa INCLUÍDA. O sobrepasso acima começa no pico e esconde essa fase;
+    # um controlador que corta cedo precisa do total, porque é o total que
+    # acontece depois da única decisão que ele tem.
+    total = abs(sum(norm(r[i]['yaw'] - r[i - 1]['yaw'])
+                    for i in range(corte + 1, parou + 1)))
+    print(f'  -> GIRO TOTAL do corte à parada: {math.degrees(total):.0f}° '
+          f'em {r[parou]["t"] - r[corte]["t"]:.2f} s  <- o número do corte previsto')
     return a
 
 
