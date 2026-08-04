@@ -1,0 +1,48 @@
+fatia 1 da decisao 011 — o compensador de rumo em reta, no Gazebo
+==================================================================
+
+A malha fechada de rumo (feedforward medido + PI no yaw do /Odometry)
+rodou pela primeira vez contra o simulador calibrado. Ganhos de fabrica:
+kp=1.0, ki=0.5, ff -0.817/-0.098, wz_max 0.6.
+
+maquina    : PC de desenvolvimento
+Gazebo     : Harmonic headless, planta NORMAL, placa "medido",
+             rendimento_giro 0.93 (o do perfil)
+cadeia     : ensaio.py --topico /compensador_rumo/cmd_vel
+               -> compensador_rumo (saida remapeada p/ /cmd_vel_bruto)
+               -> placa_simulada -> diff_drive_controller -> Gazebo
+leitura    : medir.py --resumo curvatura
+processos  : 1 placa + 1 compensador no grafo, conferido antes das corridas
+
+
+RESULTADO — n=3 por sentido, criterio da 011: |curvatura| < 0,05 1/m
+---------------------------------------------------------------------
+                 SEM compensador     COM compensador      criterio
+  frente           -0,82 1/m           -0,0025 1/m          0,05     PASSA 20x
+                   (raio 1,2 m)        (raio 399 m)
+  re               -0,11 1/m           -0,0003 1/m          0,05     PASSA
+                                       (raio 3981 m)
+
+Rastro: 0,2 grau de giro em 1,20 m de frente; 0,0 grau de re.
+caminho/afastamento 1,00x nos dois sentidos.
+
+O mesmo robo simulado que 30 minutos antes fechou um circulo COMPLETO
+(494 graus em 11 m) comandado a ir reto.
+
+
+RESSALVAS, para ler antes de comemorar
+---------------------------------------
+1. Dispersao 0%: e o determinismo do simulador (12c aberto), nao merito da
+   malha. No robo real a dispersao da planta e 21-37% e o numero vai abrir.
+2. O ff aqui e EXATO por construcao: a placa arca -0,817 e o ff cancela
+   -0,817 — mesma fonte. No robo real o ff vem de outra sessao que a planta
+   do dia. O caso "ff 25% errado" esta coberto por teste de unidade
+   (test_fecha_mesmo_com_ff_errado_25_por_cento), nao por esta bancada.
+3. Latencia de liga do atuador (~0,27 s) esta no caminho e nao atrapalhou;
+   a de DESLIGA (~0,5 s) nao e exercitada por reta continua — ela morde no
+   pivo (fatia 3, depois de modelar).
+4. Curva comandada passa intocada por teste de unidade; nao foi exercitada
+   nesta bancada (fora do criterio da fatia 1).
+
+Proximo: fatia 2 (atraso de desliga na placa), fatia 3 (pivo por corte
+previsto), fatia 4 (robo real, mesmo protocolo, dono conduz).

@@ -2955,3 +2955,46 @@ na vida real."**
 O critério da decisão 004 ("o simulador só serve se errar como o robô erra")
 está cumprido nas três manobras medidas, por número E por olho. Próximo
 passo decidido pelo dono: malha fechada de rumo em cima deste modelo.
+
+## 🎯 2026-08-04 (5ª leva) — A fatia 1 da 011: o robô simulado anda reto
+
+O dono aprovou a fatia 1 ("vamos focar tudo nesse PID, em fazer ele seguir
+reto de verdade, a ré também") e ela fechou na mesma sessão. Decisão escrita
+antes do código: `docs/decisoes/011-malha-fechada-de-rumo-em-reta.md`.
+
+**A arquitetura**: camada entre quem comanda e o atuador (`compensador_rumo`
+no `robot_motion`), lei pura em `lei_de_reta.py` (padrão da casa). Serve
+qualquer comandante. A lei explora o fato medido de que a compensação do
+driver preserva a RAZÃO entre rodas: há autoridade contínua sobre curvatura
+mesmo sem nenhuma sobre velocidade.
+
+    wz = ff(sentido)·|v| + Kp·e + Ki·∫e      ff = −curvatura medida
+
+**PI, não PID** — e o próprio teste corrigiu meu entendimento do porquê: sem
+Ki o P ainda ZERA a curvatura (o robô anda reto!), mas ~6° torto da
+referência — o erro constante que o P precisa manter para sustentar a
+correção. O integrador existe para zerar o RUMO, não a curvatura. Isso está
+travado em teste (`test_sem_integrador_o_rumo_assenta_torto`).
+
+**Resultado na bancada** (Gazebo, planta normal, n=3 por sentido, dado em
+`docs/dados/2026-08-04-fatia1-compensador/`):
+
+```
+                 SEM              COM            critério da 011
+frente         -0,82 1/m       -0,0025 1/m         < 0,05     ✅ 20x
+ré             -0,11           -0,0003             < 0,05     ✅
+```
+
+Raio de 1,2 m virou raio de 399 m. Giro de 0,2° em 1,2 m andados.
+
+**Defeito de instrumento achado no caminho**: mutação por `sed` com strings
+do MESMO tamanho no mesmo segundo deixa o `__pycache__` servindo bytecode
+mutado para o fonte revertido — os testes "falhavam" com o código certo.
+Limpar o cache resolveu; fica o aviso para as próximas mutações.
+
+**Ressalvas** (no leitura.txt): dispersão 0% é determinismo do simulador,
+não mérito; o ff aqui é exato por construção (mesma fonte da planta) — o
+caso ff-errado-25% é coberto por teste de unidade; curva comandada passa
+intocada por unidade, não exercitada na bancada.
+
+13 testes novos na lei (453 verdes no total). Fatias 2-5 abertas.
