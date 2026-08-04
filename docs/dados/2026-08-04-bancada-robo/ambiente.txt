@@ -241,3 +241,37 @@ provavelmente colapsa, porque o pivo sai inflado igual nos tres niveis.
 
 3-degrau_giro-a.csv   --ensaio degrau_giro --v 0 --wz 0.6 --dur 9 --espaco 1.0
                       --janela 0.5.  451 amostras, concluido (nao bateu trava).
+
+
+PASSO 3 FECHADO — n=3
+---------------------
+        pico wz    inercia          a_ef   a_med  cauda
+   a    2.226 (+0.40s)  53.0° em 1.48s   2.68   1.50   1.11
+   b    2.514 (+0.56s)  41.9° em 1.38s   4.32   1.82   0.88   <- destoa nas 4
+   c    2.253 (+0.60s)  52.4° em 1.32s   2.77   1.71   1.12
+
+   a_dec EFETIVO  media 3.26   faixa 2.68-4.32   dispersao 50%
+   a_dec medio    media 1.68   faixa 1.50-1.82   dispersao 19%
+   a_dec CAUDA    media 1.03   faixa 0.88-1.12   dispersao 24%
+   pico de wz     media 2.33   faixa 2.23-2.51   dispersao 12%
+
+A e C concordam apertado (a_ef 2.68/2.77, cauda 1.11/1.12); B destoa nas quatro
+colunas. NAO descartada — sem justificativa para descartar, e a licao de 31-07 e
+que concordancia nao e validade e descarte precisa de motivo. Fica como
+variabilidade real de atrito/contato, que e informacao sobre a maquina.
+
+O NUMERO PARA O SEGUIDOR: a_dec ~ 1.0 rad/s^2 (faixa 0.88-1.12), que e a CAUDA.
+  - o a_dec EFETIVO (3.26) espalha 50% entre corridas iguais: nao serve como
+    constante de projeto, por mais que os 3.05 do MODELO_ROBO2.md caiam dentro
+    da faixa dele;
+  - a cauda e onde o robo tem de assentar no rumo, e la ele desacelera 3x menos
+    que o substituto diz;
+  - por 27-07, errar a_dec para BAIXO e de graca e para CIMA traz o S de volta.
+
+LATENCIA depois do corte, medida nas tres: 0.40 / 0.56 / 0.60 s, media ~0.52 s.
+E MAIS que os ~0.35 s que o registro de 31-07 trazia. Isso encosta no desenho do
+cutucao do passo 6 (pulso de 0.5 s), que fica ainda mais claramente curto demais.
+
+
+3-degrau_giro-b.csv   idem -a.  436 amostras, concluido.
+3-degrau_giro-c.csv   idem -a.  450 amostras, concluido.
