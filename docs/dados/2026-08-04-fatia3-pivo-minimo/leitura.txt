@@ -1,0 +1,85 @@
+fatia 3 da decisao 011 — existe pivo pequeno neste robo?
+=========================================================
+
+A fatia 3 abriu com um medo: a placa entrega um wz so (~2,2 rad/s) e depois
+do corte o robo ainda varre ~113 graus. Se esse fosse o quantum, pivo menor
+que meia volta seria impossivel e a navegacao teria de viver sem ele.
+
+A medicao DERRUBOU o medo.
+
+maquina    : PC de desenvolvimento (simulador)
+Gazebo     : Harmonic headless, planta NORMAL, placa "medido", rend. 0,93
+comando    : ensaio.py --ensaio degrau_giro --v 0 --wz 0.6 --liga T
+             (--liga e NOVO: varre o tempo LIGADO, que e a unica coisa
+              escolhivel num atuador que nao modula magnitude)
+leitura    : giro total do ligar ate parar, do CSV cru
+
+
+O PIVO E CONTINUO, E COMECA EM ~4 GRAUS
+----------------------------------------
+   liga [s]   giro TOTAL   pico wz   t ate parar
+      0.1        0.0            0.00     0.24 s
+      0.2        0.0            0.00     0.34 s
+      0.3        0.0            0.00     0.42 s
+      0.5        3.7            0.24     0.86 s
+      0.8       22.4            0.68     1.50 s
+      1.2       68.9            1.20     2.32 s
+      2.0      215.7            2.38     3.82 s
+
+Por que nao ha quantum: o robo AINDA ESTA ACELERANDO quando o corte chega.
+O pico de wz nao e 2,2 — e o que deu tempo de subir. Cortando cedo, o pico
+e pequeno e a sobra tambem. O tempo ligado e um manche continuo.
+
+Os 113 graus continuam verdadeiros: eles sao a sobra QUANDO o robo chegou
+ao patamar (liga >= ~1,8 s). Nao sao um piso.
+
+ZONA MORTA DE TEMPO: abaixo de ~0,4 s o robo nao sai do lugar. Bate com a
+latencia de liga medida em 01-08 (0,273 s) mais o tempo de vencer inercia.
+E o BO-3 na dimensao do TEMPO, e ela nao tinha sido medida ate hoje.
+
+
+A SOBRA NAO SEGUE wz²/(2·a) COM a CONSTANTE
+--------------------------------------------
+   pico wz   sobra    wz²/(2·sobra)
+      0.24     2.4        0.67
+      0.68    12.8        1.02
+      1.20    38.4        1.07
+      2.38   110.5        1.46
+
+O "a_dec" implicito varia 2,2x na faixa. Mesma nao-constancia que o robo
+mostrou em 04-08 (a_dec efetivo espalhando 50%). A lei de frenagem da
+decisao 005 assume a constante; aqui ela erraria de novo, por outro motivo.
+
+
+⚠️ O QUE ESTA MEDIDA **NAO** AUTORIZA
+--------------------------------------
+**Esta tabela NAO pode virar tabela de consulta do controlador.**
+
+A relacao tempo->angulo depende da TAXA DE SUBIDA do wz, e a taxa tem
+origens diferentes nos dois lados:
+
+    simulador : angular.z.max_acceleration = 1.5 rad/s²  (limite de CONFIG,
+                exato e sem dispersao)
+    robo      : 1,58 / 1,61 / 2,01 rad/s²  (INERCIA fisica, 25% de espalho)
+
+Os dois coincidem em valor hoje — por acaso, nao por modelagem. Entao a
+FORMA da curva acima e do simulador, e so o ponto de liga=2,0 foi conferido
+contra o robo (sobra 110,5 aqui contra 102-124 la).
+
+CONSEQUENCIA DE PROJETO: a lei do pivo tem de funcionar SEM confiar nesta
+curva. O caminho e aproximacao sucessiva com corte conservador — cortar
+cedo custa so tempo (27-07: "errar a_dec para baixo e de graca, para cima
+traz o S de volta"), e o residuo se resolve com um pulso menor. A curva
+serve para o PRIMEIRO chute; o fechamento e por realimentacao.
+
+Isso tambem torna a fatia 3 testavel de verdade no simulador: basta rodar
+a lei com parametros de sobra DELIBERADAMENTE errados, como o
+test_fecha_mesmo_com_ff_errado_25_por_cento fez na fatia 1.
+
+
+PARA A FATIA 4 (robo real): protocolo novo a rodar
+---------------------------------------------------
+Varredura de --liga em 0.3 / 0.5 / 0.8 / 1.2 / 2.0, n=3 cada, com o robo
+parado e espaco livre de giro. E o unico jeito de saber a curva real, e
+custa ~15 corridas curtas. Sem ela o primeiro chute do pivo sai do
+simulador, que aqui e testemunha fraca.

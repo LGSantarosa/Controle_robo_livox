@@ -3045,3 +3045,52 @@ da fatia 3 precisar da forma, a fatia 2 volta.
 É a segunda vez no mesmo dia que a régua respondia outra pergunta que não
 a feita (a primeira: caminho/afastamento no critério do 12b). A lição já
 estava escrita em 29-07 na régua do planner; agora tem dois exemplos.
+
+## 🔄 2026-08-04 (7ª leva) — O pivô não tem quantum: o tempo ligado é um manche
+
+Fatia 3 aberta pelo método (medir antes de mexer), e a medição derrubou o
+medo que a motivava. Dado em `docs/dados/2026-08-04-fatia3-pivo-minimo/`.
+
+O medo: a placa entrega um wz só (~2,2 rad/s) e depois do corte o robô varre
+~113°. Se isso fosse o quantum, pivô menor que meia volta seria impossível.
+
+**Não é.** Varrendo o tempo LIGADO (`ensaio.py --liga`, novo — é a única
+coisa escolhível num atuador que não modula magnitude):
+
+```
+liga [s]   0.1   0.2   0.3   0.5    0.8    1.2    2.0
+giro         0°    0°    0°   3,7°  22,4°  68,9°  215,7°
+pico wz    0,00  0,00  0,00  0,24   0,68   1,20    2,38
+```
+
+A razão é simples e estava na cara: **o robô ainda está acelerando quando o
+corte chega.** O pico não é 2,2 — é o que deu tempo de subir. Os 113° são a
+sobra *quando ele chegou ao patamar*, não um piso. O pivô é contínuo desde
+~4°.
+
+**Zona morta de TEMPO medida pela primeira vez**: abaixo de ~0,4 s ligado o
+robô não sai do lugar. É o BO-3 numa dimensão que nunca tinha sido medida.
+
+**A sobra não segue `wz²/(2·a)` com `a` constante** (o `a` implícito varia
+2,2× na faixa) — a mesma não-constância que o robô mostrou, por outro
+caminho. A lei da 005 erraria aqui de novo.
+
+### ⚠️ A ressalva que decide o desenho da lei
+
+A relação tempo→ângulo depende da **taxa de subida** do wz, e ela tem origens
+diferentes nos dois lados: no simulador é um limite de **config**
+(`max_acceleration: 1.5`, exato); no robô é **inércia** (1,58–2,01, 25% de
+espalho). Coincidem em valor **por acaso, não por modelagem**. Só o ponto
+`liga=2,0` foi conferido contra o robô.
+
+Então a tabela acima **não pode virar tabela de consulta do controlador**. A
+lei do pivô tem de funcionar sem confiar nela: **aproximação sucessiva com
+corte conservador** — cortar cedo custa só tempo (27-07: "errar para baixo é
+de graça"), e o resíduo se resolve com um pulso menor. A curva serve para o
+primeiro chute; o fechamento é por realimentação. E isso torna a fatia 3
+testável de verdade aqui: roda-se a lei com parâmetros de sobra
+deliberadamente errados, como o `ff_errado_25_por_cento` fez na fatia 1.
+
+**Para a fatia 4**: entra no protocolo do robô uma varredura de `--liga`
+(0,3/0,5/0,8/1,2/2,0, n=3) — ~15 corridas curtas, e é o único jeito de ter
+a curva real.

@@ -266,11 +266,16 @@ class Ensaio(Node):
             return 0.0, self.dente_de_serra(te, wz_pose * self.cfg.bitola / 2)
 
         if e == 'degrau_giro':
-            # 2 s reto, 2 s de giro constante, resto SEM comando de giro.
+            # 2 s reto, `--liga` segundos de giro constante, resto SEM comando.
             # a_dec = wz² / (2·Δrumo depois do corte).
+            #
+            # `--liga` existe para a fatia 3 da decisão 011: a placa entrega um
+            # wz só, então o tamanho do pivô não se escolhe pelo comando — se
+            # escolhe pelo TEMPO ligado. Varrer esse tempo é o que responde
+            # "existe pivô pequeno?". Padrão 2,0 = o degrau de 04-08 intacto.
             if te < 2.0:
                 return c.v, 0.0
-            if te < 4.0:
+            if te < 2.0 + self.cfg.liga:
                 return c.v, c.wz
             return c.v, 0.0
 
@@ -468,6 +473,10 @@ def main():
                     help='distância máxima da origem [m] — trava de segurança')
     ap.add_argument('--v', type=float, default=0.3, help='linear do ensaio [m/s]')
     ap.add_argument('--wz', type=float, default=0.5, help='giro do ensaio [rad/s]')
+    ap.add_argument('--liga', type=float, default=2.0,
+                    help='segundos com o giro LIGADO no degrau_giro. Varrer '
+                         'isto mede o pivô mínimo (fatia 3 da decisão 011): '
+                         'a placa não modula wz, só o tempo é escolhível')
     ap.add_argument('--rampa-ate', dest='rampa_ate', type=float, default=0.35,
                     help='valor final da rampa nos ensaios de zona morta')
     ap.add_argument('--dentes', type=int, default=4,

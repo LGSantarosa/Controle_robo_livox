@@ -918,11 +918,29 @@ registro completo em `docs/decisoes/011-malha-fechada-de-rumo-em-reta.md`.
   zerar o RUMO, não a curvatura (sem ele o robô anda reto, mas ~6° torto)
   — descoberto pelo próprio teste, travado em teste.
 
-- ⏳ **Fatia 2 — atraso de desliga na placa fingida** (~0,5 s medido no robô,
-  ~0,16 s no Gazebo hoje). Estrutural, pré-requisito da fatia 3.
-- ⏳ **Fatia 3 — pivô por corte previsto.** NÃO é PID (a placa entrega um wz
-  só); é decidir quando cortar, com ~49° de sobrepasso como dado. Só se
-  sintoniza DEPOIS da fatia 2 (hoje o Gazebo sobrepassa 99° contra 49°).
+- ❌ **Fatia 2 — atraso de desliga na placa fingida: DESCARTADA na medição
+  (04-08, 6ª leva).** O gap que a motivava ("sobrepasso 99° no Gazebo contra
+  49° no robô") era artefato de comparar sobrepassos **a partir do pico**,
+  que repartem diferente nos dois lados. O número que o pivô consome é o
+  **giro total entre o comando zerar e o robô parar**, fase de empurrão
+  incluída — e nele os dois batem:
+
+  ```
+              giro total do corte à parada      tempo até parar
+  ROBÔ        102° / 114° / 124°  (~113°)       1,94–2,02 s
+  SIMULADOR   117° / 120° / 117°  (~118°)       1,82–1,86 s
+  ```
+
+  ⚠️ **Condição de projeto que isso impõe à fatia 3**: o controlador do pivô
+  pode consumir o **giro total** e a **detecção de parada**, mas **não a
+  forma da frenagem** (pico, wz no meio do caminho) — a forma é onde o
+  simulador ainda mente. Se o projeto precisar da forma, a fatia 2 volta.
+
+- ⏳ **Fatia 3 — pivô por corte previsto** (desbloqueada pelo achado acima).
+  NÃO é PID: a placa entrega um wz só, então a única alavanca é **decidir
+  quando cortar**. Dado de partida: depois do corte o robô ainda varre
+  ~113°, o que levanta a pergunta de projeto que a fatia tem de responder
+  primeiro — **existe pivô menor que isso?**
 - ⏳ **Fatia 4 — robô real.** Mesmo protocolo da bancada de 04-08, o dono
   conduz, `ensaio.py --topico /compensador_rumo/cmd_vel`. É quem julga de
   verdade: no Gazebo o ff é exato por construção; no robô a planta do dia
