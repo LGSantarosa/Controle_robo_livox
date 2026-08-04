@@ -25,6 +25,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            # decisão 011: entra cmd_vel desejado, sai cmd_vel que anda reto
+            'compensador_rumo = robot_motion.compensador_rumo:main',
             'heading_controller = robot_motion.heading_controller:main',
             'path_follower = robot_motion.path_follower:main',
             # aposentado em 28-07 (decisão 008); sai numa fatia própria
