@@ -31,6 +31,53 @@ Três outras coisas medidas entram junto:
 - **assimetria esquerda/direita dependente de sentido**: indo para a frente a
   esquerda gira 11–13% mais que a direita (n=2); de ré elas empatam (+6,7% e
   −0,9%, n=2). É o desvio de rumo do robô, medido no atuador.
+  ⚠️ **Os valores em uso hoje NÃO são esses** — ver a seção seguinte.
+
+## O arco do corpo (04-08), e por que a assimetria aqui é MAIOR que o encoder
+
+Em 04-08 o desvio foi medido no **corpo**, em percurso longo e com controle de
+piso (`n=2` por sentido, seis corridas em
+`docs/dados/2026-08-04-bancada-robo/`):
+
+    FRENTE   curvatura −0,817 1/m   raio  1,22 m   faixa −0,73 a −0,90
+    RE       curvatura −0,098 1/m   raio 10,19 m   faixa −0,08 a −0,12
+                                              razao frente/re = 8,3x
+
+O arco está preso ao **corpo**, não à sala: nas quatro corridas do par matched o
+robô andou sobre o mesmo pedaço de chão com o corpo girado 180°, e a curvatura
+no corpo saiu negativa nas quatro. Caimento de piso teria trocado o sinal.
+
+**E aqui está o furo que este modelo tapa por fora.** A assimetria de roda que
+produz esses arcos é **+24,8% de frente** e **−2,6% de ré** (derivada em
+`assimetria`) — mas o encoder de 31-07 mediu **11–12% e ~0%**. Ou seja:
+**metade do arco de frente NÃO está na velocidade das rodas.** O corpo arca mais
+do que os encoders explicam, que é a assinatura de um termo de corpo — a boba.
+
+⚠️ **A ré exige assimetria NEGATIVA**, e isso não é erro de sinal: é o que
+reproduz o robô. Em 04-08 o Δyaw saiu negativo nos DOIS sentidos (as quatro
+corridas do par matched), ou seja o corpo gira para o mesmo lado indo e
+voltando. Com assimetria positiva na ré o simulador arca para o lado errado —
+foi o que a primeira corrida de aceitação pegou, e é por isso que os parâmetros
+deste nó são a CURVATURA MEDIDA e não a assimetria escrita à mão.
+
+Como a placa só tem as rodas para escrever, o termo de corpo entra aqui
+**disfarçado de assimetria**. É deliberado, e cobra um preço:
+
+⚠️ **FENOMENOLÓGICO.** Este nó reproduz o SINTOMA (o arco), não o MECANISMO.
+Consequências, que têm de ser lidas antes de confiar nele:
+
+1. **O encoder simulado mente.** Ele vai reportar ~25% de diferença entre rodas
+   onde o robô reporta 11–12%. Hoje isso não incomoda (a odometria de roda roda
+   em `open_loop`, é o comando ecoado), mas **quebra no dia em que alguém ligar
+   `open_loop: false`** — que é um item aberto do projeto.
+2. **Não serve para responder "e se"**: outra carga, outro piso, ou depois de
+   consertar a boba. O número foi ajustado contra UMA condição.
+3. Separar os dois termos de verdade exigiria perturbação de corpo no Gazebo, e
+   isso está travado atrás do **BO-4** (a boba do simulador é um patim: multiplicar
+   o atrito dela por 16 mudou o rumo em 0,4%).
+
+Serve para o que foi feito: **desenvolver controlador contra um robô que arca
+como este arca.**
 
 ## Os dois regimes
 
@@ -71,9 +118,19 @@ class PlacaSimulada(Node):
             # 100 unidades -> 3,72 rad/s de roda (n=4, faixa 3,56–3,82).
             ('escala_real', 0.0372),        # rad/s por unidade, MEDIDO
             ('latencia', 0.27),             # s até a roda sair do lugar (n=4)
-            # Assimetria: fração a MAIS que a roda esquerda entrega.
-            ('assimetria_frente', 0.12),    # 11–13% medidos (n=2)
-            ('assimetria_re', 0.0),         # empatam (n=2)
+            # O ARCO, em curvatura de CORPO — os números da bancada de 04-08,
+            # copiados sem conversão. A assimetria de roda que os produz é
+            # DERIVADA (ver `assimetria`), e não escrita à mão, porque escrever
+            # à mão foi o que errou o sinal da ré na primeira tentativa: na ré
+            # as duas convenções de curvatura têm sinais opostos.
+            ('curvatura_frente', -0.817),   # raio  1,22 m   faixa -0,73 a -0,90
+            ('curvatura_re', -0.098),       # raio 10,19 m   faixa -0,08 a -0,12
+            # Quanto do giro pedido o GAZEBO realiza. Não é do robô: é a
+            # derrapagem do contato simulado, medida em 29-07 (79-86%) e
+            # confirmada em 04-08 na corrida de aceitação. Sem isto o corpo
+            # simulado arca ~20% menos do que o modelo pede. No robô real o
+            # equivalente é 1,0 — lá a placa não conversa com pneu de mentira.
+            ('rendimento_giro', 0.80),
             # Zona morta FÍSICA, só usada com modelo 'cru'. NÃO medida: a
             # bancada só bracketou entre 0,25 e 0,5 m/s de borda. Chute
             # conservador no meio da faixa, e é o principal furo do modelo.
@@ -115,11 +172,22 @@ class PlacaSimulada(Node):
             f'comando vira SEMPRE {self.patamar():.3f} m/s de borda. '
             f'Nessa faixa cmd_vel escolhe sentido, não módulo.')
         self.get_logger().warn(
-            f"latência {self.par['latencia']:.2f} s, esquerda "
-            f"{100 * self.par['assimetria_frente']:.0f}% mais forte indo à "
-            f"frente, escala real {self.par['escala_real']:.4f} rad/s/unidade "
+            f"latência {self.par['latencia']:.2f} s, escala real "
+            f"{self.par['escala_real']:.4f} rad/s/unidade "
             f"({self.par['escala_driver'] / self.par['escala_real']:.1f}x menor "
             f"que a assumida pelo driver).")
+        self.get_logger().warn(
+            f"o robô ARCA (04-08): curvatura {self.par['curvatura_frente']:+.3f} "
+            f"1/m de frente, {self.par['curvatura_re']:+.3f} de ré — "
+            f"{abs(self.par['curvatura_frente'] / self.par['curvatura_re']):.1f}x "
+            f"de assimetria. Não espere reta deste robô.")
+        self.get_logger().warn(
+            f"para isso a esquerda entrega "
+            f"{100 * self.assimetria(1.0):+.1f}% de frente e "
+            f"{100 * self.assimetria(-1.0):+.1f}% de ré (derivado, com "
+            f"rendimento de giro do Gazebo em {self.par['rendimento_giro']:.2f}). "
+            f"O encoder do robô mediu 11-12% / ~0%: a diferença é o termo de "
+            f"CORPO entrando disfarçado de roda. Modelo FENOMENOLÓGICO.")
 
     # ------------------------------------------------------------ conversões
     #
@@ -129,6 +197,36 @@ class PlacaSimulada(Node):
     def unidades(self, v_borda):
         """m/s de borda de roda -> unidades de set_speed, como o driver faz."""
         return v_borda / self.par['raio'] / self.par['escala_driver']
+
+    def assimetria(self, sentido):
+        """Fração a MAIS que a roda esquerda entrega, para arcar o pedido.
+
+        Derivada da curvatura alvo, nunca escrita à mão. Com as duas rodas no
+        patamar (`P`) e a esquerda ganhando `a`, andando no sentido `s`:
+
+            ve = s·P·(1+a)          vd = s·P
+            |v| = P·(2+a)/2         wz = (vd − ve)/L = −s·P·a/L
+
+        e a curvatura NA CONVENÇÃO DA BANCADA (giro por metro percorrido, com
+        o caminho SEM sinal, que é o que o `medir.py curvatura` calcula) é
+
+            c = wz/|v| = −2·s·a / (L·(2+a))      =>   a = −2cL / (2s + cL)
+
+        O `s` no denominador é o detalhe que importa: ele faz `a` sair
+        **negativo na ré**. Não é capricho de sinal — é o que reproduz o robô,
+        que em 04-08 girou para o MESMO lado do corpo nos dois sentidos (as
+        quatro corridas do par matched com Δyaw negativo). Invertendo pela
+        outra convenção (`wz/v`, com v com sinal) a ré sai espelhada, e o
+        simulador arca para o lado errado — foi o que a primeira corrida de
+        aceitação pegou.
+        """
+        c = (self.par['curvatura_frente'] if sentido >= 0
+             else self.par['curvatura_re'])
+        # O Gazebo derrapa e entrega menos giro do que se pede: pedimos mais
+        # para o CORPO sair no número do robô.
+        c /= max(1e-3, self.par['rendimento_giro'])
+        L, s = self.par['bitola'], (1.0 if sentido >= 0 else -1.0)
+        return -2.0 * c * L / (2.0 * s + c * L)
 
     def patamar(self):
         """Velocidade de borda que o patamar entrega [m/s]."""
@@ -171,11 +269,8 @@ class PlacaSimulada(Node):
         else:
             ve, vd, engoliu = self.medido(ve, vd)
 
-        # Assimetria: a esquerda entrega mais indo para a frente. Depois da
-        # zona morta, porque é ganho do atuador, não limiar.
-        assim = (self.par['assimetria_frente'] if (ve + vd) >= 0
-                 else self.par['assimetria_re'])
-        ve *= (1.0 + assim)
+        # O arco. Depois da zona morta, porque é ganho do atuador, não limiar.
+        ve *= (1.0 + self.assimetria(ve + vd))
 
         v = (ve + vd) / 2.0
         wz = (vd - ve) / self.par['bitola']
