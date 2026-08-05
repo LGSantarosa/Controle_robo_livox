@@ -1,0 +1,86 @@
+as batidas do Nav2 — quatro mudancas, cada uma medida
+======================================================
+
+O dono viu o robo bater e pediu para atacar isso antes do collision_monitor.
+Primeiro veio a REGUA (`tools/banco/folga.py`): ate 05-08 a unica evidencia de
+colisao era o olho dele no RViz, e olho nao compara duas sintonias.
+
+    folga = distancia do centro do robo ate a celula ocupada mais proxima
+            (contra o MAPA, nao contra o sensor: o sensor tem 2 m de zona cega
+             e diria "livre" justamente onde o robo raspa)
+
+    folga < 0,314 (circunscrito medido com trena) = o corpo INVADIU = bateu
+
+Protocolo: 4 alvos, sempre os mesmos, 70 s cada.
+
+
+A PROGRESSAO
+------------
+                                        invasoes  raspoes  folga min
+  1. base (inflacao 0,30)                  2509     3831     0,308
+  2. raio 0,32 + inflacao 0,35               34     9636     0,296
+  3. + w_traversal_cost 5,0                  59      259     0,291
+  4. + lookahead 0,37 (era 0,555)             0      285     0,331
+  5. + inflacao 0,50 + cost_scaling 3,0       0        0     0,449
+
+O maximo teorico e 0,45: e a folga de um robo CENTRADO num vao de 0,90 m.
+O pior ponto da corrida 5 caiu em (4,07 , 2,49) e o centro da porta e 2,50.
+
+
+AS QUATRO CAUSAS, NA ORDEM EM QUE FORAM ACHADAS
+------------------------------------------------
+(a) INFLACAO MENOR QUE O RAIO INSCRITO. 0,30 contra 0,363. O Nav2 acusava
+    isso como ERRO desde 01-08 (item 7 do ESTADO) e ninguem tinha medido o
+    custo: sobrava uma faixa de 6 cm onde o CORPO encosta e o costmap diz
+    "livre". O planner roteava por ali.
+
+    ⚠️ Subir so a inflacao para 0,40 PIOROU (6299 invasoes): trouxe de volta
+    o `Start occupied` de 29-07 — o robo entrava na porta, o replanejamento
+    achava que a propria posicao dele era obstaculo, o plano sumia, o
+    seguidor parava por "plano velho" e o pivo girava no lugar. Foi o que o
+    dono viu e perguntou se era o collision monitor. Nao era: nao existe
+    collision monitor. Era o planner recusando o proprio robo.
+
+(b) O `robot_radius` ESTAVA 15% MAIOR QUE O ROBO. 0,36 configurado contra
+    0,314 real — a trena de 29-07 deu caixa 0,433 x 0,455, e o circunscrito
+    disso e 0,314; as rodas (borda a 0,158) e a boba (ponta a 0,215) ficam
+    DENTRO. Numa porta de 0,90 m isso e a diferenca entre 9 cm e 13 cm de
+    folga por lado, e foi o que fez o vao virar impossivel com inflacao 0,40.
+
+    Corrigidos JUNTOS (raio 0,32 = 0,314 + 6 mm, inflacao 0,35): as invasoes
+    cairam de 2509 para 34. O teste de coerencia pegou a bancada do planner
+    com o valor velho — e para isso que ele existe.
+
+(c) O CAMINHO PASSAVA COLADO NA QUINA. `w_traversal_cost` 2,0 (valor da
+    bancada, nunca julgado em execucao) pesa pouco contra o de andar menos.
+    Subindo para 5,0 os raspoes cairam de 9636 para 259.
+
+(d) O SEGUIDOR CORTAVA A QUINA. `lookahead_fator` 1,5 dava mira de 0,555 m —
+    mais da METADE do vao da porta. A cenoura caia depois da porta e o robo
+    cortava por dentro para alcanca-la. O 1,5 vinha de um seguidor que NAO
+    pivotava e precisava de mira longa para nao oscilar; este pivota e tem o
+    compensador cancelando o arco, entao mira curta deixou de custar
+    oscilacao. Com 1,0 (0,37 m) as invasoes zeraram.
+
+(e) E ELE AINDA PASSAVA NA QUINA, so que sem bater. Dentro do vao o costmap
+    ficava PLANO (cost_scaling_factor padrao 10 faz o custo despencar logo
+    depois do inscrito), e planner que nao ve diferenca entre o meio e a
+    quina escolhe o mais curto. Com inflacao 0,50 e cost_scaling 3,0 as
+    inflacoes das duas ombreiras se encontram no meio e criam um MINIMO no
+    centro. E o gradiente que empurra o caminho para o meio.
+
+    A inflacao de 0,50 so e possivel PORQUE o raio foi corrigido para 0,32:
+    com 0,36 ela reproduziria o `Start occupied`.
+
+
+O QUE NAO FOI RESOLVIDO
+------------------------
+1. FLUIDEZ. Palavra do dono: "ta parandinho demais". Ele para e pivota com
+   15 graus de erro (`limiar_pivo` 0,26 rad), e isso e frequente. Subir o
+   limiar devolve arco; a saida provavel e deixar o pivo so para erro grande
+   e o compensador segurar a reta no resto — mas isso e sintonia, e sintonia
+   sem medida vira gosto.
+2. n=1 por alvo, 4 alvos, so no simulador. Nao e n=3.
+3. Tudo com o mapa ESTATICO. O costmap nao tem camada de sensor ligada (foi
+   revertida em 05-08 de proposito). Obstaculo que nao esta no mapa continua
+   invisivel — e disso trata o collision_monitor, o proximo da fila.

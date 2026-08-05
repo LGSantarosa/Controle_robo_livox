@@ -62,7 +62,17 @@ class PathFollower(Node):
             # 29-07: 0,370 no perfil otimista de zona morta, 0,463 no
             # pessimista. Mesmo número que o planner recebe.
             ('raio_min_curva', 0.37),
-            ('lookahead_fator', 1.5),
+            # ⚠️ 1,0 desde 05-08, era 1,5. Com 1,5 o lookahead dava 0,555 m —
+            # mais da metade do vão da porta (0,90 m). A cenoura caía DEPOIS
+            # da porta e o robô cortava a quina para alcançá-la: o pior ponto
+            # das quatro corridas de 05-08 caiu sempre na ombreira, com folga
+            # de 0,29 m contra os 0,314 do corpo.
+            #
+            # 1,5 vinha de um seguidor que NÃO pivotava e precisava de mira
+            # longa para não oscilar. Este pivota (fatia 3 da 011) e tem o
+            # compensador cancelando o arco: mira curta deixou de custar
+            # oscilação. Com 1,0 o lookahead vira 0,37 m — cabe dentro do vão.
+            ('lookahead_fator', 1.0),
             ('lookahead_piso', 0.30),
             ('v_max', 0.5),
             ('a_lin', 0.3),

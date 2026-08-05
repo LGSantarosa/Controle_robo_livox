@@ -107,7 +107,7 @@ global_costmap:
 
       # Raio do robô [m]: circunscrito da caixa 0,50 × 0,50 = 0,354.
       # Vira 0,36 por segurança. O modelo 3D real corrige isto.
-      robot_radius: 0.36
+      robot_radius: 0.32
 
       plugins: ["static_layer", "inflation_layer"]
 

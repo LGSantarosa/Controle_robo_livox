@@ -3399,3 +3399,72 @@ sintoma entrar, ela ganha a faixa entre o humano e a autonomia.
 **492 testes verdes** (eram 488), 4 deles travando o mux: humano acima da
 autonomia, `use_stamped`, todo tópico com timeout, e os nomes da launch batendo
 com os do YAML.
+
+## 🧱 2026-08-05 (6ª leva) — As batidas: quatro causas, e a régua primeiro
+
+O dono pediu para atacar as batidas antes do `collision_monitor`. Antes de
+mexer, a **régua** (`tools/banco/folga.py`): até hoje a única evidência de
+colisão era o olho dele no RViz, e olho não compara duas sintonias. Ela mede
+contra o **mapa**, não contra o sensor — o sensor tem 2 m de zona cega e diria
+"livre" justamente onde o robô raspa. Dado em
+`docs/dados/2026-08-05-batidas-nav2/`.
+
+```
+                                    invasões  raspões  folga mín
+1. base (inflação 0,30)                2509     3831     0,308
+2. raio 0,32 + inflação 0,35             34     9636     0,296
+3. + w_traversal_cost 5,0                59      259     0,291
+4. + lookahead 0,37 (era 0,555)           0      285     0,331
+5. + inflação 0,50 + cost_scaling 3,0     0        0     0,449
+```
+
+**0,45 é o máximo teórico** — a folga de um robô centrado num vão de 0,90 m. O
+pior ponto da última corrida caiu em (4,07 · 2,49), e o centro da porta é 2,50.
+Veredito do dono: *"lindo, passou perfeitamente no meio"*.
+
+### As causas, na ordem em que apareceram
+
+**(a) Inflação menor que o raio inscrito** (0,30 contra 0,363). O Nav2 acusava
+como ERRO desde 01-08 e ninguém tinha medido o custo: sobrava uma faixa de 6 cm
+onde o corpo encosta e o costmap diz "livre".
+
+⚠️ **Subir só a inflação para 0,40 PIOROU** (6299 invasões): trouxe de volta o
+`Start occupied` de 29-07. O robô entrava na porta, o replanejamento achava que
+a própria posição dele era obstáculo, o plano sumia, o seguidor parava por
+"plano velho" e o pivô girava no lugar. Foi o que o dono viu e perguntou se era
+o collision monitor — **não era; não existe collision monitor.** Era o planner
+recusando o próprio robô.
+
+**(b) O `robot_radius` estava 15% maior que o robô.** 0,36 configurado contra
+**0,314 real** — a trena de 29-07 deu caixa 0,433 × 0,455, e as rodas (borda a
+0,158) e a boba (ponta a 0,215) ficam dentro. Numa porta de 0,90 m isso é a
+diferença entre 9 e 13 cm de folga por lado. Corrigidos juntos, as invasões
+caíram de 2509 para 34. **O teste de coerência pegou a bancada do planner com o
+valor velho** — é para isso que ele existe (a bitola divergiu assim em 29-07).
+
+**(c) O caminho passava colado na quina.** `w_traversal_cost` 2,0 era o valor da
+bancada, nunca julgado em execução. Para 5,0: raspões de 9636 para 259.
+
+**(d) O seguidor cortava a quina.** `lookahead_fator` 1,5 dava mira de 0,555 m —
+mais da **metade** do vão da porta. A cenoura caía depois da porta e o robô
+cortava por dentro. O 1,5 vinha de um seguidor que **não pivotava** e precisava
+de mira longa para não oscilar; este pivota e tem o compensador cancelando o
+arco. Com 1,0 (0,37 m) as invasões zeraram.
+
+**(e) E ele ainda passava na quina, sem bater.** Dentro do vão o costmap ficava
+**plano** — o `cost_scaling_factor` padrão (10) faz o custo despencar logo após
+o inscrito, e planner que não vê diferença entre o meio e a quina escolhe o mais
+curto. Com inflação 0,50 e `cost_scaling_factor` 3,0 as inflações das duas
+ombreiras se encontram no meio e criam um **mínimo no centro**. A inflação de
+0,50 só é possível **porque** o raio foi corrigido: com 0,36 ela reproduziria o
+`Start occupied`.
+
+### Aberto
+
+**Fluidez** — palavra do dono: *"tá parandinho demais"*. Ele para e pivota com
+15° de erro, e isso é frequente. Subir o limiar devolve arco; a saída provável é
+pivô só para erro grande e o compensador segurando a reta no resto. É sintonia,
+e sintonia sem medida vira gosto — precisa de régua própria.
+
+E segue tudo com o **mapa estático**: obstáculo que não está no mapa continua
+invisível. Disso trata o `collision_monitor`, o próximo da fila.

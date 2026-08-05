@@ -829,3 +829,75 @@ def test_perfil_de_cegueira_marca_faixa_vazia():
     perfil = campo.perfil_de_cegueira(pts, 0.27, [(0.5, 1.0), (3.0, 4.0)])
     assert perfil[0][2] is None and perfil[0][3] == 0, 'dentro da zona cega'
     assert perfil[1][2] == pytest.approx(0.0, abs=0.01), 'já vê o chão'
+
+
+# ------------------------------------------- a régua de "ele bateu?" (05-08)
+
+folga_mod = _carrega('folga')
+
+
+def grid_com_parede(res=0.05, largura=60, altura=60, col_parede=30):
+    """Sala vazia com uma parede vertical numa coluna conhecida."""
+    dados = [0] * (largura * altura)
+    for lin in range(altura):
+        dados[lin * largura + col_parede] = 100
+    return folga_mod.Grid(dados, largura, altura, res, 0.0, 0.0)
+
+
+def test_folga_mede_a_distancia_ate_a_parede():
+    """Parede na coluna 30 com 0,05 m/célula = x de 1,50 m. Um ponto a 1,00 m
+    tem de ler 0,50 m de folga."""
+    g = grid_com_parede()
+    assert folga_mod.folga(g, 1.00, 1.0) == pytest.approx(0.50, abs=0.05)
+    assert folga_mod.folga(g, 1.40, 1.0) == pytest.approx(0.10, abs=0.05)
+
+
+def test_folga_satura_e_diz_que_saturou():
+    """Longe de tudo a resposta é o alcance, não uma distância inventada.
+    Quem chama precisa saber que é um piso — senão 'folga 1,5 m' viraria
+    verdade num mapa onde a parede está a 40 m."""
+    g = grid_com_parede()
+    assert folga_mod.folga(g, 0.1, 1.0, alcance=0.6) == 0.6
+
+
+def test_fora_do_mapa_nao_e_obstaculo():
+    """Desconhecido não é ocupado. Tratar como ocupado faria toda corrida
+    perto da borda parecer colisão — e o robô nasce a 0,2 m da parede."""
+    g = grid_com_parede()
+    assert folga_mod.folga(g, -5.0, -5.0, alcance=0.5) == 0.5
+
+
+def test_perfil_separa_INVASAO_de_raspao():
+    """A distinção que o dono precisa: 'bateu' (o corpo ocupou a célula do
+    obstáculo) é diferente de 'passou raspando'. Misturar os dois faria uma
+    sintonia que só raspa parecer tão ruim quanto uma que bate."""
+    g = grid_com_parede()
+    raio = 0.36
+    # x=1,50 é a parede: 1,20 dá folga 0,30 (invade), 1,10 dá 0,40 (raspa),
+    # 0,50 dá 1,00 (limpo).
+    pior, inv, rasp, _ = folga_mod.perfil_de_folga(
+        g, [(0.50, 1.0), (1.15, 1.0), (1.20, 1.0)], raio, margem=0.05)
+    assert inv == 1, 'o ponto a ~0,33 m da parede invadiu'
+    assert rasp == 1, 'o ponto a ~0,38 m raspou'
+    assert pior == pytest.approx(0.33, abs=0.03)
+
+
+def test_perfil_devolve_o_pior_ponto_para_ir_olhar():
+    """Número sem lugar não se investiga. O pior ponto é o que se abre no
+    RViz."""
+    g = grid_com_parede()
+    _, _, _, ponto = folga_mod.perfil_de_folga(
+        g, [(0.5, 1.0), (1.45, 2.0)], 0.36)
+    assert ponto == (1.45, 2.0)
+
+
+def test_le_o_mapa_de_verdade_da_pista():
+    """Regressão contra o PGM versionado. A pista tem perímetro de parede, e
+    o ponto de largada do robô (2,0 · 5,0) é livre com folga de sobra."""
+    import os as _os
+    raiz = _os.path.dirname(_os.path.dirname(AQUI))
+    g = folga_mod.carrega_pgm(_os.path.join(raiz, 'maps', 'pista_obstaculos.pgm'),
+                              resolucao=0.05, ox=0.0, oy=0.0)
+    assert g.largura > 100 and g.altura > 100
+    assert folga_mod.folga(g, 2.0, 5.0) > 0.5, 'a largada tem de ser livre'
+    assert folga_mod.folga(g, 0.1, 4.0) < 0.2, 'a borda oeste é parede'
