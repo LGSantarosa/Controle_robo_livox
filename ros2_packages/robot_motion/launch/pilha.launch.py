@@ -18,6 +18,11 @@ A cadeia, e de quem é cada pedaço:
                                                                  ↓
                                                  heading_controller  (nosso)
                                                                  ↓
+                                                          /auto_vel
+                                                                 ↓
+                                          twist_mux  ← /key_vel, /web_vel
+                                                       (humano vence sempre)
+                                                                 ↓
                                               /compensador_rumo/cmd_vel
                                                                  ↓
                                                  compensador_rumo  (nosso)
@@ -62,6 +67,7 @@ MUNDO_PADRAO = os.path.join(RAIZ, 'worlds', 'pista_obstaculos.sdf')
 def generate_launch_description():
     pkg = get_package_share_directory('robot_motion')
     nav2_params = os.path.join(pkg, 'config', 'nav2.yaml')
+    mux_params = os.path.join(pkg, 'config', 'twist_mux.yaml')
     mov_params_real = os.path.join(pkg, 'config', 'movimentacao.yaml')
     mov_params_sim = os.path.join(pkg, 'config', 'movimentacao_sim.yaml')
     rviz_config = os.path.join(pkg, 'rviz', 'pilha.rviz')
@@ -180,7 +186,17 @@ def generate_launch_description():
              name='heading_controller', output='both',
              parameters=[mov_params, {'use_sim_time': sim}],
              remappings=[('/hoverboard_base_controller/cmd_vel',
-                          '/compensador_rumo/cmd_vel')]),
+                          '/auto_vel')]),
+
+        # ---------------------------------------------- quem manda (05-08)
+        # Árbitro de comando. Humano acima da autonomia, sempre. Até hoje a
+        # pilha não tinha nenhum: o heading_controller publicava direto no
+        # atuador e não havia como tomar o controle de um robô indo para a
+        # parede. Racional e prioridades em `config/twist_mux.yaml`.
+        Node(package='twist_mux', executable='twist_mux',
+             name='twist_mux', output='both',
+             parameters=[mux_params, {'use_sim_time': sim}],
+             remappings=[('/cmd_vel_out', '/compensador_rumo/cmd_vel')]),
 
         # ⚠️ No simulador o comando TEM de passar pela placa fingida
         # (`/cmd_vel_bruto`), como já fazia o `navegacao.launch.py`. Esta

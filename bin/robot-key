@@ -29,5 +29,9 @@ if ! command -v ros2 >/dev/null 2>&1; then
     exit 1
 fi
 
-exec ros2 run teleop_twist_keyboard teleop_twist_keyboard \
-    --ros-args -r cmd_vel:=key_vel
+# Teleop PROPRIO do robo 2 (05-08): o teleop_twist_keyboard de fabrica publica
+# Twist cru e a cadeia deste robo e TwistStamped inteira — o DDS rejeitaria por
+# type hash e o mux publicaria no vazio. E o nosso e homem-morto: soltou o
+# teclado, o robo para.
+exec ros2 run robot_motion teleop_teclado \
+    --ros-args -r /teleop_teclado/cmd_vel:=/key_vel

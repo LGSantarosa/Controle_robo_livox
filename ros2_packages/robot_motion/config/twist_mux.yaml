@@ -1,0 +1,64 @@
+# Arbitragem de comando do robô 2 — quem manda quando dois falam junto.
+#
+# Portado do robô 1 (`robot_nav/config/twist_mux.yaml`), que é a única peça da
+# camada de segurança dele que atravessa inteira: prioridade não depende de
+# sensor nem de chassi. Levantamento em `docs/decisoes/010-levantamento-2026-08-05.md`.
+#
+# ⚠️ POR QUE ISTO VEM PRIMEIRO, antes do collision_monitor. Até 05-08 a pilha do
+# robô 2 não tinha árbitro nenhum: o `heading_controller` publicava direto no
+# atuador. Não existia como um humano tomar o controle de um robô indo para a
+# parede — e "humano tem prioridade sobre goal" é um dos poucos princípios que o
+# `CLAUDE.md` diz valer nos DOIS robôs. O reflexo de colisão protege contra o que
+# o sensor vê; isto protege contra tudo o mais, inclusive contra nós.
+#
+# A cadeia, e onde este nó entra:
+#
+#     heading_controller  ──/auto_vel──┐
+#     teclado (robot-key) ──/key_vel───┤  twist_mux
+#     web                 ──/web_vel───┘      │
+#                                             ▼  /cmd_vel_mux
+#                                      compensador_rumo   (cancela o arco)
+#                                             ▼
+#                          /cmd_vel_bruto (sim) ou o atuador (robô)
+#
+# O compensador fica DEPOIS do mux de propósito: o arco do corpo é do robô, não
+# da fonte. Humano que pede "reto" merece reto pelo mesmo motivo que o Nav2.
+#
+# ⚠️ DIFERENÇA DELIBERADA PARA O ROBÔ 1: lá existe uma entrada `unstuck_vel`
+# (prio 30) que FURA o reflexo de colisão para dar ré. Aqui ela não existe
+# AINDA, por dois motivos: (a) não há reflexo de colisão para furar; (b) a
+# recuperação deste robô é PIVÔ, não ré — a premissa "girar não vence o atrito"
+# é do skid-steer do robô 1 e caiu em 05-08. Quando a recuperação por sintoma
+# entrar, ela ganha uma faixa aqui, entre o humano e a autonomia.
+twist_mux:
+  ros__parameters:
+    use_sim_time: false        # a launch sobrescreve no simulador
+
+    # TwistStamped em toda a cadeia do robô 2 — o `diff_drive_controller`, a
+    # placa fingida e o compensador falam stamped. O robô 1 usava `false`
+    # porque a cadeia dele era Twist cru; copiar aquele valor faria o DDS
+    # rejeitar por type hash e o mux publicaria no vazio, sem ninguém consumir.
+    use_stamped: true
+
+    topics:
+      # --- HUMANO: sempre vence, e nunca é filtrado por nada ---
+      teclado:
+        topic: key_vel         # bin/robot-key, num terminal ssh separado
+        timeout: 0.5           # soltou a tecla por 0,5 s -> devolve o comando
+        priority: 90
+      web:
+        topic: web_vel         # controle_web, quando ligado
+        timeout: 0.5
+        priority: 50
+
+      # --- AUTONOMIA: o que a pilha do Nav2 decidiu ---
+      # Prioridade mais baixa de propósito. E o `timeout` é o que faz o robô
+      # PARAR quando a navegação morre: sem publicação nova em 0,5 s o mux
+      # deixa de repetir a fonte, o `diff_drive_controller` estoura o próprio
+      # `cmd_vel_timeout` e as rodas param. Comando velho é comando perigoso —
+      # mesma regra do `timeout_alvo` da movimentação e do `timeout_plano` do
+      # seguidor.
+      autonomia:
+        topic: auto_vel
+        timeout: 0.5
+        priority: 10

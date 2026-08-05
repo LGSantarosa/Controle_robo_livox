@@ -83,3 +83,53 @@ def test_o_raio_de_chegada_do_nav2_bate_com_o_do_seguidor():
     """
     from robot_motion import path_follower  # noqa: F401  (só para existir)
     assert valor(PRODUCAO, 'xy_goal_tolerance') == 0.25
+
+
+# ------------------------------ o árbitro de comando (levantamento da 010)
+
+def _mux():
+    import yaml
+    p = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                     'config', 'twist_mux.yaml')
+    return yaml.safe_load(open(p))['twist_mux']['ros__parameters']
+
+
+def test_humano_vence_a_autonomia_sempre():
+    """O princípio que o CLAUDE.md diz valer nos DOIS robôs. Se alguém inverter
+    isto, o robô deixa de ser controlável por uma pessoa — e o sintoma só
+    aparece no pior momento possível, com ele indo para a parede."""
+    t = _mux()['topics']
+    auto = t['autonomia']['priority']
+    for nome in ('teclado', 'web'):
+        assert t[nome]['priority'] > auto, f'{nome} tem de vencer a autonomia'
+
+
+def test_o_mux_fala_stamped_como_o_resto_da_cadeia():
+    """A cadeia do robô 2 é TwistStamped de ponta a ponta. O robô 1 usava
+    Twist cru, e copiar aquele valor faria o DDS rejeitar por type hash: o mux
+    publicaria e ninguém consumiria — falha silenciosa, a classe de defeito que
+    mais custou tempo neste projeto (BO-3)."""
+    assert _mux()['use_stamped'] is True
+
+
+def test_toda_fonte_tem_timeout():
+    """Fonte sem timeout é comando velho vivo para sempre. Mesma regra do
+    `timeout_alvo` da movimentação e do `timeout_plano` do seguidor: é o
+    timeout que faz o robô PARAR quando quem comandava morreu."""
+    for nome, cfg in _mux()['topics'].items():
+        assert cfg.get('timeout', 0) > 0, f'{nome} sem timeout'
+        assert cfg['timeout'] <= 1.0, f'{nome} com timeout longo demais'
+
+
+def test_a_cadeia_da_launch_bate_com_a_config():
+    """Os nomes de tópico vivem em dois arquivos (YAML e launch) e se
+    divergirem o robô não anda — ou pior, anda sem árbitro. Este teste é o que
+    impede a divergência de virar depuração de campo."""
+    p = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                     'launch', 'pilha.launch.py')
+    launch = open(p).read()
+    topicos = {c['topic'] for c in _mux()['topics'].values()}
+    assert 'auto_vel' in topicos
+    assert "'/auto_vel'" in launch, 'o heading_controller tem de alimentar o mux'
+    assert "'/cmd_vel_out', '/compensador_rumo/cmd_vel'" in launch, \
+        'a saída do mux tem de entrar no compensador'

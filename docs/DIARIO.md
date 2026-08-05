@@ -3339,3 +3339,63 @@ exatamente o sintoma. O script passou a esperar os **dois**.
 
 **Aberto**: o A/B do Smac na manobra "atrás" não rodou; é n=1 por alvo; e nada
 disso passou pelo robô (fatia 4).
+
+## 🛡️ 2026-08-05 (5ª leva) — O robô ganha um freio de mão
+
+Pedido do dono depois de ver o robô bater: montar o `twist_mux` **antes** do
+`collision_monitor`. O levantamento da 010 (commitado hoje) já apontava a mesma
+ordem, e por uma razão que vale escrever: **a pilha do robô 2 não tinha árbitro
+nenhum**. O `heading_controller` publicava direto no atuador, e não existia
+como uma pessoa tomar o controle de um robô indo para a parede — sendo que
+"humano tem prioridade sobre goal" é um dos poucos princípios que o `CLAUDE.md`
+diz valer nos **dois** robôs.
+
+### A cadeia agora
+
+```
+heading_controller ──/auto_vel──┐
+teclado (robot-key) ─/key_vel───┤ twist_mux   humano 90/50 > autonomia 10
+web ────────────────/web_vel────┘     │
+                                      ▼ /compensador_rumo/cmd_vel
+                               compensador_rumo  (cancela o arco)
+                                      ▼
+                        /cmd_vel_bruto (sim) ou o atuador (robô)
+```
+
+O compensador ficou **depois** do mux de propósito: o arco do corpo é do robô,
+não da fonte. Humano que pede "reto" merece reto pelo mesmo motivo que o Nav2.
+
+### Provado nas três situações
+
+```
+autonomia sozinha     auto pede +0,483  ->  sai +0,483   passa
+humano assume (ré)    auto pede +0,162  ->  sai −0,250   HUMANO VENCE
+humano solta (3 s)                      ->  sai +0,493   autonomia retoma
+```
+
+### Duas coisas que o robô 1 não podia nos dar
+
+1. **`use_stamped: true`.** O robô 1 usa `false` porque a cadeia dele é Twist
+   cru. Copiar aquele valor faria o DDS rejeitar por *type hash*: o mux
+   publicaria e ninguém consumiria — falha silenciosa, a classe de defeito que
+   mais custou tempo aqui (BO-3). Travado em teste.
+2. **Teleop próprio** (`teleop_teclado`). O `teleop_twist_keyboard` de fábrica
+   não publica stamped no Jazzy, e ele tem teclas de passo de velocidade que
+   **seriam mentira neste robô**: a compensação entrega um patamar, e comandar
+   0,10 ou 0,50 dá a mesma coisa na placa. O nosso é **homem-morto**: sem tecla
+   nova por 0,4 s o comando cai a zero sozinho — terminal não avisa quando a
+   tecla é solta, e um teleop que repete o último comando para sempre é um robô
+   que continua andando depois de a pessoa largar o teclado, o oposto de um
+   freio de mão.
+
+### Uma diferença deliberada para o robô 1
+
+Lá existe a faixa `unstuck_vel` (prio 30) que **fura** o reflexo de colisão
+para dar ré. Aqui ela **não existe ainda**: (a) não há reflexo para furar; e
+(b) a recuperação deste robô é **pivô**, não ré — a premissa "girar não vence o
+atrito" é do skid-steer do robô 1 e caiu em 05-08. Quando a recuperação por
+sintoma entrar, ela ganha a faixa entre o humano e a autonomia.
+
+**492 testes verdes** (eram 488), 4 deles travando o mux: humano acima da
+autonomia, `use_stamped`, todo tópico com timeout, e os nomes da launch batendo
+com os do YAML.

@@ -27,6 +27,8 @@ setup(
         'console_scripts': [
             # decisão 011: entra cmd_vel desejado, sai cmd_vel que anda reto
             'compensador_rumo = robot_motion.compensador_rumo:main',
+            # o freio de mao do humano (twist_mux, prio 90)
+            'teleop_teclado = robot_motion.teleop_teclado:main',
             'heading_controller = robot_motion.heading_controller:main',
             'path_follower = robot_motion.path_follower:main',
             # aposentado em 28-07 (decisão 008); sai numa fatia própria
