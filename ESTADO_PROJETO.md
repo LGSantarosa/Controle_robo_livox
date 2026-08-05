@@ -48,17 +48,32 @@ previu **não existe**: 0,3 s dão 48°.
   Se a quantização estiver certa, tem de sair **bimodal** — ora ~0°, ora ~16°.
   O único valor que temos (2,7°) é compatível com ter pego **zero** ciclos.
 
-🔴 **O ROBÔ REAL NÃO TEM MODELO GEOMÉTRICO (05-08).** O `tracao.launch.py`
-carrega o `diffbot.urdf.xacro`, que é o **exemplo de demonstração do
-`ros2_control`** (caixa 0,10×0,10×0,05, roda 0,015, bitola 0,10, duas bobas,
-sem Livox). A cinemática vem do YAML e está certa — mas **toda geometria no robô
-real está errada**: polígonos do `collision_monitor`, footprint do Nav2,
-montagem de sensor. A descrição correta já existe (`robo2.urdf.xacro`) e nunca
-foi usada pelo robô. **Bloqueia o reflexo de colisão no hardware.**
+✅ **O ROBÔ REAL GANHOU CORPO (05-08, 11ª leva).** O `tracao.launch.py` carregava
+o `diffbot.urdf.xacro` — o **exemplo de demonstração do `ros2_control`** (caixa
+0,10×0,10×0,05, roda 0,015, bitola 0,10, duas bobas, sem Livox). Passou a
+carregar o `robo2.urdf.xacro` com `sim:=false`: a arquitetura "uma descrição,
+dois hardwares" **já existia** (os dois blocos `ros2_control` chaveados por
+`<xacro:arg name="sim">`) e só nunca tinha sido ligada ao robô.
+
+  Os blocos de hardware foram comparados renderizando os dois xacro **antes** da
+  troca: plugin, juntas, `device`, `wheel_radius`, `feedback_sign_*` e
+  `deadband_*` saem idênticos — **o atuador não muda**. O que muda é a geometria,
+  e o **`livox_frame` passa a existir**, que era o bloqueio do teste D.
+
+  ⚠️ **Falta confirmar no robô**: `sessao.py --checar` mostrando
+  `wheel_separation = 0.2700` vivo depois da troca. Primeiro passo da próxima ida.
 
 📏 **MID-360 MEDIDO COM TRENA: 42 cm do chão, centrado (05-08)** — não os 27 cm
-que o `robo2.urdf.xacro` supunha. A zona cega vai de 2,19 m para **3,40 m**: o
-simulador está 55% otimista nela.
+supostos. A zona cega vai de 2,19 m para **3,40 m**, e a 0,5 m ele só vê acima de
+**36 cm** (era 21). O simulador estava 55% otimista nela; corrigido nos dois
+lados. **A caixa do teste D tem de ter 50 cm, não 40.** Travado em 4 testes
+novos, verificados por mutação.
+
+🔴 **O `collision_monitor.yaml` descreve o robô errado (aberto).** O comentário
+que justifica `max_height: 0.50` diz *"o robô tem 0,30 m de alto"* — número do
+modelo antigo da decisão 004. A caixa termina a **0,230 m** e o Mid-360 está a
+**0,42 m**: é o sensor que define o gabarito. Não mexido de propósito —
+`max_height` é parâmetro de segurança e merece decisão própria.
 
 ✅ **`twist_mux` RESOLVIDO (05-08, 10ª leva) — `./setup_twist_mux.sh`.** Ele
 entra por **fonte em commit fixado** (tag 4.5.0), mesmo padrão do

@@ -19,14 +19,38 @@ from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
-    # URDF vem do xacro do próprio driver — é lá que ficam o wheel_radius e o
-    # device serial usados pela interface de hardware.
+    # A descrição é a MEDIDA, a mesma do simulador — `sim:=false` troca só a
+    # camada de hardware (`HoverboardSystem` no lugar do `GazeboSimSystem`).
+    #
+    # ⚠️ ATÉ 05-08 ISTO CARREGAVA `hoverboard_driver/urdf/diffbot.urdf.xacro`,
+    # que é o **exemplo de demonstração do `ros2_control`** e nunca foi
+    # substituído. O robô real rodava com esta geometria:
+    #
+    #                       diffbot (o exemplo)      real (trena 29-07)
+    #     caixa             0,10 × 0,10 × 0,05 m    0,433 × 0,455 × 0,145
+    #     raio da roda      0,015 m                  0,080 m
+    #     bitola            0,10 m                   0,270 m
+    #     rodas bobas       duas                     uma
+    #     Livox             não existe               existe, a 42 cm
+    #
+    # A CINEMÁTICA não vinha daí e estava certa (`wheel_separation` e
+    # `wheel_radius` moram no `hoverboard_controllers.yaml`, que o
+    # `diff_drive_controller` lê, e o `--checar` confirma vivos). Mas toda
+    # GEOMETRIA no robô estava errada: os polígonos do `collision_monitor`
+    # vivem em `base_link`, o footprint do Nav2 idem, e **não existia
+    # `base_link → livox_frame`** — sem essa TF o reflexo de colisão não tem
+    # como trazer a nuvem para o corpo. Era este o bloqueio do teste D.
+    #
+    # O bloco `ros2_control` foi comparado renderizando os dois xacro antes da
+    # troca: plugin, juntas, `device`, `wheel_radius`, `feedback_sign_*` e
+    # `deadband_*` saem IDÊNTICOS. A troca não mexe no atuador.
     robot_description_content = Command([
         PathJoinSubstitution([FindExecutable(name='xacro')]),
         ' ',
         PathJoinSubstitution([
-            FindPackageShare('hoverboard_driver'), 'urdf', 'diffbot.urdf.xacro'
+            FindPackageShare('robot_base'), 'description', 'robo2.urdf.xacro'
         ]),
+        ' sim:=false',
     ])
     # O launch_ros >=0.26 lê parâmetro como YAML por padrão; um URDF cru falha
     # ('<?xml ...' não é YAML). value_type=str força string — correto no

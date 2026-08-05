@@ -85,19 +85,35 @@
   <xacro:property name="boba_pivo_damping"   value="0.02"/>
 
   <!-- Livox Mid-360, o único sensor externo do robô (decisão 012).
-       ⚠️ POSIÇÃO PROVISÓRIA — mesmo estatuto do `boba_raio`: NÃO medida com
-       trena. Suposto no topo da caixa, centrado. A altura importa muito e é
-       barata de medir: o Mid-360 quase não olha para baixo (−7°), então o
-       chão só aparece a `h/tan(7°) ≈ 8,1·h` do robô. Com estes valores dá
-       um raio cego de ~2,2 m em volta de um robô de 45 cm de largura.
-       Trocar aqui reescala a zona cega inteira. -->
-  <xacro:property name="livox_z_sobre_caixa" value="0.04"/>
-  <xacro:property name="livox_x"             value="0.0"/>
+       ✅ MEDIDO COM TRENA em 2026-08-05: centro do sensor a **42 cm do chão**,
+       centrado no robô. Fecha o item que o `ESTADO_PROJETO.md` listava como
+       "o mais barato e de maior retorno da lista".
+
+       ⚠️ E DERRUBA O QUE ESTAVA AQUI. A posição era suposta (topo da caixa
+       + 4 cm), o que dava 27 cm — **15 cm abaixo do real, 55% de erro**.
+       Como o Mid-360 quase não olha para baixo (−7°), o chão só aparece a
+       `h/tan(7°) ≈ 8,1·h`, e a zona cega escala com a altura:
+
+           suposto (27 cm)   raio cego 2,19 m   a 0,5 m só vê acima de 21 cm
+           MEDIDO  (42 cm)   raio cego 3,40 m   a 0,5 m só vê acima de 36 cm
+
+       O simulador estava 55% otimista em zona cega — ele enxergava obstáculo
+       baixo que o robô não enxerga. Consequência de campo: a caixa do teste D
+       precisa ter **50 cm**, não os 40 que o plano pedia (a 0,5 m sobrariam
+       4 cm de margem).
+
+       ⚠️ A altura é medida DO CHÃO, e `base_link` está no nível do chão (a
+       junta da roda fica a `roda_raio` acima dele). Por isso este valor entra
+       direto, sem somar `altura_solo` nem `caixa_z` — que é o que a versão
+       anterior fazia, e é onde o erro se escondia. -->
+  <xacro:property name="livox_z_solo" value="0.42"/>
+  <xacro:property name="livox_x"      value="0.0"/>
 
   <!-- ==================== DERIVADOS (não editar) ==================== -->
   <xacro:property name="caixa_cz"  value="${altura_solo + caixa_z/2}"/>
   <xacro:property name="boba_pivo_z" value="${altura_solo}"/>
-  <xacro:property name="livox_z"   value="${altura_solo + caixa_z + livox_z_sobre_caixa}"/>
+  <!-- Medido do chão, e `base_link` está no chão: entra direto. -->
+  <xacro:property name="livox_z"   value="${livox_z_solo}"/>
 
   <!-- Inércia de caixa sólida.
        ox/oy/oz = onde o CENTRO DE MASSA fica dentro do link. Sem isso o URDF

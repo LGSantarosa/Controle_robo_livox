@@ -3905,3 +3905,83 @@ Passou a separar `tudo` de `regime`, e a julgar pelo regime.
 **Falta do teste C só o item 1**, que precisa de máquina: soltar o teclado e o
 robô parar sozinho em 0,4 s. 513 testes verdes (sem mudança — o `prova_mux.py`
 é ferramenta de bancada como o `ensaio.py`, não teste de suíte).
+
+## 🧱 2026-08-05 (11ª leva) — O robô real ganha um corpo, e o Livox entra no lugar medido
+
+Segundo item da fila de dev: destravar o **teste D** (reflexo de colisão), que
+parou na bancada porque **não existe `base_link → livox_frame` no robô**.
+
+### A mudança foi muito menor do que o bloqueio sugeria
+
+O levantamento mostrou que a arquitetura *"uma descrição, dois hardwares"* já
+estava construída: o `robo2.urdf.xacro` tem os **dois** blocos `ros2_control`
+(`GazeboSimSystem` e `HoverboardSystem` com o plugin real), chaveados por
+`<xacro:arg name="sim">`, e o include do Gazebo está protegido por `<xacro:if>`.
+Ela só nunca foi ligada ao robô: o `tracao.launch.py` carregava
+`hoverboard_driver/urdf/diffbot.urdf.xacro`, o **exemplo de demonstração do
+`ros2_control`**.
+
+Antes de trocar, renderizei os dois xacro e comparei o bloco de hardware:
+
+```
+plugin          hoverboard_driver/hoverboard_driver   ==  idêntico
+juntas          left_wheel_joint, right_wheel_joint   ==  idênticas
+device          /dev/ttyUSB0                          ==  idêntico
+wheel_radius    0.080                                 ==  idêntico
+feedback_sign   +1,0 / −1,0                           ==  idênticos
+deadband        true / 100.0                          ==  idênticos
+```
+
+**A troca não mexe no atuador.** O que muda é o corpo: `base_link` ganha a caixa
+medida, uma boba em vez de duas, e o **`livox_frame` passa a existir**.
+
+Verificado subindo o `tracao.launch.py` aqui, sem placa: `Loaded hardware
+'HoverboardSystem'`, o `robot_state_publisher` de pé, e a TF
+`base_link → livox_frame` aparecendo. (O `ros2_control_node` morre depois, na
+serial — esperado sem robô.)
+
+E há um detalhe que a troca conserta sozinho: o `robo2.urdf.xacro` traz o
+comentário *"⚠️ ESTE é o bloco que o robô lê"*, que **era falso** — e foi
+justamente essa confusão que fez alguém editar o arquivo errado em 31-07,
+segundo o próprio comentário.
+
+### A altura do Mid-360: 27 cm supostos → 42 cm medidos
+
+```
+                    raio cego     a 0,5 m só vê acima de
+suposto (27 cm)      2,19 m              21 cm
+MEDIDO  (42 cm)      3,40 m              36 cm
+```
+
+O simulador estava **55% otimista em zona cega** — enxergava obstáculo baixo que
+o robô não enxerga. Consequência de campo: a caixa do teste D precisa ter
+**50 cm**, não os 40 do plano (a 0,5 m sobrariam 4 cm de margem).
+
+⚠️ O valor entra **direto**, sem somar `altura_solo` nem `caixa_z`: a medida é do
+chão, e `base_link` está no nível do chão (a junta da roda fica a `roda_raio`
+acima dele). Somar era o que a versão anterior fazia — e é onde o erro se
+escondia.
+
+### Quatro testes novos, porque nada travava esse número
+
+`test_urdf_robo2.py` cobria caixa, massa, rodas e boba, e **nada** cobria o
+sensor. É a lição de 29-07 ("a bancada não tinha teste nenhum — foi assim que
+sobreviveu errada"). Entraram: o `livox_frame` existir na descrição **real**, a
+altura ser a medida e centrada, a **zona cega que ela implica** (traduz a altura
+na grandeza que a operação sente) e o sensor ser o ponto mais alto do robô.
+Verificados por mutação: voltando aos 27 cm, dois falham.
+
+### 🔴 Achado sem conserto: o `collision_monitor.yaml` descreve o robô errado
+
+O comentário que justifica `max_height: 0.50` diz *"acima de 0,50 o robô passa
+por baixo — ele tem 0,30 m de alto"*. **O robô não tem 0,30 m de alto**: a caixa
+termina a 0,230 m e o Mid-360 está a 0,42 m. O "0,30" é do modelo antigo da
+decisão 004 (caixa 0,50 × 0,50 × 0,30).
+
+Não mexi: `max_height` é parâmetro de **segurança** e merece decisão própria, não
+um efeito colateral desta fatia. Fica travado em teste
+(`test_o_livox_e_o_ponto_mais_ALTO_do_robo`) para não passar batido de novo.
+
+**517 testes verdes** (eram 513). ⚠️ O que **só o robô** pode confirmar:
+`sessao.py --checar` mostrando `wheel_separation = 0.2700` vivo depois da troca
+de descrição. É o primeiro passo da próxima ida.

@@ -152,12 +152,27 @@ que teleop nenhum.
 
 ### Teste D — o reflexo de colisão para o robô
 
-**Robô LIGADO. Uma caixa de papelão de pelo menos 40 cm de altura**, num
+**Robô LIGADO. Uma caixa de papelão de pelo menos 50 cm de altura**, num
 corredor livre de 3 m.
 
-⚠️ **A altura da caixa não é detalhe.** O Mid-360 não vê o chão dentro de
-~2 m; a 0,5 m ele só enxerga o que passa de ~21 cm. Caixa baixa **não vai ser
-vista**, e isso não é defeito do software.
+⚠️ **A altura da caixa não é detalhe, e o número MUDOU em 05-08.** O Mid-360 foi
+medido com trena: **42 cm do chão**, não os 27 cm supostos. Como ele quase não
+olha para baixo (−7°), a zona cega escala com a altura:
+
+```
+                    raio cego     a 0,5 m só vê acima de
+suposto (27 cm)      2,19 m              21 cm
+MEDIDO  (42 cm)      3,40 m              36 cm
+```
+
+Os 40 cm que este plano pedia passariam com **4 cm de margem**. Use **50 cm**.
+Caixa baixa não vai ser vista, e isso não é defeito do software.
+
+⚠️ **E o `livox_frame` só passou a existir no robô em 05-08** (11ª leva): até
+então o `tracao.launch.py` carregava o URDF de exemplo do `ros2_control`, sem
+sensor nenhum, e o `collision_monitor` não tinha como trazer a nuvem para o
+corpo. Confirme com `sessao.py --checar` que a bitola viva segue 0,2700 depois
+da troca de descrição — é o primeiro passo da sessão.
 
 ```bash
 ros2 launch robot_motion pilha.launch.py

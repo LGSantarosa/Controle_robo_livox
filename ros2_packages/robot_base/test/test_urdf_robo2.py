@@ -167,3 +167,62 @@ def test_raio_da_roda_bate_com_o_controlador(urdf):
         cfg = yaml.safe_load(f)
     raio_yaml = cfg['hoverboard_base_controller']['ros__parameters']['wheel_radius']
     assert math.isclose(_raio_cilindro(urdf, 'left_wheel'), raio_yaml, abs_tol=TOL)
+
+
+# ------------------------------------------- o Mid-360 (medido com trena 05-08)
+#
+# A altura do sensor era SUPOSTA (topo da caixa + 4 cm = 27 cm) e a trena deu
+# 42 cm — 55% de erro. Como o Mid-360 quase não olha para baixo (−7°), a zona
+# cega escala com ela (`h/tan 7° ≈ 8,1·h`): 2,19 m no valor suposto contra
+# 3,40 m no real. O simulador enxergava obstáculo baixo que o robô não enxerga.
+# Nada travava esse número — é a lição de 29-07 ("a bancada não tinha teste
+# nenhum, foi assim que sobreviveu errada").
+
+def test_o_livox_existe_no_robo_REAL(urdf):
+    """A fixture renderiza com `sim:=false`, que é o que o robô carrega desde
+    05-08. Sem `livox_frame` aqui não há `base_link → livox_frame`, e o
+    `collision_monitor` não tem como trazer a nuvem para o corpo — era esse o
+    bloqueio do teste D."""
+    assert _junta(urdf, 'livox_joint') is not None
+    assert any(l.get('name') == 'livox_frame' for l in urdf.findall('link'))
+
+
+def test_altura_do_livox_e_a_MEDIDA(urdf):
+    """42 cm do chão, trena de 05-08. `base_link` está no nível do chão (a
+    junta da roda fica a `roda_raio` acima dele), então a origem da junta é a
+    altura de montagem, sem somar mais nada — somar era o que a versão anterior
+    fazia, e é onde o erro se escondia."""
+    _, y, z = _xyz(_junta(urdf, 'livox_joint'))
+    assert math.isclose(z, 0.42, abs_tol=1e-9), (
+        f'altura do Mid-360 = {z:.3f} m, medida = 0,42. Trocar aqui reescala a '
+        f'zona cega inteira (8,1x a altura)')
+    assert math.isclose(y, 0.0, abs_tol=TOL), 'medido CENTRADO no robô'
+
+
+def test_a_zona_cega_que_essa_altura_implica(urdf):
+    """Não é redundante com o teste acima: traduz a altura na grandeza que a
+    operação sente. Se alguém mexer na montagem, este teste diz o que muda no
+    campo — e o número tem de ir junto para o `collision_monitor.yaml` e para
+    o tamanho da caixa do teste D."""
+    _, _, h = _xyz(_junta(urdf, 'livox_joint'))
+    raio_cego = h / math.tan(math.radians(7.0))
+    assert raio_cego == pytest.approx(3.42, abs=0.05), (
+        f'raio cego = {raio_cego:.2f} m')
+    # A 0,5 m do robô, só aparece o que passar desta altura:
+    visivel_a_meio_metro = h - 0.5 * math.tan(math.radians(7.0))
+    assert visivel_a_meio_metro == pytest.approx(0.359, abs=0.005), (
+        f'a 0,5 m o sensor só vê acima de {visivel_a_meio_metro:.3f} m — a '
+        f'caixa do teste D tem de passar disso com folga (50 cm, não 40)')
+
+
+def test_o_livox_e_o_ponto_mais_ALTO_do_robo(urdf):
+    """Trava um fato que o `collision_monitor.yaml` ainda descreve errado: ele
+    diz "o robô tem 0,30 m de alto", número do modelo antigo da decisão 004. A
+    caixa termina a 0,230 m e o sensor está a 0,42 — é ele quem define o gabarito
+    do robô, e é por ele que se decide o `max_height` do reflexo."""
+    _, _, z_livox = _xyz(_junta(urdf, 'livox_joint'))
+    topo_da_caixa = 0.0852 + 0.145          # altura_solo + caixa_z
+    assert z_livox > topo_da_caixa, (
+        'o sensor tem de estar acima da caixa; se deixar de estar, o gabarito '
+        'do robô muda e o max_height do collision_monitor precisa ser revisto')
+    assert topo_da_caixa == pytest.approx(0.230, abs=0.001)
