@@ -123,13 +123,19 @@ def test_caixa_nao_raspa_o_chao(urdf):
 
 
 def test_massa_total(urdf):
-    """~10 kg: o dono descreveu o robô como leve. A inércia que sai daqui é o
-    que produz o sobrepasso de rumo — massa errada, ajuste errado."""
+    """~10,265 kg: o dono descreveu o robô como leve. A inércia que sai daqui
+    é o que produz o sobrepasso de rumo — massa errada, ajuste errado.
+
+    Os 10,0 são chassi + rodas + boba (todos ESTIMADOS, item de bancada); os
+    0,265 são o Livox Mid-360 da decisão 012, e este é o único número de massa
+    do robô que vem de folha de fabricante em vez de chute. Ele entra porque
+    fica ALTO (0,27 m) e mexe no centro de massa.
+    """
     total = sum(
         float(m.get('value'))
         for m in urdf.findall('./link/inertial/mass')
     )
-    assert math.isclose(total, 10.0, abs_tol=0.05), f'massa total = {total}'
+    assert math.isclose(total, 10.265, abs_tol=0.05), f'massa total = {total}'
 
 
 def test_inercias_positivas(urdf):

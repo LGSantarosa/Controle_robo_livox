@@ -67,4 +67,80 @@
     </plugin>
   </gazebo>
 
+  <!-- ================= Livox Mid-360, fingido (decisão 012) =================
+
+       Publica em `/livox/lidar`, o MESMO tópico do driver real — mesmo
+       princípio do `/Odometry`: quem consome não deve saber a diferença.
+
+       Números da folha do Mid-360: 360° na horizontal, −7° a +52° na
+       vertical, 0,1 a 40 m, 10 Hz, ~200 000 pontos/s (aqui 400×50 = 20 000
+       por quadro a 10 Hz, que dá os mesmos 200 k/s).
+
+       ⛔ ISTO É RASTER, E O MID-360 É ROSETA NÃO REPETITIVA. Cada quadro
+       real cobre uma FRAÇÃO do campo, e a cobertura adensa com o tempo de
+       integração; aqui a grade é uniforme e igual todo quadro. O simulador
+       portanto ENXERGA MELHOR que o robô num quadro só: obstáculo fino
+       (perna de cadeira) que a roseta pode perder aqui aparece sempre.
+
+       Serve para: campo de visão, zona cega, alcance, e amarrar a cadeia
+       nuvem→costmap→Nav2. NÃO serve para: taxa de detecção de obstáculo
+       fino, tempo de integração, ou qualquer conclusão sobre FAST-LIO (que
+       se alimenta justamente do padrão de varredura). Racional inteiro e o
+       teste de esparsidade a fazer: `docs/decisoes/012-lidar-3d-no-simulador.md`.
+
+       ⚠️ A ZONA CEGA É DE PROJETO, não defeito: com −7° de depressão o chão
+       só começa a ~8,1× a altura do sensor. Obstáculo baixo e perto é
+       invisível por geometria, e nenhuma sintonia resolve. -->
+  <!-- ⚠️ A junta fixa TEM de ser preservada. Sem isto o conversor URDF→SDF
+       colapsa `livox_frame` dentro do `base_link` e pendura o sensor lá com
+       a pose remontada — medido em 05-08: o chão aparecia a −0,307 m do
+       sensor quando o modelo diz −0,270, e a zona cega saía inconsistente
+       com o próprio ângulo do feixe (7,7° lidos contra 7,0° configurados).
+       Com a junta preservada a pose do sensor é a que está escrita no URDF,
+       e conferível. Custo: um link a mais na árvore de TF, que é justamente
+       o que a percepção precisa para transformar a nuvem. -->
+  <gazebo reference="livox_joint">
+    <preserveFixedJoint>true</preserveFixedJoint>
+    <disableFixedJointLumping>true</disableFixedJointLumping>
+  </gazebo>
+
+  <gazebo reference="livox_frame">
+    <sensor name="livox_mid360" type="gpu_lidar">
+      <topic>livox/lidar</topic>
+      <gz_frame_id>livox_frame</gz_frame_id>
+      <update_rate>10</update_rate>
+      <always_on>1</always_on>
+      <visualize>true</visualize>
+      <lidar>
+        <scan>
+          <horizontal>
+            <samples>400</samples>
+            <resolution>1</resolution>
+            <min_angle>-3.141593</min_angle>
+            <max_angle>3.141593</max_angle>
+          </horizontal>
+          <vertical>
+            <samples>50</samples>
+            <resolution>1</resolution>
+            <min_angle>-0.122173</min_angle>  <!-- −7°  -->
+            <max_angle>0.907571</max_angle>   <!-- +52° -->
+          </vertical>
+        </scan>
+        <range>
+          <min>0.1</min>
+          <max>40.0</max>
+          <resolution>0.01</resolution>
+        </range>
+        <!-- ~2 cm é a exatidão de folha do Mid-360. Sem ruído a nuvem sai
+             perfeita e a percepção fica ajustada contra um sensor que não
+             existe — o mesmo erro que a placa fingida existe para não repetir. -->
+        <noise>
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.02</stddev>
+        </noise>
+      </lidar>
+    </sensor>
+  </gazebo>
+
 </robot>

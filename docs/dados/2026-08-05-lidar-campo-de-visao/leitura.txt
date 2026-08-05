@@ -1,0 +1,88 @@
+o Livox Mid-360 fingido entra no simulador — e a zona cega e enorme
+====================================================================
+
+Decisao 012. Primeira vez que o simulador tem SENSOR: ate aqui o /Odometry
+era pose verdadeira e obstaculo so existia se viesse de mapa estatico.
+
+maquina  : PC de desenvolvimento
+Gazebo   : Harmonic headless, mundo pista_obstaculos, robo em (1,0 , 1,0)
+sensor   : gpu_lidar, 360 x (-7 a +52) graus, 0,1-40 m, 10 Hz, ruido 2 cm
+topico   : /livox/lidar  (PointCloud2) — MESMO nome do driver real
+altura   : 0,270 m, CONFERIDA por TF (base_link -> livox_frame)
+
+
+O SENSOR FUNCIONA E BATE COM A FOLHA
+-------------------------------------
+  20 000 pontos por quadro (400 x 50) a 10 Hz = 200 000 pontos/s
+  6 963 com retorno (35%) — o resto aponta para o ceu e volta vazio
+  frame_id livox_frame, campos x/y/z/intensity/ring
+
+
+O RESULTADO QUE MUDA PROJETO: ELE NAO VE O CHAO PERTO
+------------------------------------------------------
+                        MEDIDO        PREVISTO (decisao 012)
+  zona cega             2,04 m            2,20 m
+
+E o perfil de cegueira, que e a leitura operacional:
+
+    distancia      altura minima para APARECER
+      0,5-1,0 m         +0,15 m
+      1,0-1,5 m         +0,09 m
+      1,5-2,0 m         +0,03 m
+      2,0-2,5 m          ve o chao
+
+Ou seja: um robo de 45 cm de largura com ~2 m de cegueira de chao em volta.
+Caixa baixa, degrau, pe de mesa, cachorro deitado — invisiveis se estiverem
+perto. **Isto e do SENSOR, nao do simulador**: e geometria de -7 graus de
+depressao, e nenhuma sintonia de costmap resolve.
+
+Consequencia para a fatia B: obstaculo baixo tem de ser tratado por memoria
+(o que foi visto de longe e lembrado) ou por outro sensor. Nao ha terceira
+saida com este hardware nesta altura.
+
+
+⚠️ A REGUA ERROU PRIMEIRO — DE NOVO
+-------------------------------------
+A primeira medida deu zona cega de 2,27 m e "altura do sensor 0,308 m",
+sendo que a TF diz 0,270. Ponto a -0,308 esta 3,8 cm ABAIXO do chao: nao e
+geometria, e artefato de rasancia (precisao de profundidade a 11 m em
+angulo raso). Sao 38 pontos, 0,5% da nuvem, todos a 2,4-5,2 m.
+
+O script pegava "os pontos de z minimo" como se fossem o chao. Os pontos
+impossiveis sequestraram o minimo e a medida saiu 11% errada.
+
+Terceira vez na mesma semana que a REGUA respondeu outra pergunta:
+  29-07  regua do planner lia cuspide como curva fechadissima
+  04-08  criterio do 12b usava caminho/afastamento que nao discrimina
+  05-08  esta
+
+Por isso a conta virou instrumento versionado: tools/banco/campo_de_visao.py,
+com separacao explicita de "abaixo do chao" e 9 testes, um deles travando
+exatamente este defeito (nuvem suja tem de dar a MESMA zona cega da limpa).
+
+
+O QUE FOI CONSERTADO NO CAMINHO
+--------------------------------
+1. A ponte lia o topico errado. O gpu_lidar publica LaserScan em <topic> e a
+   NUVEM em <topic>/points. Escutando <topic> a ponte sobe, o topico ROS
+   aparece e nao chega nada — sintoma que parece sensor quebrado.
+2. Junta fixa preservada (preserveFixedJoint). Sem isso o conversor
+   URDF->SDF colapsa livox_frame dentro do base_link. Nao era a causa da
+   discrepancia de altura (a regua era), mas deixa a pose do sensor
+   conferivel por TF, que e como ela foi conferida.
+
+
+O QUE ESTE SENSOR NAO PROVA
+----------------------------
+O Mid-360 varre em ROSETA nao repetitiva; o gpu_lidar varre em RASTER.
+Cobertura uniforme todo quadro contra cobertura que adensa com o tempo de
+integracao. Entao o simulador ENXERGA MELHOR que o robo num quadro so, e
+qualquer numero de "taxa de deteccao de obstaculo fino" daqui e otimista.
+Serve para geometria, zona cega, alcance e para amarrar nuvem->costmap->Nav2.
+Nao serve para dimensionar tempo de integracao nem para dizer nada sobre
+FAST-LIO. Racional inteiro na decisao 012.
+
+⚠️ A ALTURA DE MONTAGEM E PROVISORIA (nao medida com trena), e a zona cega
+escala com ela: ~8,1x a altura. Medir onde o Mid-360 esta no robo e item de
+bancada barato e de alto retorno — cada centimetro a mais sao 8 cm de raio
+cego a mais.

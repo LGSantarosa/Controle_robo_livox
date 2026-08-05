@@ -741,3 +741,91 @@ def test_curvatura_reproduz_o_robo_medido_em_0804(capsys):
     assert mr == pytest.approx(-0.11, abs=0.03), 'arco de ré'
     assert mf / mr == pytest.approx(7.4, abs=1.5), 'a assinatura da boba'
     assert mf < 0 and mr < 0, 'os dois sentidos arcam para o mesmo lado do corpo'
+
+
+# ------------------------------- campo de visão do LiDAR (decisão 012)
+
+campo = _carrega('campo_de_visao')
+DEP7 = math.radians(7.0)   # depressão do Mid-360
+
+
+def nuvem_de_chao(altura, depressao, n=360, ate=8.0):
+    """Nuvem sintética: um leque de feixes batendo num chão plano.
+
+    Feixe acima da horizontal nunca encontra o chão e não entra — é o que
+    cria a zona cega, e o teste tem de reproduzir a causa, não o número.
+    """
+    pts = []
+    for i in range(n):
+        a = 2 * math.pi * i / n
+        d = altura / math.tan(depressao)
+        while d <= ate:
+            pts.append((d * math.cos(a), d * math.sin(a), -altura))
+            d += 0.25
+    return pts
+
+
+def test_zona_cega_e_a_conta_da_decisao_012():
+    """Mid-360 a 0,27 m com −7° não vê o chão dentro de ~2,2 m. É o dado que
+    diz que obstáculo baixo e perto é invisível POR GEOMETRIA."""
+    assert campo.zona_cega(0.270, DEP7) == pytest.approx(2.20, abs=0.02)
+
+
+def test_zona_cega_escala_com_a_altura():
+    """Ela é ~8,1x a altura de montagem — por isso medir a altura do Mid-360
+    com trena é item de bancada barato e de alto retorno."""
+    for h in (0.20, 0.27, 0.40):
+        assert campo.zona_cega(h, DEP7) == pytest.approx(8.14 * h, rel=0.01)
+
+
+def test_sensor_que_nao_olha_para_baixo_nunca_ve_o_chao():
+    assert campo.zona_cega(0.27, 0.0) == float('inf')
+
+
+def test_altura_minima_visivel_bate_com_a_tabela_da_012():
+    """A tabela que a decisão 012 previu e a bancada confirmou em 05-08."""
+    for d, esperado in ((0.5, 0.21), (1.0, 0.15), (1.5, 0.09)):
+        assert campo.altura_minima_visivel(0.270, DEP7, d) == \
+            pytest.approx(esperado, abs=0.01), f'a {d} m'
+
+
+def test_alem_da_zona_cega_nada_e_exigido_de_altura():
+    """Passada a zona cega o feixe já está no chão: objeto de qualquer altura
+    aparece. A função tem de saturar em zero, não devolver negativo."""
+    assert campo.altura_minima_visivel(0.270, DEP7, 3.0) == 0.0
+
+
+def test_separa_chao_isola_os_pontos_impossiveis():
+    """Retorno ABAIXO do plano do chão não é geometria — é artefato de
+    rasância. Foi ele que sequestrou a primeira medida (2,27 m em vez de
+    2,04 m) por entrar num mínimo. Tem de sair separado, não misturado."""
+    pts = nuvem_de_chao(0.27, DEP7) + [(5.0, 0.0, -0.31), (6.0, 0.0, -0.33)]
+    chao, acima, abaixo = campo.separa_chao(pts, 0.27)
+    assert len(abaixo) == 2, 'os dois impossíveis têm de ser isolados'
+    assert chao and not acima
+
+
+def test_raio_do_chao_nao_e_envenenado_pelo_artefato():
+    """O teste que trava o defeito de 05-08: com pontos afundados na nuvem, a
+    zona cega medida NÃO pode mudar."""
+    limpa = nuvem_de_chao(0.27, DEP7)
+    suja = limpa + [(2.4, 0.0, -0.308), (5.2, 0.0, -0.33)]
+    assert campo.raio_do_chao_visto(suja, 0.27) == \
+        pytest.approx(campo.raio_do_chao_visto(limpa, 0.27), abs=1e-9)
+
+
+def test_nuvem_sem_chao_devolve_none_em_vez_de_mentir():
+    """Sala pequena, sensor para cima, nuvem vazia: 'não dá para medir' é
+    resposta. Devolver um número aqui seria inventar zona cega."""
+    assert campo.raio_do_chao_visto([(1.0, 0.0, 0.5)], 0.27) is None
+    assert campo.raio_do_chao_visto([], 0.27) is None
+
+
+def test_perfil_de_cegueira_marca_faixa_vazia():
+    """Faixa sem retorno nenhum é diferente de faixa que vê o chão. Uma é
+    'não sei', a outra é 'enxergo'. Confundir as duas é como o costmap ganha
+    buraco fantasma."""
+    pts = nuvem_de_chao(0.27, DEP7)
+    perfil = campo.perfil_de_cegueira(pts, 0.27, [(0.5, 1.0), (3.0, 4.0)])
+    assert perfil[0][2] is None and perfil[0][3] == 0, 'dentro da zona cega'
+    assert perfil[1][2] == pytest.approx(0.0, abs=0.01), 'já vê o chão'

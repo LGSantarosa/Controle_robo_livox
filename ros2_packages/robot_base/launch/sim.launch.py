@@ -149,8 +149,17 @@ def generate_launch_description():
             '/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock',
             '/Odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry',
             '/tf_odom@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V',
+            # Livox Mid-360 fingido (decisão 012). O `gpu_lidar` publica DOIS
+            # tópicos: o `<topic>` do SDF leva um LaserScan (uma linha só,
+            # inútil aqui) e `<topic>/points` leva a nuvem. É a nuvem que
+            # queremos — e ela é remapeada para `/livox/lidar`, o MESMO nome
+            # do driver real, como o /Odometry: quem consome não sabe a
+            # diferença. Escutar o tópico sem `/points` cria a ponte e não
+            # entrega nada, que foi o primeiro sintoma em 05-08.
+            '/livox/lidar/points@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked',
         ],
-        remappings=[('/tf_odom', '/tf')],
+        remappings=[('/tf_odom', '/tf'),
+                    ('/livox/lidar/points', '/livox/lidar')],
         parameters=[{'use_sim_time': True}],
         output='both',
     )

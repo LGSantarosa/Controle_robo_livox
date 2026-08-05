@@ -84,9 +84,20 @@
   <xacro:property name="boba_pivo_atrito"    value="0.05"/>
   <xacro:property name="boba_pivo_damping"   value="0.02"/>
 
+  <!-- Livox Mid-360, o único sensor externo do robô (decisão 012).
+       ⚠️ POSIÇÃO PROVISÓRIA — mesmo estatuto do `boba_raio`: NÃO medida com
+       trena. Suposto no topo da caixa, centrado. A altura importa muito e é
+       barata de medir: o Mid-360 quase não olha para baixo (−7°), então o
+       chão só aparece a `h/tan(7°) ≈ 8,1·h` do robô. Com estes valores dá
+       um raio cego de ~2,2 m em volta de um robô de 45 cm de largura.
+       Trocar aqui reescala a zona cega inteira. -->
+  <xacro:property name="livox_z_sobre_caixa" value="0.04"/>
+  <xacro:property name="livox_x"             value="0.0"/>
+
   <!-- ==================== DERIVADOS (não editar) ==================== -->
   <xacro:property name="caixa_cz"  value="${altura_solo + caixa_z/2}"/>
   <xacro:property name="boba_pivo_z" value="${altura_solo}"/>
+  <xacro:property name="livox_z"   value="${altura_solo + caixa_z + livox_z_sobre_caixa}"/>
 
   <!-- Inércia de caixa sólida.
        ox/oy/oz = onde o CENTRO DE MASSA fica dentro do link. Sem isso o URDF
@@ -202,6 +213,25 @@
     <child link="caster_wheel"/>
     <origin xyz="${-boba_trail} 0 ${-(boba_pivo_z - boba_raio)}"/>
     <axis xyz="0 1 0"/>
+  </joint>
+
+  <!-- ==================== Livox Mid-360 (decisão 012) ==================== -->
+  <!-- Corpo cilíndrico de ~65 mm de altura. Sem colisão de propósito: ele não
+       encosta em nada e colisão aqui só criaria contato espúrio no topo. A
+       massa entra porque ele fica ALTO e mexe no centro de massa — 265 g na
+       folha do fabricante. -->
+  <link name="livox_frame">
+    <visual>
+      <geometry><cylinder radius="0.0325" length="0.065"/></geometry>
+      <material name="livox_preto"><color rgba="0.10 0.10 0.12 1"/></material>
+    </visual>
+    <xacro:inercia_roda m="0.265" r="0.0325" h="0.065"/>
+  </link>
+
+  <joint name="livox_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="livox_frame"/>
+    <origin xyz="${livox_x} 0 ${livox_z}"/>
   </joint>
 
   <!-- ==================== ros2_control ==================== -->

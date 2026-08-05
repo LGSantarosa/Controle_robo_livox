@@ -3094,3 +3094,66 @@ deliberadamente errados, como o `ff_errado_25_por_cento` fez na fatia 1.
 **Para a fatia 4**: entra no protocolo do robô uma varredura de `--liga`
 (0,3/0,5/0,8/1,2/2,0, n=3) — ~15 corridas curtas, e é o único jeito de ter
 a curva real.
+
+## 👁️ 2026-08-05 — O simulador ganha olhos, e eles são mais cegos do que se supunha
+
+O dono mandou atacar percepção. Decisão 012 escrita antes do código; dado e
+leitura em `docs/dados/2026-08-05-lidar-campo-de-visao/`.
+
+**O sensor entrou**: `gpu_lidar` no topo da caixa publicando `PointCloud2`
+em `/livox/lidar` — mesmo tópico do driver real, mesmo princípio do
+`/Odometry`. 20 000 pontos/quadro a 10 Hz = 200 000 pontos/s, os números da
+folha do Mid-360. É a primeira vez que este simulador tem sensor.
+
+### O resultado que muda projeto
+
+```
+                    MEDIDO      PREVISTO (012)
+zona cega           2,04 m         2,20 m
+
+altura mínima para um obstáculo APARECER:
+  a 0,5–1,0 m   +0,15 m       a 1,5–2,0 m   +0,03 m
+  a 1,0–1,5 m   +0,09 m       a 2,0–2,5 m   vê o chão
+```
+
+**Um robô de 45 cm de largura com ~2 m de cegueira de chão em volta.** Caixa
+baixa, degrau, pé de mesa: invisíveis se estiverem perto. É do **sensor**,
+não do simulador — geometria dos −7° de depressão — e nenhuma sintonia de
+costmap resolve. Para a fatia B sobra tratar obstáculo baixo por **memória**
+(lembrar o que se viu de longe) ou por outro sensor. Não há terceira saída
+com este hardware nesta altura.
+
+### ⚠️ A régua errou primeiro, pela terceira vez na semana
+
+A primeira medida deu zona cega 2,27 m e "sensor a 0,308 m" — com a TF
+dizendo 0,270. Um ponto a −0,308 está **3,8 cm abaixo do chão**: não é
+geometria, é artefato de rasância (38 pontos, 0,5% da nuvem, todos a
+2,4–5,2 m). O script pegava "os pontos de z mínimo" como se fossem chão, e
+os impossíveis sequestraram o mínimo — 11% de erro.
+
+```
+29-07  a régua do planner lia cúspide como curva fechadíssima
+04-08  o critério do 12b usava caminho/afastamento, que não discrimina
+05-08  esta
+```
+
+Por isso a conta virou **instrumento versionado**
+(`tools/banco/campo_de_visao.py`, puro, sem ROS, no padrão das leis): separa
+explicitamente "abaixo do chão", e tem 9 testes — um deles travando este
+defeito (nuvem suja tem de dar a MESMA zona cega da limpa), verificado por
+mutação.
+
+### Dois defeitos consertados no caminho
+
+1. **A ponte lia o tópico errado.** O `gpu_lidar` publica LaserScan em
+   `<topic>` e a nuvem em `<topic>/points`. Escutando o primeiro, a ponte
+   sobe, o tópico ROS aparece e **não chega nada** — sintoma com cara de
+   sensor quebrado.
+2. **Junta fixa preservada.** Sem isso o conversor URDF→SDF colapsa
+   `livox_frame` dentro do `base_link`. Não era a causa da discrepância de
+   altura (a régua era — hipótese minha, testada e derrubada), mas é o que
+   deixa a pose do sensor conferível por TF, e foi assim que ela se conferiu.
+
+**462 testes verdes.** O `test_massa_total` foi atualizado: o robô ganhou os
+265 g do Mid-360, e essa é a única massa do modelo que vem de folha de
+fabricante em vez de chute.
