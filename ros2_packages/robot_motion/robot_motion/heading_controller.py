@@ -29,6 +29,7 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 from std_msgs.msg import Float64
 
+from robot_motion.lei_de_pivo import DESISTIU, PRONTO, PivoPorCorte
 from robot_motion.lei_de_rumo import (
     comando,
     comando_de_re,
@@ -71,6 +72,31 @@ class HeadingController(Node):
             ('timeout_alvo', 1.0),
             # Detector de plantão: comando saindo e pose sem mudar.
             ('plantao_s', 0.5),
+
+            # ---- PIVÔ (fatia 3 da decisão 011) ----
+            # Erro de rumo acima do qual vale PARAR e virar no eixo em vez de
+            # arcar. Medido em 05-08: arcando, o robô realiza raio de 0,82 m
+            # contra os 0,37 m que o Smac planeja — virada grande feita em arco
+            # não tem como seguir o plano.
+            # ⚠️ 0,26 rad (~15°) desde 05-08, era 0,70 (~40°). Com 40° ele
+            # arcava até o erro ficar grande, e o arco já tinha tirado o robô
+            # da rota — caminho de 1,60x. O pivô é BARATO neste robô (fecha em
+            # ~2 s com resíduo abaixo de 0,1°) e o arco é CARO: virar andando
+            # realiza raio de 0,82 m contra os 0,37 m que o Smac planeja.
+            #
+            # O piso não pode descer muito: a tolerância do pivô é ~6° e o
+            # pivô mínimo da máquina é ~4°, então limiar perto disso faria a
+            # manobra disparar sem parar e o robô nunca andaria. 15° dá folga
+            # de 2,5x sobre a tolerância.
+            ('limiar_pivo', 0.26),          # rad (~15°)
+            # ⚠️ Este a_dec é do PIVÔ e NÃO é o `a_dec` acima. Ele entra numa
+            # desigualdade de segurança (`a_dec da lei ≤ a_dec real`): baixo
+            # demais custa pulsos, alto demais traz sobrepasso. Ver
+            # `lei_de_pivo.py`.
+            ('pivo_a_dec', 0.6),
+            ('pivo_tolerancia', 0.105),     # rad (~6°), o piso medido é ~4°
+            ('pivo_max_pulsos', 6),
+            ('pivo_teto_tempo', 20.0),
         ])
         self.par = {x.name: x.value for x in p}
 
@@ -85,6 +111,10 @@ class HeadingController(Node):
         self.pose = None
         self.t_pose = None
         self.hist = []          # (t, x, y) para estimar a direção do movimento
+        self.hist_yaw = []      # (t, yaw) para estimar o giro realizado
+        self.wz_real = 0.0
+        self.pivo = None        # manobra em curso, quando houver
+        self.t_passo = None
         self.rumo_alvo = None
         self.t_alvo = None
         self.v_alvo = self.par['v_max']
@@ -131,6 +161,20 @@ class HeadingController(Node):
         while len(self.hist) > 1 and self.t_pose - self.hist[0][0] > 0.3:
             self.hist.pop(0)
 
+        # Giro medido, para a lei do pivô decidir a hora de cortar. Sai da
+        # POSE e não do campo `twist`, pela mesma razão anotada no `ensaio.py`:
+        # o twist do publicador é ruidoso e a pose é limpa. Janela curta
+        # (0,1 s) porque derivar duas amostras coladas amplifica ruído, e é
+        # justamente `wz` ao quadrado que entra no critério de corte.
+        yaw = yaw_de(msg.pose.pose.orientation)
+        self.hist_yaw.append((self.t_pose, yaw))
+        while len(self.hist_yaw) > 2 and self.t_pose - self.hist_yaw[0][0] > 0.1:
+            self.hist_yaw.pop(0)
+        if len(self.hist_yaw) >= 2:
+            (t0, y0), (t1, y1) = self.hist_yaw[0], self.hist_yaw[-1]
+            if t1 - t0 > 1e-4:
+                self.wz_real = norm_ang(y1 - y0) / (t1 - t0)
+
     def direcao_do_movimento(self):
         """Para onde o robô ANDA de fato — não para onde aponta.
 
@@ -176,8 +220,26 @@ class HeadingController(Node):
         if agora - self.t_alvo > self.par['timeout_alvo']:
             return self.para('alvo de rumo venceu')
 
+        yaw = yaw_de(self.pose.pose.pose.orientation)
+        erro = norm_ang(self.rumo_alvo - yaw)
+
         # ---- modo ré: reta, sem giro, e sem passar pela lei de rumo ----
-        if self.v_alvo < 0.0:
+        #
+        # ⚠️ O PIVÔ TEM PRIORIDADE SOBRE A RÉ, e isso foi medido em 05-08.
+        # A ré da decisão 009 dispara por SINTOMA ("não progrediu"), e durante
+        # um pivô o robô legitimamente não progride — ele está girando no
+        # lugar. Resultado com a ordem antiga (ré primeiro):
+        #
+        #     PIVÔ -45° -> RÉ -> RÉ -> PIVÔ DESISTIU
+        #     PIVÔ +40° -> RÉ -> RÉ -> PIVÔ DESISTIU
+        #     PIVÔ -47° -> (sem ré) -> pivô fechado
+        #
+        # A ré atropelava a manobra em 2 de 3 casos, e o pivô então acusava
+        # "o robô não se mexeu (BO-3)" — alarme FALSO: ele mandava girar e
+        # quem estava publicando era a ré. Recuar para consertar rumo também é
+        # a manobra errada: recuar reto NÃO muda o rumo (medido em 29-07, 7ª
+        # leva). Quem conserta rumo é o pivô; a ré serve para abrir geometria.
+        if self.v_alvo < 0.0 and self.pivo is None:
             v, wz = comando_de_re(self.v_alvo, self.par['zona_morta'],
                                   self.par['margem_piso'], self.par['v_max'])
             self.get_logger().info(f'RÉ a {abs(v):.2f} m/s (manobra)',
@@ -186,8 +248,52 @@ class HeadingController(Node):
             self.plantao(agora, v, wz)
             return
 
-        yaw = yaw_de(self.pose.pose.pose.orientation)
-        erro = norm_ang(self.rumo_alvo - yaw)
+        # ---- PIVÔ: parar e virar no eixo, quando arcar não serve ----
+        #
+        # Medido em 05-08 com a pilha inteira: arcando, o robô realiza raio de
+        # 0,82 m contra os 0,37 m que o Smac planeja, e o caminho realizado não
+        # tem como coincidir com o planejado — o seguidor passa a corrigir um
+        # erro que ele mesmo gera (1,35x de caminho, 0,4% de giro parado).
+        #
+        # A manobra é BANG-BANG por necessidade, não por escolha: a placa
+        # entrega um `wz` só, então a única alavanca é quando cortar
+        # (`lei_de_pivo.py`). Uma vez começada ela vai até o fim — trocar de
+        # modo no meio deixaria o robô girando sem ninguém responsável pelo
+        # corte, e a sobra é de ~113°.
+        if self.pivo is None and abs(erro) > self.par['limiar_pivo']:
+            self.pivo = PivoPorCorte(
+                a_dec=self.par['pivo_a_dec'],
+                tolerancia=self.par['pivo_tolerancia'],
+                wz_comando=self.par['wz_max'],
+                max_pulsos=self.par['pivo_max_pulsos'],
+                teto_tempo=self.par['pivo_teto_tempo'])
+            self.get_logger().info(
+                f'PIVÔ: {math.degrees(erro):+.0f}° de erro — parando para '
+                f'virar no eixo (arcar daria raio de ~0,8 m)')
+
+        if self.pivo is not None:
+            # dt limitado a alguns ciclos: se a manobra ficar suspensa (outro
+            # modo assumiu, o nó travou), o intervalo acumulado entraria de uma
+            # vez nos cronômetros e a lei acusaria BO-3 sem ter comandado nada
+            # naquele tempo. Foi assim que o alarme falso de 05-08 apareceu.
+            dt = (0.0 if self.t_passo is None
+                  else min(agora - self.t_passo, 5.0 / self.par['taxa']))
+            self.t_passo = agora
+            wz, estado = self.pivo.passo(erro, self.wz_real, dt)
+            if estado == PRONTO:
+                self.get_logger().info(
+                    f'pivô fechado, sobrou {math.degrees(erro):+.1f}°')
+                self.pivo = None
+            elif estado == DESISTIU:
+                # Nunca em silêncio: o motivo é o que separa "não deu" de
+                # "parou sozinho e ninguém viu" (BO-3).
+                self.get_logger().error(f'PIVÔ DESISTIU — {self.pivo.motivo}')
+                self.pivo = None
+            else:
+                self.publica(0.0, wz)     # linear ZERO: é giro no eixo
+                self.plantao(agora, 0.0, wz)
+                return
+        self.t_passo = agora
 
         # Quanto o MOVIMENTO está fora do rumo pedido. É ele que decide se
         # vale a pena avançar ou se é hora de parar e virar.

@@ -99,6 +99,21 @@ def generate_launch_description():
         # (o padrão, os dois saem de `gera_pista.py`) o robô poderia estar
         # desviando de memória e ninguém saberia.
         DeclareLaunchArgument('mundo', default_value=MUNDO_PADRAO),
+        # ⚠️ PADRÃO `normal`, e isto é uma CORREÇÃO de 05-08. Esta launch não
+        # passava `planta` nenhuma, então o `sim.launch.py` caía no default
+        # dele (`lenta`) e a pilha inteira rodava contra a planta
+        # DELIBERADAMENTE PESSIMISTA de 27-07 — aceleração angular de
+        # 0,3 rad/s² contra 1,5. Sintoma: o pivô comandado por 1,4 s chegava a
+        # 0,34 rad/s (0,3 × 1,4 = 0,42, bate), quando o robô real faz 2,33.
+        #
+        # A `lenta` nasceu quando o `a_dec` era ESTIMADO em ~0,5; hoje ele está
+        # medido, e foi a planta `normal` que passou na aceitação de 04-08
+        # (pico 2,25 contra 2,33 do robô). Ela continua disponível como teste
+        # de estresse — mas não pode ser o que se mede por omissão.
+        DeclareLaunchArgument(
+            'planta', default_value='normal',
+            description='"normal" (a que bate com o robô medido) ou "lenta" '
+                        '(pessimista de 27-07, para estressar o controlador)'),
         DeclareLaunchArgument('rviz', default_value='true'),
         DeclareLaunchArgument(
             'placa', default_value='medido',
@@ -115,6 +130,7 @@ def generate_launch_description():
             # perímetro, que começa em 0.
             launch_arguments={'mundo': LaunchConfiguration('mundo'),
                               'x': '2.0', 'y': '5.0',
+                              'planta': LaunchConfiguration('planta'),
                               'placa': placa}.items(),
         ),
 

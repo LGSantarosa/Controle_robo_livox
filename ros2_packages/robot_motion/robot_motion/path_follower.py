@@ -74,6 +74,25 @@ class PathFollower(Node):
             ('v_piso', 0.335),
             ('raio_chegada', 0.25),
             # --- ré por gatilho (decisão 009) ---
+            #
+            # ⚠️ DESLIGADA POR PADRÃO desde 05-08, e isto revisa a premissa da
+            # própria 009. Ela escolheu ré-por-sintoma com estas palavras: "o
+            # que sustenta a ré por gatilho é o PIVÔ, e o robô 1 pivota. O robô
+            # 2 não, com os parâmetros de hoje." Essa premissa CAIU: com a lei
+            # do pivô (fatia 3 da 011) o robô 2 pivota — 3 manobras iniciadas,
+            # 3 fechadas, resíduo de 0,0°/0,0°/0,1°.
+            #
+            # E a ré nunca resolveu o problema que a disparava: ela dispara por
+            # "não progrediu", que num robô mal-apontado significa RUMO errado
+            # — e recuar RETO não muda rumo (medido em 29-07, 7ª leva:
+            # "recuar NÃO salva o plano, hipótese testada e derrubada").
+            # Pior, ela atropelava o pivô: em 05-08, 2 de 3 manobras morreram
+            # assim, com o pivô acusando BO-3 por não conseguir girar.
+            #
+            # Fica no código, com orçamento e voz, para o caso que só ela
+            # resolve: geometria fechada de verdade (nariz contra a parede,
+            # sem espaço para girar). Ligar com `re_habilitada:=true`.
+            ('re_habilitada', False),
             ('re_parado_s', 1.5),
             ('re_avanco_min', 0.05),
             ('re_orcamento_cego', 0.30),
@@ -197,6 +216,17 @@ class PathFollower(Node):
             self.entra_na_re(t, x, y, dist)
 
     def entra_na_re(self, t, x, y, dist):
+        if not self.par['re_habilitada']:
+            # Quem conserta rumo agora é o pivô, lá na movimentação. Falar uma
+            # vez a cada 5 s é o suficiente: se o robô ficar de fato emperrado
+            # com a ré desligada, isto é a pista.
+            self.get_logger().warn(
+                f'sem progresso a {dist:.2f} m do objetivo — ré DESLIGADA '
+                '(o pivô responde por rumo desde 05-08); se ele não sair '
+                'daqui, a geometria é fechada e a ré precisa voltar',
+                throttle_duration_sec=5.0)
+            self.progresso.reinicia()
+            return
         orcamento = orcamento_de_re(vao_traseiro=None,
                                     cego=self.par['re_orcamento_cego'])
         if orcamento <= 0.0:

@@ -3215,3 +3215,62 @@ vez, o número reaparece medido de ponta a ponta.
 **Linha de base gravada** (1137 amostras com pedido, entregue e realizado
 lado a lado): os números a derrubar são **0,4% de giro parado** e **1,35× de
 caminho**.
+
+## 🔄 2026-08-05 (3ª leva) — A fatia 3 fecha, e a ré sai de cena
+
+O pivô entrou na pilha e o robô passou a **chegar** onde antes falhava. Quatro
+corridas do mesmo alvo, cada uma isolando uma mudança
+(`docs/dados/2026-08-05-fatia3-pivo/`):
+
+```
+                          1-base   2-pivo   3-prior  4-livre
+giro parado                 0,4%     3,3%     5,3%    12,2%
+raio realizado ao virar    0,82 m   0,50 m   0,13 m   0,09 m
+caminho / reta              1,35x    1,54x    1,60x    1,13x
+parou a ... do alvo        3,91 m   1,78 m   0,22 m   0,17 m
+pivôs iniciados/fechados     -/-      4/1      3/3      7/7
+rés acionadas                 ?        4        2        0
+```
+
+**Os dois últimos passos vieram do dono olhando a tela**, e os dois estavam
+certos:
+
+1. *"ele ativa a ré muitas vezes, vezes essas que ele poderia só fazer um
+   pivô"* — e o log mostrava exatamente isso: `PIVÔ → RÉ → RÉ → PIVÔ
+   DESISTIU`, duas vezes em três. A ré da decisão 009 dispara por sintoma
+   ("não progrediu") e **durante um pivô o robô legitimamente não progride**.
+   Pior: o `PIVÔ DESISTIU — o robô não se mexeu (BO-3)` era **alarme falso**
+   — a lei mandava girar e quem publicava era a ré.
+2. *"deixa o pivô livre pra qualquer lado... acho que isso ajeita até esse
+   arco inicial"* — desligada a ré e baixado o limiar de 40° para 15°, o
+   caminho caiu de **1,60× para 1,13×**. O palpite acertou nas duas pontas.
+
+### Um defeito de configuração que valia 5×
+
+**A pilha nunca passava `planta`**, então caía no default `lenta` — a planta
+deliberadamente pessimista de 27-07, com aceleração angular de 0,3 rad/s²
+contra 1,5. O pivô comandado por 1,4 s chegava a 0,34 rad/s (0,3 × 1,4 = 0,42,
+bate) contra 2,33 do robô. É a mesma classe do bypass da placa achado hoje de
+manhã: **a launch não repassando o parâmetro que decide qual máquina se está
+medindo.** Padrão agora é `normal`, a que passou na aceitação de 04-08.
+
+### A premissa da decisão 009 caiu
+
+A 009 escolheu ré-por-gatilho com estas palavras: *"o que sustenta a ré por
+gatilho é o PIVÔ, e o robô 1 pivota. O robô 2 não, com os parâmetros de
+hoje."* **O robô 2 pivota agora**: 7 manobras, 7 fechadas, resíduo mediano de
+5°. A ré fica no código, **desligada por padrão** (`re_habilitada:=true`
+religa), para o caso que só ela resolve — geometria fechada sem espaço para
+girar. Não foi apagada porque esse caso não foi testado; foi apenas deixado de
+acontecer.
+
+E há um argumento independente: a ré dispara por falta de progresso, que num
+robô mal-apontado é **rumo** errado, e **recuar reto não muda rumo** — medido
+e registrado em 29-07 (7ª leva), "hipótese testada e derrubada".
+
+### O que não fechou
+
+1,13× ainda não é 1,00×, e não investiguei de onde sobra. O resíduo do pivô
+encosta na tolerância (5,x de 6°) — apertar esbarra no pivô mínimo da máquina
+(~4°). E é **um alvo, uma repetição**: não é n=3, e nada disso passou pelo
+robô (fatia 4).

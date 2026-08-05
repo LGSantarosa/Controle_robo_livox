@@ -1,0 +1,89 @@
+fatia 3 da decisao 011 — o pivo entra, e a re sai
+==================================================
+
+Quatro corridas do MESMO alvo (2,0 · 5,0) -> (2,0 · 1,5), 3,5 m ao sul,
+corredor livre, medidas com o mesmo script. Cada uma isola UMA mudanca.
+
+                              1-base   2-pivo   3-prior  4-livre
+  giro parado                   0,4%     3,3%     5,3%    12,2%
+  raio realizado ao virar      0,82 m   0,50 m   0,13 m   0,09 m
+  linear enquanto gira        0,32 m/s 0,15     0,08     0,05
+  caminho / reta                1,35x    1,54x    1,60x    1,13x
+  parou a ... do alvo          3,91 m   1,78 m   0,22 m   0,17 m
+  pivos: iniciados/fechados      -/-      4/1      3/3      7/7
+  res acionadas                   ?        4        2        0
+
+  (raio de chegada do seguidor: 0,25 m — as corridas 3 e 4 CHEGARAM)
+
+1-baseline  : pilha com compensador, sem pivo. Nao segue o plano: toda
+              virada vira arco de 0,82 m contra os 0,37 m que o Smac
+              planeja. FALHOU a 3,91 m.
+
+2-pivo      : lei do pivo integrada no heading_controller. Melhora, mas
+              1 pivo de 4 fecha. Rodou na planta LENTA sem ninguem pedir —
+              ver defeito (b) abaixo.
+
+3-prioridade: pivo passa a ter prioridade sobre a re, e planta normal.
+              3 de 3 pivos fecham. CHEGA (0,22 m). Mas caminho piora para
+              1,60x: com limiar de 40 graus ele arca ate o erro ficar
+              grande, e o arco ja tirou o robo da rota.
+
+4-livre     : re DESLIGADA e limiar do pivo de 40 para 15 graus, a pedido
+              do dono ("deixa o pivo livre pra qualquer lado, isso ajeita
+              ate esse arco inicial"). 7 de 7 pivos fecham, ZERO res, e o
+              caminho cai para 1,13x. O palpite do dono estava certo nas
+              duas pontas: menos re E menos arco.
+              Residuos dos 7 pivos: -0,9 +2,6 +1,6 +5,3 +5,0 +5,7 +5,4 graus
+              (tolerancia 6 graus).
+
+
+TRES DEFEITOS ACHADOS NO CAMINHO, TODOS DE CONFIGURACAO
+--------------------------------------------------------
+(a) A RE ATROPELAVA O PIVO. A re da decisao 009 dispara por sintoma ("nao
+    progrediu"), e durante um pivo o robo LEGITIMAMENTE nao progride — ele
+    esta girando no lugar. O ramo da re rodava ANTES do pivo:
+
+        PIVO -45 -> RE -> RE -> PIVO DESISTIU
+        PIVO +40 -> RE -> RE -> PIVO DESISTIU
+        PIVO -47 -> (sem re) -> pivo fechado
+
+    E o "PIVO DESISTIU — o robo nao se mexeu (BO-3)" era ALARME FALSO: a
+    lei mandava girar e quem publicava era a re. Somado, o dt acumulado
+    durante a suspensao entrava de uma vez nos cronometros da lei.
+
+(b) A PILHA NUNCA PASSAVA `planta`. Caia no default do sim.launch.py
+    (`lenta`), a planta deliberadamente pessimista de 27-07: aceleracao
+    angular de 0,3 rad/s2 contra 1,5. Sintoma medido: pivo comandado por
+    1,4 s chegava a 0,34 rad/s (0,3 x 1,4 = 0,42, bate) contra 2,33 do
+    robo. Mesma classe do bypass da placa — a launch nao repassando o
+    parametro que decide QUAL MAQUINA se esta medindo.
+
+(c) A RE NUNCA RESOLVEU O QUE A DISPARAVA. Ela dispara por falta de
+    progresso, que num robo mal-apontado e RUMO errado — e recuar RETO nao
+    muda rumo. Isso ja estava medido em 29-07 (7a leva): "recuar NAO salva
+    o plano — hipotese testada e derrubada". Com o pivo existindo, a re
+    perdeu a funcao que a 009 lhe deu.
+
+
+O QUE ISTO FAZ COM A DECISAO 009
+---------------------------------
+A 009 escolheu re-por-gatilho com esta justificativa textual: "o que
+sustenta a re por gatilho e o PIVO, e o robo 1 pivota. O robo 2 nao, com os
+parametros de hoje."
+
+**Essa premissa caiu.** O robo 2 pivota: 7 manobras, 7 fechadas, residuo
+mediano de 5 graus. A re fica no codigo, desligada por padrao
+(`re_habilitada:=true` religa), para o caso que so ela resolve: geometria
+fechada de verdade, sem espaco para girar. Nao foi apagada porque esse caso
+nao foi testado — foi apenas deixado de acontecer.
+
+
+O QUE ESTA CORRIDA NAO FECHA
+-----------------------------
+1. 1,13x ainda nao e 1,00x. Sobra caminho, e nao foi investigado de onde.
+2. Residuo do pivo encosta na tolerancia (5,x de 6 graus): ele fecha "no
+   limite". Baixar a tolerancia esbarra no pivo minimo da maquina (~4).
+3. Tudo em simulador, planta normal. O robo real tem 25% de espalho na
+   taxa de subida, e a lei foi feita para tolerar isso — mas nao foi
+   provado la (fatia 4).
+4. Um alvo so, uma repeticao. Nao e n=3.
