@@ -117,6 +117,23 @@ do controlador — hoje ela está em 6° por causa do simulador.
 
 **Robô LIGADO, alguém com a mão no teclado, robô no chão com espaço.**
 
+⚠️ **ANTES, uma vez por máquina** (05-08): o `twist_mux` do apt **não sobe** —
+a `diagnostic_updater` do NUC é mais velha que o binário e falta um símbolo. Ele
+vem por fonte, e o `git reset --hard` **não** traz o clone (é `.gitignore`):
+
+```bash
+./setup_twist_mux.sh      # clona em commit fixado e compila
+ros2 pkg prefix twist_mux # tem de apontar para o install/ daqui, não /opt/ros
+```
+
+🛑 **NÃO resolva com `sudo apt upgrade ros-jazzy-diagnostic-updater`.** Está
+medido: a 4.2.7 **remove** o símbolo que a 4.2.6 exporta, e isso quebraria o
+`controller_manager` — a base pode não subir depois. Ver a 10ª leva de 08-05.
+
+✅ **Os itens 2 e 3 abaixo já foram provados sem robô** com
+`tools/banco/prova_mux.py` (o humano vence a autonomia; soltar devolve o
+comando). No laboratório, o que **precisa** de máquina é o **item 1**.
+
 ```bash
 ros2 launch robot_motion pilha.launch.py     # sem sim:=true
 # noutro terminal ssh:

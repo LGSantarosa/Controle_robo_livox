@@ -60,10 +60,32 @@ foi usada pelo robô. **Bloqueia o reflexo de colisão no hardware.**
 que o `robo2.urdf.xacro` supunha. A zona cega vai de 2,19 m para **3,40 m**: o
 simulador está 55% otimista nela.
 
-⚠️ **`twist_mux` instalado mas NÃO SOBE** (ABI: `diagnostic_updater` 4.2.6 na
-máquina × 4.5.0 compilado contra 4.2.7). O upgrade **não foi feito de propósito**
-— `libcontroller_manager.so` usa essa lib e a base pode não subir da próxima vez.
-Conserto: compilar do fonte no nosso workspace, como o `setup_livox.sh` faz.
+✅ **`twist_mux` RESOLVIDO (05-08, 10ª leva) — `./setup_twist_mux.sh`.** Ele
+entra por **fonte em commit fixado** (tag 4.5.0), mesmo padrão do
+`setup_livox.sh`; compilado no NUC liga contra os headers que a máquina tem.
+Nenhuma lib do sistema é tocada.
+
+  🛑 **E ficou PROVADO que o `apt upgrade` de um pacote só seria perigoso.**
+  Lendo os símbolos do `.deb` da 4.2.7 **sem instalar**:
+
+  ```
+  diagnostic_updater 4.2.6   exporta  ...NodeTopicsInterfaceEEd     (só)
+  diagnostic_updater 4.2.7   exporta  ...NodeTopicsInterfaceEEdh    (só)
+  ```
+
+  O símbolo antigo **desaparece** — é substituição, não adição. Subir a lib
+  quebraria todo consumidor compilado contra a 4.2.6, inclusive o
+  `controller_manager` que a base usa. Aquele caminho só existe como **upgrade
+  coerente da pilha inteira**, em sessão própria, com a base conferida depois.
+
+  ⚠️ **Deploy**: o NUC precisa rodar `./setup_twist_mux.sh` uma vez antes do
+  teste C. O `git reset --hard` não traz o clone (ele é `.gitignore`, como o
+  Livox e o FAST-LIO).
+
+  ✅ **Itens 2 e 3 do teste C já estão provados sem robô**
+  (`tools/banco/prova_mux.py`): o humano vence a autonomia, e soltar devolve o
+  comando. **Falta o item 1**, que precisa de máquina: soltar o teclado e o robô
+  parar sozinho em 0,4 s.
 
 ---
 

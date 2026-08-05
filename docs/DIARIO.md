@@ -3825,3 +3825,83 @@ tem de sair bimodal (ora ~0°, ora ~16°).
 **513 testes verdes** (eram 503), dois dos novos verificados por mutação: com o
 descarte de volta só o teste do pulso curto falha; com a retenção segurando o
 valor cheio só o teste do decaimento falha.
+
+## 🔌 2026-08-05 (10ª leva) — O `twist_mux` entra pelo fonte, e o `apt upgrade` fica provado perigoso
+
+Primeiro item da fila de dev: destravar o **teste C** (freio de mão), que ficou
+bloqueado na bancada porque o `ros-jazzy-twist-mux` instala e **não sobe**.
+
+### O diagnóstico da bancada estava certo no mecanismo e errado no culpado
+
+Na bancada eu li o erro (`undefined symbol: diagnostic_updater::Updater::...`)
+como "ABI: a máquina tem `diagnostic_updater` 4.2.6 e o `twist_mux` quer 4.2.7".
+Certo. Mas **o dev tem o MESMO par de versões e o `twist_mux` sobe normalmente**.
+
+A diferença não é a versão, é a **data de compilação** do pacote:
+
+```
+                        DEV                      NUC
+diagnostic-updater   4.2.6-...20260412        4.2.6-...20251007
+twist-mux            4.5.0-...20260412        4.5.0-...20260615
+```
+
+O `twist_mux` de junho foi compilado contra uma `diagnostic_updater` mais nova
+que a de outubro. Mesmo número de versão, ABI diferente.
+
+### 🛑 E a pergunta que decidia tudo, agora respondida com número
+
+*"Subir só a `diagnostic_updater` para 4.2.7 resolveria?"* — eu tinha abortado
+isso no robô por medo de quebrar o `controller_manager`. Baixei o `.deb` da
+4.2.7 e li os símbolos **sem instalar**:
+
+```
+diagnostic_updater 4.2.6   exporta  ...NodeTopicsInterfaceEEd     (só)
+diagnostic_updater 4.2.7   exporta  ...NodeTopicsInterfaceEEdh    (só)
+```
+
+**O símbolo antigo DESAPARECE na 4.2.7** — o construtor ganhou um parâmetro e o
+nome mangled mudou. É substituição, não adição. Então subir essa lib no NUC
+**quebraria todo consumidor compilado contra a 4.2.6**, inclusive o
+`controller_manager`, que a base usa e que estava com a lib mapeada no processo
+vivo. **O medo estava certo, e agora está medido em vez de suposto.**
+
+➡️ Fica registrado: aquele caminho só funciona como **upgrade coerente da pilha
+inteira**, com o `controller_manager` reconstruído junto e a base conferida
+depois. Sessão própria, nunca no meio de uma bancada.
+
+### O conserto: `setup_twist_mux.sh`
+
+Mesmo padrão e mesma razão do `setup_livox.sh` — upstream de terceiro entra por
+**clone em commit fixado**, não vendorizado. Compilado no NUC, o `twist_mux`
+liga contra os headers que a máquina **tem** e passa a pedir `...d`, que existe.
+Nenhuma lib do sistema é tocada.
+
+Verificado por inspeção antes de tentar: `twist_mux_diagnostics.cpp` constrói o
+Updater com `make_shared<Updater>(mux)` — um nó só, os demais parâmetros vêm por
+default do header, então compila contra as duas versões.
+
+### A arbitragem virou prova de bancada (`tools/banco/prova_mux.py`)
+
+Dois dos três itens do teste C **não precisam de robô nem de dedo no teclado** —
+são afirmações sobre arbitragem de tópico. Provados aqui:
+
+```
+1. só a autonomia                  regime=[0.1]   ✓ a autonomia passa
+2. autonomia + humano juntos       regime=[0.9]   ✓ o humano VENCE
+3. só a autonomia de novo          regime=[0.1]   ✓ o comando VOLTA
+4. ninguém publica                 0 msgs         ✓ comando velho não é repetido
+```
+
+Isso também protege contra o modo de falha mais chato do mux: **ele não reclama
+quando ninguém escuta**. Se o tipo divergir (`Twist` cru contra o `TwistStamped`
+de toda a cadeia deste robô), o DDS rejeita por type hash, o mux publica no
+vazio e o log fica limpo — um freio de mão que não freia, sem uma linha de erro.
+
+⚠️ **A primeira versão do script reprovou uma arbitragem CORRETA**: ela juntava a
+fase inteira num conjunto e via `[0.1, 0.9]`, sem distinguir o vazamento dos
+primeiros instantes da transição (o mux age na chegada da mensagem) do regime.
+Passou a separar `tudo` de `regime`, e a julgar pelo regime.
+
+**Falta do teste C só o item 1**, que precisa de máquina: soltar o teclado e o
+robô parar sozinho em 0,4 s. 513 testes verdes (sem mudança — o `prova_mux.py`
+é ferramenta de bancada como o `ensaio.py`, não teste de suíte).

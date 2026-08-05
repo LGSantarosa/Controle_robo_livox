@@ -32,6 +32,7 @@ log/
 # é versionada em ros2_packages/robot_base/config/.
 ros2_packages/livox_ros_driver2/
 ros2_packages/FAST_LIO/
+ros2_packages/twist_mux/
 
 # Fonte do SDK nativo da Livox (compilado e instalado em /usr/local por
 # setup_livox.sh). Fica fora de ros2_packages/ para o colcon não tentar
