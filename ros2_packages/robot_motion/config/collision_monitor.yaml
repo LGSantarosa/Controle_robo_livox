@@ -1,0 +1,102 @@
+# Reflexo de colisão do robô 2 — a última linha antes de bater.
+#
+# Portado do robô 1 (levantamento em `docs/decisoes/010-levantamento-2026-08-05.md`),
+# mas com TODOS os números re-derivados: lá eles vêm de um chassi 50×50 com LD06
+# planar; aqui, da trena de 29-07 e do atuador medido em 31-07/04-08.
+#
+# Onde ele entra na cadeia:
+#
+#     heading_controller ──/auto_vel_raw──▶ collision_monitor ──/auto_vel──▶
+#         twist_mux  ◀── /key_vel (humano, prio 90)
+#              │
+#              ▼  compensador_rumo ──▶ atuador
+#
+# Ele filtra SÓ a autonomia, e o humano entra DEPOIS: quem está com o teclado
+# atravessa o reflexo de propósito. É a única forma de tirar um robô que o
+# próprio reflexo prendeu contra uma parede.
+#
+# ══════════════════════════════════════════════════════════════════════════
+# ⚠️ O QUE ESTE REFLEXO **NÃO** VÊ, E É GEOMETRIA, NÃO SINTONIA
+#
+# O Mid-360 quase não olha para baixo (−7°). Montado a 0,27 m, o chão só
+# começa a aparecer a ~2,04 m (medido em 05-08, decisão 012). O polígono de
+# parada abaixo vive a menos de 0,5 m do robô — **inteiramente dentro da zona
+# cega**. Um obstáculo a 0,5 m só entra na nuvem se for mais alto que ~0,21 m:
+#
+#     a 0,5 m   precisa de mais de 0,21 m de altura
+#     a 1,0 m   precisa de mais de 0,15 m
+#     a 1,5 m   precisa de mais de 0,09 m
+#
+# Ou seja: **ele protege contra parede, pessoa em pé e móvel alto, e é CEGO
+# para caixa baixa, degrau e pé de mesa.** Não confie nele para isso. A saída
+# é memória (lembrar o que se viu de longe) ou outro sensor, e nenhuma das
+# duas existe ainda.
+# ══════════════════════════════════════════════════════════════════════════
+
+collision_monitor:
+  ros__parameters:
+    use_sim_time: false           # a launch sobrescreve no simulador
+    base_frame_id: "base_link"
+    odom_frame_id: "odom"
+    cmd_vel_in_topic: "auto_vel_raw"
+    cmd_vel_out_topic: "auto_vel"
+    state_topic: "collision_monitor_state"
+    # A cadeia inteira do robô 2 é TwistStamped (mesma razão do twist_mux).
+    enable_stamped_cmd_vel: true
+    transform_tolerance: 0.5
+    source_timeout: 1.0
+    base_shift_correction: True
+    stop_pub_timeout: 2.0
+
+    # ⚠️ UM POLÍGONO SÓ, e isto é uma diferença de FUNDO para o robô 1.
+    #
+    # Lá existe um `PolygonSlow` com `action_type: limit` (linear_limit 0,10).
+    # Aqui isso é IMPOSSÍVEL: a compensação de zona morta do driver entrega um
+    # patamar de ~0,30 m/s de borda e **não existe velocidade entre 0 e isso**
+    # (medido 31-07, confirmado 04-08). Pedir 0,10 vira "anda a 0,30" ou "não
+    # anda". Desacelerar não é uma ação que este atuador saiba executar — a
+    # única que ele sabe é PARAR.
+    polygons: ["PolygonStop"]
+
+    PolygonStop:
+      type: "polygon"
+      # ⚠️ `stop` estático, e NÃO o `approach` do robô 1. O `approach` projeta
+      # o footprint pela velocidade COMANDADA, e neste robô o comando não diz
+      # a velocidade: o seguidor pede 0,50 e o robô anda 0,30 (medido em
+      # 05-08, dentro da pilha). O `approach` projetaria 1,7x longe demais e
+      # pararia cedo — erra para o lado seguro, mas erra, e com um número que
+      # ninguém consegue interpretar depois.
+      #
+      # Como a velocidade é sempre a mesma, a caixa estática é HONESTA e o
+      # tamanho dela é uma conta fechada:
+      #
+      #   coasting (a placa empurra 0,5 s após o corte)  0,298 × 0,5 = 0,149 m
+      #   frenagem (a_lin medido 0,373 m/s²)          0,298²/(2·0,373) = 0,119 m
+      #   distância de parada                                          0,268 m
+      #   + meia caixa (0,433/2)                                       0,216 m
+      #                                                        frente  0,485 m
+      #
+      # Lateral: meia largura da caixa (0,2275) + 3 cm. NÃO mais que isso — no
+      # robô 1 o lateral a ±0,45 prendia o robô a 30% da velocidade em todo
+      # corredor (29 desacelerações num log de campo) e tiveram de encolher.
+      # Traseira: meia caixa + folga, porque a ré existe.
+      points: "[[0.49, 0.26], [0.49, -0.26], [-0.28, -0.26], [-0.28, 0.26]]"
+      action_type: "stop"
+      # 2 pontos, não 1: ponto solto é ruído. O Mid-360 entrega 20 000 pontos
+      # por quadro, então exigir 2 não atrasa nada real.
+      min_points: 2
+      visualize: True
+      polygon_pub_topic: "polygon_stop"
+      enabled: True
+
+    observation_sources: ["livox"]
+    livox:
+      type: "pointcloud"
+      topic: "/livox/lidar"
+      # Mesma faixa de altura do costmap, e pelo mesmo motivo medido: abaixo
+      # de ~0,05 m o próprio chão vira obstáculo (em 05-08 a nuvem mostrou
+      # retornos errando até 3,8 cm em incidência rasante). 0,10 dá 2,6x de
+      # margem. Acima de 0,50 o robô passa por baixo — ele tem 0,30 m de alto.
+      min_height: 0.10
+      max_height: 0.50
+      enabled: True

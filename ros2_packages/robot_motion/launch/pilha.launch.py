@@ -18,10 +18,12 @@ A cadeia, e de quem é cada pedaço:
                                                                  ↓
                                                  heading_controller  (nosso)
                                                                  ↓
-                                                          /auto_vel
+                                                     /auto_vel_raw
+                                                                 ↓
+                                          collision_monitor  (reflexo)
                                                                  ↓
                                           twist_mux  ← /key_vel, /web_vel
-                                                       (humano vence sempre)
+                                                       (humano FURA o reflexo)
                                                                  ↓
                                               /compensador_rumo/cmd_vel
                                                                  ↓
@@ -68,6 +70,7 @@ def generate_launch_description():
     pkg = get_package_share_directory('robot_motion')
     nav2_params = os.path.join(pkg, 'config', 'nav2.yaml')
     mux_params = os.path.join(pkg, 'config', 'twist_mux.yaml')
+    cm_params = os.path.join(pkg, 'config', 'collision_monitor.yaml')
     mov_params_real = os.path.join(pkg, 'config', 'movimentacao.yaml')
     mov_params_sim = os.path.join(pkg, 'config', 'movimentacao_sim.yaml')
     rviz_config = os.path.join(pkg, 'rviz', 'pilha.rviz')
@@ -93,7 +96,7 @@ def generate_launch_description():
          mov_params_real, "'"])
 
     servidores = ['map_server', 'planner_server', 'controller_server',
-                  'bt_navigator']
+                  'bt_navigator', 'collision_monitor']
 
     return LaunchDescription([
         DeclareLaunchArgument('sim', default_value='false',
@@ -186,7 +189,19 @@ def generate_launch_description():
              name='heading_controller', output='both',
              parameters=[mov_params, {'use_sim_time': sim}],
              remappings=[('/hoverboard_base_controller/cmd_vel',
-                          '/auto_vel')]),
+                          '/auto_vel_raw')]),
+
+        # ------------------------------------- o reflexo de colisão (05-08)
+        # Filtra SÓ a autonomia (`auto_vel_raw` -> `auto_vel`), e o humano
+        # entra DEPOIS dele, no mux: quem está com o teclado atravessa o
+        # reflexo de propósito. É a única forma de tirar um robô que o próprio
+        # reflexo prendeu contra uma parede.
+        #
+        # ⚠️ Ele é CEGO para obstáculo baixo e perto — o Mid-360 não vê o chão
+        # dentro de ~2 m. Racional inteiro em `config/collision_monitor.yaml`.
+        Node(package='nav2_collision_monitor', executable='collision_monitor',
+             name='collision_monitor', output='both',
+             parameters=[cm_params, {'use_sim_time': sim}]),
 
         # ---------------------------------------------- quem manda (05-08)
         # Árbitro de comando. Humano acima da autonomia, sempre. Até hoje a

@@ -3468,3 +3468,74 @@ e sintonia sem medida vira gosto — precisa de régua própria.
 
 E segue tudo com o **mapa estático**: obstáculo que não está no mapa continua
 invisível. Disso trata o `collision_monitor`, o próximo da fila.
+
+## 🛡️ 2026-08-05 (7ª leva) — O reflexo de colisão entra, e o humano continua furando ele
+
+Segundo item do levantamento da 010 (o `twist_mux` foi o primeiro). Portado do
+robô 1 com **todos** os números re-derivados. Dado em
+`docs/dados/2026-08-05-reflexo-colisao/`.
+
+```
+heading_controller ──/auto_vel_raw──▶ collision_monitor ──/auto_vel──▶
+    twist_mux  ◀── /key_vel (humano, prio 90)
+         │
+         ▼  compensador_rumo ──▶ atuador
+```
+
+### Provado em duas pontas
+
+**1. Ele para diante de obstáculo que o mapa não tem.** Caixa de 0,6 m de
+altura em (3,2 · 5,0), presente no **mundo** e ausente do **mapa** (que sai do
+`gera_pista.py` e não a conhece). Comando de frente publicado direto no
+`auto_vel_raw` por 30 s:
+
+```
+face da caixa            x = 2,95
+primeiro corte           x = 2,40
+robô parou em            x = 2,46      distância centro→face  0,49 m
+10215 de 11991 amostras zeradas com a autonomia insistindo
+```
+
+Os 0,49 m são exatamente o alcance do polígono — e ele não é gosto:
+
+```
+coasting (a placa empurra 0,5 s após o corte)  0,298 × 0,5      = 0,149 m
+frenagem (a_lin medido 0,373)                  0,298²/(2·0,373) = 0,119 m
++ meia caixa                                   0,433/2          = 0,216 m
+                                                        frente    0,485 m
+```
+
+**2. O humano fura o reflexo.**
+
+```
+autonomia insiste em ir para frente (5 s)  ->  andou +0,000 m
+humano manda ré pelo /key_vel      (6 s)  ->  andou −0,829 m
+```
+
+### Duas diferenças de fundo para o robô 1
+
+1. **Um polígono só, e a ação é PARAR.** O robô 1 tem um `PolygonSlow` com
+   `action_type: limit` (linear_limit 0,10). Aqui é **impossível**: a
+   compensação entrega um patamar de ~0,30 m/s e não existe velocidade entre 0
+   e isso. **Desacelerar não é uma ação que este atuador saiba executar.**
+2. **`stop` estático e não o `approach` do robô 1.** O `approach` projeta o
+   footprint pela velocidade **comandada**, e aqui o comando não diz a
+   velocidade: o seguidor pede 0,50 e o robô anda 0,30. Projetaria 1,7× longe
+   demais. Como a velocidade real é sempre a mesma, a caixa estática é mais
+   honesta **e** mais interpretável depois.
+
+### ⚠️ E o que ele não vê, que é geometria e não sintonia
+
+O polígono vive a menos de 0,5 m do robô, e o Mid-360 não vê o chão dentro de
+~2,04 m. Obstáculo a 0,5 m só entra na nuvem se for **mais alto que ~0,21 m**.
+Ele protege contra parede, pessoa em pé e móvel alto; é **cego para caixa
+baixa, degrau e pé de mesa** — boa parte do que se quer pegar. A caixa desta
+prova tem 0,6 m de altura **de propósito**.
+
+Medir a altura de montagem do Mid-360 com trena segue sendo o item barato de
+maior retorno: a zona cega escala ~8,1× com ela.
+
+**503 testes verdes**, 5 deles travando o reflexo.
+
+**Falta do levantamento**: detecção por sintoma com **pivô** como recuperação
+primária, medida de vão livre contra a nuvem, e o `motion_guard` reescrito.
