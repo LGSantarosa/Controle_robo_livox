@@ -27,6 +27,7 @@ import csv
 import math
 
 import rclpy
+from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Odometry, Path
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy
@@ -73,6 +74,20 @@ class PathFollower(Node):
             # calcula: zona_morta + wz_max·bitola/2 + margem.
             ('v_piso', 0.335),
             ('raio_chegada', 0.25),
+            # --- chegada em DUAS FASES (05-08) ---
+            # A decisão 006 tirou o rumo de chegada com esta razão: "girar
+            # depois de chegar arrasta o robô para fora do ponto (0,06 m
+            # viraram 0,27 m em 27-07)". Aquilo era verdade para um robô que
+            # só sabia ARCAR: girar significava andar em círculo.
+            #
+            # Com o pivô (fatia 3 da 011) girar parado custa v=0 — o robô não
+            # sai do lugar. Então a chegada volta a ter duas fases: vai até o
+            # ponto reto, e SÓ LÁ acerta o ângulo. É também o que torna o
+            # Theta* utilizável: o plano não precisa mais chegar apontado.
+            ('aponta_no_fim', True),
+            # Folga sobre a tolerância do pivô (~6°): pedir mais fino que a
+            # manobra consegue entregar é laço que não fecha.
+            ('tolerancia_rumo_final', 0.15),
             # --- ré por gatilho (decisão 009) ---
             #
             # ⚠️ DESLIGADA POR PADRÃO desde 05-08, e isto revisa a premissa da
@@ -110,6 +125,11 @@ class PathFollower(Node):
         self.pub_vel = self.create_publisher(Float64, '~/velocidade_alvo', qos)
         self.create_subscription(Odometry, '/Odometry', self.cb_odom, qos)
         self.create_subscription(Path, '/plan', self.cb_plano, qos)
+        # O ângulo de chegada vem do /goal_pose, e NÃO do fim do plano: o
+        # Theta* devolve orientação ZERADA em todos os pontos (medido em
+        # 29-07, "faixa de yaw de 0,0° em 144 pontos"), então ler o plano
+        # daria sempre 0 rad e o robô apontaria para o leste em toda chegada.
+        self.create_subscription(PoseStamped, '/goal_pose', self.cb_goal, qos)
 
         self.pose = None
         self.plano = []
@@ -119,6 +139,7 @@ class PathFollower(Node):
                                            self.par['re_avanco_min'])
         self.re_desde = None
         self.re_origem = None
+        self.rumo_objetivo = None
 
         self.linhas = []
         self.create_timer(1.0 / self.par['taxa'], self.passo)
@@ -165,6 +186,9 @@ class PathFollower(Node):
             self.estado = 'seguindo'
             self.progresso.reinicia()
 
+    def cb_goal(self, msg):
+        self.rumo_objetivo = yaw_de(msg.pose.orientation)
+
     def agora(self):
         return self.get_clock().now().nanoseconds * 1e-9
 
@@ -181,18 +205,28 @@ class PathFollower(Node):
         if self.pose is None or not self.plano:
             return
         t = self.agora()
-        if self.t_plano is not None and t - self.t_plano > self.par['timeout_plano']:
-            self.para('plano velho')
-            return
-
         x = self.pose.pose.pose.position.x
         y = self.pose.pose.pose.position.y
         rumo = yaw_de(self.pose.pose.pose.orientation)
         objetivo = self.plano[-1]
         dist = math.hypot(objetivo[0] - x, objetivo[1] - y)
 
-        if chegou(dist, self.par['raio_chegada']):
+        # ⚠️ A CHEGADA VEM ANTES DO FRESCOR DO PLANO, e a ordem é o conserto de
+        # 05-08. O Nav2 declara `Goal succeeded` assim que o robô entra no raio
+        # e PARA de replanejar; o plano vence 2 s depois. Com a checagem de
+        # plano velho antes desta, o seguidor entrava em `parado (plano velho)`
+        # e ficava trancado lá — nunca alcançava a fase de apontar, e o robô
+        # parava no ponto com o ângulo errado. Medido: 2 de 3 alvos chegaram a
+        # 0,10–0,20 m do ponto com 84–90° de erro de rumo.
+        if chegou(dist, self.par['raio_chegada']) or self.estado == 'apontando':
+            if self.aponta(rumo):
+                return
             self.para('chegou')
+            return
+
+        if (self.t_plano is not None
+                and t - self.t_plano > self.par['timeout_plano']):
+            self.para('plano velho')
             return
 
         if self.estado == 're':
@@ -214,6 +248,32 @@ class PathFollower(Node):
 
         if self.progresso.atualiza(t, dist):
             self.entra_na_re(t, x, y, dist)
+
+    def aponta(self, rumo):
+        """Fase 2 da chegada: no ponto, acerta o ângulo. Devolve True se ainda
+        está trabalhando nisso.
+
+        Quem gira é o PIVÔ da movimentação (v=0), então o robô não sai do
+        lugar — é isso que torna esta fase possível sem repetir o defeito de
+        27-07, quando girar depois de chegar arrastava 0,06 m para 0,27 m.
+        """
+        if not self.par['aponta_no_fim'] or self.rumo_objetivo is None:
+            return False
+        erro = math.atan2(math.sin(self.rumo_objetivo - rumo),
+                          math.cos(self.rumo_objetivo - rumo))
+        if abs(erro) <= self.par['tolerancia_rumo_final']:
+            if self.estado == 'apontando':
+                self.get_logger().info(
+                    f'ângulo acertado: {math.degrees(erro):+.1f}° do pedido')
+            return False
+        if self.estado != 'apontando':
+            self.get_logger().info(
+                f'no ponto — girando {math.degrees(erro):+.0f}° para acertar '
+                f'o ângulo pedido')
+            self.estado = 'apontando'
+        # Velocidade ZERO: é o pivô que responde por isto.
+        self.publica(self.rumo_objetivo, 0.0)
+        return True
 
     def entra_na_re(self, t, x, y, dist):
         if not self.par['re_habilitada']:

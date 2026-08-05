@@ -64,7 +64,35 @@ planner_server:
     expected_planner_frequency: 1.0
     planner_plugins: ["GridBased"]
 
+    # ⚠️ THETA* desde 05-08, e isto REVISA A DECISÃO 008 pela mesma razão
+    # que derrubou a ré: a premissa era "este robô não pivota".
+    #
+    # A 008 escolheu o Smac Hybrid-A* porque ele respeita raio de curva, e
+    # descartou o Theta* com estas palavras (varredura de 29-07): "desenha
+    # reta lateral, que só serve para robô que pivota" e "os dois zeros do
+    # Theta* nos casos de lado não são virtude — é reta lateral para um robô
+    # que TERIA de pivotar".
+    #
+    # O robô agora pivota (fatia 3 da 011: 7 manobras, 7 fechadas, resíduo
+    # mediano 5°). Então a "reta lateral" deixou de ser defeito e virou o
+    # caminho certo: ir reto até o ponto e acertar o ângulo lá, em vez de
+    # descrever um arco de carro para chegar já apontado. A mesma varredura
+    # mediu o preço do arco: o Smac cobra 1,50x a 2,12x mais caminho nos
+    # alvos "de lado".
+    #
+    # O Smac continua sendo a escolha certa para um robô que NÃO pivota, e
+    # a bancada (`robot_planning`) segue comparando os dois. Se o pivô
+    # regredir no robô real (fatia 4), esta linha volta atrás.
     GridBased:
+      plugin: "nav2_theta_star_planner::ThetaStarPlanner"
+      how_many_corners: 8
+      w_euc_cost: 1.0
+      w_traversal_cost: 2.0
+      # false: o rumo de chegada é problema do PIVÔ, não do plano. É esta
+      # linha que materializa "vai reto e ajeita o ângulo lá".
+      use_final_approach_orientation: false
+
+    _smac_aposentado_em_05_08:
       plugin: "nav2_smac_planner::SmacPlannerHybrid"
       tolerance: 0.25
       downsample_costmap: false

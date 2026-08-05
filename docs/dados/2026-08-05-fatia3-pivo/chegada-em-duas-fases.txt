@@ -1,0 +1,94 @@
+chegada em DUAS FASES, e a troca do planner — 05-08
+====================================================
+
+Pedido do dono, e ele estava certo pelas duas pontas:
+
+  "o planner faz ele dar esse arco pra chegar de frente pro ponto como se
+   ele fosse um carro, mas ele não precisa fazer isso, ele pode ir até lá
+   reto e aí dar o pivô em cima do ponto pra acertar o ângulo"
+
+  "ele não acerta o ângulo do ponto agora, ele tem que chegar no ponto ai
+   sim pivotar pra ficar na direção correta"
+
+
+O QUE MUDOU
+-----------
+1. PLANNER: Smac Hybrid-A* (DUBIN) -> Theta*.
+   Revisa a decisao 008, pela MESMA razao que derrubou a re: a premissa era
+   "este robo nao pivota". A varredura de 29-07 descartou o Theta* com estas
+   palavras textuais: "desenha reta lateral, que so serve para robo que
+   pivota" e "os dois zeros do Theta* nos casos de lado nao sao virtude — e
+   reta lateral para um robo que TERIA de pivotar". O robo pivota agora.
+
+2. CHEGADA EM DUAS FASES no path_follower: vai ate o ponto reto, e SO LA
+   acerta o angulo. O angulo vem do /goal_pose e nao do fim do plano — o
+   Theta* devolve orientacao ZERADA em todos os pontos (29-07), entao ler o
+   plano daria sempre 0 rad.
+
+   Isto tambem revisa a decisao 006, que tinha CORTADO o rumo de chegada com
+   esta razao: "girar depois de chegar arrasta o robo para fora do ponto
+   (0,06 m viraram 0,27 m em 27-07)". Aquilo valia para um robo que so sabia
+   ARCAR — girar significava andar em circulo. Com o pivo, girar custa v=0.
+
+3. O heading_controller passa a SEMPRE pivotar quando a velocidade pedida e
+   zero. Sem isso, erro pequeno na fase 2 caia na lei de arco, que aplica
+   piso de linear e arrastaria o robo para fora do ponto — o defeito de
+   27-07 de volta.
+
+
+RESULTADO
+---------
+Caminho, mesmo alvo reto de 3,5 m:
+
+    Smac Hybrid-A*   1,13x
+    Theta*           1,07x
+
+Alvo atras (180 graus de virada, 1,57 m):  Theta* 1,06x
+
+Chegadas com angulo pedido (as que completaram):
+
+    alvo (2,0 , 1,5) rumo  -90   ->  0,17 m   -7,5 graus
+    alvo (3,0 , 3,5) rumo    0   ->  0,26 m   -0,7 graus
+    alvo (3,2 , 4,5) rumo  +90   ->  0,27 m   +1,3 graus
+    alvo (1,5 , 5,5) rumo  180   ->  0,17 m   +2,5 graus
+    alvo (3,2 , 3,0) rumo    0   ->  0,16 m   +4,6 graus
+
+Residuo do pivo final, 10 manobras nos dois logs:
+    +8,2 -7,5 +8,0 -8,4 +7,8 -8,5 +7,9 +7,9 +8,4 -7,5  graus
+E o limite da tolerancia (8,6 graus), nao a precisao da maquina: a manobra
+para assim que entra nela. Apertar a tolerancia esbarra no pivo minimo (~4).
+
+
+UM DEFEITO DE ORDEM, ACHADO MEDINDO
+------------------------------------
+Primeira versao: 2 de 3 alvos chegavam a 0,10-0,20 m do ponto com 84-90 de
+erro de rumo. Causa: o Nav2 declara `Goal succeeded` assim que o robo entra
+no raio de chegada e PARA de replanejar; o plano vence 2 s depois. Como a
+checagem de "plano velho" vinha ANTES da checagem de chegada, o seguidor
+entrava em `parado (plano velho)` e ficava trancado la — nunca alcancava a
+fase de apontar.
+
+Conserto: a chegada passa a ser avaliada ANTES do frescor do plano.
+
+
+⚠️ RESSALVA DE INSTRUMENTO (nao do robo)
+-----------------------------------------
+Varias corridas desta bateria reprovaram por falha do TESTE, nao do robo:
+o script publicava em /goal_pose antes de os assinantes existirem. Esta
+maquina tem descoberta de nos instavel (o Gazebo loga "Exception sending a
+multicast message: Network is unreachable"), entao no efemero que publica e
+sai perde mensagem. O script passou a esperar os DOIS assinantes
+(bt_navigator e path_follower) antes de publicar — com um so, o robo navega
+e o angulo nao chega, que foi exatamente o sintoma.
+
+Isso ja aconteceu tres vezes hoje em formas diferentes. Vale como aviso para
+quem for automatizar teste desta pilha nesta maquina.
+
+
+O QUE NAO FOI FEITO
+-------------------
+- A/B do Smac na manobra "atras" nao rodou (a comparacao 1,13 vs 1,07 e so
+  no alvo reto). A varredura de 29-07 mediu o Smac cobrando 1,50-2,12x nos
+  alvos de lado, mas em PLANEJAMENTO, nao em execucao.
+- n=1 por alvo. Nada disso e n=3.
+- Tudo em simulador. O robo real e a fatia 4.

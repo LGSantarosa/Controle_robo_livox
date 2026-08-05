@@ -260,7 +260,17 @@ class HeadingController(Node):
         # (`lei_de_pivo.py`). Uma vez começada ela vai até o fim — trocar de
         # modo no meio deixaria o robô girando sem ninguém responsável pelo
         # corte, e a sobra é de ~113°.
-        if self.pivo is None and abs(erro) > self.par['limiar_pivo']:
+        # Com velocidade ZERO pedida, arcar não existe: o robô só pode girar
+        # parado. É o caso da fase 2 da chegada (o seguidor manda `v=0` e o
+        # ângulo do objetivo). Sem esta condição o erro pequeno cairia na lei
+        # de arco, que aplica piso de linear e ARRASTA o robô para fora do
+        # ponto — exatamente o defeito de 27-07 que a decisão 006 evitou
+        # cortando o rumo de chegada. Aqui o limiar é a própria tolerância do
+        # pivô, porque abaixo dela não há manobra possível.
+        parado = abs(self.v_alvo) < 1e-6
+        precisa_pivo = abs(erro) > (self.par['pivo_tolerancia'] if parado
+                                    else self.par['limiar_pivo'])
+        if self.pivo is None and precisa_pivo:
             self.pivo = PivoPorCorte(
                 a_dec=self.par['pivo_a_dec'],
                 tolerancia=self.par['pivo_tolerancia'],

@@ -3274,3 +3274,68 @@ e registrado em 29-07 (7ª leva), "hipótese testada e derrubada".
 encosta na tolerância (5,x de 6°) — apertar esbarra no pivô mínimo da máquina
 (~4°). E é **um alvo, uma repetição**: não é n=3, e nada disso passou pelo
 robô (fatia 4).
+
+## 🎯 2026-08-05 (4ª leva) — Chegar reto e acertar o ângulo lá
+
+Dois pedidos do dono, os dois certos, e os dois revisando decisões antigas
+pela **mesma razão que derrubou a ré**: a premissa era "este robô não pivota".
+
+> *"o planner faz ele dar esse arco pra chegar de frente pro ponto como se ele
+> fosse um carro, mas ele não precisa fazer isso, ele pode ir até lá reto e aí
+> dar o pivô em cima do ponto pra acertar o ângulo"*
+
+### O planner: Smac Hybrid-A\* → Theta\* (revisa a 008)
+
+A varredura de 29-07 descartou o Theta\* com estas palavras textuais:
+*"desenha reta lateral, que só serve para robô que pivota"* e *"os dois zeros
+do Theta\* nos casos de lado não são virtude — é reta lateral para um robô que
+TERIA de pivotar"*. **O robô pivota agora**, então a "reta lateral" deixou de
+ser defeito e virou o caminho certo.
+
+```
+mesmo alvo reto de 3,5 m:   Smac 1,13x   ->   Theta* 1,07x
+alvo atrás (180°, 1,57 m):  Theta* 1,06x
+```
+
+### A chegada em duas fases (revisa a 006)
+
+A decisão 006 tinha **cortado** o rumo de chegada, com esta razão: *"girar
+depois de chegar arrasta o robô para fora do ponto (0,06 m viraram 0,27 m em
+27-07)"*. Aquilo valia para um robô que só sabia **arcar** — girar significava
+andar em círculo. Com o pivô, girar custa `v=0` e o robô não sai do lugar.
+
+O ângulo vem do **`/goal_pose`**, não do fim do plano: o Theta\* devolve
+orientação zerada em todos os pontos, então ler o plano daria sempre 0 rad.
+
+```
+alvo (2,0 · 1,5) rumo  -90°  ->  0,17 m   -7,5°
+alvo (3,0 · 3,5) rumo    0°  ->  0,26 m   -0,7°
+alvo (3,2 · 4,5) rumo  +90°  ->  0,27 m   +1,3°
+alvo (1,5 · 5,5) rumo  180°  ->  0,17 m   +2,5°
+alvo (3,2 · 3,0) rumo    0°  ->  0,16 m   +4,6°
+```
+
+Junto entrou uma condição no `heading_controller`: **com velocidade zero
+pedida, sempre pivô**. Sem ela, erro pequeno na fase 2 cairia na lei de arco,
+que aplica piso de linear e arrastaria o robô para fora do ponto — o defeito
+de 27-07 de volta pela porta dos fundos.
+
+### Um defeito de ORDEM, achado medindo
+
+Primeira versão: 2 de 3 alvos chegavam a 0,10–0,20 m do ponto **com 84–90° de
+erro de rumo**. O Nav2 declara `Goal succeeded` ao entrar no raio e **para de
+replanejar**; o plano vence 2 s depois. Como a checagem de "plano velho" vinha
+**antes** da de chegada, o seguidor travava em `parado (plano velho)` e nunca
+alcançava a fase de apontar. A chegada passou a ser avaliada primeiro.
+
+### ⚠️ E um aviso de instrumento que já custou três diagnósticos errados
+
+Várias corridas reprovaram por falha do **teste**, não do robô: o script
+publicava em `/goal_pose` antes de os assinantes existirem. Esta máquina tem
+descoberta de nós instável (o Gazebo loga `Exception sending a multicast
+message: Network is unreachable`), então nó efêmero que publica e sai perde
+mensagem. Com **um** assinante o robô navega e o ângulo não chega — que era
+exatamente o sintoma. O script passou a esperar os **dois**.
+
+**Aberto**: o A/B do Smac na manobra "atrás" não rodou; é n=1 por alvo; e nada
+disso passou pelo robô (fatia 4).
