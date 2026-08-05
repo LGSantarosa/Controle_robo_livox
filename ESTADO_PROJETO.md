@@ -1,12 +1,55 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-08-04**.
+> Versionado na `main`. Atualizado em **2026-08-05**.
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+---
+
+🟢 **O COMPENSADOR DE RUMO PASSOU NO ROBÔ REAL (05-08)** — 21 corridas, dados e
+registro em `docs/dados/2026-08-05-bancada-robo/`, entrada 08-05 (8ª leva) do
+diário:
+
+```
+                sem compensador          com compensador       redução
+FRENTE  n=3    −0,9116 (raio 1,10 m)   +0,0417 (raio 24 m)      95,4%
+RÉ      n=3    −0,0968 (raio 10,3 m)   −0,0466 (raio 21 m)      52%
+                                    critério (011): |curv| < 0,05
+```
+
+As duas médias passam. Ressalvas que o número esconde: 3 das 6 corridas
+compensadas estouram o critério **individualmente**; os dois sentidos falham por
+motivos **opostos** (de frente **oscila** — o S que o dono viu; de ré fica
+**aquém**); e o espalho absoluto **não mudou** (0,035 → 0,044 1/m), porque o
+compensador tira viés e não toca variabilidade de planta.
+
+🔴 **O PIVÔ EM MALHA ABERTA NÃO FUNCIONA NESTE ROBÔ (05-08).** `liga 0,15 s` dá
+16,6–33,4°; `liga 0,20 s` dá 30,3–35,8° — **as faixas se sobrepõem**. Duas
+corridas com o **mesmo tempo medido** deram 16,6° e 33,4°. A grandeza que o
+controlador escolhe **não determina** a que ele quer; pivô tem de ser malha
+fechada no yaw. E a "zona morta de tempo abaixo de 0,4 s" que o simulador
+previu **não existe**: 0,3 s dão 48°.
+
+🔴 **O ROBÔ REAL NÃO TEM MODELO GEOMÉTRICO (05-08).** O `tracao.launch.py`
+carrega o `diffbot.urdf.xacro`, que é o **exemplo de demonstração do
+`ros2_control`** (caixa 0,10×0,10×0,05, roda 0,015, bitola 0,10, duas bobas,
+sem Livox). A cinemática vem do YAML e está certa — mas **toda geometria no robô
+real está errada**: polígonos do `collision_monitor`, footprint do Nav2,
+montagem de sensor. A descrição correta já existe (`robo2.urdf.xacro`) e nunca
+foi usada pelo robô. **Bloqueia o reflexo de colisão no hardware.**
+
+📏 **MID-360 MEDIDO COM TRENA: 42 cm do chão, centrado (05-08)** — não os 27 cm
+que o `robo2.urdf.xacro` supunha. A zona cega vai de 2,19 m para **3,40 m**: o
+simulador está 55% otimista nela.
+
+⚠️ **`twist_mux` instalado mas NÃO SOBE** (ABI: `diagnostic_updater` 4.2.6 na
+máquina × 4.5.0 compilado contra 4.2.7). O upgrade **não foi feito de propósito**
+— `libcontroller_manager.so` usa essa lib e a base pode não subir da próxima vez.
+Conserto: compilar do fonte no nosso workspace, como o `setup_livox.sh` faz.
 
 ---
 

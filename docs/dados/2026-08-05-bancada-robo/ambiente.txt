@@ -1,0 +1,366 @@
+sessao de bancada no robo real — 2026-08-05
+============================================
+
+commit do fonte E do install/ no NUC : 9b8ce08
+maquina                              : NUC (bara, 10.244.3.205), Ubuntu 24.04
+                                       + ROS 2 Jazzy
+rede                                 : mesma sub-rede do dev (10.244.3.5/24),
+                                       ssh por chave, latencia ~370 ms
+                                       (a medida NAO passa pela wifi: ensaio,
+                                       FAST-LIO e placa rodam todos no NUC)
+piso                                 : NAO INFORMADO
+bateria                              : NAO INFORMADO
+                                       -> ver a RESSALVA no fim deste arquivo:
+                                          hoje ela deixou de ser burocracia e
+                                          virou SUSPEITA de causa.
+
+DEPLOY: o NUC estava em 7d7fad8 (6 commits atras). Levado por `git bundle`
++ `git fetch/reset --hard FETCH_HEAD` (o NUC nao tem auth no GitHub).
+`colcon build` de hoverboard_driver + robot_base + robot_motion.
+⚠️ O robot_motion NUNCA tinha sido compilado nesta maquina — sem esse build o
+`compensador_rumo` do teste A nao existiria no robo.
+
+calibracao VIVA (lida do hoverboard_base_controller, nao do arquivo)
+--------------------------------------------------------------------
+wheel_separation = 0.2700   bate com a trena
+wheel_radius     = 0.0800   bate com a trena
+rodas: esquerda=['left_wheel_joint']  direita=['right_wheel_joint']
+       -> swap NAO aplicado. E o estado CORRETO.
+
+pilha de localizacao: exatamente 1 fastlio_mapping + 1 livox_ros_driver2_node
+                      + 1 ros2_control_node
+/Odometry a 10.0 Hz   |   odom (open_loop) a 9.7 Hz   |   cmd_vel: 1 ouvinte
+
+⚠️ ARMADILHA DE CONTAGEM, nova, que custou um susto: `pgrep -c -f
+"[f]astlio_mapping"` acusou 2 pilhas. Era FALSO — o proprio comando ssh
+continha a palavra "fastlio_mapping" (num printf) e o bash casou consigo
+mesmo. O truque do colchete protege contra o pgrep, nao contra o resto da
+linha. Conferir com `pgrep -a` (que MOSTRA quem casou) antes de acreditar
+num numero.
+
+⚠️ "Received a non-finite error value" na subida: 58 linhas e PAROU. Nao e o
+defeito do registro (quadro de 18 vs 26 bytes), que inunda o log para sempre
+e deixa as rodas paradas. Aqui foi transiente antes do primeiro quadro valido
+da placa. O rviz2 tambem morreu (sem display por ssh) — esperado, inofensivo.
+
+
+=========================================================================
+TESTE A — O COMPENSADOR DE RUMO (fatia 4 da decisao 011)
+=========================================================================
+12 corridas, `--v ±0.25 --wz 0 --dur 12 --espaco 1.2 --janela 0.5`.
+SEM compensador: publicando direto em /hoverboard_base_controller/cmd_vel.
+COM compensador: `--topico /compensador_rumo/cmd_vel`.
+
+O no ficou de pe a sessao inteira e a escolha sem/com foi so o --topico:
+ele so publica em REACAO a comando (nunca por timer) e se RESETA sozinho
+entre corridas (o ensaio publica zero ao terminar, e comando zerado zera o
+rumo travado e o integrador). Nenhuma corrida herdou estado da anterior.
+
+parametros: ff -0.817 1/m frente, -0.098 re; kp=1.00 ki=0.50, correcao
+limitada a +-0.60 rad/s; segura_rumo=True (padrao do no solto).
+
+                    sem compensador          com compensador       reducao
+  FRENTE  n=3      -0.9116 (raio 1.10 m)   +0.0417 (raio 24 m)      95.4%
+  RE      n=3      -0.0968 (raio 10.3 m)   -0.0466 (raio 21 m)      52%
+                                        criterio (011): |curv| < 0.05
+
+  frente sem comp : -0.9078  -0.9310  -0.8958    espalho  2%
+  re     sem comp : -0.1000  -0.1133  -0.0772    espalho 19%
+  frente com comp : +0.0436  +0.0625  +0.0190    espalho 52%
+  re     com comp : -0.0369  -0.0525  -0.0505    espalho 18%
+
+AS DUAS MEDIAS PASSAM. E o resultado do dia.
+
+RESSALVAS, para o numero nao ficar melhor do que e:
+
+1. 3 das 6 corridas compensadas estouram o criterio INDIVIDUALMENTE
+   (frente-b 0.0625, re-b 0.0525, re-c 0.0505). Passa na media de tres,
+   nao em toda corrida.
+
+2. OS DOIS SENTIDOS FALHAM POR MOTIVOS OPOSTOS, e nao tem o mesmo conserto:
+
+   FRENTE: passa do ponto e volta. O DONO VIU A OLHO — "de frente ele faz um
+   pequeno S para tentar compensar o erro". Nao e sobrecorrecao em regime, e
+   OSCILACAO: por isso a media varia 0.019 a 0.062 (a curvatura que sai
+   depende de onde a corrida cortou na FASE do S, nao de ruido).
+   Suspeito com numero: kp=1.0 e ki=0.5 contra os ~0.52 s de atraso de
+   desliga da placa (04-08), com malha a 10 Hz. Integrador contra tempo
+   morto e o que fabrica ciclo-limite — mesmo mecanismo do S de 27-07,
+   vindo do integrador em vez da rampa. Candidato n.1: baixar o `ki`.
+
+   RE: fica sempre AQUEM, nunca alem. O DONO VIU A OLHO — "na re ele nao faz
+   S, ele pende pro mesmo lado que sem o compensador, mas claramente menos".
+   Nenhuma das tres trocou de sinal, e o espalho e o mais apertado das
+   quatro condicoes (0.016 absoluto). Subcorrecao pura: com o ff 8x menor,
+   o PI mal tem autoridade ali.
+
+3. O ESPALHO ABSOLUTO NAO MUDOU: 0.035 1/m sem compensador (frente), 0.044
+   com. O compensador tirou o VIES SISTEMATICO e nao mexeu na variabilidade
+   da maquina — que e o que feedforward + PI deve fazer. Consequencia: NENHUM
+   ajuste de ganho aperta esse espalho, porque ele e da planta.
+   (Os 52% e os 19% sao porcentagem sobre numero quase nulo — o mesmo
+   artefato registrado em 04-08. Em absoluto as quatro condicoes espalham
+   igual.)
+
+4. O compensador NAO reclamou uma unica vez nas 12 corridas
+   (`SEM POSE FRESCA` = 0): corrigiu com pose fresca do LIO o tempo todo.
+
+CONSERTO QUE EU PROPUS E QUE OS DADOS DERRUBARAM (fica registrado para
+ninguem tentar de novo): antes das corridas eu previ residuo NEGATIVO de
+~-0.09 1/m, porque o ff supoe -0.817 e a planta de hoje e -0.91, e propus
+trocar `curv_frente` para o valor de hoje. Saiu residuo POSITIVO. ff mais
+forte empurra a correcao mais para a esquerda, que e justamente para onde
+ela ja esta sobrando — mexer ali PIORA. O que sobra do ponto e do PI, nao
+do feedforward.
+
+
+=========================================================================
+TESTE B — VARREDURA DO PIVO (fatia 3 da decisao 011)
+=========================================================================
+`--ensaio degrau_giro --v 0 --wz 0.6 --liga T --dur 10 --espaco 1.0
+ --janela 0.5`, publicando direto no atuador (o compensador fica fora do
+caminho; com v=0 ele seria passa-direto de qualquer jeito).
+
+Leitura: giro TOTAL do ligar ate parar, do CSV cru — a MESMA regua da
+varredura do simulador de 04-08. Validada: ela reproduz a tabela do
+simulador exatamente (0 · 0 · 0 · 3.7 · 22.4 · 68.9 · 215.7).
+
+  liga [s]   n    giro medio    faixa            espalho   pico wz
+    0.10     1       2.7°          —                —       0.11
+    0.15     3      27.8°     16.6 – 33.4°        60%      0.51 – 0.87
+    0.20     3      32.5°     30.3 – 35.8°        17%      0.83 – 0.92
+    0.30     1      48.0°          —                —       1.33
+  simulador            0.0° em TODOS estes tempos
+
+O QUE ISTO DERRUBA DO SIMULADOR
+--------------------------------
+A leitura de 04-08 registrou "ZONA MORTA DE TEMPO: abaixo de ~0.4 s o robo
+nao sai do lugar", batendo com a latencia de liga de 01-08. NO ROBO ISSO NAO
+EXISTE: 0.3 s dao 48 graus (confirmado a olho pelo dono: "girou sim, uns 45
+graus"), e ate 0.1 s produz movimento medivel.
+
+A varredura do PLANO (0.3 / 0.5 / 0.8 / 1.2 / 2.0) comeca acima de todo o
+fenomeno interessante. A resposta esta ABAIXO de 0.3 s.
+
+O ACHADO PRINCIPAL: O PIVO NAO E REPETIVEL COM COMANDO IDENTICO
+----------------------------------------------------------------
+                tempo REAL ligado    pico wz    giro
+  0.15-a            0.14 s            0.51     16.6°
+  0.15-b            0.16 s            0.87     33.4°
+  0.15-c            0.14 s            0.83     33.4°
+
+`a` e `c` tiveram o MESMO tempo de comando e deram 16.6 contra 33.4 graus.
+
+⚠️ HIPOTESE MINHA, TESTADA E DERRUBADA NA MESMA SESSAO: com `a` e `b` eu
+atribui o espalho aos 20 ms de diferenca no tempo ligado ("0.84 graus por
+milissegundo"). A corrida `c` matou isso — mesmo tempo, o dobro do giro.
+Dois pontos desenham qualquer reta; foi preciso o terceiro.
+
+A causa esta na PLANTA, e aparece no pico de wz: com o mesmo comando a placa
+levou o robo a 0.51 rad/s numa corrida e a 0.83 na outra. Candidatos, nao
+separados hoje: atrito de partida (vencer a inercia estatica as vezes sai
+"melhor"), queda de tensao da bateria, fase de comutacao do motor.
+Encosta no que 04-08 ja tinha visto por outro caminho: `a_dec` efetivo
+espalhando 50% entre corridas identicas, "variabilidade real de atrito".
+
+O comportamento e BIMODAL PERTO DO LIMIAR: em 0.15 s (em cima do limiar de
+partida) o espalho e 60% e os picos vao de 0.51 a 0.87; em 0.20 s (ja
+passado o limiar) o espalho cai para 17% e os picos batem (0.83–0.92).
+
+E O QUE FECHA O ASSUNTO — AS FAIXAS SE SOBREPOEM:
+
+    liga 0.15  ->  16.6 a 33.4 graus
+    liga 0.20  ->  30.3 a 35.8 graus
+
+Comandar 0.15 s ou 0.20 s PODE DAR O MESMO ANGULO. O manche do tempo nao tem
+50 ms de resolucao: dois comandos distintos produzem resultados
+indistinguiveis. Nao e "o pivo e impreciso" — e que a grandeza que o
+controlador escolhe NAO DETERMINA a grandeza que ele quer.
+
+CONSEQUENCIA DE PROJETO
+------------------------
+Pivo em MALHA ABERTA (escolher o tempo e soltar) NAO PODE funcionar neste
+robo. Tem de ser malha fechada olhando o yaw e cortando quando chegar — o
+que reabre o problema do atraso de desliga (~0.52 s, 04-08), porque cortar
+"quando chegar" ja e tarde.
+
+E a TOLERANCIA DE 6 GRAUS do controlador, herdada do simulador ("pivo minimo
+~4 graus, contInuo"), nao se sustenta: o minimo medivel e 2.7 graus, mas a
+incerteza na faixa util (5–35 graus) e da ordem do proprio angulo pedido.
+
+⚠️ O PIVO MINIMO MEDIVEL NAO E O PIVO MINIMO UTIL. Em `liga 0.1` o yaw da um
+degrau limpo de 2.7 graus e FICA la por 4 s (piso de ruido do LIO na mesma
+corrida: +-0.3 graus, ou seja 9x menor). Mas o dono, olhando, disse "ele nao
+se mexeu aqui nesse ultimo" — e esta certo: 2.7 graus numa caixa de 45 cm
+sao 1 cm na quina, invisivel. As duas frases sao verdadeiras e nenhuma
+corrige a outra. Um pivo que o operador nao ve e um pivo que, na pratica,
+nao aconteceu.
+
+⚠️ DEFEITO DE INSTRUMENTO ACHADO E CONSERTADO NA SESSAO: a primeira versao
+da regua procurava a parada a partir do CORTE do comando. Com pulso curto o
+comando ACABA ANTES de o robo sair do lugar (latencia de liga ~0.27 s),
+entao ela achava "parado" no proprio corte e jogava o giro inteiro fora —
+leu 0.4 graus onde havia 35.8. Consertado procurando primeiro onde o
+movimento COMECOU. A regua consertada segue reproduzindo a tabela do
+simulador exatamente, o que prova que o conserto mexeu so no que devia.
+O sintoma que denunciou: giro de 0.4 graus com pico de 0.92 rad/s — numeros
+incoerentes ENTRE SI. (A regua vive fora do repo, no scratchpad da sessao;
+se o teste B virar rotina, ela precisa entrar no `tools/banco/` COM TESTE.)
+
+
+=========================================================================
+O QUE NAO FOI TESTADO HOJE, E POR QUE
+=========================================================================
+TESTE C (freio de mao) e a segunda metade do TESTE D (o humano furando o
+reflexo): BLOQUEADOS. `ros-jazzy-twist-mux` NAO ESTA INSTALADO no NUC, e
+instalar pede sudo. Sem ele o `robot-key` publica em /key_vel e NINGUEM
+ESCUTA — nao ha arbitro. O `nav2_collision_monitor` ESTA instalado, entao a
+primeira metade do D (o reflexo parando o robo) nao depende disso.
+O NUC TEM internet: `sudo apt install -y ros-jazzy-twist-mux` resolve.
+
+NAV2 (planner, chegada com angulo, porta): segue bloqueado pela falta de
+localizacao contra o mapa, como o PLANO_TESTE_ROBO.md ja dizia. Nao e
+assunto de bancada.
+
+
+=========================================================================
+RESSALVA QUE ATRAVESSA A SESSAO INTEIRA
+=========================================================================
+PISO E BATERIA NAO FORAM INFORMADOS — de novo, como em 04-08.
+
+Em 04-08 isso era uma pena. HOJE E PIOR, porque a bateria virou SUSPEITA
+NOMEADA: ela e um dos tres candidatos para a corrida `0.15-a` ter saido
+fraca (pico 0.51 contra 0.83 das outras duas com o mesmo comando). Sem o
+numero, essa pergunta nao e respondivel em casa — nem hoje, nem depois.
+
+As 20 corridas sairam em sequencia, na mesma tarde, sem recarga. Se houve
+queda de tensao ao longo da sessao, ela entra em TODA comparacao entre as
+primeiras (teste A sem compensador) e as ultimas (teste B) — e nao ha como
+separar.
+
+
+=========================================================================
+LINHA DE BASE REPETIDA NO FIM DA SESSAO (pedido do dono)
+=========================================================================
+A1-sem-comp-frente-d-fimsessao.csv   curvatura -0.8652 1/m
+
+  inicio da sessao (n=3)   -0.9116   faixa -0.8958 a -0.9310
+  FIM da sessao   (n=1)    -0.8652
+
+Ficou FORA da faixa da manha, por pouco: 0.03 abaixo da corrida menos
+acentuada das tres. O arco enfraqueceu ~5%.
+
+⚠️ n=1 NAO ESTABELECE DERIVA. A distancia entre esta corrida e a faixa
+anterior e da ordem do proprio espalho daquela faixa. E SUGESTIVO de planta
+enfraquecendo ao longo da tarde (o padrao esperado de bateria caindo), e nao
+passa disso. O dono optou por parar em vez de rodar mais duas — decisao de
+escopo, registrada.
+
+O QUE VALE COMO NUMERO DE PROJETO, se a deriva for real: ela vale 0.046 1/m,
+que e do MESMO TAMANHO do residuo inteiro depois de compensar (0.042). Ou
+seja, a variacao da planta ao longo de UMA SESSAO e comparavel a tudo o que
+o compensador ainda deixa na mesa. Sintonia fina feita no comeco da tarde
+pode nao valer no fim dela.
+
+
+=========================================================================
+MEDIDA NOVA COM TRENA: A ALTURA DO MID-360
+=========================================================================
+  MEDIDO: centro do Mid-360 a ~42 cm do chao, CENTRADO no robo.
+
+Fecha o item que o ESTADO_PROJETO listava como "o mais barato e de maior
+retorno da lista". E ele NAO bate com o que o projeto assumia:
+
+  robo2.urdf.xacro supoe   8.52 cm (fundo) + 14.5 (caixa) + 4 (suposto) = 27 cm
+  MEDIDO                                                                  42 cm
+                                                    -> 55% mais alto
+
+Como a zona cega escala 8.1x com a altura (FOV vertical do Mid-360 comeca em
+-7 graus, decisao 012):
+
+                          raio cego    altura minima visivel a 0.5 m
+  suposto (27 cm)          2.19 m               21 cm
+  REAL    (42 cm)          3.40 m               36 cm
+
+⚠️ O SIMULADOR ESTA OTIMISTA EM ZONA CEGA em 55%. Corrigir `livox_z_sobre_caixa`
+para a medida reescala a zona cega dos dois lados.
+⚠️ A caixa do teste D tem de ter 50 cm, nao 40: a 0.5 m o sensor so ve o que
+passa de 36 cm, entao os 40 cm do plano passariam com 4 cm de margem.
+
+
+=========================================================================
+POR QUE C E D NAO RODARAM — os dois bloqueios, diagnosticados
+=========================================================================
+
+TESTE C (freio de mao) — BLOQUEIO DE ABI
+-----------------------------------------
+`ros-jazzy-twist-mux` foi instalado nesta sessao e NAO SOBE:
+
+  undefined symbol: diagnostic_updater::Updater::Updater(...)
+  [ros2run]: Process exited with failure 127
+
+  ros-jazzy-diagnostic-updater  instalado 4.2.6-...20251007
+                                candidato 4.2.7-...20260615
+  ros-jazzy-twist-mux                     4.5.0-...20260615  <- contra a 4.2.7
+
+O apt do dono reportou "718 not upgraded": a maquina e de out/2025 e recebeu
+um pacote de jun/2026.
+
+🛑 O UPGRADE DA BIBLIOTECA NAO FOI FEITO, DE PROPOSITO. `libcontroller_manager.so`
+declara `libdiagnostic_updater.so`, e o processo vivo (PID do ros2_control_node)
+tem a lib MAPEADA — ou seja, a base usa. Subir para 4.2.7 nao afeta o processo
+ja rodando, mas o controller_manager desta maquina foi compilado contra a 4.2.6
+e o proprio erro do twist_mux prova que a ABI mudou. NA PROXIMA SUBIDA A BASE
+PODE NAO SUBIR. Trocar "rodar o C hoje" por "o robo talvez nao ligue na proxima
+sessao" e mau negocio (regra 9 do CLAUDE.md: complicou, aborta).
+
+CONSERTO RECOMENDADO: compilar o twist_mux DO FONTE dentro do nosso workspace,
+em commit fixado — o mesmo padrao que o `setup_livox.sh` ja usa para os drivers
+da Livox e o FAST-LIO. Ele passa a linkar contra a diagnostic_updater que a
+maquina tem, e nenhuma biblioteca do sistema e tocada. O `apt upgrade` coerente
+da pilha continua sendo a solucao "certa", mas e sessao propria, com a base
+conferida DEPOIS.
+
+TESTE D (reflexo de colisao) — O ROBO REAL NAO TEM MODELO GEOMETRICO
+---------------------------------------------------------------------
+O collision_monitor precisa transformar a nuvem (`/livox/lidar`, frame
+`livox_frame`) para `base_link`. Essa TF nao existe no robo.
+
+CAUSA, e ela e maior que o teste: `base.launch.py` -> `tracao.launch.py`
+carrega `hoverboard_driver/description/urdf/diffbot.urdf.xacro`, que e o
+EXEMPLO DE DEMONSTRACAO do ros2_control, nunca substituido:
+
+                    diffbot.urdf.xacro (o que o ROBO carrega)   real (trena 29-07)
+  caixa                 0.10 x 0.10 x 0.05 m                 0.433 x 0.455 x 0.145
+  raio da roda          0.015 m                              0.080 m
+  bitola                0.10 m                               0.270 m
+  rodas bobas           duas (frontal + traseira)            uma
+  Livox                 nao existe                           existe, a 42 cm
+
+⚠️ SEPARAR AS DUAS CONSEQUENCIAS:
+ · Os numeros DE HOJE nao sao afetados. A cinematica vem do
+   `hoverboard_controllers.yaml` (bitola 0.270 / raio 0.080), que o --checar
+   confirmou carregado, e a bancada mede a pose do /Odometry direto. Nada do
+   teste A ou B passa pelo TF.
+ · Tudo que usa GEOMETRIA no robo real esta errado: os poligonos do
+   collision_monitor (que vivem em base_link), o footprint que o Nav2 usaria,
+   e qualquer montagem de sensor. E por isso que o reflexo nunca teve chance.
+
+A DESCRICAO CORRETA JA EXISTE NO REPO: `robot_base/description/robo2.urdf.xacro`
+tem a caixa medida, a boba, a bitola e o `livox_frame`. Ela so nunca foi usada
+pelo robo, porque nasceu como descricao do SIMULADOR.
+
+CONSERTO RECOMENDADO (4 itens):
+ 1. `tracao.launch.py` passa a carregar o `robo2.urdf.xacro`, com a secao
+    ros2_control apontando para o plugin de hardware real em vez do Gazebo.
+    E o que a decisao 004 ja prescreve: "mesmo diff_drive_controller e mesmos
+    tetos; so a camada de hardware muda". Uma descricao, dois hardwares.
+ 2. `livox_z_sobre_caixa` -> a medida de 42 cm (conserta o simulador junto).
+ 3. Reconferir min_height/max_height do collision_monitor (hoje 0.10-0.50)
+    contra a montagem real.
+ 4. Caixa de 50 cm para o ensaio.
+
+⚠️ NOTA DE INSTRUMENTO: o `tf2_echo` desta sessao NAO E CONFIAVEL — ele negou
+ate o `base_link`, que existe e e publicado. O diagnostico acima NAO depende
+dele: esta no arquivo (`grep -c livox diffbot_description.urdf.xacro` = 0), e
+isso e conclusivo.

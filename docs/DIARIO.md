@@ -3539,3 +3539,170 @@ maior retorno: a zona cega escala ~8,1× com ela.
 
 **Falta do levantamento**: detecção por sintoma com **pivô** como recuperação
 primária, medida de vão livre contra a nuvem, e o `motion_guard` reescrito.
+
+## 🤖 2026-08-05 (8ª leva) — A ida ao robô: o compensador passa, e o pivô não é dirigível
+
+Primeira sessão no robô real desde 04-08. Conduzida por ssh no NUC
+(`10.244.3.205`); o dono só executou o físico. **21 corridas.** Dados crus e
+registro completo em `docs/dados/2026-08-05-bancada-robo/` (com `ambiente.txt`).
+
+O NUC estava 6 commits atrás e **nunca tinha compilado o `robot_motion`** — sem
+o build desta sessão o `compensador_rumo` não existiria na máquina.
+
+### Teste A — o compensador de rumo funciona, e as duas médias passam
+
+```
+                    sem compensador          com compensador       redução
+FRENTE  n=3        −0,9116 (raio 1,10 m)   +0,0417 (raio 24 m)      95,4%
+RÉ      n=3        −0,0968 (raio 10,3 m)   −0,0466 (raio 21 m)      52%
+                                        critério (011): |curv| < 0,05
+```
+
+A linha de base reproduziu 04-08 (−0,817 frente, −0,098 ré) com a razão
+frente/ré em 9,4× contra 8,3× — a assinatura da boba está lá, igual.
+
+**Três ressalvas que o número sozinho esconde:**
+
+1. **3 das 6 corridas compensadas estouram o critério individualmente.** Passa
+   na média de três, não em toda corrida.
+2. **Os dois sentidos falham por motivos opostos, e não têm o mesmo conserto.**
+   De frente ele **oscila** — o dono viu a olho: *"de frente ele faz um pequeno
+   S para tentar compensar o erro"*. Por isso a curvatura varia 0,019 a 0,062:
+   o valor depende de onde a corrida cortou na **fase** do S, não é ruído.
+   Suspeito com número: `kp=1,0` e `ki=0,5` contra os ~0,52 s de atraso de
+   desliga da placa, com malha a 10 Hz — integrador contra tempo morto é o que
+   fabrica ciclo-limite. De ré ele fica **sempre aquém**, nunca além (o dono:
+   *"na ré ele não faz S, ele pende pro mesmo lado, mas claramente menos"*).
+3. **O espalho absoluto não mudou** (0,035 → 0,044 1/m). O compensador tirou o
+   **viés sistemático** e não tocou na variabilidade da máquina. Nenhum ajuste
+   de ganho aperta isso, porque é da planta.
+
+🔴 **Conserto que EU propus e que os dados derrubaram na mesma sessão**: previ
+resíduo negativo (o ff supõe −0,817, a planta de hoje é −0,91) e propus trocar
+`curv_frente`. Saiu resíduo **positivo** — ff mais forte empurra para o lado
+que já está sobrando. Mexer ali **piora**.
+
+### Teste B — o pivô em malha aberta não pode funcionar neste robô
+
+```
+liga [s]   n    giro médio    faixa            espalho   pico wz
+  0,10     1       2,7°          —                —       0,11
+  0,15     3      27,8°     16,6 – 33,4°        60%      0,51 – 0,87
+  0,20     3      32,5°     30,3 – 35,8°        17%      0,83 – 0,92
+  0,30     1      48,0°          —                —       1,33
+simulador            0,0° em TODOS estes tempos
+```
+
+**A "zona morta de tempo" de 04-08 não existe no robô.** O simulador previa que
+abaixo de ~0,4 s ligado ele não sai do lugar; 0,3 s dão 48° (confirmado a olho:
+*"girou sim, uns 45 graus"*). A varredura do plano começa **acima** de todo o
+fenômeno — a resposta está abaixo de 0,3 s.
+
+🔴 **O achado principal: o pivô não é repetível com comando idêntico.**
+
+```
+            tempo REAL ligado    pico wz    giro
+0,15-a          0,14 s            0,51     16,6°
+0,15-b          0,16 s            0,87     33,4°
+0,15-c          0,14 s            0,83     33,4°   <- mesmo tempo da (a), o dobro
+```
+
+⚠️ **Hipótese minha, testada e derrubada na mesma sessão**: com `a` e `b` atribuí
+o espalho aos 20 ms de diferença no tempo ligado ("0,84°/ms"). A corrida `c`
+matou isso — mesmo tempo, o dobro do giro. Dois pontos desenham qualquer reta.
+
+A causa está na **planta** e aparece no pico de wz: com o mesmo comando a placa
+levou o robô a 0,51 rad/s numa corrida e a 0,83 na outra. É **bimodal perto do
+limiar de partida** (60% de espalho em 0,15 s; 17% em 0,20 s, já passado o
+limiar). Encosta no `a_dec` efetivo espalhando 50% em 04-08.
+
+**E o que fecha o assunto: as faixas se sobrepõem.** `liga 0,15` dá 16,6–33,4°;
+`liga 0,20` dá 30,3–35,8°. **Comandar 0,15 s ou 0,20 s pode dar o mesmo ângulo.**
+Não é "o pivô é impreciso" — é que a grandeza que o controlador escolhe **não
+determina** a que ele quer. Pivô tem de ser malha fechada no yaw.
+
+⚠️ **O pivô mínimo medível não é o pivô mínimo útil.** Em `liga 0,1` o yaw dá um
+degrau limpo de 2,7° e fica lá por 4 s (piso de ruído do LIO: ±0,3°). Mas o dono
+disse *"ele não se mexeu"* — e está certo: 2,7° numa caixa de 45 cm é 1 cm na
+quina. As duas frases são verdadeiras e nenhuma corrige a outra.
+
+⚠️ **Defeito de instrumento achado e consertado durante a sessão**: a régua do
+pivô procurava a parada a partir do **corte** do comando; com pulso curto o
+comando acaba **antes** de o robô sair (latência de liga ~0,27 s), então ela
+achava "parado" no próprio corte e jogava o giro fora — leu 0,4° onde havia
+35,8°. O sintoma que denunciou foi a **incoerência interna**: 0,4° de giro com
+pico de 0,92 rad/s. Consertada, ela segue reproduzindo a tabela do simulador
+exatamente. (Vive fora do repo; se o teste B virar rotina, entra no
+`tools/banco/` **com teste**.)
+
+### Medida nova com trena: o Mid-360 está a 42 cm, não a 27
+
+Fecha o item que o `ESTADO` listava como "o mais barato e de maior retorno".
+
+```
+                          raio cego    altura mínima visível a 0,5 m
+suposto (27 cm)            2,19 m               21 cm
+MEDIDO  (42 cm)            3,40 m               36 cm
+```
+
+**O simulador está 55% otimista em zona cega.** E a caixa do teste D precisa ter
+**50 cm**, não os 40 do plano.
+
+### Testes C e D não rodaram — dois bloqueios, os dois diagnosticados
+
+**C (freio de mão) — ABI.** O `ros-jazzy-twist-mux` foi instalado e não sobe:
+`undefined symbol: diagnostic_updater::Updater::Updater(...)`. A máquina tem
+`diagnostic-updater` 4.2.6 (out/2025) e o `twist_mux` é 4.5.0 (jun/2026).
+🛑 **O upgrade NÃO foi feito de propósito**: `libcontroller_manager.so` declara
+essa lib e o processo vivo a tem mapeada. Subir a 4.2.7 não afeta o que já roda,
+mas **na próxima subida a base pode não subir**. Conserto recomendado: compilar
+o `twist_mux` **do fonte no nosso workspace**, em commit fixado — o padrão que o
+`setup_livox.sh` já usa. Nenhuma lib do sistema tocada.
+
+**D (reflexo) — o robô real não tem modelo geométrico.** O `tracao.launch.py`
+carrega `hoverboard_driver/.../diffbot.urdf.xacro`, que é o **exemplo de
+demonstração do `ros2_control`**, nunca substituído:
+
+```
+                 o que o ROBÔ carrega        real (trena 29-07)
+caixa            0,10 × 0,10 × 0,05 m      0,433 × 0,455 × 0,145
+raio da roda     0,015 m                    0,080 m
+bitola           0,10 m                     0,270 m
+bobas            duas                       uma
+Livox            não existe                 existe, a 42 cm
+```
+
+⚠️ **Separar as duas consequências**: os números de hoje **não** são afetados (a
+cinemática vem do `hoverboard_controllers.yaml`, e a bancada mede a pose do
+`/Odometry` direto — nada passa pelo TF). Mas **tudo que usa geometria no robô
+real está errado**: polígonos do `collision_monitor`, footprint do Nav2,
+montagem de sensor. É por isso que o reflexo nunca teve chance ali.
+
+**A descrição correta já existe no repo** — `robo2.urdf.xacro`, com a caixa
+medida, a boba, a bitola e o `livox_frame`. Ela só nunca foi usada pelo robô,
+porque nasceu como descrição do simulador. Conserto: o `tracao.launch.py` passa
+a carregá-la, com a seção `ros2_control` apontando para o hardware real — que é
+o que a decisão 004 já prescreve ("só a camada de hardware muda").
+
+⚠️ **Nota de instrumento**: o `tf2_echo` desta sessão **não é confiável** (negou
+até o `base_link`, que existe). O diagnóstico acima não depende dele: está no
+arquivo, e `grep -c livox diffbot_description.urdf.xacro` = 0.
+
+### Duas armadilhas de bancada, para não repetir
+
+- **`pgrep -c -f "[f]astlio"` mentiu**, acusando 2 pilhas. O truque do colchete
+  protege contra o `pgrep`, **não contra o resto da linha de comando do ssh** —
+  a palavra aparecia num `printf` do mesmo comando e o bash casou consigo mesmo.
+  Conferir com `pgrep -a`, que mostra **quem** casou.
+- **`Received a non-finite error value` na subida não é o defeito de 24-07**:
+  parou em 58 linhas. O do registro (quadro de 18 vs 26 bytes) inunda o log para
+  sempre e deixa as rodas paradas.
+
+### Piso e bateria, de novo, NÃO INFORMADOS
+
+Em 04-08 era uma pena. **Hoje é pior**: a bateria virou suspeita nomeada — é um
+dos três candidatos para a corrida `0.15-a` ter saído fraca (pico 0,51 contra
+0,83 com o mesmo comando). E a linha de base repetida no fim da sessão deu
+**−0,8652**, fora da faixa da manhã, sugerindo que a planta enfraqueceu ~5% ao
+longo da tarde. Com `n=1` isso não estabelece deriva — mas se for real, vale
+0,046 1/m, **do mesmo tamanho do resíduo inteiro depois de compensar**.
