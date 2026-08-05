@@ -897,6 +897,24 @@ porque havia **quatro `placa_simulada` órfãs** acumuladas, de lançamentos que
 derrubei com `pkill` de padrão largo. Contar processo vivo antes de medir entrou
 no procedimento.
 
+## 📋 PARA IR AO ROBÔ: `docs/PLANO_TESTE_ROBO.md`
+
+Escrito em 05-08. Responde o que testar, com que mapa e como rodar. O resumo
+que decide a próxima sessão:
+
+- ✅ **Testável JÁ, sem mapa nenhum**: compensador de rumo (reta e ré), pivô,
+  `twist_mux` + teleop (freio de mão) e reflexo de colisão. Os quatro usam só
+  o `/Odometry` do LIO e a nuvem do Mid-360.
+- 🔴 **Bloqueado**: tudo do Nav2 (planner, seguidor, chegada com ângulo).
+  E **não é falta de mapa** — é falta de **localização contra o mapa**. A
+  `pilha.launch.py` publica uma TF `map→odom` FIXA, que só vale no simulador
+  porque mundo e mapa saem da mesma planta.
+- ⚠️ **O mapa do repo é sintético** (`GERADO por gera_pista.py`) e não
+  corresponde a lugar nenhum. **O mapa do estagiário NÃO está neste repo** —
+  o workspace dele está fora do git.
+- ➡️ Saída recomendada: **SLAM online** (o mapa nasce enquanto anda, `map ≡
+  odom` por construção). É a menor mudança que destrava, e mantém a 003.
+
 ## 🎯 O TRABALHO ATUAL: decisão 011 — malha fechada de rumo (o "PID")
 
 Aprovada pelo dono em 04-08 ("focar tudo nesse PID"). Plano em 5 fatias;
