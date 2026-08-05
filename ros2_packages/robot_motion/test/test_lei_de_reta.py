@@ -50,16 +50,45 @@ def test_captura_o_rumo_na_entrada_da_reta_e_segura():
     assert wz == pytest.approx(0.1, abs=0.02)
 
 
-def test_curva_pedida_passa_intocada_e_rearma():
-    """Curva é assunto do comandante. E depois dela a referência velha tem de
-    morrer — o rumo novo é o que valer quando a reta voltar."""
+def test_curva_pedida_mantem_a_intencao_mas_ganha_o_ff():
+    """Curva é assunto do comandante — a MALHA DE RUMO não se mete nela. Mas o
+    ff sim: o arco é do CORPO e existe girando também. Antes esta lei devolvia
+    a curva crua, e o robô curvava com o viés somado por cima."""
     m = MalhaDeReta()
     m.passo(0.25, 0.0, yaw=0.0, dt=0.1)
     assert m.rumo_ref is not None
-    assert m.passo(0.25, 0.5, yaw=0.7, dt=0.1) == 0.5
-    assert m.rumo_ref is None
+    saida = m.passo(0.25, 0.5, yaw=0.7, dt=0.1)
+    assert saida == pytest.approx(0.5 + 0.817 * 0.25, rel=1e-6)
+    assert m.rumo_ref is None, 'a referência de rumo tem de morrer na curva'
     m.passo(0.25, 0.0, yaw=1.5, dt=0.1)
     assert m.rumo_ref == pytest.approx(1.5)
+
+
+def test_ff_escala_com_a_velocidade_REAL_e_nao_com_a_pedida():
+    """O defeito de 05-08, achado pelo dono olhando o robô pender. O arco é
+    curvatura × distância percorrida, e quem decide a distância é o patamar da
+    placa. Na pilha o seguidor pedia 0,500 e o robô andava 0,299: o ff saía
+    67% grande."""
+    m = MalhaDeReta(kp=0.0, ki=0.0)
+    com_real = m.passo(0.500, 0.0, yaw=0.0, dt=0.1, v_real=0.299)
+    assert com_real == pytest.approx(0.817 * 0.299, rel=1e-6)
+    m2 = MalhaDeReta(kp=0.0, ki=0.0)
+    sem_real = m2.passo(0.500, 0.0, yaw=0.0, dt=0.1)
+    assert sem_real == pytest.approx(0.817 * 0.500, rel=1e-6)
+    assert com_real < sem_real, 'sem v_real a lei superestima o arco'
+
+
+def test_sem_segurar_rumo_sobra_so_o_feedforward():
+    """Modo para quando há controlador de rumo ACIMA (a pilha). Os dois
+    segurando rumo disputam: este segura o que CAPTUROU, o de cima quer o do
+    caminho, e o de cima acaba pivotando para desfazer. Aqui a lei só cancela
+    o arco e não escolhe direção nenhuma."""
+    m = MalhaDeReta(segura_rumo=False)
+    # Mesmo com erro de rumo enorme, a saída é o ff puro: nada de P nem I.
+    for _ in range(50):
+        saida = m.passo(0.25, 0.0, yaw=-1.0, dt=0.1, v_real=0.30)
+    assert saida == pytest.approx(0.817 * 0.30, rel=1e-6)
+    assert m.integral == 0.0 and m.rumo_ref is None
 
 
 def test_parado_nao_segura_rumo_nenhum():

@@ -24,6 +24,8 @@ avisa alto. A alternativa (segurar o comando) violaria a prioridade do
 humano; corrigir sem sensor é impossível; e fazer qualquer um dos dois em
 silêncio é o defeito do BO-3. O robô volta a arcar — mas dizendo por quê.
 """
+import math
+
 import rclpy
 from geometry_msgs.msg import TwistStamped
 from nav_msgs.msg import Odometry
@@ -48,6 +50,9 @@ class CompensadorRumo(Node):
             ('wz_max', 0.6),        # [rad/s] grampo da correção
             ('int_max', 0.6),       # [rad·s] anti-windup
             ('limiar_curva', 0.05),  # [rad/s] acima disso é curva: passa
+            # False quando há controlador de rumo ACIMA (a pilha): aí este nó
+            # só cancela o arco e não disputa a direção. Ver `lei_de_reta`.
+            ('segura_rumo', True),
             # Pose mais velha que isto = sem sensor: passa reto e grita.
             ('validade_pose', 0.5),  # [s]
         ])
@@ -56,7 +61,8 @@ class CompensadorRumo(Node):
         self.malha = MalhaDeReta(
             curv_frente=par['curv_frente'], curv_re=par['curv_re'],
             kp=par['kp'], ki=par['ki'], wz_max=par['wz_max'],
-            int_max=par['int_max'], limiar_curva=par['limiar_curva'])
+            int_max=par['int_max'], limiar_curva=par['limiar_curva'],
+            segura_rumo=par['segura_rumo'])
         self.validade_pose = par['validade_pose']
 
         qos = QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE)
@@ -68,6 +74,8 @@ class CompensadorRumo(Node):
         self.yaw = None
         self.t_pose = None
         self.t_passo = None
+        self.v_real = 0.0
+        self.hist = []      # (t, x, y) para medir a velocidade de verdade
 
         self.get_logger().warn(
             f"compensador de rumo (decisão 011): ff {par['curv_frente']:+.3f} "
@@ -82,6 +90,18 @@ class CompensadorRumo(Node):
     def cb_odom(self, msg):
         self.yaw = yaw_de(msg.pose.pose.orientation)
         self.t_pose = self.agora()
+        # Velocidade MEDIDA, da pose. O feedforward precisa dela e não do
+        # comando: o arco é curvatura × distância percorrida, e quem decide a
+        # distância é o patamar da placa. Janela de 0,2 s para não derivar
+        # ruído; fonte é a pose, nunca o campo `twist` (`ensaio.py`).
+        p = msg.pose.pose.position
+        self.hist.append((self.t_pose, p.x, p.y))
+        while len(self.hist) > 2 and self.t_pose - self.hist[0][0] > 0.2:
+            self.hist.pop(0)
+        if len(self.hist) >= 2:
+            (t0, x0, y0), (t1, x1, y1) = self.hist[0], self.hist[-1]
+            if t1 - t0 > 1e-4:
+                self.v_real = math.hypot(x1 - x0, y1 - y0) / (t1 - t0)
 
     def cb_cmd(self, msg):
         v = msg.twist.linear.x
@@ -102,7 +122,8 @@ class CompensadorRumo(Node):
 
         dt = 0.0 if self.t_passo is None else t - self.t_passo
         self.t_passo = t
-        self.publica(msg, v, self.malha.passo(v, wz, self.yaw, dt))
+        self.publica(msg, v,
+                     self.malha.passo(v, wz, self.yaw, dt, self.v_real))
 
     def publica(self, msg, v, wz):
         fora = TwistStamped()

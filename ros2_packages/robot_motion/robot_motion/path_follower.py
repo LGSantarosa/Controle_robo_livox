@@ -27,7 +27,6 @@ import csv
 import math
 
 import rclpy
-from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Odometry, Path
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy
@@ -125,11 +124,6 @@ class PathFollower(Node):
         self.pub_vel = self.create_publisher(Float64, '~/velocidade_alvo', qos)
         self.create_subscription(Odometry, '/Odometry', self.cb_odom, qos)
         self.create_subscription(Path, '/plan', self.cb_plano, qos)
-        # O ângulo de chegada vem do /goal_pose, e NÃO do fim do plano: o
-        # Theta* devolve orientação ZERADA em todos os pontos (medido em
-        # 29-07, "faixa de yaw de 0,0° em 144 pontos"), então ler o plano
-        # daria sempre 0 rad e o robô apontaria para o leste em toda chegada.
-        self.create_subscription(PoseStamped, '/goal_pose', self.cb_goal, qos)
 
         self.pose = None
         self.plano = []
@@ -181,13 +175,27 @@ class PathFollower(Node):
         if len(novo) < 2:
             return
         self.plano = novo
+        # O ângulo de chegada sai do ÚLTIMO ponto do plano, e não de uma
+        # assinatura própria de `/goal_pose`.
+        #
+        # A primeira versão assinava `/goal_pose` e ERA FRÁGIL: nó que publica
+        # o alvo e sai pode ser descoberto pelo `bt_navigator` e não por este
+        # nó, e então o robô navega para o ponto certo e gira para o ângulo do
+        # alvo ANTERIOR. Aconteceu na demonstração de 05-08 — chegou a 0,09 m
+        # do ponto com 98° de erro, e o log mostrava "ângulo acertado" porque
+        # ele acertou o objetivo velho.
+        #
+        # Ler do plano elimina a corrida: sem plano este nó não faz nada
+        # mesmo, então a informação chega junto com o trabalho.
+        #
+        # ⚠️ São só os pontos INTERMEDIÁRIOS do Theta* que vêm com orientação
+        # zerada (29-07). O ÚLTIMO carrega o rumo pedido — conferido em 05-08:
+        # alvo de +45,0° e último ponto do plano com +45,0°.
+        self.rumo_objetivo = yaw_de(msg.poses[-1].pose.orientation)
         self.t_plano = self.agora()
         if self.estado == 'ocioso':
             self.estado = 'seguindo'
             self.progresso.reinicia()
-
-    def cb_goal(self, msg):
-        self.rumo_objetivo = yaw_de(msg.pose.orientation)
 
     def agora(self):
         return self.get_clock().now().nanoseconds * 1e-9

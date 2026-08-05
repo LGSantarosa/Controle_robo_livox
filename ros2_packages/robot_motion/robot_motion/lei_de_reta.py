@@ -43,9 +43,18 @@ class MalhaDeReta:
     """
 
     def __init__(self, curv_frente=-0.817, curv_re=-0.098, kp=1.0, ki=0.5,
-                 wz_max=0.6, int_max=0.6, limiar_curva=0.05):
+                 wz_max=0.6, int_max=0.6, limiar_curva=0.05,
+                 segura_rumo=True):
         if kp < 0.0 or ki < 0.0:
             raise ValueError('kp e ki não podem ser negativos')
+        # `segura_rumo=False` deixa só o FEEDFORWARD: cancela o arco do corpo
+        # e não escolhe rumo nenhum. É o modo para quando há um controlador de
+        # rumo ACIMA (o `heading_controller`, na pilha). Com ele ligado os dois
+        # disputam: este nó segura o rumo que CAPTUROU, que não é o rumo que o
+        # caminho quer, e o de cima tem de pivotar para desfazer — foi o
+        # sintoma que o dono viu em 05-08 ("parece que ele está sem o PID, tá
+        # pendendo pra direita, aí o pivô para tendo que arrumar isso").
+        self.segura_rumo = segura_rumo
         self.curv_frente = curv_frente
         self.curv_re = curv_re
         self.kp = kp
@@ -57,26 +66,41 @@ class MalhaDeReta:
         self.integral = 0.0       # [rad·s]
         self.sentido = 0          # +1 frente, -1 ré, 0 parado
 
-    def passo(self, v_cmd, wz_cmd, yaw, dt):
+    def passo(self, v_cmd, wz_cmd, yaw, dt, v_real=None):
         """Um ciclo: devolve o wz corrigido para (v_cmd, wz_cmd) dados.
 
         `yaw` é o rumo atual [rad] (LIO no robô, pose verdadeira no Gazebo);
-        `dt` é o tempo desde o último passo [s]. `v_cmd` sai como entrou —
-        esta lei não toca na velocidade (não teria autoridade: patamar).
-        """
-        # Curva pedida de verdade passa INTOCADA e rearma a captura: curva é
-        # assunto do comandante. Corrigi-la aqui brigaria com quem pediu.
-        if abs(wz_cmd) >= self.limiar_curva:
-            self._descarta()
-            return wz_cmd
+        `dt` é o tempo desde o último passo [s]. `v_real` é a velocidade
+        MEDIDA — ver abaixo. `v_cmd` sai como entrou: esta lei não toca na
+        velocidade (não teria autoridade: patamar).
 
-        # Parado não há rumo a segurar — e referência velha é pior que
-        # nenhuma: o robô pode ter sido girado no chão enquanto esperava.
+        ⚠️ O feedforward escala com a velocidade **REAL**, não com a pedida.
+        O arco é curvatura × distância percorrida, e quem decide a distância é
+        o patamar da placa, não o comando. Medido em 05-08 dentro da pilha: o
+        seguidor pedia 0,500 m/s, o robô andava 0,299, e o ff saía +0,408
+        rad/s onde bastavam +0,244 — 67% a mais. Sem `v_real` a lei cai no
+        comando, que é o certo só quando os dois coincidem.
+        """
+        v_ff = abs(v_real) if v_real is not None else abs(v_cmd)
+
+        # Parado não há arco: ele nasce do movimento. E não há rumo a segurar
+        # — referência velha é pior que nenhuma, o robô pode ter sido girado
+        # no chão enquanto esperava.
         if abs(v_cmd) < 1e-9:
             self._descarta()
             return wz_cmd
 
         sentido = 1 if v_cmd > 0.0 else -1
+        curv = self.curv_frente if sentido > 0 else self.curv_re
+        ff = -curv * v_ff
+
+        # O arco existe girando também: ele é do CORPO, não do comando. Por
+        # isso o ff entra sempre, inclusive na curva pedida. O que a curva
+        # dispensa é a malha de rumo — essa sim é assunto do comandante.
+        if abs(wz_cmd) >= self.limiar_curva or not self.segura_rumo:
+            if abs(wz_cmd) >= self.limiar_curva:
+                self._descarta()
+            return wz_cmd + ff
         if sentido != self.sentido:
             # O viés da frente (−0,82) não é o da ré (−0,10): integrador
             # carregado do sentido errado viraria chicote na troca.
@@ -93,10 +117,7 @@ class MalhaDeReta:
             self.integral = max(-self.int_max,
                                 min(self.int_max, self.integral + e * dt))
 
-        curv = self.curv_frente if sentido > 0 else self.curv_re
-        wz_ff = -curv * abs(v_cmd)
-
-        wz = wz_ff + self.kp * e + self.ki * self.integral
+        wz = ff + self.kp * e + self.ki * self.integral
         return max(-self.wz_max, min(self.wz_max, wz))
 
     def _descarta(self):
