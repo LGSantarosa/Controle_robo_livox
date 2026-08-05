@@ -19,8 +19,29 @@
 
 controller_manager:
   ros__parameters:
-    update_rate: 50  # Hz — mais alto que os 10 Hz do robô, porque no simulador
-                     # não custa nada e o contato da boba precisa de passo fino.
+    # ⚠️ 10 Hz, IGUAL AO ROBÔ — e isto é uma CORREÇÃO de 05-08.
+    #
+    # Estava em 50, com esta justificativa: "mais alto que os 10 Hz do robô,
+    # porque no simulador não custa nada e o contato da boba precisa de passo
+    # fino". A varredura de pivô no robô mostrou que **custa**, e caro.
+    #
+    # A 10 Hz o atuador só é atualizado a cada 100 ms, então o tempo de comando
+    # não é contínuo: ele é contado em CICLOS. Foi o que a bancada de 05-08
+    # mediu sem saber que estava medindo isso — duas corridas de `liga 0,15 s`
+    # (1,5 ciclos) deram 16,6° e 33,4°, razão **2,012**, porque uma pegou um
+    # ciclo de comando e a outra pegou dois. Com 16,6° como o giro de um ciclo:
+    #
+    #     liga 0,20 s = 2 ciclos -> 33,2° previsto, robô deu 30,3 a 35,8
+    #     liga 0,30 s = 3 ciclos -> 49,8° previsto, robô deu 48,0
+    #
+    # A 50 Hz o simulador não tem esse quantum e responde suave onde o robô
+    # responde em degraus — ele parecia mais controlável do que a máquina é.
+    # Igualar a taxa não modela fenômeno novo: REMOVE uma divergência conhecida.
+    #
+    # O preço, que a justificativa antiga anunciava: passo grosso pode degradar
+    # o contato da boba (BO-4). Por isso a mudança foi validada nas DUAS
+    # aceitações — a tabela do pivô e o arco de 04-08 — e não só na que motivou.
+    update_rate: 10  # Hz — o mesmo do robô (bringup/config/hoverboard_controllers.yaml)
     use_sim_time: true
 
     joint_state_broadcaster:

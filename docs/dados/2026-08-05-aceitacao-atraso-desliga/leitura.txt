@@ -1,0 +1,157 @@
+aceitacao do ATRASO DE DESLIGA no simulador — 2026-08-05
+=========================================================
+
+A terceira pendencia do ESTADO ("o simulador desacelera 2x mais rapido por
+falta do atraso de desliga da placa (~0,5 s) — entrada estrutural, nao e
+parametrizacao"), atacada com o dado do robo do MESMO DIA como juiz.
+
+maquina    : PC de desenvolvimento (nao o NUC)
+Gazebo     : Harmonic headless (rviz:=false), planta NORMAL, placa "medido"
+comando    : ensaio.py --ensaio degrau_giro --v 0 --wz 0.6 --liga T --dur 10
+             --espaco 1.0 --janela 0.2 --sim --topico /cmd_vel_bruto
+             (arco: --ensaio reta --v +-0.25 --wz 0 --dur 12 --espaco 1.2
+              --janela 0.5)
+leitura    : pivo.py (copiado aqui), giro TOTAL do ligar ate parar, do CSV cru
+             — a MESMA regua da varredura de 04-08. Validada: reproduz a
+             tabela do simulador daquele dia exatamente
+             (0 · 0 · 0 · 3.7 · 22.4 · 68.9 · 215.7).
+alvo       : docs/dados/2026-08-05-bancada-robo/ (o robo, medido hoje de manha)
+
+
+TRES MUDANCAS, e cada uma foi obrigada por um dado
+---------------------------------------------------
+
+1. ATRASO DE DESLIGA (placa_simulada): depois do comando zerar a placa
+   continua empurrando ~0,52 s (04-08, n=3: 0,40 / 0,56 / 0,60). Antes o
+   simulador parava no instante do corte.
+
+2. A LATENCIA DE LIGA DEIXOU DE DESCARTAR O COMANDO. Ela estava modelada como
+   um `return 0,0` enquanto corria — ou seja, uma janela em que o comando NAO
+   EXISTIA. Consequencia que ninguem tinha visto porque nada no projeto
+   comandava pulso curto: TODO pulso menor que 0,27 s produzia exatamente
+   nada. O robo gira 32 graus com pulso de 0,20 s. Virou fila de atraso: a
+   placa entrega, a roda responde depois.
+
+3. update_rate do simulador 50 -> 10 Hz, IGUAL AO ROBO. Nao modela fenomeno
+   novo: REMOVE uma divergencia que estava documentada como deliberada.
+
+
+O QUE A TAXA DE 10 Hz EXPLICOU — o quantum do pivo
+---------------------------------------------------
+A 10 Hz o atuador so e atualizado a cada 100 ms, entao o tempo de comando nao
+e continuo: e contado em CICLOS. Com 16,6 graus como o giro de um ciclo:
+
+    liga 0,20 s = 2 ciclos -> 33,2 previsto, robo deu 30,3 a 35,8
+    liga 0,30 s = 3 ciclos -> 49,8 previsto, robo deu 48,0
+    liga 0,15 s = 1,5 ciclos -> 16,6 OU 33,2, robo deu 16,6 e 33,4
+
+E o numero que fecha: 33,4 / 16,6 = 2,012. EXATAMENTE o dobro.
+
+🔴 ISTO CORRIGE A CONCLUSAO ESCRITA DE MANHA. O ambiente.txt da bancada e a
+entrada 08-05 (8a leva) do diario atribuem a nao-repetibilidade do pivo a
+PLANTA ("atrito de partida, queda de tensao da bateria, fase de comutacao").
+Esta errado. A causa e a FASE do comando contra o laco de 10 Hz, e a diferenca
+de pico (0,51 contra 0,83) e consequencia de ter recebido metade dos ciclos,
+nao uma variacao independente da maquina.
+
+CONFIRMADO POR DENTRO DO SIMULADOR (arquivos semretencao-*, com
+atraso_desliga=0, que isola o efeito da taxa):
+
+    liga 0,10 -> 1 ciclo       -> 0,8 graus   (3 de 3 corridas iguais)
+    liga 0,20 -> 2 ciclos      -> 3,0 graus   (3 de 3 corridas iguais)
+    liga 0,30 -> 3 ciclos      -> 6,8 graus   (3 de 3 corridas iguais)
+    liga 0,15 -> 1 OU 2 ciclos -> 0,8 · 3,0 · 0,0   <- pega um ou outro
+
+Os tres tempos multiplos de 100 ms saem PERFEITAMENTE repetiveis; so o 0,15
+espalha, e espalha exatamente entre os valores de 1 e de 2 ciclos. A
+variabilidade nao e ruido do Gazebo: e a fase.
+
+DE QUEBRA, o item 12c: o ESTADO registrava "o simulador e determinista demais
+... um simulador deterministico faz qualquer controlador parecer mais
+repetivel do que vai ser". A bimodalidade veio junto com a taxa, sem ninguem
+pedir.
+
+
+ACEITACAO 1 — O ARCO (nao pode regredir), n=3 por sentido
+----------------------------------------------------------
+                 SIM 50 Hz (04-08)   SIM 10 Hz (hoje)   ROBO 04-08  ROBO 05-08
+  frente           -0,817             -0,8199            -0,838      -0,9116
+  re               -0,109             -0,0938            -0,113      -0,0968
+  razao              7,5x               8,74x              7,4x        9,4x
+
+  frente: faixa -0,7755 a -0,8719, dispersao 6%
+  re:     faixa -0,0937 a -0,0939, dispersao 0%
+
+PASSOU, e melhorou: a re foi de -0,109 para -0,094 contra os -0,0968 medidos
+no robo hoje, e a razao cai ENTRE as duas sessoes do robo em vez de abaixo
+das duas.
+
+⚠️ O medo declarado ao baixar a taxa era o BO-4 — o comentario antigo do YAML
+dizia que "o contato da boba precisa de passo fino". NAO se concretizou.
+
+
+ACEITACAO 2 — O PIVO, n=3 por ponto
+------------------------------------
+  liga        SIM media (faixa)         ROBO
+  0,10 s      19,0  (19,0 – 19,1)        2,7   (n=1)
+  0,15 s      21,8  (19,3 – 26,6)       27,8   (16,6 – 33,4)
+  0,20 s      26,7  (23,2 – 30,4)       32,5   (30,3 – 35,8)
+  0,30 s      30,2  (27,8 – 34,1)       48,0   (n=1)
+
+NAO PASSOU. Os dois pontos do meio ficam a ~20% com faixas que se sobrepoem;
+as pontas erram: 0,10 sai 7x alto e 0,30 sai 37% baixo.
+
+O DEFEITO QUE SOBRA, com assinatura clara: a curva do simulador e CHATA
+DEMAIS. Ele sai de 19 graus com 1 ciclo e chega a 30 com 3 (fator 1,6). O robo
+e LINEAR nos ciclos (~16,6 cada, passando pela origem, fator 3,0). A retencao
+ainda soma um bloco quase fixo (~0,26 s equivalentes, mesmo depois do
+decaimento linear) que domina o pulso curto e nao cresce com o comando.
+
+
+POR QUE PARAMOS AQUI, E NAO NO MODELO PERFEITO
+-----------------------------------------------
+Os dois pontos em que o simulador mais discorda sao EXATAMENTE os dois em que
+o robo tem n=1. E o 0,10 e o ponto onde a hipotese da quantizacao JA PREVE
+bimodalidade: 2,7 graus e compativel com aquela corrida ter pego ZERO ciclos.
+Se numa proxima ida ele der ~16 graus em parte das tentativas, o simulador
+(19,0) passa a acertar sem mexer em nada.
+
+Continuar reformando o modelo agora seria ajustar contra DUAS AMOSTRAS UNICAS
+— a forma de erro que este projeto ja pagou tres vezes (a bitola em 29-07, a
+regua do planner em 29-07, e a hipotese dos "20 ms" na propria bancada de
+hoje de manha, morta pela terceira corrida).
+
+➡️ PRIORIDADE DA PROXIMA IDA AO ROBO: repetir `liga 0,10` e `liga 0,30` com
+   n=3. Sao os dois pontos que hoje decidem no escuro. E o 0,10 e uma
+   PREVISAO FALSIFICAVEL: se a quantizacao estiver certa, ele tem de sair
+   bimodal (ora ~0, ora ~16 graus).
+
+
+EXPERIMENTO DESCARTADO, e a licao
+----------------------------------
+Rodei uma varredura com `ros2 param set /placa_simulada atraso_desliga 0.0`
+achando que estava desligando a retencao. NAO ESTAVA: o no copia os
+parametros para `self.par` no construtor e nao tem callback de parametro,
+entao o `param set` mudou o valor guardado pelo rclpy (o `param get` respondia
+0.0) e o no seguiu usando 0,52. Os arquivos semretencao-* sao da versao
+CERTA, com o parametro passado na subida do no.
+
+
+⚠️ CONTAMINACAO QUE INVALIDOU VARIAS VARREDURAS INTERMEDIARIAS
+---------------------------------------------------------------
+Cinco `parameter_bridge` orfaos, um de cada simulador subido na sessao,
+sobreviveram aos kills (que miravam so `gz sim`, `sim.launch` e
+`placa_simulada`). Como o gz transport descobre por rede, cada ponte
+sobrevivente reencontrava o Gazebo NOVO e republicava /Odometry: 5
+publicadores e 190 Hz onde o normal e 1 e 46 Hz.
+
+Todas as varreduras intermediarias foram descartadas. Os numeros deste
+arquivo sao de pilha limpa, com a saude CONFERIDA ANTES de medir:
+
+    publicadores em /Odometry : 1
+    taxa do /Odometry         : 46,5 Hz
+    spawner do controlador    : sem falha
+
+E a mesma doenca de 31-07 no robo (tres pilhas orfas, horas perdidas), desta
+vez na maquina de dev. A conferencia acima passa a ser obrigatoria antes de
+qualquer corrida de aceitacao.

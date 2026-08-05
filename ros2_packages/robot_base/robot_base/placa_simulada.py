@@ -24,6 +24,10 @@ Três outras coisas medidas entram junto:
 - **latência de ~0,27 s** entre o comando e a roda sair do lugar (n=4, faixa
   0,24–0,31). Não é filtro: é o motor vencendo a inércia. Muda o que um
   controlador a 10 Hz consegue fazer.
+- **atraso de DESLIGA de ~0,52 s** (n=3, faixa 0,40–0,60, bancada 04-08): depois
+  que o comando zera, a placa **continua empurrando**. Não é o mesmo fenômeno
+  que a latência de liga e não é correção dela — são dois atrasos, nas duas
+  pontas, e o de desliga é o maior. Ver a seção seguinte.
 - **a escala do firmware não é a que o driver pensa.** O driver converte
   rad/s -> unidades por `/0,10472`; medido, 100 unidades entregam 3,72 rad/s de
   roda, ou seja **0,0372 rad/s por unidade**. O driver superestima a roda em
@@ -79,6 +83,35 @@ Consequências, que têm de ser lidas antes de confiar nele:
 Serve para o que foi feito: **desenvolver controlador contra um robô que arca
 como este arca.**
 
+## O atraso de desliga (05-08), e por que ele é ESTRUTURAL
+
+Até 05-08 este nó modelava só a ponta de LIGA. O `ESTADO_PROJETO.md` registrava
+a consequência: *"o simulador desacelera 2× mais rápido por falta do atraso de
+desliga da placa (~0,5 s) — entrada estrutural, não é parametrização"*.
+
+O que a bancada mediu (04-08, degrau de giro, n=3): entre o comando zerar e o
+`wz` atingir o **pico** passam 0,40 / 0,56 / 0,60 s. O robô **acelera depois do
+corte**. E a varredura de pivô de 05-08 mostrou o quanto isso domina:
+
+    liga 0,15 s  ->  girou 33,4°, dos quais 32,8° DEPOIS do comando acabar
+    liga 0,20 s  ->  girou 35,8°, dos quais 35,4° DEPOIS
+    liga 0,30 s  ->  girou 48,0°, dos quais 44,5° DEPOIS
+
+Num pulso curto o comando é só um cutucão: **quase todo o movimento acontece
+com o comando já em zero.** Um simulador sem isso responde a pulso curto com
+quase nada — que é exatamente o que ele fazia (0° em todos esses tempos, contra
+2,7° a 48° no robô).
+
+O modelo aqui é o mecânico: **segurar o último comando por `atraso_desliga`
+segundos depois de ele zerar.** Como o robô ainda está acelerando quando o corte
+chega, segurar faz o pico acontecer no fim da retenção — que é o que se mede.
+
+⚠️ **Limite conhecido:** este nó só age quando chega mensagem. Se o comandante
+parar de publicar em vez de publicar zero, a retenção não acontece. Na prática
+todos os nossos comandantes publicam zero (`ensaio.py`, `twist_mux`,
+`compensador_rumo`), então o caminho real está coberto — mas a placa de verdade
+seguraria de qualquer jeito.
+
 ## Os dois regimes
 
     compensacao LIGADA  (como o robô está hoje)
@@ -118,6 +151,10 @@ class PlacaSimulada(Node):
             # 100 unidades -> 3,72 rad/s de roda (n=4, faixa 3,56–3,82).
             ('escala_real', 0.0372),        # rad/s por unidade, MEDIDO
             ('latencia', 0.27),             # s até a roda sair do lugar (n=4)
+            # Atraso de DESLIGA: quanto a placa continua empurrando depois do
+            # comando zerar (04-08, n=3: 0,40 / 0,56 / 0,60). É outro fenômeno
+            # que a `latencia`, não uma correção dela, e é o MAIOR dos dois.
+            ('atraso_desliga', 0.52),
             # O ARCO, em curvatura de CORPO — os números da bancada de 04-08,
             # copiados sem conversão. A assimetria de roda que os produz é
             # DERIVADA (ver `assimetria`), e não escrita à mão, porque escrever
@@ -148,8 +185,9 @@ class PlacaSimulada(Node):
             TwistStamped, '/hoverboard_base_controller/cmd_vel', qos)
         self.create_subscription(TwistStamped, '/cmd_vel_bruto', self.cb, qos)
 
-        self.t_pedido = None      # quando o comando saiu de zero (latência)
-        self.parado = True
+        self.fila = []            # [(t_chega_na_roda, v, wz)] — latência de liga
+        self.t_corte = None       # quando o comando ZEROU (atraso de desliga)
+        self.saida_retida = None  # o que a placa segue empurrando depois dele
 
         self._anuncia()
 
@@ -176,6 +214,11 @@ class PlacaSimulada(Node):
             f"{self.par['escala_real']:.4f} rad/s/unidade "
             f"({self.par['escala_driver'] / self.par['escala_real']:.1f}x menor "
             f"que a assumida pelo driver).")
+        self.get_logger().warn(
+            f"atraso de DESLIGA {self.par['atraso_desliga']:.2f} s: depois do "
+            f"comando zerar a placa CONTINUA empurrando (04-08, n=3). Num "
+            f"pulso curto quase todo o movimento acontece aí — pivô de 0,2 s "
+            f"gira 35,8° no robô, dos quais 35,4° com o comando já em zero.")
         self.get_logger().warn(
             f"o robô ARCA (04-08): curvatura {self.par['curvatura_frente']:+.3f} "
             f"1/m de frente, {self.par['curvatura_re']:+.3f} de ré — "
@@ -249,21 +292,9 @@ class PlacaSimulada(Node):
 
         meia = self.par['bitola'] / 2.0
         ve, vd = v - wz * meia, v + wz * meia          # borda de cada roda [m/s]
-
-        # Latência: o motor não sai do lugar no instante do comando. Zerar o
-        # cronômetro só quando o comando volta a zero é o que reproduz o
-        # arranque a cada nova ordem, que é onde ela aparece.
         agora = self.get_clock().now().nanoseconds * 1e-9
-        pedindo = max(abs(ve), abs(vd)) > 1e-6
-        if not pedindo:
-            self.t_pedido, self.parado = None, True
-        else:
-            if self.t_pedido is None:
-                self.t_pedido = agora
-            if self.parado and agora - self.t_pedido < self.par['latencia']:
-                return self.publica(msg, 0.0, 0.0)
-            self.parado = False
 
+        # A placa DECIDE na hora — zona morta, patamar, escala, arco.
         if modelo == 'cru':
             ve, vd, engoliu = self.cru(ve, vd)
         else:
@@ -282,7 +313,81 @@ class PlacaSimulada(Node):
                 f'wz={msg.twist.angular.z:.3f}, entregando v={v:.3f} '
                 f'wz={wz:.3f}',
                 throttle_duration_sec=1.0 / self.par['taxa_avisos'])
-        self.publica(msg, v, wz)
+
+        # ...e a RODA responde `latencia` depois. Ver `enfileira`.
+        chegou = self.enfileira(agora, v, wz)
+        if chegou is None:
+            return self.publica(msg, 0.0, 0.0)
+
+        if abs(chegou[0]) < 1e-9 and abs(chegou[1]) < 1e-9:
+            # O que chegou à roda é zero: aqui começa o atraso de DESLIGA.
+            retida = self.retencao_de_desliga(agora)
+            return self.publica(msg, *(retida if retida else (0.0, 0.0)))
+
+        self.t_corte = None
+        self.saida_retida = chegou
+        self.publica(msg, *chegou)
+
+    def enfileira(self, agora, v, wz):
+        """Fila de atraso: o que a placa decidiu agora chega à roda depois.
+
+        ⚠️ **Isto era um DESCARTE até 05-08, e o robô provou que estava errado.**
+        O modelo anterior devolvia zero enquanto `agora - t_pedido < latencia` e
+        **jogava o comando fora**. Consequência que ninguém tinha visto porque
+        nada no projeto comandava pulso curto: **todo pulso menor que 0,27 s
+        produzia exatamente nada**. Na varredura de pivô de 05-08 o robô girou
+        32° com pulso de 0,20 s e o simulador ficou em 0,0° — e não era o
+        atraso de desliga faltando, era o comando sendo descartado antes.
+
+        Os 0,27 s medidos (n=4, faixa 0,24–0,31) são o tempo até a **roda sair
+        do lugar**, não uma janela em que o comando não existe. A placa entrega
+        durante o pulso inteiro; quem chega atrasada é a roda.
+
+        Devolve o que a roda está recebendo AGORA, ou `None` se ainda não chegou
+        nada (robô recém-comandado, dentro da primeira latência).
+        """
+        self.fila.append((agora + self.par['latencia'], v, wz))
+        chegou = None
+        while self.fila and self.fila[0][0] <= agora:
+            _, cv, cwz = self.fila.pop(0)
+            chegou = (cv, cwz)
+        return chegou
+
+    def retencao_de_desliga(self, agora):
+        """O que a placa ainda empurra depois do comando zerar, ou `None`.
+
+        Pura de propósito (só mexe no próprio estado): é o mecanismo que o
+        pulso curto inteiro depende, e ele precisa ser testável sem subir ROS.
+
+        O cronômetro parte do PRIMEIRO instante em que o comando aparece
+        zerado — não do último comando não-nulo. É o que reproduz o
+        comportamento medido: entre o corte e o pico de `wz` passam
+        0,40–0,60 s (04-08, n=3), e nesse trecho o robô ainda ACELERA.
+
+        ⚠️ **A saída DECAI, não fica no valor cheio** — e isto é a segunda
+        correção de 05-08 neste método. A primeira versão segurava o valor
+        cheio pelos 0,52 s inteiros, e a aceitação pegou o defeito: com ela o
+        simulador dava ~37° em `liga` 0,10, 0,15 **e** 0,20 s, ou seja quase o
+        mesmo giro para 1, 1,5 e 2 ciclos de comando. A retenção virava o
+        movimento e o comando virava detalhe.
+
+        O robô não é assim: ele é **linear no número de ciclos** (16,6° por
+        ciclo, passando pela origem), o que quer dizer que a inércia depois do
+        corte é proporcional ao que foi comandado — não existe bloco fixo
+        sobrando no fim. Uma placa que rampa a saída para baixo reproduz isso;
+        uma que segura a fundo e corta, não.
+        """
+        if self.t_corte is None:
+            self.t_corte = agora
+        if self.saida_retida is None:
+            return None
+        decorrido = agora - self.t_corte
+        atraso = self.par['atraso_desliga']
+        if atraso <= 0.0 or decorrido >= atraso:
+            self.saida_retida = None
+            return None
+        fator = 1.0 - decorrido / atraso
+        return (self.saida_retida[0] * fator, self.saida_retida[1] * fator)
 
     def medido(self, ve, vd):
         """A placa como ela está hoje: compensação ligada, e o patamar.

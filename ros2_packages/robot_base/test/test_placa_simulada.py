@@ -65,7 +65,12 @@ class Placa:
     def __init__(self, **kw):
         self.par = dict(PADRAO)
         self.par.update(kw)
+        self.t_corte = None
+        self.saida_retida = None
+        self.fila = []
 
+    enfileira = placa_mod.PlacaSimulada.enfileira
+    retencao_de_desliga = placa_mod.PlacaSimulada.retencao_de_desliga
     unidades = placa_mod.PlacaSimulada.unidades
     assimetria = placa_mod.PlacaSimulada.assimetria
     patamar = placa_mod.PlacaSimulada.patamar
@@ -262,3 +267,142 @@ def test_a_lei_de_frenagem_da_005_degenera_em_liga_desliga():
         ve, vd, _ = p.medido(-wz * meia, wz * meia)
         entregues.add(round((vd - ve) / p.par['bitola'], 4))
     assert len(entregues) == 1, f'a lei tinha de colapsar num valor só: {entregues}'
+
+
+# ------------------------------------------- o atraso de DESLIGA (05-08)
+#
+# Estes existem porque o simulador respondia a pulso curto com quase nada (0°
+# em toda a varredura de pivô), enquanto o robô girava de 2,7° a 48°. A causa
+# era estrutural: só a ponta de LIGA estava modelada. No robô, num pulso de
+# 0,2 s, 35,4° dos 35,8° acontecem com o comando JÁ EM ZERO.
+
+def test_a_placa_continua_empurrando_depois_do_comando_zerar():
+    """O fato medido em 04-08 (n=3): entre o comando zerar e o `wz` chegar ao
+    pico passam 0,40 a 0,60 s. Sem isto o simulador para no instante do corte e
+    desacelera 2x mais rápido que o robô."""
+    p = Placa()
+    p.saida_retida = (0.30, 1.20)
+    assert p.retencao_de_desliga(100.0) == (0.30, 1.20), 'no corte, valor cheio'
+    meio = p.retencao_de_desliga(100.3)
+    assert meio is not None and meio[1] > 0.0, 'a 0,3 s ainda empurra'
+
+
+def test_a_retencao_DECAI_em_vez_de_segurar_o_valor_cheio():
+    """A segunda correção de 05-08. Segurando o valor cheio, o simulador dava
+    ~37° para 1, 1,5 E 2 ciclos de comando — a retenção virava o movimento. O
+    robô é linear nos ciclos (16,6° cada), logo a inércia é proporcional ao
+    comando e não um bloco fixo.
+
+    Verificado por mutação: devolvendo `self.saida_retida` cru, este teste
+    falha e os outros da retenção continuam passando."""
+    p = Placa()
+    p.saida_retida = (0.30, 1.20)
+    p.retencao_de_desliga(100.0)
+    a = p.retencao_de_desliga(100.0 + 0.25 * PADRAO['atraso_desliga'])
+    b = p.retencao_de_desliga(100.0 + 0.75 * PADRAO['atraso_desliga'])
+    assert a[1] == pytest.approx(0.75 * 1.20, rel=0.02), 'a 25% do atraso, 75%'
+    assert b[1] == pytest.approx(0.25 * 1.20, rel=0.02), 'a 75% do atraso, 25%'
+    assert b[1] < a[1] < 1.20, 'tem de DECAIR, monotonicamente'
+
+
+def test_a_retencao_acaba_e_o_robo_solta():
+    """O atraso é finito: passado `atraso_desliga` a placa solta e devolve None
+    — senão o robô nunca pararia, que é um defeito pior que o que se conserta."""
+    p = Placa()
+    p.saida_retida = (0.30, 1.20)
+    p.retencao_de_desliga(100.0)
+    assert p.retencao_de_desliga(100.0 + PADRAO['atraso_desliga'] + 0.01) is None
+    assert p.saida_retida is None, 'soltou, e esqueceu o que segurava'
+
+
+def test_o_cronometro_parte_do_primeiro_zero_e_nao_reinicia():
+    """Chegam várias mensagens zeradas seguidas (o `ensaio.py` publica a 50 Hz).
+    Se cada uma reiniciasse o cronômetro, a placa seguraria PARA SEMPRE — o
+    robô nunca pararia e o defeito passaria por física."""
+    p = Placa()
+    p.saida_retida = (0.30, 1.20)
+    for t in (100.0, 100.1, 100.2, 100.3, 100.4, 100.5):
+        p.retencao_de_desliga(t)
+    assert p.retencao_de_desliga(100.6) is None, 'passou de 0,52 s: tinha de soltar'
+
+
+def test_sem_nada_para_reter_nao_inventa_movimento():
+    """Comando zerado sem corrida anterior (robô recém-ligado) não pode produzir
+    saída nenhuma. Um simulador que inventa movimento do nada é pior que um que
+    não reproduz o atraso."""
+    p = Placa()
+    assert p.retencao_de_desliga(100.0) is None
+    assert p.retencao_de_desliga(100.3) is None
+
+
+def test_o_atraso_de_desliga_e_maior_que_o_de_liga():
+    """Os dois atrasos são fenômenos DIFERENTES, e não um a correção do outro
+    (a leitura de 08-01 x 08-04 insiste nisso). O de desliga é o maior: se
+    alguém trocar um pelo outro por engano, este teste pega."""
+    assert PADRAO['atraso_desliga'] > PADRAO['latencia']
+    assert PADRAO['atraso_desliga'] == pytest.approx(0.52, abs=0.001)
+    assert PADRAO['latencia'] == pytest.approx(0.27, abs=0.001)
+
+
+def test_o_pulso_curto_e_dominado_pela_retencao():
+    """O número que motivou a mudança, em forma de teste.
+
+    Pulso de 0,2 s contra retenção de 0,52 s: o comando fica ligado 28% do
+    tempo em que a placa empurra. É por isso que no robô 35,4° dos 35,8° de um
+    pivô de 0,2 s acontecem com o comando já em zero — e por isso um simulador
+    sem retenção respondia a esse pulso com quase nada.
+    """
+    pulso = 0.20
+    fracao_comandada = pulso / (pulso + PADRAO['atraso_desliga'])
+    assert fracao_comandada < 0.30, (
+        f'o comando responde por {100 * fracao_comandada:.0f}% do empurrão; '
+        f'se isso subir, o pulso curto deixa de ser dominado pela retenção')
+
+
+# --------------------------------------- a latência de liga ATRASA, não descarta
+#
+# Estes existem por causa de um defeito que sobreviveu meses porque nada no
+# projeto comandava pulso curto. A latência estava modelada como DESCARTE: um
+# `return 0,0` enquanto ela corria. Consequência: todo pulso menor que 0,27 s
+# produzia exatamente nada. A varredura de 05-08 mostrou o robô girando 32° com
+# pulso de 0,20 s e o simulador em 0,0°.
+
+def test_a_roda_so_responde_depois_da_latencia():
+    """Os 0,27 s medidos (n=4) são o tempo até a roda SAIR DO LUGAR. Antes
+    disso, nada chegou nela."""
+    p = Placa()
+    assert p.enfileira(100.0, 0.30, 1.20) is None, 'no instante do comando, nada'
+    assert p.enfileira(100.1, 0.30, 1.20) is None, 'a 0,1 s ainda nada'
+    assert p.enfileira(100.0 + PADRAO['latencia'] + 0.01, 0.30, 1.20) == (0.30, 1.20)
+
+
+def test_pulso_MAIS_CURTO_que_a_latencia_NAO_e_descartado():
+    """O defeito, em forma de teste. Pulso de 0,20 s contra latência de 0,27 s:
+    o comando acaba antes de a roda responder. O modelo antigo devolvia zero e
+    esquecia — o robô real gira 32° nessa condição.
+
+    Verificado por mutação: trocando a fila por `return None` enquanto
+    `agora - t0 < latencia`, este teste falha e o `test_a_roda_so_responde...`
+    continua passando. É este que trava o defeito.
+    """
+    p = Placa()
+    t0 = 100.0
+    for t in (t0, t0 + 0.05, t0 + 0.10, t0 + 0.15, t0 + 0.20):
+        p.enfileira(t, 0.30, 1.20)          # o pulso, todo dentro da latência
+    for t in (t0 + 0.25, t0 + 0.30, t0 + 0.40, t0 + 0.45):
+        chegou = p.enfileira(t, 0.0, 0.0)   # comando já zerado
+        if chegou is not None and chegou != (0.0, 0.0):
+            break
+    else:
+        raise AssertionError('o pulso curto foi DESCARTADO — é o defeito de 05-08')
+    assert chegou == (0.30, 1.20), 'o que chega na roda é o pulso, atrasado'
+
+
+def test_a_fila_nao_cresce_sem_limite():
+    """A fila é drenada a cada chamada: o que já chegou sai. Uma fila que só
+    cresce vira vazamento num nó que roda por horas."""
+    p = Placa()
+    for i in range(500):
+        p.enfileira(100.0 + i * 0.02, 0.30, 0.0)
+    assert len(p.fila) <= 1 + PADRAO['latencia'] / 0.02, (
+        f'fila com {len(p.fila)} entradas — está vazando')

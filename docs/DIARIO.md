@@ -3706,3 +3706,122 @@ dos três candidatos para a corrida `0.15-a` ter saído fraca (pico 0,51 contra
 **−0,8652**, fora da faixa da manhã, sugerindo que a planta enfraqueceu ~5% ao
 longo da tarde. Com `n=1` isso não estabelece deriva — mas se for real, vale
 0,046 1/m, **do mesmo tamanho do resíduo inteiro depois de compensar**.
+
+## 🔧 2026-08-05 (9ª leva) — O simulador ganha as duas pontas da placa, e o pivô ganha mecanismo
+
+Sessão de dev, sem robô. Alvo: a **terceira pendência** do `ESTADO` — *"o
+simulador desacelera 2× mais rápido por falta do atraso de desliga da placa
+(~0,5 s) — entrada estrutural, não é parametrização"*. Juiz: a varredura de
+pivô medida no robô nesta mesma manhã.
+
+Dados, leitura e a régua em `docs/dados/2026-08-05-aceitacao-atraso-desliga/`.
+
+### Três mudanças, cada uma obrigada por um dado
+
+1. **Atraso de desliga** no `placa_simulada` (0,52 s, de 04-08 n=3): depois do
+   comando zerar a placa continua empurrando.
+2. **A latência de liga deixou de DESCARTAR o comando.** Ela era um
+   `return 0,0` enquanto corria — uma janela em que o comando não existia.
+   Consequência que sobreviveu meses porque nada no projeto comandava pulso
+   curto: **todo pulso menor que 0,27 s produzia exatamente nada**. O robô gira
+   32° com pulso de 0,20 s. Virou **fila de atraso**: a placa entrega, a roda
+   responde depois.
+3. **`update_rate` do simulador 50 → 10 Hz, igual ao robô.** Não modela
+   fenômeno novo: **remove** uma divergência que estava documentada como
+   deliberada (*"no simulador não custa nada"* — custa).
+
+### 🔴 A taxa explicou o pivô, e corrige a conclusão da 8ª leva
+
+A 10 Hz o atuador só é atualizado a cada 100 ms: o tempo de comando não é
+contínuo, é **contado em ciclos**. Com 16,6° como o giro de um ciclo:
+
+```
+liga 0,20 = 2 ciclos -> 33,2° previsto, robô deu 30,3 a 35,8
+liga 0,30 = 3 ciclos -> 49,8° previsto, robô deu 48,0
+liga 0,15 = 1,5      -> 16,6 OU 33,2,   robô deu 16,6 e 33,4
+```
+
+E o número que fecha: **33,4 / 16,6 = 2,012**.
+
+**A entrada da 8ª leva (e o `ambiente.txt` da bancada) atribuem a
+não-repetibilidade do pivô à planta — "atrito de partida, queda de tensão da
+bateria, fase de comutação". Está errado.** A causa é a **fase do comando
+contra o laço de 10 Hz**, e a diferença de pico (0,51 contra 0,83) é
+*consequência* de ter recebido metade dos ciclos.
+
+Confirmado **por dentro do simulador**, com a retenção desligada para isolar a
+taxa:
+
+```
+liga 0,10 -> 1 ciclo       -> 0,8°   (3 de 3 iguais)
+liga 0,20 -> 2 ciclos      -> 3,0°   (3 de 3 iguais)
+liga 0,30 -> 3 ciclos      -> 6,8°   (3 de 3 iguais)
+liga 0,15 -> 1 OU 2 ciclos -> 0,8 · 3,0 · 0,0
+```
+
+Os múltiplos de 100 ms saem **perfeitamente repetíveis**; só o 0,15 espalha, e
+espalha exatamente entre os valores de 1 e de 2 ciclos.
+
+✅ **De quebra, o item 12c**: o `ESTADO` registrava *"o simulador é determinista
+demais... faz qualquer controlador parecer mais repetível do que vai ser"*. A
+bimodalidade veio junto com a taxa, sem ninguém pedir.
+
+### As duas aceitações
+
+**O arco (não podia regredir), n=3 por sentido — PASSOU e melhorou:**
+
+```
+              SIM 50 Hz    SIM 10 Hz    ROBÔ 04-08   ROBÔ 05-08
+frente        −0,817       −0,8199      −0,838       −0,9116
+ré            −0,109       −0,0938      −0,113       −0,0968
+razão           7,5×         8,74×        7,4×         9,4×
+```
+
+O medo declarado ao baixar a taxa era o **BO-4** (*"o contato da boba precisa de
+passo fino"*). **Não se concretizou.**
+
+**O pivô, n=3 por ponto — NÃO passou:**
+
+```
+liga       SIM média (faixa)      ROBÔ
+0,10 s     19,0 (19,0–19,1)        2,7   (n=1)
+0,15 s     21,8 (19,3–26,6)       27,8   (16,6–33,4)
+0,20 s     26,7 (23,2–30,4)       32,5   (30,3–35,8)
+0,30 s     30,2 (27,8–34,1)       48,0   (n=1)
+```
+
+O defeito que sobra tem assinatura clara: **a curva do simulador é chata
+demais** (19° com 1 ciclo, 30° com 3 — fator 1,6), enquanto o robô é **linear
+nos ciclos** (fator 3,0). A retenção ainda soma um bloco quase fixo (~0,26 s
+equivalentes, mesmo com o decaimento linear).
+
+### Por que paramos aqui
+
+**Os dois pontos em que o simulador mais discorda são exatamente os dois em que
+o robô tem n=1.** E o `0,10` é onde a hipótese da quantização **já prevê**
+bimodalidade — 2,7° é compatível com aquela corrida ter pego **zero** ciclos.
+Continuar reformando o modelo seria ajustar contra duas amostras únicas: a forma
+de erro que este projeto já pagou três vezes (a bitola em 29-07, a régua do
+planner em 29-07, e a hipótese dos "20 ms" na bancada desta manhã).
+
+➡️ **Prioridade da próxima ida ao robô**: repetir `liga 0,10` e `liga 0,30` com
+n=3. O `0,10` é uma **previsão falsificável** — se a quantização estiver certa,
+tem de sair bimodal (ora ~0°, ora ~16°).
+
+### Duas armadilhas de processo, minhas, nesta sessão
+
+- **`ros2 param set` não chega no nó.** O `placa_simulada` copia os parâmetros
+  para `self.par` no construtor e não tem callback — o `param get` respondia
+  `0.0` e o nó seguia com `0,52`. Uma varredura inteira foi descartada.
+- **Cinco `parameter_bridge` órfãos**, um de cada simulador da sessão,
+  sobreviveram aos `kill` (que miravam só `gz sim`, `sim.launch` e
+  `placa_simulada`). Como o `gz transport` descobre por rede, cada ponte
+  reencontrava o Gazebo novo e republicava `/Odometry`: **5 publicadores e
+  190 Hz** onde o normal é 1 e 46. Todas as varreduras intermediárias foram
+  descartadas. É a doença de 31-07, na máquina de dev.
+  **Conferência de saúde antes de medir passa a ser obrigatória**: 1 publicador
+  em `/Odometry`, taxa ~46 Hz, spawner sem falha.
+
+**513 testes verdes** (eram 503), dois dos novos verificados por mutação: com o
+descarte de volta só o teste do pulso curto falha; com a retenção segurando o
+valor cheio só o teste do decaimento falha.

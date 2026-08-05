@@ -34,6 +34,20 @@ controlador escolhe **não determina** a que ele quer; pivô tem de ser malha
 fechada no yaw. E a "zona morta de tempo abaixo de 0,4 s" que o simulador
 previu **não existe**: 0,3 s dão 48°.
 
+  ✅ **A CAUSA FOI ACHADA na 9ª leva do mesmo dia, e é QUANTIZAÇÃO** — não a
+  planta. O `controller_manager` roda a **10 Hz**, então o tempo de comando é
+  contado em **ciclos de 100 ms**: `liga 0,15 s` são 1,5 ciclos e a fase decide
+  se cabem 1 ou 2. Com 16,6° por ciclo, `0,20` = 2 ciclos (33,2° previsto,
+  30,3–35,8 medidos) e `0,30` = 3 ciclos (49,8° previsto, 48,0 medidos). E
+  **33,4 / 16,6 = 2,012**. Reproduzido dentro do simulador depois de igualar a
+  taxa. ⚠️ **Isto corrige o que o `ambiente.txt` da bancada e a 8ª leva do
+  diário dizem** (lá a causa foi atribuída a atrito de partida, bateria ou
+  comutação do motor).
+
+  ⏳ **Previsão falsificável para a próxima ida**: repetir `liga 0,10` com n=3.
+  Se a quantização estiver certa, tem de sair **bimodal** — ora ~0°, ora ~16°.
+  O único valor que temos (2,7°) é compatível com ter pego **zero** ciclos.
+
 🔴 **O ROBÔ REAL NÃO TEM MODELO GEOMÉTRICO (05-08).** O `tracao.launch.py`
 carrega o `diffbot.urdf.xacro`, que é o **exemplo de demonstração do
 `ros2_control`** (caixa 0,10×0,10×0,05, roda 0,015, bitola 0,10, duas bobas,
@@ -57,9 +71,29 @@ Conserto: compilar do fonte no nosso workspace, como o `setup_livox.sh` faz.
 - **Arco (1ª leva)**: frente −0,817 1/m (robô −0,838), ré −0,109 (robô −0,113)
 - **Pico de wz (3ª leva, planta normal)**: 2,25 rad/s (robô 2,33)
 - As duas maiores grandezas de fidelidade estão dentro da dispersão da máquina.
-- **Terceira pendência (sobrepasso):** o simulador desacelera 2× mais rápido por
-  falta do atraso de desliga da placa (~0,5 s) — entrada estrutural, não é
-  parametrização. Deixa para depois da dispersão (item 12c).
+- ~~**Terceira pendência (sobrepasso):** o simulador desacelera 2× mais rápido
+  por falta do atraso de desliga da placa (~0,5 s).~~ ✅ **ENTROU em 05-08 (9ª
+  leva)**, junto com duas outras correções que o dado obrigou —
+  `docs/dados/2026-08-05-aceitacao-atraso-desliga/`:
+  1. **atraso de desliga** (0,52 s, decaindo — segurar o valor cheio deixava o
+     simulador dando ~37° para 1, 1,5 **e** 2 ciclos de comando);
+  2. **a latência de liga deixou de DESCARTAR o comando** — era um `return 0,0`
+     que fazia **todo pulso menor que 0,27 s produzir exatamente nada**, e o
+     robô gira 32° com pulso de 0,20 s. Virou fila de atraso;
+  3. **`update_rate` 50 → 10 Hz, igual ao robô** — remove uma divergência que
+     estava documentada como deliberada.
+
+  **Arco (n=3): PASSOU e melhorou** — ré de −0,109 para −0,0938 (robô: −0,0968),
+  razão 7,5× → **8,74×** (robô: 7,4× em 04-08, 9,4× em 05-08). O medo do BO-4
+  ao baixar a taxa não se concretizou.
+  **Pivô (n=3): NÃO passou** — o simulador é chato demais (19° com 1 ciclo, 30°
+  com 3; o robô é linear, fator 3,0). Parado de propósito: os dois pontos em
+  que ele mais discorda são os dois em que o **robô tem n=1**.
+
+- ✅ **O item 12c (dispersão) veio de graça com a taxa.** O `ESTADO` registrava
+  "o simulador é determinista demais". Com 10 Hz ele ficou **bimodal como o
+  robô**: tempos múltiplos de 100 ms saem repetíveis, e `liga 0,15 s` (1,5
+  ciclos) espalha exatamente entre os valores de 1 e de 2 ciclos.
 
 ---
 
