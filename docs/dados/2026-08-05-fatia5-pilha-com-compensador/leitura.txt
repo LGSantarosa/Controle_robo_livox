@@ -1,0 +1,70 @@
+fatia 5 da decisao 011 — o compensador entra na pilha, e o PIVO some
+=====================================================================
+
+O que a fatia 5 fez: pos o compensador_rumo na cadeia do Nav2, e consertou
+um defeito que estava escondido nela.
+
+    ANTES:  heading_controller --> /hoverboard_base_controller/cmd_vel
+    AGORA:  heading_controller --> /compensador_rumo/cmd_vel
+                              --> compensador_rumo
+                              --> /cmd_vel_bruto (sim) ou direto (robo)
+                              --> [placa fingida] --> diff_drive
+
+⚠️ O DEFEITO QUE ESTAVA ESCONDIDO: o pilha.launch.py NAO remapeava a saida
+para /cmd_vel_bruto no simulador. O navegacao.launch.py fazia; este nao. Ou
+seja **toda corrida de pilha no Gazebo ate 05-08 passou POR FORA da placa
+fingida** — mediu um atuador perfeito, sem patamar, sem latencia, sem
+assimetria. E o mesmo defeito que o ensaio.py tinha ate o --topico de 04-08.
+Os resultados de pilha de 29-07 e 01-08 herdam essa ressalva.
+
+
+O RESULTADO: A PILHA ANDA, MAS NAO SEGUE O PLANO
+-------------------------------------------------
+Alvo reto, 4,05 m ao sul, corredor livre:
+
+    caminho 5,47 m para reta de 4,05 m  =  1,35x
+    parou a 3,91 m do alvo  (falhou)
+    numa repeticao anterior: 1,59x, parou a 0,31 m, desvio lateral 0,80 m
+
+A CAUSA, apontada pelo dono ao ver a tela e confirmada no dado:
+
+>>> GIRO PARADO: 5 amostras de 1137  (0,4%)
+
+    amostras girando forte (|wz|>0,2 rad/s): 104
+    velocidade LINEAR mediana enquanto gira: 0,32 m/s
+    raio de curva realizado, mediana:        0,82 m
+
+**Ele nao para para girar.** Toda vez que o plano pede uma virada, ele vira
+ANDANDO, e a virada vira arco de 0,82 m. O plano do Smac em DUBIN e feito
+para raio 0,37 m; o robo entrega 0,82 m. O caminho realizado nao pode
+coincidir com o planejado, e o seguidor passa a corrigir um erro que ele
+mesmo gera.
+
+Isto NAO e defeito do compensador nem da fatia 5. E a fatia 3 (pivo por
+corte previsto) faltando. Bate com 29-07, que ja tinha achado "0 amostras
+de giro parado em 2714" no perfil pessimista.
+
+
+A CADEIA DE COMANDO, MEDIDA
+----------------------------
+                     mediana    max
+    wz PEDIDO         0,000    0,438     (heading_controller)
+    wz ENTREGUE       0,147    0,513     (compensador: ff + PI)
+    wz REALIZADO      0,040    0,509     (o robo, pela pose)
+
+O compensador esta agindo (entrega 0,147 onde o pedido e 0,000 — e o
+feedforward cancelando o arco). E o robo realiza 0,040: ele de fato anda
+mais reto do que andaria sozinho. A fatia 1 funciona dentro da pilha.
+
+O que nao funciona e a manobra de VIRAR.
+
+
+O QUE FICA COMO LINHA DE BASE DA FATIA 3
+------------------------------------------
+nav-alvo-reto-baseline.csv: 1137 amostras com, por linha,
+  t, x, y, yaw, v_ped, wz_ped, v_ent, wz_ent, v_real, wz_real
+ou seja o comando PEDIDO pelo heading_controller, o ENTREGUE pelo
+compensador e o REALIZADO pelo robo, lado a lado. Quando a fatia 3 fechar,
+esta corrida se repete e as tres colunas dizem se melhorou e onde.
+
+Numero-alvo a derrubar: **0,4% de giro parado** e **1,35x de caminho**.

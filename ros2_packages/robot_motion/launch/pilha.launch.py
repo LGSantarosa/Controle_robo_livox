@@ -18,7 +18,18 @@ A cadeia, e de quem é cada pedaço:
                                                                  ↓
                                                  heading_controller  (nosso)
                                                                  ↓
+                                              /compensador_rumo/cmd_vel
+                                                                 ↓
+                                                 compensador_rumo  (nosso)
+                                                                 ↓
+                              /cmd_vel_bruto (sim) ou direto (robô)
+                                                                 ↓
                                     /hoverboard_base_controller/cmd_vel
+
+O `compensador_rumo` (decisão 011) é a última camada antes do atuador: ele
+existe porque o robô comandado a ir RETO descreve um círculo de 1,22 m de raio
+(−0,817 1/m de frente, −0,098 de ré, medidos em 04-08). Corrigir isso é
+problema de todo comandante, então mora fora de todos eles.
 
 O `controller_server` do Nav2 sobe junto e é IGNORADO de propósito: a árvore de
 comportamento padrão usa `FollowPath` e sem esse servidor ela falha, levando o
@@ -37,7 +48,7 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, LogInfo
-from launch.conditions import IfCondition
+from launch.conditions import IfCondition, UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
@@ -82,6 +93,12 @@ def generate_launch_description():
         DeclareLaunchArgument('sim', default_value='false',
                               description='true sobe o Gazebo junto'),
         DeclareLaunchArgument('mapa', default_value=MAPA_PADRAO),
+        # `mundo` separado de `mapa` de propósito: é fazendo os dois
+        # DISCORDAREM que se testa percepção. Mundo com um obstáculo que o
+        # mapa não tem = o desvio só pode vir do sensor. Com os dois iguais
+        # (o padrão, os dois saem de `gera_pista.py`) o robô poderia estar
+        # desviando de memória e ninguém saberia.
+        DeclareLaunchArgument('mundo', default_value=MUNDO_PADRAO),
         DeclareLaunchArgument('rviz', default_value='true'),
         DeclareLaunchArgument(
             'placa', default_value='medido',
@@ -96,7 +113,8 @@ def generate_launch_description():
             condition=IfCondition(sim),
             # Nasce num ponto LIVRE da pista: a origem cai dentro da parede do
             # perímetro, que começa em 0.
-            launch_arguments={'mundo': MUNDO_PADRAO, 'x': '2.0', 'y': '5.0',
+            launch_arguments={'mundo': LaunchConfiguration('mundo'),
+                              'x': '2.0', 'y': '5.0',
                               'placa': placa}.items(),
         ),
 
@@ -130,9 +148,40 @@ def generate_launch_description():
              parameters=[{'use_sim_time': sim}]),
 
         # ------------------------------------------------------- os nossos
+        #
+        # A cadeia de comando, e por que ela tem esta forma (decisão 011):
+        #
+        #   heading_controller  --/compensador_rumo/cmd_vel-->
+        #   compensador_rumo    --/cmd_vel_bruto (sim) ou direto (robô)-->
+        #   [placa fingida, só no sim] --> diff_drive_controller
+        #
+        # O compensador é a ÚLTIMA camada antes do atuador de propósito: ele
+        # corrige fidelidade de comando (o robô comandado reto arca −0,82 1/m),
+        # e isso vale para QUALQUER comandante. Pôr o Nav2 ou o
+        # heading_controller para brigar com o arco sozinhos é o que a fatia 1
+        # tornou desnecessário.
         Node(package='robot_motion', executable='heading_controller',
              name='heading_controller', output='both',
-             parameters=[mov_params, {'use_sim_time': sim}]),
+             parameters=[mov_params, {'use_sim_time': sim}],
+             remappings=[('/hoverboard_base_controller/cmd_vel',
+                          '/compensador_rumo/cmd_vel')]),
+
+        # ⚠️ No simulador o comando TEM de passar pela placa fingida
+        # (`/cmd_vel_bruto`), como já fazia o `navegacao.launch.py`. Esta
+        # launch NÃO fazia: publicava direto no controlador e pulava a placa,
+        # então toda corrida de pilha no Gazebo até 05-08 mediu um atuador
+        # PERFEITO — sem patamar, sem latência, sem assimetria. É o mesmo
+        # defeito que o `ensaio.py` tinha e que o `--topico` consertou.
+        Node(package='robot_motion', executable='compensador_rumo',
+             name='compensador_rumo', output='both',
+             parameters=[{'use_sim_time': sim}],
+             remappings=[('/hoverboard_base_controller/cmd_vel',
+                          '/cmd_vel_bruto')],
+             condition=IfCondition(sim)),
+        Node(package='robot_motion', executable='compensador_rumo',
+             name='compensador_rumo', output='both',
+             parameters=[{'use_sim_time': sim}],
+             condition=UnlessCondition(sim)),
         Node(package='robot_motion', executable='path_follower',
              name='path_follower', output='both',
              parameters=[{'use_sim_time': sim}],

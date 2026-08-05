@@ -3157,3 +3157,61 @@ mutação.
 **462 testes verdes.** O `test_massa_total` foi atualizado: o robô ganhou os
 265 g do Mid-360, e essa é a única massa do modelo que vem de folha de
 fabricante em vez de chute.
+
+## 🔗 2026-08-05 (2ª leva) — A fatia 5 liga o compensador, e expõe o pivô que falta
+
+O dono cortou a ida para percepção com razão de método ("eu sequer vi ele
+andando com Nav2 reto, imagina desviando"). A camada de voxel do costmap foi
+**revertida** — config ligada e não provada é como alguém confia nela por
+engano — e a fatia 5 entrou no lugar. Dado em
+`docs/dados/2026-08-05-fatia5-pilha-com-compensador/`.
+
+### O defeito que estava escondido na pilha há uma semana
+
+O `pilha.launch.py` **não remapeava a saída para `/cmd_vel_bruto` no
+simulador**. O `navegacao.launch.py` fazia; este não. Ou seja: **toda corrida
+de pilha no Gazebo até hoje passou por fora da placa fingida** — mediu um
+atuador perfeito, sem patamar, sem latência, sem assimetria. É o mesmo
+defeito que o `ensaio.py` tinha até o `--topico` de 04-08, e agora os
+resultados de pilha de 29-07 e 01-08 herdam essa ressalva.
+
+### A cadeia nova, e o que ela mede
+
+```
+heading_controller → /compensador_rumo/cmd_vel → compensador_rumo
+                   → /cmd_vel_bruto → placa fingida → diff_drive
+```
+
+```
+                mediana    max
+wz PEDIDO        0,000    0,438     (heading_controller)
+wz ENTREGUE      0,147    0,513     (compensador: ff + PI)
+wz REALIZADO     0,040    0,509     (o robô, pela pose)
+```
+
+**A fatia 1 funciona dentro da pilha**: o compensador entrega 0,147 onde o
+pedido é zero — é o feedforward cancelando o arco — e o robô realiza 0,040.
+
+### O que NÃO funciona, apontado pelo dono na tela e confirmado no dado
+
+```
+>>> GIRO PARADO: 5 amostras de 1137  (0,4%)
+    girando forte (|wz|>0,2): 104 amostras
+    velocidade linear mediana enquanto gira: 0,32 m/s
+    raio de curva realizado:                 0,82 m
+```
+
+**Ele não para para girar.** Toda virada que o plano pede vira arco de
+0,82 m. O Smac planeja em DUBIN para raio 0,37 m; o robô entrega 0,82 m — o
+caminho realizado não pode coincidir com o planejado, e o seguidor passa a
+corrigir um erro que ele mesmo gera. Resultado: 1,35× de caminho e uma
+navegação que parou a 3,91 m do alvo.
+
+Isso **não é defeito do compensador nem da fatia 5**: é a **fatia 3**
+faltando. Bate com 29-07, que já tinha achado "0 amostras de giro parado em
+2714" no perfil pessimista — e agora, com a placa no caminho pela primeira
+vez, o número reaparece medido de ponta a ponta.
+
+**Linha de base gravada** (1137 amostras com pedido, entregue e realizado
+lado a lado): os números a derrubar são **0,4% de giro parado** e **1,35× de
+caminho**.
