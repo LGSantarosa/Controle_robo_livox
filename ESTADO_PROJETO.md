@@ -10,6 +10,55 @@
 
 ---
 
+## 🤖 06-08 (tarde) — O ROBÔ CONFIRMOU: o S morre com os ganhos novos
+
+**18 corridas na cerâmica da sala**, bateria 41,16 → 40,92 V. Tudo o que estava
+"previsto e nunca visto no robô" foi visto. Dados em `docs/dados/2026-08-06-*`.
+
+🟢 **A previsão principal PASSOU — a oscilação divergente acabou.**
+
+```
+                 invs   período medido   envoltória 1ª→2ª
+VELHOS  (1,0/0,5)  1,2,2     2 de 3        2,13× 2,53× 1,87×  cresce
+NOVOS  (0,25/0,12) 0,1,0     0 de 3        monotônico / 0,58×
+```
+
+A evidência limpa é o **período**, e vem do `mede_o_s`: medido em 2 das 3
+corridas velhas (2,28 e 2,44 s, dentro dos 2,2–2,4 s de 05-08) e em **nenhuma**
+das novas. Sem período não há ciclo. O controle do dia reproduziu 05-08 quase
+exato (1,87–2,53× contra 1,86–2,18×) — a comparação é **interna**, não entre
+dias. O dono, a olho: *"faz um S mas tá reto, tá bom."*
+
+🔴 **Mas o arco NÃO é do laço, e sobrou inteiro.** `|curvatura|` deu 0,0764
+(novos) contra 0,0707 (velhos) — a mesma coisa. Baixar o ganho 4,1× não mexeu
+nela, porque ela vem do `ff` (−0,817 1/m, idêntico nas duas). O limiar
+`< 0,05` do plano mede erro de **feedforward**, não estabilidade. ➡️ **Acertar
+o `curv_frente` é hoje o conserto de maior valor do projeto.**
+
+🟢 **O pivô é bimodal, como a quantização de 10 Hz previa.** `liga 0,10` (1
+ciclo) variou **13×** entre corridas idênticas (2,2 · 3,3 · 29,7°); `liga 0,30`
+(3 ciclos) ficou em ±8% (59,2 · 67,6 · 69,7°). ⚠️ O modo alto deu ~30°, não os
+~16° previstos — o modelo acerta a **estrutura** e erra a **escala** por ~2×.
+
+🟡 **O preditor de Smith EMPATOU** (invs 1,0,1; nenhum período), contrariando a
+bancada onde perdia claro. **O desempate não coube na sala**: sustentada ×
+assenta só aparece em corrida longa, e a trava de 1,2 m corta em 4,7 s. Fica
+desligado — em empate ganha quem não depende de modelo, ainda mais com o pivô
+mostrando o modelo errando escala por 2×.
+
+🔵 **Hipótese retirada:** o S era do laço, não da boba (BO-4).
+
+🔴 **OS TESTES C E D FALHARAM, e o D tem causa única: falta o TF `odom →
+base_link`.** O FAST-LIO publica `/Odometry` como mensagem e não a
+transformada. A árvore TF parte em dois, o `planner_server` não ativa, o
+`lifecycle_manager` **aborta o bringup** e leva o `collision_monitor` junto —
+ativado na mão, ele recebe e não publica nem zero, porque não consegue
+transformar a nuvem. Sensor bom, nuvem a 8 Hz, cadeia de tópicos inteira.
+**Falta uma transformada.** No teste C, o teleop não publicou **nada** em
+`/key_vel` (44 s de CSV, zero amostras dessa fonte).
+
+---
+
 ## 🎚️ 06-08 — O S tem mecanismo, número e conserto projetado
 
 🔴 **A OSCILAÇÃO DO ROBÔ CRESCE — é instabilidade, não transiente.** Olhando a
@@ -185,35 +234,46 @@ Nenhuma lib do sistema é tocada.
 
 ## 📋 A PRÓXIMA IDA AO ROBÔ — tudo o que está esperando máquina
 
-➡️ **O roteiro de operação, passo a passo, está em
-`docs/PROXIMA_SESSAO_NO_ROBO.md`** — escrito para o assistente que chegar frio,
-começando pelo método de trabalho e pelo passo bloqueante. É o documento a abrir
-quando o dono disser que chegou no robô.
+> Atualizado depois da sessão de **06-08**, que rodou 18 corridas. Os itens 1, 2
+> e 5 da lista antiga **foram fechados**; o 3 e o 4 falharam, e por motivos que
+> agora têm causa. O roteiro de operação (`docs/PROXIMA_SESSAO_NO_ROBO.md`)
+> segue válido no **método** — o que mudou foi a lista de experimentos.
 
-Em ordem de valor. O roteiro completo de cada um está nos planos citados.
+🔴 **O conserto de maior valor NÃO precisa de robô ligado para ser escrito.**
+Dois dos três bloqueios de hoje são de dev:
 
-```
-0. deploy: bundle -> colcon build -> ./setup_twist_mux.sh (uma vez, só o C/D)
-1. sessao.py --checar   🔴 OBRIGATÓRIO: wheel_separation TEM de dar 0,2700.
-                        A descrição do robô mudou em 05-08 e isso nunca rodou lá.
-                        Se não bater, PARE — nenhum número da sessão vale.
-```
-
-| # | o que | por quê é o mais valioso | onde |
+| # | o que | por quê | onde |
 |---|---|---|---|
-| 1 | **sintonia do rumo**: ganhos novos (0,25/0,12) × antigos (1,0/0,5), n=3 | previsão falsificável: a amplitude tem de **decair** em vez de crescer | `PLANO_SINTONIA_RUMO.md` |
-| 2 | **pivô `liga 0,10` e `0,30`, n=3** | previsão falsificável: o `0,10` tem de sair **bimodal** (~0° ou ~16°). São os dois pontos onde o simulador mais discorda, e onde só há n=1 | `PLANO_TESTE_ROBO.md` §1 |
-| 3 | **teste C, item 1** (homem-morto) | único teste cuja falha é *pior que não ter a função* | `PLANO_TESTE_ROBO.md` §1 |
-| 4 | **teste D** (reflexo) — **caixa de 50 cm** | destravado em 05-08 (o `livox_frame` passou a existir) | `PLANO_TESTE_ROBO.md` §1 |
-| 5 | **preditor de Smith**, se sobrar | 3 corridas desempatam; se perder, fica desligado para sempre | `PLANO_SINTONIA_RUMO.md` §4 |
-| 6 | **vídeo da traseira** durante o S | critério (b) do BO-4, aberto desde 28-07. Filmado em 04-08 e **nunca trazido para o repo** — é o item mais barato que falta | BO-4 |
+| 1 | **TF `odom → base_link`** | o FAST-LIO publica `/Odometry` como mensagem e **não** publica a transformada. A árvore TF fica partida, o `planner_server` não ativa, o `lifecycle_manager` **aborta o bringup inteiro** e leva o `collision_monitor` junto. Bloqueia Nav2 **e** o teste D | DIÁRIO 06-08 (3ª leva) |
+| 2 | **`curv_frente` errado** | sobra arco de ~0,08 1/m depois de compensar, idêntico com ganhos novos e velhos — é erro de **feedforward**, e nenhum ganho corrige. A corrida `novos-a` assentou a 6,81°, contra os ~6,8° previstos | decisão 011 |
+| 3 | **teleop não publica em `/key_vel`** | 44 s de gravação, **zero** amostras dessa fonte. Não é o `le_tecla()` — é antes disso | `homem_morto.py` |
+| 4 | **`bin/robot-key` com `set -u`** | briga com `COLCON_TRACE` e `AMENT_TRACE_SETUP_FILES` dos `setup.bash`. Uma linha | — |
 
-🔴 **PISO E BATERIA, e desta vez não é burocracia.** Ficaram `NÃO INFORMADO` em
-04-08 **e** em 05-08. Na sintonia do rumo a bateria é candidata direta a
-explicar diferença entre valores de ganho, e sem ela uma varredura ao longo de
-uma tarde **não é comparável consigo mesma** — a linha de base repetida no fim
-de 05-08 já sugeriu ~5% de queda de planta na sessão, que vale 0,046 1/m, do
-tamanho do resíduo inteiro depois de compensar.
+**Só depois disso vale voltar ao robô**, e aí a lista é curta:
+
+```
+0. deploy: bundle -> colcon build   (o twist_mux JÁ está compilado no NUC)
+1. sessao.py --checar   🔴 wheel_separation TEM de dar 0,2700 (passou em 06-08,
+                        reconferir: o NUC reinicia junto com o robô)
+```
+
+| # | o que | por quê | onde |
+|---|---|---|---|
+| 1 | **teste C item 1** (homem-morto) | único teste cuja falha é *pior que não ter a função*. Agora com gravador: `tools/banco/homem_morto.py` mede os três intervalos em CSV | `PLANO_TESTE_ROBO.md` §1 |
+| 2 | **teste D** (reflexo) | **bloqueado até o TF existir.** O plano está errado ao listá-lo como executável sem `map` | `PLANO_TESTE_ROBO.md` §1 |
+| 3 | **desempate do preditor** | empatou em 06-08; precisa de **corredor longo** — a sala não deu. Sustentada × assenta só aparece em corrida longa | `PLANO_SINTONIA_RUMO.md` §4 |
+| 4 | **`heading_controller`: pivô indisponível** | ele recusa girar parado (pediria 1,48 rad/s, teto 1,00), mas a máquina **faz** 69,7° com `liga 0,30`. Quem recusa é o teto, não o robô | `movimentacao.yaml` |
+| 5 | **vídeo da traseira** | segue barato; deixou de ser urgente (o S era do laço) | BO-4 |
+
+⚠️ **O NUC CAI JUNTO COM O ROBÔ.** Parecia ter alimentação separada; não tem.
+Em 06-08 um deploy morreu no meio (`No route to host`) e o NUC voltou com
+`up 0 min`. Salve em levas para o `origin` — foi o que impediu perda hoje. E
+`/tmp/logs` **não sobrevive**: recriar antes de qualquer `nohup`.
+
+🟢 **PISO E BATERIA: resolvido em 06-08.** Cerâmica da sala, 41,16 → 40,92 V,
+gravados no `ambiente.txt` de cada pasta de dados. A queda de 0,24 V ao longo de
+18 corridas mostra que a suspeita de deriva de planta por bateria **não se
+materializou** nesta sessão — as duas condições da sintonia são comparáveis.
 
 ---
 

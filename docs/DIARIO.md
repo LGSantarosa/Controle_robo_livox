@@ -4194,3 +4194,190 @@ fazendo `yaw_efetivo` devolver o yaw cru, só o teste do sino falha.
 ➡️ `PLANO_SINTONIA_RUMO.md` ganhou a seção do preditor: se sobrar sessão, três
 corridas desempatam. Se ele não ganhar no robô, fica desligado para sempre e
 isso vira registro.
+
+## 🤖 2026-08-06 (3ª leva) — A ida ao robô: o S morre, o pivô é bimodal, e o teste D cai por falta de uma transformada
+
+Sessão de bancada na cerâmica da sala, bateria 41,16 → 40,92 V. **Dezoito
+corridas.** As três previsões que o dia foi testar tinham resposta ao fim da
+tarde, e duas passaram.
+
+### 🟢 O passo bloqueante passou
+
+`wheel_separation = 0.2700` **no robô**. A descrição nova (`robo2.urdf.xacro`)
+foi trocada em 05-08 e nunca tinha rodado na máquina; comparar xacro no dev não
+é verificação no robô, e bitola errada enviesaria tudo sem sintoma nenhum.
+Reconferido depois do reboot no meio da sessão, em vez de assumir que seguia
+válido.
+
+### 🟢 Os ganhos reduzidos 4,1× matam a oscilação divergente
+
+Seis corridas de reta, três por condição, com o compensador **morto e subido de
+novo** entre elas (`param set` não pega nesse nó) e a primeira linha do log
+conferida nas duas.
+
+```
+                 invs   período medido   envoltória 1ª→2ª
+VELHOS  a          1      —                2,13×  cresce
+        b          2     2,28 s            2,53×  cresce
+        c          2     2,44 s            1,87×  cresce
+NOVOS   a          0      —                monotônico
+        b          1      —               (2,03× é deriva, não ciclo)
+        c          0      —                0,58×  decai
+```
+
+**A evidência limpa é o período, e ela vem do `mede_o_s`, não de script novo:**
+medido em 2 das 3 corridas velhas (2,28 e 2,44 s, dentro dos 2,2–2,4 s de
+05-08) e em **nenhuma** das novas. Sem período não há ciclo.
+
+O controle do dia reproduziu 05-08 quase exato (1,87–2,53× hoje contra
+1,86–2,18× então): a comparação é **interna**, não entre dias — que era a
+armadilha de uma varredura ao longo de uma tarde.
+
+O dono, a olho: *"ele tá fazendo um S mas tá reto, tá bom."* Em 05-08 o mesmo
+olho viu o S divergir.
+
+### 🔴 O critério de curvatura falhou nas duas condições — e agora se sabe por quê
+
+```
+NOVOS   média 0,0764   faixa 0,023–0,108
+VELHOS  média 0,0707   faixa 0,032–0,107
+```
+
+São a mesma coisa. Baixar o ganho 4,1× **não mexeu na curvatura**, porque o
+arco não vem do laço: vem do `ff`, idêntico nas duas condições (−0,817 1/m). O
+limiar `|curvatura| < 0,05` mede erro de **feedforward**, não estabilidade —
+ele nunca ia separar essas condições. A corrida `novos-a` assentou em **6,81°**,
+contra os "~6,8°" que o `ESTADO_PROJETO` previu para o ff 25% errado.
+
+➡️ O conserto é acertar o `curv_frente`. Nenhum ganho corrige isso.
+
+**Hipótese retirada:** o S era do laço, não da boba (BO-4). O vídeo da traseira
+continua valendo, mas deixou de ser urgente.
+
+### 🟢 O pivô é bimodal em `liga 0,10` e unimodal em `liga 0,30`
+
+```
+              giro    pico   t_parar
+liga0.10-a    3,3°    0,12    0,76
+liga0.10-b    2,2°    0,11    0,86     BIMODAL — 2,2 a 29,7°  (13×)
+liga0.10-c   29,7°    0,89    1,38
+liga0.30-a   69,7°    1,49    1,94
+liga0.30-b   67,6°    1,52    2,16     UNIMODAL — 59,2 a 69,7°  (±8%)
+liga0.30-c   59,2°    1,44    1,86
+```
+
+Mesma máquina, mesma tarde, só muda a largura do pulso. Com 1,0 ciclo do laço a
+fase decide e o giro se parte em dois modos separados por 13×; com 3,0 ciclos
+ele se repete dentro de ±8%. É a assinatura da quantização de 10 Hz.
+
+**O pico de `wz` separa os regimes melhor que a amplitude**: nas corridas baixas
+o pico foi 0,11–0,12 rad/s contra os **0,6 comandados** — o pulso morreu antes
+de vencer a inércia — e na alta foi 0,89, **acima** do comandado.
+
+⚠️ **Ressalva ao modelo:** o modo alto deu ~30°, não os ~16° previstos. Quase o
+dobro, compatível com pegar 2 ciclos e não 1. O modelo acerta a **estrutura** e
+erra a **escala** por ~2×. O próximo refino do simulador tem alvo.
+
+A amostra única de 05-08 (2,7°) era do modo baixo. Com n=1 a conclusão teria
+sido "nada mudou" — a armadilha do roteiro, confirmada na prática.
+
+### 🟡 O preditor de Smith EMPATA no robô — e o desempate não coube na sala
+
+```
+                    invs   período medido   amp média   curvatura
+VELHOS  1.0/0.5     1,2,2      2 de 3         12,5°       0,0707
+PREDITOR 1.0/0.5    1,0,1      0 de 3          9,0°       0,0882
+NOVOS   0.25/0.12   0,1,0      0 de 3          8,6°       0,0764
+```
+
+Contraria a bancada matemática, onde ele perdia claro. No robô os dois são
+indistinguíveis dentro do espalho, e **ambos** matam a divergência.
+
+🔴 **O que o empate não resolve, e isto é o resultado honesto:** a diferença
+prevista é entre ondulação **sustentada** e **assentar**, e ela só aparece em
+corrida **longa** — o próprio `mede_o_s` avisa que `invs` depende da duração.
+Todas as corridas de hoje duram 4,7–5,0 s porque a trava de 1,2 m corta, e a
+cerâmica da sala não dá mais espaço. **O desempate que a sessão foi buscar não
+coube no espaço disponível.**
+
+**Decisão provisória:** preditor fica desligado. Em empate técnico ganha a opção
+que não depende de modelo — e o próprio nó imprime isso ao subir. Reforça a
+escolha o pivô de hoje ter mostrado o modelo errando escala por ~2×. Não é
+"desligado para sempre": o critério que fecharia a questão exige corredor longo.
+
+### 🔴 O teste C falhou, e meu primeiro diagnóstico estava errado
+
+O `bin/robot-key` **não sobe**: o script tem `set -u` e os `setup.bash` do
+colcon/ament leem variáveis sem default (`COLCON_TRACE`,
+`AMENT_TRACE_SETUP_FILES`, e seguiria). Contornado rodando o `ros2 run` direto.
+
+Com o teleop no ar e o dono no teclado, **nada aconteceu no robô**. O gravador
+novo (`tools/banco/homem_morto.py`, escrito nesta sessão com o robô desligado)
+fechou a questão — e desmentiu o que eu tinha afirmado:
+
+```
+amostras por fonte: {'roda': 439}    em 44 s
+```
+
+Eu havia dito que "o teleop está vivo publicando zeros e não lê as teclas".
+**Errado.** `/key_vel` não publicou **nada**, nem zero — não há uma única
+amostra dessa fonte no CSV. O defeito não está no `le_tecla()`; está antes
+disso, no teleop não chegar a publicar. Fica em aberto, com dado.
+
+### 🔴 E o teste D cai por falta de UMA transformada
+
+O robô não saiu do lugar (3 mm com comando de 0,25 m/s). Foram três hipóteses,
+duas derrubadas por medida:
+
+1. *o reflexo parou* — **não**: a zona é `x ∈ [−0,28, +0,49]` e a cadeira estava
+   a ~1,1 m, fora dela;
+2. *o `heading_controller` disputava `/auto_vel_raw` publicando zero* — plausível
+   (ele publica lá), morto para testar, **e o robô continuou parado**;
+3. **a raiz**: não existe TF `odom → base_link`.
+
+```
+odom -> base_link        : "frame does not exist" / árvores desconectadas
+base_link -> livox_frame : OK, 0,420 m        ← o lidar no lugar medido
+/livox/lidar             : 8 Hz               ← a nuvem está viva
+```
+
+O FAST-LIO publica `/Odometry` **como mensagem** e não publica a transformada.
+Sem ela a árvore TF fica partida, e cai em cascata: o `planner_server` não
+ativa, o **`lifecycle_manager` aborta o bringup inteiro**, e o
+`collision_monitor` — que está na mesma lista — nunca é ativado. Ativado na mão
+(`inactive` → `active`), ele passou a receber e **continuou sem publicar nada,
+nem zero**, porque precisa transformar a nuvem para o corpo
+(`base_shift_correction: True`).
+
+⚠️ **O `PLANO_TESTE_ROBO` está errado ao listar o teste D como executável hoje.**
+Ele diz que o reflexo "não sabe o que é `map`" — verdade sobre o algoritmo,
+falso sobre a operação: o `collision_monitor` está amarrado ao mesmo
+`lifecycle_manager` que o Nav2 derruba.
+
+Sensor bom, nuvem boa, cadeia de tópicos inteira e conectada (conferida elo a
+elo com `topic info -v`). Falta uma transformada.
+
+### Achados de infra que custaram tempo hoje
+
+- **O NUC cai junto com o robô.** Ele parecia ter alimentação separada; não tem.
+  Um deploy morreu no meio (`No route to host`) e o NUC voltou com `up 0 min`.
+  Nada foi perdido porque os dados iam para o `origin` em levas.
+- **`/tmp/logs` não sobrevive ao reboot** — o `nohup` falhou silenciosamente e a
+  base não subiu; o `--checar` reprovou e recusou medir, que é para o que existe.
+- **`pgrep` casando com a própria linha do ssh**, de novo, agora com
+  `teleop_teclado`. O colchete protege contra o `pgrep`, não contra o resto do
+  comando. `ros2 node list` foi a leitura confiável.
+- **`pkill` matando a própria sessão ssh** antes de derrubar a pilha. Matar por
+  PID, como manda a lição das três pilhas órfãs.
+
+### O que a sessão deixa aberto
+
+| item | estado |
+|---|---|
+| `curv_frente` errado (~0,08 1/m de arco) | **o conserto de maior valor**; nenhum ganho resolve |
+| TF `odom → base_link` | bloqueia Nav2, `collision_monitor` e o teste D inteiro |
+| teleop não publica em `/key_vel` | teste C item 1 pendente, agora com dado |
+| `bin/robot-key` com `set -u` | uma linha |
+| desempate do preditor | precisa de corredor longo |
+| `heading_controller`: pivô indisponível | pede 1,48 rad/s, teto 1,00 — e o robô **faz** 69,7° com `liga 0,30` |
+| vídeo da traseira | segue barato, deixou de ser urgente |
