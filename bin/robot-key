@@ -14,6 +14,19 @@ cd "$REPO_DIR"
 
 # SSH não-interativo não lê o ~/.bashrc → ROS pode não estar sourceado.
 # Tenta o workspace primeiro; senão cai pra distro base (/opt/ros/*/setup.bash).
+#
+# ⚠️ `set -u` FICA SUSPENSO aqui, e não é frescura: os setup.bash do colcon e do
+# ament leem variáveis sem default (`COLCON_TRACE`, `AMENT_TRACE_SETUP_FILES`, e
+# não são só essas). Com `-u` ligado o script morre na primeira delas, ANTES de
+# o teleop existir. Em 06-08 isso impediu o teste do homem-morto de rodar:
+#
+#     install/setup.bash: line 11: COLCON_TRACE: unbound variable
+#     /opt/ros/jazzy/local_setup.bash: line 8: AMENT_TRACE_SETUP_FILES: unbound
+#
+# Definir cada variável na mão seria correr atrás de uma lista que é do
+# upstream. Suspender o `-u` só no trecho do source é o escopo certo — ele volta
+# logo abaixo, e o `command -v ros2` continua sendo quem decide se deu certo.
+set +u
 if [ -f install/setup.bash ]; then
     # shellcheck disable=SC1091
     source install/setup.bash
@@ -23,6 +36,7 @@ else
         [ -f "$d" ] && source "$d" && break
     done
 fi
+set -u
 
 if ! command -v ros2 >/dev/null 2>&1; then
     echo "ERRO: 'ros2' não encontrado. Source /opt/ros/<distro>/setup.bash ou rode ./start.sh pra compilar o workspace." >&2
