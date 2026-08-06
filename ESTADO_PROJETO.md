@@ -185,6 +185,11 @@ Nenhuma lib do sistema é tocada.
 
 ## 📋 A PRÓXIMA IDA AO ROBÔ — tudo o que está esperando máquina
 
+➡️ **O roteiro de operação, passo a passo, está em
+`docs/PROXIMA_SESSAO_NO_ROBO.md`** — escrito para o assistente que chegar frio,
+começando pelo método de trabalho e pelo passo bloqueante. É o documento a abrir
+quando o dono disser que chegou no robô.
+
 Em ordem de valor. O roteiro completo de cada um está nos planos citados.
 
 ```
