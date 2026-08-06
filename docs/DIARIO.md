@@ -3985,3 +3985,59 @@ um efeito colateral desta fatia. Fica travado em teste
 **517 testes verdes** (eram 513). ⚠️ O que **só o robô** pode confirmar:
 `sessao.py --checar` mostrando `wheel_separation = 0.2700` vivo depois da troca
 de descrição. É o primeiro passo da próxima ida.
+
+## 🌀 2026-08-05 (12ª leva) — O `ki` não é o culpado, e o simulador não pode arbitrar
+
+Terceiro item da fila: atacar o **S** que o dono viu no robô (*"de frente ele faz
+um pequeno S para tentar compensar o erro"*). **Resultado negativo**, e está
+guardado por isso — dados em `docs/dados/2026-08-05-ki-no-simulador/`.
+
+### A régua que faltava (`tools/banco/mede_o_s.py`)
+
+Curvatura média **não distingue pender de oscilar**: um robô que serpenteia ±10°
+e volta dá curvatura quase nula, igual a um que pende pouco. Era por isso que o
+número de 05-08 (`+0,0417`) não contradizia o olho do dono — ele simplesmente
+não falava sobre aquilo. A régua nova conta **inversões do sentido de giro**:
+
+```
+sem compensador   amp 68,0°      invs 0   deriva −68°     <- PENDE
+com compensador   amp 9,4–18,5°  invs 2   T 2,2–2,4 s     <- o S
+```
+
+### A varredura, e o que ela derrubou
+
+```
+ki      1,00 → 0,50 → 0,25 → 0,10 → 0,00     invs: 1, 1, 1, 1, 1
+kp      1,00 → 0,40                          invs: 1, 1   (e PIOROU)
+```
+
+**Nenhum ganho, em nenhum valor, mudou o número de inversões.** A hipótese era o
+integrador brigando com os 0,52 s de tempo morto da placa — se fosse isso,
+zerar o `ki` teria de mudar alguma coisa.
+
+E a corrida longa fechou: **27 s, 8 m, 1 inversão, deriva final 0,0°**. É o
+transiente da malha assentando, não ciclo-limite.
+
+### 🔴 Duas razões estruturais, e eu devia tê-las visto ANTES de varrer
+
+1. **O feedforward cancela o arco por construção.** A placa fingida usa
+   `curvatura_frente = −0,817` e o compensador usa `curv_frente = −0,817` — o
+   mesmo número. Não sobra erro para o integrador, então `ki` ali só podia
+   piorar. Testado também **descasado** (planta em −0,9116 contra ff de −0,817,
+   que é a situação real do robô): continuou 1 inversão.
+2. **BO-4** — a boba do simulador é um patim, e o contato dela não participa da
+   dinâmica. Oscilação puxada por roda boba arrastada **não pode** aparecer ali.
+   E a boba é a única peça que troca de papel entre frente e ré, que é a
+   assinatura do defeito de rumo deste robô desde 04-08.
+
+### O que isto NÃO diz
+
+Não diz que `ki` menor é pior no robô. Diz que **o simulador não pode arbitrar**.
+No robô o ff (−0,817) difere da planta (−0,9116) e o integrador tem trabalho
+real — exatamente o que aqui ele não tem.
+
+➡️ **`docs/PLANO_SINTONIA_RUMO.md`** (novo): a sintonia vira sessão de campo, com
+a varredura de `ki` (12 corridas), as duas réguas, os critérios de sucesso e —
+o mais importante — **o que fazer se `invs` também não mudar lá**: nesse caso o
+S não é do ganho, e o caminho passa a ser o BO-4 (o vídeo da traseira, filmado
+em 04-08 e nunca trazido para o repo, é o item mais barato que falta).

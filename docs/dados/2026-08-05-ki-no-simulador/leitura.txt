@@ -1,0 +1,104 @@
+varredura de ki no SIMULADOR — 2026-08-05
+==========================================
+
+RESULTADO NEGATIVO, e e por isso que ele esta guardado: o simulador NAO
+reproduz o S, entao nenhum ganho pode ser escolhido nele. Guardado para
+ninguem tentar de novo daqui a um mes.
+
+maquina    : PC de desenvolvimento
+Gazebo     : Harmonic headless, planta NORMAL, placa "medido", 10 Hz
+             (a taxa igualada ao robo na 9a leva de 05-08)
+comando    : ensaio.py --ensaio reta --v 0.25 --wz 0 --dur 12 --espaco 1.2
+             --janela 0.5 --sim --topico /compensador_rumo/cmd_vel
+compensador: ros2 run robot_motion compensador_rumo, REINICIADO a cada valor
+             (param set nao chega no no — ele copia para self.par no
+              construtor e nao tem callback)
+leituras   : medir.py --resumo curvatura   e   mede_o_s.py (novo)
+saude      : conferida ANTES de medir — 1 publicador em /Odometry, 44 Hz,
+             1 gz server, controladores active
+
+
+A PERGUNTA
+-----------
+O dono viu, no robo: "de frente ele faz um pequeno S para tentar compensar o
+erro". A hipotese era o integrador brigando com o tempo morto da placa
+(~0,52 s de atraso de desliga) num laco de 10 Hz — mecanismo classico de
+ciclo-limite. Se fosse isso, baixar `ki` mataria o S.
+
+
+A REGUA (tools/banco/mede_o_s.py, novo)
+----------------------------------------
+Curvatura media NAO distingue "pende" de "oscila": um robo que serpenteia e
+volta da curvatura quase nula, igual a um que pende pouco. A regua conta
+INVERSOES do sentido de giro.
+
+    invs 0  + deriva grande  -> PENDE
+    invs >=2 + deriva ~0     -> OSCILA (o S)
+    invs 1                   -> transiente: corrigiu uma vez e assentou
+
+Validada contra o robo:
+    A1-sem-comp-frente-a   amp 68,0°  invs 0  deriva -67,9°   <- pende
+    A2-com-comp-frente-a   amp  9,4°  invs 2  T 2,20 s        <- o S
+    A2-com-comp-frente-b   amp 18,5°  invs 2  T 2,20 s
+    A2-com-comp-frente-c   amp 17,3°  invs 2  T 2,38 s
+
+
+A VARREDURA (n=3 por valor)
+----------------------------
+   ki      amp    invs   deriva   curvatura
+   0,50    9,9°     1     2,2°     0,0325
+   0,25    9,0°     1     2,1°     0,0317
+   0,10    8,5°     1     1,7°     0,0254
+   0,00    8,1°     1     1,3°     0,0188
+
+   kp=0,40 ki=0,10   amp 11,0°  invs 1  deriva 2,5°  curvatura 0,0364
+   (kp MENOR piorou tudo)
+
+NENHUM VALOR MUDOU O NUMERO DE INVERSOES. Se o integrador contra o tempo
+morto fosse a causa, zera-lo teria de mudar isso.
+
+Tudo melhora monotonicamente indo a zero, INCLUSIVE a curvatura — mas isso e
+o integrador somando erro que nao existe, nao oscilacao sendo removida.
+
+
+A CORRIDA LONGA — o que fecha o argumento
+------------------------------------------
+LONGA-kp1.0ki0.5.csv    --dur 40 --espaco 8.0
+
+    amp 11,3°    invs 1    deriva final 0,0°    dur 27,3 s
+
+UMA inversao em 27 segundos e 8 metros, a mesma que em 4,5 s, e o rumo
+termina EXATAMENTE na referencia. Isso e transiente, nao ciclo-limite. O robo
+faz 2 inversoes em 4,9 s com periodo de 2,2 s.
+
+
+DUAS RAZOES ESTRUTURAIS, as duas conhecidas
+--------------------------------------------
+1. O FEEDFORWARD CANCELA O ARCO POR CONSTRUCAO. A placa fingida usa
+   curvatura_frente = -0,817 e o compensador usa curv_frente = -0,817 — o
+   MESMO numero. Nao sobra erro para o integrador trabalhar, entao `ki` ali so
+   pode piorar.
+
+   TESTADO DESCASADO (arquivos DESC-*): planta em -0,9116 (a do robo em 05-08)
+   contra ff de -0,817 (o que ele carregava). E a situacao real. Continuou
+   1 inversao (amp 10,1-11,5°). Nem o descasamento produz o S.
+
+2. BO-4: A BOBA DO SIMULADOR E UM PATIM. O contato dela nao participa da
+   dinamica — multiplicar o atrito por 16 mudou o rumo em 0,4% (28-07). Uma
+   oscilacao de rumo puxada por roda boba arrastada NAO PODE aparecer nesse
+   modelo. E a boba e a unica peca que troca de papel entre frente e re, que
+   e a assinatura do defeito de rumo deste robo desde 04-08.
+
+
+CONSEQUENCIA
+-------------
+A sintonia do S tem de ser feita NO ROBO. Plano de campo escrito em
+docs/PLANO_SINTONIA_RUMO.md, com a varredura, os criterios e — importante — o
+que fazer se `invs` tambem nao mudar la: nesse caso o S nao e do ganho, e o
+caminho passa a ser o BO-4 (video da traseira, que ja foi filmado em 04-08 e
+nunca trazido para o repo).
+
+⚠️ E o que este resultado NAO diz: ele nao diz que `ki` menor e pior no robo.
+Diz que o SIMULADOR nao pode arbitrar. No robo o ff (-0,817) difere da planta
+(-0,9116), entao la o integrador tem trabalho real — exatamente o que aqui ele
+nao tem.
