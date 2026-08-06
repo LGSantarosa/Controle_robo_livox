@@ -146,10 +146,26 @@ def test_dt_nao_positivo_nao_envenena_o_integrador():
 
 # ------------------------------------------------- o fechamento (o que vale)
 
-def _roda_planta(malha, curv_planta, v_cmd, passos=600, dt=0.02, atraso=13):
+def _roda_planta(malha, curv_planta, v_cmd, passos=1500, dt=0.02, atraso=47):
     """Planta de brinquedo com o defeito medido: a curvatura ENTREGUE é a
-    comandada mais um viés que a malha não conhece — e o wz age com atraso
-    (13 passos de 20 ms ≈ 0,27 s, a latência medida do atuador).
+    comandada mais um viés que a malha não conhece — e o wz age com atraso.
+
+    ⚠️ **O ATRASO ERA 0,26 s E ESTAVA ERRADO — corrigido em 05-08 para 0,94 s**
+    (47 passos de 20 ms). O valor antigo era só a latência de LIGA (0,27 s); o
+    laço real tem também o atraso de DESLIGA da placa (0,52 s) mais a pose a
+    10 Hz e a janela de 0,2 s da velocidade. Os 0,94 s foram confirmados por
+    duas rotas independentes: essa soma, e a frequência da oscilação que o robô
+    de fato fez (1,277 rad/s com o PI antigo).
+
+    Por que isso importa mais do que parece: **com 0,26 s esta planta não
+    oscila com ganho nenhum.** Foi por isso que o S do robô não apareceu em
+    lugar nenhum — nem aqui, nem no Gazebo. Com 0,94 s ela reproduz o
+    fenômeno, e passa a ser o único lugar do projeto onde a estabilidade do
+    rumo pode ser julgada sem o robô.
+
+    O horizonte subiu de 600 para 1500 passos (12 s -> 30 s) porque a malha
+    nova é 4x mais lenta de propósito; medir regime em 12 s pegaria o
+    transiente dela e reprovaria um projeto correto.
 
     Devolve (curvatura de regime, erro de rumo final). A curvatura é
     calculada como a bancada calcula (giro acumulado / caminho, 2ª metade);
@@ -191,13 +207,31 @@ def test_fecha_a_re_no_criterio_da_011():
 
 
 def test_fecha_mesmo_com_ff_errado_25_por_cento():
-    """A dispersão do robô é 21% entre corridas idênticas. O integrador tem
-    de comer a diferença entre o ff (calibrado num dia) e a planta (de outro
-    dia): reta E rumo em cima, mesmo com o ff 25% otimista."""
+    """A dispersão do robô é 21% entre corridas idênticas, então o ff calibrado
+    num dia enfrenta a planta de outro. Com o ff 25% otimista, ele ainda tem de
+    ANDAR RETO — que é o critério da 011.
+
+    ⚠️ **A expectativa de rumo mudou em 05-08, e não foi para o teste passar.**
+    Antes este teste exigia rumo < 1°, e passava porque os ganhos eram 4x
+    maiores. Eles foram reduzidos de propósito para matar uma oscilação
+    CRESCENTE medida no robô (ver os ganhos no `compensador_rumo.py`), e o
+    preço calculado dessa redução é exatamente este: com o ff bem errado o
+    integrador satura em `int_max` e o termo P sustenta o resto **mantendo um
+    erro de rumo**.
+
+    O que NÃO se degradou é o que a 011 pede: a curvatura fica em 0,0007 —
+    três ordens de grandeza abaixo do limite. O robô anda reto; ele só anda
+    reto apontando alguns graus fora da referência que capturou.
+
+    ➡️ O conserto do rumo é o **feedforward** estar certo, não o integrador
+    brigar contra tempo morto. Subir `int_max` foi testado e traz o sino de
+    volta (9° de segunda excursão) — a tabela está no `compensador_rumo.py`."""
     m = MalhaDeReta()                       # ff acha que é −0,817
     c, e = _roda_planta(m, curv_planta=-1.02, v_cmd=0.25)   # planta 25% pior
     assert abs(c) < 0.05, f'curvatura de regime {c:.3f}'
-    assert abs(math.degrees(e)) < 1.0, f'rumo assentou {math.degrees(e):.1f}° torto'
+    assert abs(math.degrees(e)) < 8.0, (
+        f'rumo assentou {math.degrees(e):.1f}° torto — acima disso o ff está '
+        f'errado demais para o integrador limitado dar conta')
 
 
 def test_sem_integrador_o_rumo_assenta_torto():
@@ -211,3 +245,101 @@ def test_sem_integrador_o_rumo_assenta_torto():
     assert abs(c) < 0.05, 'a curvatura fecha até sem Ki — não é ela que o justifica'
     assert abs(math.degrees(e)) > 3.0, \
         f'sem Ki o rumo deveria assentar torto, deu {math.degrees(e):.1f}°'
+
+
+# ------------------------------- os ganhos são um PROJETO, não um chute (05-08)
+#
+# Com kp=1,0 e ki=0,5 o robô OSCILAVA e a oscilação CRESCIA 2,07x por
+# meio-período (três corridas, `docs/dados/2026-08-05-bancada-robo/`). A causa
+# é tempo morto: 0,94 s de atraso efetivo no laço, confirmado por duas rotas
+# independentes — a frequência medida da oscilação (1,277 rad/s) e a soma dos
+# atrasos de liga (0,27 s) e desliga (0,52 s) da placa mais o sensoriamento.
+#
+# Os ganhos caíram 4,1x, JUNTOS, para o ganho de laço passar de ~2 para ~0,5.
+
+import ast  # noqa: E402
+
+
+def _defaults_do_no():
+    """Lê os defaults do `declare_parameters` do nó, direto do fonte.
+
+    Duplicar default entre o nó e a lei é como eles derivam. O
+    `placa_simulada` já pagou esse preço em 04-08: o dublê do teste ficou com
+    valores antigos e a suíte passou verde descrevendo um robô que já não
+    existia."""
+    fonte = os.path.join(os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__))), 'robot_motion', 'compensador_rumo.py')
+    arvore = ast.parse(open(fonte).read())
+    for no in ast.walk(arvore):
+        if (isinstance(no, ast.Call)
+                and getattr(no.func, 'attr', None) == 'declare_parameters'):
+            return {ast.literal_eval(t.elts[0]): ast.literal_eval(t.elts[1])
+                    for t in no.args[1].elts}
+    raise AssertionError('declare_parameters não encontrado')
+
+
+def _picos(malha, curv_planta=-0.9116, v_cmd=0.25, passos=1500, dt=0.02,
+           atraso=47):
+    """Amplitudes dos extremos sucessivos do rumo. Toca sino ou assenta?"""
+    yaw, fila, hist = 0.0, [0.0] * atraso, []
+    for _ in range(passos):
+        fila.append(malha.passo(v_cmd, 0.0, yaw, dt))
+        agindo = fila.pop(0)
+        v_real = math.copysign(0.30, v_cmd)
+        yaw = norm_ang(yaw + (agindo / abs(v_real) + curv_planta)
+                       * abs(v_real) * dt)
+        hist.append(math.degrees(yaw))
+    return [abs(hist[i]) for i in range(1, len(hist) - 1)
+            if (hist[i] - hist[i - 1]) * (hist[i + 1] - hist[i]) < 0]
+
+
+def test_o_no_e_a_lei_concordam_nos_ganhos():
+    par = _defaults_do_no()
+    m = MalhaDeReta()
+    assert m.kp == par['kp'], 'default do nó e da lei divergiram'
+    assert m.ki == par['ki'], 'default do nó e da lei divergiram'
+
+
+def test_os_ganhos_ANTIGOS_tocam_sino_na_planta_com_o_atraso_MEDIDO():
+    """A prova de que o número novo tem razão de ser — e de que a planta de
+    brinquedo, com o atraso certo, enxerga o defeito que o robô mostrou.
+
+    Verificado por mutação: com o atraso antigo (13 passos = 0,26 s) este
+    teste FALHA, porque lá nem os ganhos velhos oscilam. Era essa a cegueira."""
+    picos = _picos(MalhaDeReta(kp=1.0, ki=0.5))
+    assert len(picos) >= 5, (
+        f'esperava sino com os ganhos antigos, vieram {len(picos)} extremos')
+    assert picos[1] > 5.0, (
+        f'a segunda excursão foi {picos[1]:.1f}° — sem sino, a planta não '
+        f'reproduz o que o robô fez')
+
+
+def test_os_ganhos_DE_HOJE_assentam_em_uma_excursao():
+    """O projeto: uma excursão e acabou. Não é "oscila menos" — é não oscilar."""
+    picos = _picos(MalhaDeReta())
+    assert len(picos) >= 1
+    assert picos[1] < 2.0 if len(picos) > 1 else True, (
+        f'segunda excursão de {picos[1]:.1f}° — ainda está tocando sino')
+    assert all(p < 1.0 for p in picos[2:]), (
+        f'não assentou: extremos seguintes {[round(p, 2) for p in picos[2:5]]}')
+
+
+def test_a_razao_ki_sobre_kp_foi_preservada():
+    """A redução foi de GANHO, não de controlador: os dois caíram juntos, então
+    o zero do PI (em ki/kp) fica onde estava. Mexer só num deles muda a forma
+    da resposta e invalida a análise de estabilidade que escolheu o número."""
+    par = _defaults_do_no()
+    assert par['ki'] / par['kp'] == pytest.approx(0.5, rel=0.05), (
+        'o zero do PI mudou de lugar — refazer a análise antes de aceitar')
+
+
+def test_o_integrador_ainda_da_conta_do_residuo_do_ff():
+    """Ganho menor não pode virar erro permanente. O ff erra ~0,095 1/m (planta
+    de 05-08 contra o ff carregado), o que a 0,30 m/s pede 0,028 rad/s de
+    correção contínua. O teto do integrador tem de cobrir isso com folga."""
+    par = _defaults_do_no()
+    residuo_rad_s = (0.9116 - 0.817) * 0.298
+    autoridade = par['ki'] * par['int_max']
+    assert autoridade > 2 * residuo_rad_s, (
+        f'integrador entrega no máximo {autoridade:.3f} rad/s e o resíduo pede '
+        f'{residuo_rad_s:.3f} — sem folga, o rumo fica com erro permanente')

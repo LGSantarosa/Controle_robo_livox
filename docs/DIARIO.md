@@ -4041,3 +4041,101 @@ a varredura de `ki` (12 corridas), as duas réguas, os critérios de sucesso e �
 o mais importante — **o que fazer se `invs` também não mudar lá**: nesse caso o
 S não é do ganho, e o caminho passa a ser o BO-4 (o vídeo da traseira, filmado
 em 04-08 e nunca trazido para o repo, é o item mais barato que falta).
+
+## 🎚️ 2026-08-06 — O S tem número: 0,94 s de tempo morto, e os ganhos caem 4,1×
+
+O dono empurrou de volta, e com razão: *"vc tem certeza que com esses dados não
+tem como fazer um ki bom? ... teoricamente isso é fácil de fazer e nem precisa
+de um simulador tão preciso"*. **Tem como, e o simulador não era necessário.**
+
+### Primeiro, uma correção de leitura minha
+
+Eu tinha contado inversões e parado aí. Não olhei a **envoltória**:
+
+```
+corrida    1ª excursão   2ª excursão   cresceu   meio-período
+a             −2,97°        +6,46°      2,18×       2,38 s
+b             −6,47°       +12,04°      1,86×       2,50 s
+c             −5,43°       +11,84°      2,18×       2,50 s
+média                                   2,07×       2,46 s
+```
+
+**A oscilação do robô CRESCE.** Não é a malha assentando — é instabilidade. Três
+corridas, o mesmo fator.
+
+### O tempo morto sai do próprio dado, por duas rotas
+
+Com o PI que estava rodando (`kp=1,0`, `ki=0,5`), oscilar a 1,277 rad/s exige
+**0,94 s** de atraso puro no laço. E esse número **não foi ajustado para caber**:
+
+```
+atraso de liga      0,27 s   (01-08, n=4)
+atraso de desliga   0,52 s   (04-08, n=3)
+soma                0,79 s   + pose a 10 Hz e janela de 0,2 s   ≈ 0,94 s
+```
+
+Duas rotas independentes, mesmo número. **O mecanismo está confirmado.**
+
+### Quanto reduzir também sai do dado
+
+Crescer 2,07× por meio-período põe o ganho de laço em ~2,07 na travessia de
+fase; ele precisa ficar abaixo de 1. **Reduzir 4,1×, os dois juntos** (a razão
+`ki/kp` não muda — é ganho a menos, não controlador diferente):
+
+```
+kp  1,00 -> 0,25        ki  0,50 -> 0,12
+```
+
+### 🔴 A planta de brinquedo do teste tinha o MESMO ponto cego
+
+O `_roda_planta` do `test_lei_de_reta.py` já modelava atraso — mas de **0,26 s**,
+que é só a latência de liga. Com esse valor **ela não oscila com ganho nenhum**.
+Era por isso que o S não aparecia em lugar nenhum: nem no Gazebo, nem aqui.
+
+Corrigido para os 0,94 s medidos, ela reproduz o fenômeno e vira **o único lugar
+do projeto onde a estabilidade do rumo pode ser julgada sem o robô**:
+
+```
+                       atraso 0,26 s (antes)        atraso 0,94 s (medido)
+ganhos ANTIGOS         picos 4,6 · 0,2 · 0,0        15,2 · 15,3 · 12,2 · 10,0 · 8,2
+ganhos NOVOS           picos 8,2 · 0,3 · 0,1        16,5 · 0,4 · 0,2 · 0,1
+```
+
+### ⚠️ Um efeito colateral que o teste pegou, e o conserto errado que eu tentei
+
+Baixar `ki` 4,1× **encolhe junto a autoridade do integrador** (`ki · int_max`
+caiu de 0,30 para 0,072 rad/s). Subi o `int_max` para 2,5 para preservar o
+produto — e o teste derrubou: **o sino voltou** (9° de segunda excursão).
+
+Com tempo morto, `int_max` não é só teto de autoridade: é a proteção contra
+**windup**, que é o que produz sobrepasso. Medido:
+
+```
+int_max   ff certo: 2ª exc | curvatura      ff 25% errado: curvatura
+  0,6         0,4°  | −0,0012                    0,0007
+  1,0         7,1°  | +0,0061                   −0,0026
+  2,5         9,0°  | +0,0076                   +0,0053
+```
+
+**Fica em 0,6.** A curvatura — o critério da 011 — sai três ordens de grandeza
+abaixo do limite nos dois casos. O preço é que com o ff 25% errado o rumo
+assenta ~6,8° fora da referência capturada. **O conserto disso é o feedforward
+estar certo, não o integrador brigar contra tempo morto.**
+
+E isso me obriga a retirar a retirada de 05-08: eu tinha dito que corrigir o
+`curv_frente` para a planta medida pioraria, porque o resíduo saiu positivo.
+Aquele `+0,0417` é a **média de uma oscilação crescente cortada em 1,2 m** — ele
+depende de onde a corrida terminou e não diz nada sobre o sinal do erro do ff.
+
+### O que ficou travado em teste
+
+Cinco testes novos, dois verificados por mutação: com o atraso de volta em
+0,26 s o teste do sino falha (a planta era cega), e com os ganhos de volta em
+1,0/0,5 o teste de assentamento falha. Mais o que compara os defaults do nó com
+os da lei — default duplicado é default que deriva.
+
+**522 testes verdes** (eram 517).
+
+⏳ **A conferir no robô** (`docs/PLANO_SINTONIA_RUMO.md`): a mesma corrida tem de
+mostrar a amplitude **decaindo** em vez de crescer. Se continuar crescendo com
+estes ganhos, o S não é do laço e o caminho passa a ser o BO-4.

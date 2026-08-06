@@ -42,7 +42,16 @@ class MalhaDeReta:
                                     curva de verdade e passa intocado.
     """
 
-    def __init__(self, curv_frente=-0.817, curv_re=-0.098, kp=1.0, ki=0.5,
+    # ⚠️ `kp` e `ki` reduzidos 4,1x em 05-08 (eram 1,0 e 0,5), porque com os
+    # valores antigos o robô OSCILA e a oscilação CRESCE 2,07x por meio-período.
+    # É tempo morto: 0,94 s de atraso efetivo no laço, confirmado por duas
+    # rotas independentes (a frequência da oscilação medida, e a soma dos
+    # atrasos de liga e desliga da placa). O racional completo, com os números
+    # e o preço, está no `compensador_rumo.py`, ao lado do `declare_parameters`.
+    #
+    # ⚠️ Estes defaults têm de acompanhar os do nó — há um teste que compara os
+    # dois, porque default duplicado é default que deriva.
+    def __init__(self, curv_frente=-0.817, curv_re=-0.098, kp=0.25, ki=0.12,
                  wz_max=0.6, int_max=0.6, limiar_curva=0.05,
                  segura_rumo=True):
         if kp < 0.0 or ki < 0.0:
