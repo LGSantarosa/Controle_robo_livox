@@ -38,3 +38,21 @@ observação do dono, a olho, na condição NOVOS
 ---------------------------------------------
   "ele tá fazendo um S mas tá reto, tá bom"
   Em 05-08, com os ganhos velhos, o mesmo olho viu o S DIVERGIR.
+
+TERCEIRA CONDIÇÃO — preditor de Smith (rodada depois do pivô)
+-------------------------------------------------------------
+  preditor-* : kp=1.00 ki=0.50 COM preditor:=true (desconta 0,94 s)
+  bateria ao subir esta condição: 40,92 V
+
+                    invs   período medido   amp média   curvatura média
+  VELHOS  1.0/0.5   1,2,2      2 de 3         12,5°        0,0707
+  PREDITOR 1.0/0.5  1,0,1      0 de 3          9,0°        0,0882
+  NOVOS   0.25/0.12 0,1,0      0 de 3          8,6°        0,0764
+
+O preditor EMPATA com o detune no robô — contraria a bancada matemática, onde
+perdia claro. Ambos matam a divergência dos ganhos velhos.
+
+⚠️ O QUE ESTE EMPATE NÃO RESOLVE: a diferença prevista pela bancada é entre
+ondulação SUSTENTADA e ASSENTAR, e isso só aparece em corrida LONGA. Aqui todas
+duram 4,7-5,0 s porque a trava de 1,2 m corta, e a cerâmica da sala não dá mais
+espaço. O desempate não coube no espaço disponível.
