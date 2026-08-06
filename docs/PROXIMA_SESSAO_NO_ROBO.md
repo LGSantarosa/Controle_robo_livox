@@ -4,84 +4,71 @@
 > não cruza sessões nem máquinas — é por isso que este arquivo existe, e é por
 > isso que ele começa pelo método e não pelos comandos.
 >
-> Escrito em **2026-08-06**, depois de dois dias de trabalho (uma sessão de
-> bancada no robô em 05-08 e três de dev em 05/06-08). Tudo o que está aqui tem
-> origem citada.
+> **Reescrito em 2026-08-06**, depois da sessão de bancada daquele dia (18
+> corridas). A versão anterior mandava rodar experimentos que **já foram
+> feitos** — se você está lendo uma cópia que pede varredura de ganhos ou pivô
+> `liga 0,10`, ela está velha: esses fecharam. Tudo aqui tem origem citada.
 
 ---
 
-## 0. O MÉTODO — leia antes dos comandos, é o que fez a sessão de ontem funcionar
+## 0. O MÉTODO — leia antes dos comandos
 
 O dono elogiou explicitamente o modo de conduzir de 05-08 e pediu que se repita:
 
 > *"direto aos testes, sem se enrolar, só fazendo o que foi pedido, avisando
 > pra desligar o robô, pedindo 'pode' para soltar o comando"*
 
-Na prática:
+1. **O DONO SÓ RODA.** Nunca peça para ele relatar console. Tudo grava CSV ou
+   vai para o `rosout`, que se lê por ssh. Ele executa o físico: posicionar,
+   ligar, olhar, apertar tecla.
+2. **UMA CORRIDA POR VEZ.** Antes de cada comando que move: dizer o que o robô
+   vai fazer, quanto espaço precisa, e **esperar o "pode"**.
+3. **NÚMERO NA HORA**, com o robô ligado. Não acumular CSV para ler depois.
+4. **RESPOSTA CURTA.** Em 06-08 o dono cortou com *"responda simples"* depois de
+   blocos longos entre uma corrida e outra. Durante a bancada: o número e o
+   veredito, 2–4 linhas. Tabela e ressalva vão para o commit e o `DIARIO`.
+5. **AVISAR LIGADO vs DESLIGADO**, e avisar quando já pode desligar.
+6. **NÃO EXPANDIR ESCOPO** com a bateria correndo. Precisa escrever ferramenta?
+   Escreva com o robô desligado — foi assim que o `homem_morto.py` nasceu.
+7. **RETIRAR HIPÓTESE ASSIM QUE O DADO A DERRUBAR**, em voz alta.
 
-1. **O DONO SÓ RODA.** Nunca peça para ele relatar console. Tudo grava CSV, que
-   volta por `scp` e é lido no dev. Ele executa o físico: posicionar, ligar,
-   olhar, apertar tecla.
-2. **UMA CORRIDA POR VEZ.** Antes de cada comando que move a máquina: dizer o
-   que o robô vai fazer, quanto espaço precisa, e **esperar o "pode"**.
-3. **NÚMERO NA HORA.** Rodar o ensaio e já devolver a leitura, com o robô
-   ligado. Não acumular CSV para ler depois — o dono decide o próximo passo com
-   o número na mão.
-4. **AVISAR LIGADO vs DESLIGADO**, e avisar quando já pode desligar.
-5. **NÃO EXPANDIR ESCOPO.** Bloqueio que aparecer: diagnosticar, registrar,
-   seguir. Não sair consertando com o robô ligado e a bateria correndo.
-6. **RETIRAR HIPÓTESE ASSIM QUE O DADO A DERRUBAR**, em voz alta. Isso aconteceu
-   três vezes em 05-08 e é o que manteve os números confiáveis.
-
-⚠️ **Bateria é o recurso escasso.** Cada minuto de conversa é minuto de bateria.
+⚠️ **Bateria é o recurso escasso.** Em 06-08 foram 41,16 → 40,92 V em 18
+corridas — dá folga, mas conversa é o que come tempo, não corrida.
 
 ---
 
-## 1. Contexto mínimo — 5 minutos de leitura antes de tocar em qualquer coisa
-
-Na ordem:
+## 1. Contexto mínimo
 
 | ler | por quê |
 |---|---|
-| `ESTADO_PROJETO.md`, o topo até "A PRÓXIMA IDA AO ROBÔ" | o estado vivo, e a lista dos 6 itens em ordem de valor |
-| `docs/PLANO_SINTONIA_RUMO.md` | o experimento nº 1 desta sessão, com critérios |
-| `docs/PLANO_TESTE_ROBO.md` §1 | os experimentos 2, 3 e 4 |
-| `tools/banco/CHECKLIST_ROBO.md` | a folha de campo, com as armadilhas antigas |
+| `ESTADO_PROJETO.md`, o topo | o que 06-08 provou e o que derrubou |
+| `docs/decisoes/013-o-ff-fixo-nao-fecha-o-arco.md` | o experimento nº 2 desta sessão |
+| `docs/DIARIO.md`, 06-08 (3ª leva) | por que os testes C e D falharam |
 
-**O que mudou desde a última vez que o robô rodou (05-08), e nunca foi visto
-por ele:**
+**O que mudou desde a última vez que o robô rodou, e nunca foi visto por ele:**
 
-- os **ganhos do compensador caíram 4,1×** (`kp` 1,00→0,25, `ki` 0,50→0,12);
-- o robô passou a carregar **outra descrição** (`robo2.urdf.xacro` em vez do
-  exemplo de demonstração do `ros2_control`) — ganhou geometria medida e o
-  `livox_frame`;
-- o **Mid-360 entrou a 42 cm** (medido com trena), não os 27 supostos;
-- existe um **preditor de Smith** no compensador, **desligado** por padrão;
-- o `twist_mux` passou a vir **do fonte** (`./setup_twist_mux.sh`).
+- existe um nó novo, **`tf_odom`**, que publica a TF `odom → base_link` — a que
+  faltava e que derrubou o teste D. Sobe junto na `localizacao.launch.py`;
+- o **`bin/robot-key` foi consertado** (`set -u` brigava com os `setup.bash`);
+- o **teleop ganhou diagnóstico** por `rosout` a cada 2 s;
+- **nada disso rodou no robô.** É a primeira coisa a conferir.
 
 ---
 
 ## 2. Acesso e deploy
 
 ```bash
-# 1) achar o robô. Em 05-08 foi 10.244.3.205, mas o IP MUDA.
-#    O dono sabe o final; o resto vem da sua própria sub-rede:
+# 1) achar o robô. Em 06-08 foi 10.244.3.205, e o IP MUDA.
 ip -4 addr show | grep "inet "         # veja em que /24 você está
 ping -c2 <ip-do-nuc>
 ssh -o ServerAliveInterval=15 bara@<ip-do-nuc>
 ```
 
-⚠️ **Se não pingar, o problema quase sempre é topologia, não senha.** Em 30-07
-o dev estava em `10.150.13.54/19` e o NUC em `10.244.3.205` — sub-redes
-diferentes, gateway não encaminhava. O dono resolve pondo o dev na mesma rede
-do robô. A chave ssh já está autorizada; não deve pedir senha.
-
 ```bash
 # 2) deploy — o NUC NÃO tem auth no GitHub, então vai por bundle
-#    (no dev)
-git bundle create /tmp/repo.bundle --all
+git bundle create /tmp/repo.bundle --all          # no dev
 scp /tmp/repo.bundle bara@<ip>:/tmp/
-#    (no NUC)
+#    no NUC:
 cd ~/Controle_robo_livox
 git fetch /tmp/repo.bundle main && git reset --hard FETCH_HEAD
 source /opt/ros/jazzy/setup.bash
@@ -90,27 +77,25 @@ colcon build --base-paths ros2_packages --symlink-install \
 source install/setup.bash
 ```
 
-⚠️ **`colcon build` SEMPRE.** `git reset --hard` troca o fonte e **não** troca o
-`install/` — e é do `install/` que o `tracao.launch.py` lê a descrição.
+⚠️ **`colcon build` SEMPRE.** O `reset --hard` troca o fonte e **não** o
+`install/`, e é de lá que a descrição é lida.
 
-⚠️ Se houver CSVs não commitados no NUC, o `reset --hard` reclama de arquivos
-untracked. Em 05-08 eles eram idênticos aos do repo (conferido por `md5sum`
-antes de deixar o git passar por cima). **Confira antes de apagar dado de
-bancada.**
+✅ **O `twist_mux` já está compilado no NUC** desde 06-08 (`./setup_twist_mux.sh`
+não precisa de novo, a menos que o `install/` tenha sido apagado).
 
-Só para os testes C e D, uma vez por máquina:
-
-```bash
-./setup_twist_mux.sh
-```
+⚠️ **O NUC CAI JUNTO COM O ROBÔ.** Parece ter alimentação separada; não tem. Em
+06-08 um deploy morreu no meio (`No route to host`) e ele voltou com `up 0 min`.
+Salve em levas para o `origin`. E **`/tmp/logs` não sobrevive ao reboot** —
+`mkdir -p /tmp/logs` antes de qualquer `nohup`, senão o launch falha calado.
 
 ---
 
-## 3. 🔴 PASSO BLOQUEANTE — a conferência que só existe nesta sessão
+## 3. 🔴 PASSO BLOQUEANTE
 
-**Robô LIGADO.** Terminal 1, e fica vivo a sessão inteira:
+**Robô LIGADO.** Terminal 1, vivo a sessão inteira:
 
 ```bash
+mkdir -p /tmp/logs
 ros2 launch robot_base base.launch.py
 ```
 
@@ -120,214 +105,191 @@ Terminal 2:
 python3 tools/banco/sessao.py --checar
 ```
 
-**TEM de imprimir:**
-
-```
-[ok] /Odometry a ~10 Hz
-[ok] wheel_separation = 0.2700   (bate com a trena)
-[ok] wheel_radius = 0.0800
-```
-
-🛑 **Se a bitola não der 0,2700, PARE A SESSÃO.** O robô trocou de descrição em
-05-08 e isso nunca rodou na máquina. Os blocos de hardware foram comparados
-renderizando os dois xacro e saem idênticos, mas comparação no dev não é
-verificação no robô. Bitola errada = todo número da sessão sai enviesado **sem
-sintoma nenhum**.
+**TEM de imprimir** `wheel_separation = 0.2700`. Passou em 06-08, mas
+**reconferir**: o NUC reinicia junto com o robô. Bitola errada enviesa tudo sem
+sintoma.
 
 E a conferência de sempre — exatamente UMA pilha:
 
 ```bash
-pgrep -a -f "[f]astlio_mapping"          # tem de listar UM processo
+pgrep -a -f "[f]astlio_mapping"          # UM processo
 pgrep -a -f "[l]ivox_ros_driver2_node"   # idem
 ```
 
-⚠️ **Use `pgrep -a`, nunca `pgrep -c`.** O `-c` mentiu em 05-08 acusando 2
-pilhas: a própria linha de comando do ssh continha a palavra e o bash casou
-consigo mesmo. O colchete protege contra o `pgrep`, não contra o resto do
-comando.
-
-⚠️ **`Received a non-finite error value` na subida não é o defeito de 24-07** se
-parar em algumas dezenas de linhas. O do registro (quadro de 18 vs 26 bytes)
-inunda o log para sempre e as rodas nunca giram.
+⚠️ **`pgrep -a`, nunca `-c`**, e **leia quem casou**: o colchete protege contra
+o `pgrep`, não contra a própria linha de comando do ssh. Isso mordeu duas vezes,
+a última em 06-08 com `teleop_teclado`. Quando houver dúvida, `ros2 node list`.
 
 ---
 
-## 4. Pedir ao dono, antes da primeira corrida
+## 4. EXPERIMENTO 1 — o `tf_odom` funciona? (5 min, destrava o resto)
 
-Três coisas, e a primeira já foi esquecida duas sessões seguidas:
+**É o primeiro porque o teste D depende dele.** Não move o robô.
+
+```bash
+grep -i "tf_odom\|primeira TF" /tmp/logs/base.log | head
+ros2 run tf2_ros tf2_echo odom base_link
+```
 
 ```
-piso    : <sala e superfície>
-bateria : <cheia? tensão? e conferir de novo no fim>
-espaço  : 1,2 m de raio livre EM TODAS AS DIREÇÕES
+✅ PASSOU   o log diz "primeira TF publicada", e o tf2_echo imprime translação
+            que MUDA quando o robô é empurrado com a mão
+❌ FALHOU   "NÃO EXISTE TF <frame> -> base_link" -> o nó está dizendo qual frame
+            faltou. Provável: o child_frame_id do FAST-LIO não existe no URDF.
+            Conserto na hora:  -p frame_da_pose:=<o frame que ele citou>
 ```
 
-🔴 **Piso e bateria não são burocracia nesta sessão.** A varredura de ganhos
-compara condições ao longo de uma tarde; a linha de base repetida no fim de
-05-08 já sugeriu ~5% de queda de planta na sessão, que vale 0,046 1/m — do
-tamanho do resíduo inteiro depois de compensar. Sem esses dois campos, a
-varredura não é comparável consigo mesma.
-
-**Ponto 0 marcado com fita, e o RUMO também.** Todas as corridas de uma
-condição saem do mesmo ponto e do mesmo rumo.
+⚠️ Repare em **qual** mensagem o nó dá ao subir: ele diz se compôs com o URDF ou
+se a pose já era do corpo. Se disser "já era o corpo" mas o `child_frame_id` for
+do sensor, a TF sai 42 cm errada **em silêncio** — é o modo de falha que o nó
+foi escrito para evitar.
 
 ---
 
-## 5. EXPERIMENTO 1 — a sintonia do rumo (o principal)
+## 5. EXPERIMENTO 2 — as três corridas SEM compensador (a medida que falta)
 
-Detalhes e racional: `docs/PLANO_SINTONIA_RUMO.md`. Aqui é a operação.
+Isto é o que fecha a **decisão 013**, e é barato. Só existe curvatura crua de
+04-08 (−0,8031) e 05-08 (−0,9116): dois pontos, 13,5% de diferença, faixas que
+não se tocam. **O terceiro ponto caracteriza a tendência em vez de inferi-la.**
 
-**A pergunta, e ela é falsificável:** com os ganhos novos, a amplitude da
-oscilação **DECAI** em vez de crescer?
-
-### Terminal 3 — o compensador, REINICIADO a cada condição
-
-```bash
-# condição A — os ganhos NOVOS (o projeto). É o default, não precisa passar nada:
-ros2 run robot_motion compensador_rumo
-
-# condição B — os ganhos VELHOS (o CONTROLE do dia):
-ros2 run robot_motion compensador_rumo --ros-args -p kp:=1.0 -p ki:=0.5
-```
-
-🛑 **`ros2 param set` NÃO funciona neste nó** — ele copia os parâmetros no
-construtor e não tem callback. O `param get` responde o valor novo e o nó segue
-usando o velho. **Matar e subir de novo a cada condição**, e conferir na
-primeira linha do log:
-
-```
-compensador de rumo (decisão 011): ff -0.817 ... kp=0.25 ki=0.12
-```
-
-### Terminal 4 — as corridas, três por condição
+🛑 **SEM compensador rodando.** Se ele estiver de pé, mate. O resíduo com a
+malha fechada **não mede** o `ff` — o integrador come parte dele (medido: em
+05-08 o esperado era −0,095 e o medido foi +0,0417, com o sinal invertido).
 
 ```bash
-D=docs/dados/$(date +%Y-%m-%d)-sintonia-rumo
-mkdir -p $D
+D=docs/dados/$(date +%Y-%m-%d)-curva-crua && mkdir -p $D
 python3 tools/banco/ensaio.py --ensaio reta --v 0.25 --wz 0 \
-    --dur 12 --espaco 1.2 --janela 0.5 \
-    --topico /compensador_rumo/cmd_vel \
-    --csv $D/novos-frente-a.csv
+    --dur 12 --espaco 1.2 --janela 0.5 --csv $D/cru-frente-a.csv
 ```
 
-Repetir `-b` e `-c`, reposicionando no ponto 0. Depois trocar o compensador
-para os ganhos velhos e repetir com `velhos-frente-{a,b,c}.csv`.
+Repetir `-b` e `-c`, do mesmo ponto 0 e mesmo rumo. Leitura na hora:
+
+```bash
+python3 tools/banco/medir.py --resumo curvatura $D/cru-frente-*.csv
+```
 
 ⚠️ **`--janela 0.5` sempre no robô.** O padrão de 0,2 s sobre pose a 10 Hz
-inventa ruído — foi o que gerou a falsa acusação contra o LIO em 31-07.
+inventa ruído.
 
-### A leitura, na hora
+**O robô arca com raio de ~1,2 m indo para a frente** — sem compensador ele
+descreve um círculo. Espaço em TODAS as direções, não só à frente; em 04-08 ele
+bateu numa cadeira num corredor "de 3 m livres".
 
-```bash
-python3 tools/banco/mede_o_s.py $D/novos-frente-*.csv
-python3 tools/banco/medir.py --resumo curvatura $D/novos-frente-*.csv
-```
-
-**Como julgar** (a referência de 05-08, com os ganhos velhos):
-
-```
-                      amp        invs   período   deriva
-sem compensador      68,0°         0       —       −68°     <- PENDE
-com comp. (velhos)  9,4–18,5°      2    2,2–2,4s   1–4°     <- o S
-```
-
-E a envoltória, que é o que decide — comparar a **1ª excursão com a 2ª**:
-
-```
-✅ PASSOU    a 2ª excursão é MENOR que a 1ª (decai), e |curvatura| < 0,05
-             em TODA corrida, não só na média
-❌ FALHOU    a 2ª continua maior que a 1ª (cresce, como em 05-08: 2,07x)
-```
-
-🔴 **Se falhar, NÃO é sessão perdida — é a resposta.** Significa que o S não é
-do laço de controle, e o suspeito passa a ser mecânico: a boba (BO-4). Nesse
-caso, o que a sessão tem de trazer é:
-
-- **o vídeo da traseira durante uma corrida de frente**, com o S acontecendo
-  (critério (b) do BO-4, aberto desde 28-07 — filmado em 04-08 e nunca trazido
-  para o repo);
-- **empurrar o robô com a mão, desligado**, e ver se a boba oscila sozinha.
+**Como julgar:** o número em si é o produto. Se cair perto de −0,80, a planta
+está como em 04-08; perto de −0,91, como em 05-08; no meio, a tendência é
+contínua e o caminho 3 da decisão 013 (medir no início de cada sessão) fica bem
+justificado.
 
 ---
 
-## 6. Os outros experimentos, se a bateria permitir
+## 6. EXPERIMENTO 3 — teste D, o reflexo de colisão
 
-Em ordem de valor. Nenhum deles justifica cortar o experimento 1.
-
-### 2. Pivô `liga 0,10` e `liga 0,30`, n=3 cada — a outra previsão falsificável
-
-```bash
-P=docs/dados/$(date +%Y-%m-%d)-pivo && mkdir -p $P
-python3 tools/banco/ensaio.py --ensaio degrau_giro --v 0 --wz 0.6 \
-    --liga 0.10 --dur 10 --espaco 1.0 --janela 0.5 \
-    --csv $P/liga0.10-a.csv
-```
-
-O ensaio publica **direto no atuador** (sem `--topico`), então o compensador
-fica fora do caminho — e com `--v 0` ele seria passa-direto de qualquer jeito.
-
-Leitura: `docs/dados/2026-08-05-aceitacao-atraso-desliga/pivo.py`.
-
-**A previsão:** se a quantização do laço de 10 Hz estiver certa, `liga 0,10`
-(1,0 ciclo, a fase decide se pega 0 ou 1) tem de sair **bimodal** — ora ~0°,
-ora ~16°. Hoje só existe uma amostra (2,7°), compatível com ter pego zero
-ciclos. São os dois pontos onde o simulador mais discorda do robô.
-
-### 3. Teste C, item 1 — o homem-morto
-
-Precisa do `./setup_twist_mux.sh` rodado. Os itens 2 e 3 do teste C **já estão
-provados sem robô** (`tools/banco/prova_mux.py`). Falta só:
-
-> `w` faz andar; **solte o teclado e ele para sozinho em 0,4 s.**
-
-⚠️ **Se isso falhar, PARE TUDO.** Teleop que não para sozinho é pior que teleop
-nenhum.
-
-### 4. Teste D — o reflexo de colisão
+**Só se o experimento 1 tiver passado.** Sem TF o `collision_monitor` recebe e
+não publica nem zero — foi assim que ele morreu em 06-08.
 
 **Caixa de 50 cm**, não 40: o Mid-360 está a 42 cm e a 0,5 m só vê acima de
-36 cm. Ver `PLANO_TESTE_ROBO.md` §1.
-
-### 5. O preditor de Smith — 3 corridas desempatam
+36 cm. Cadeira serve mas é pior alvo (vazada, pernas finas).
 
 ```bash
-ros2 run robot_motion compensador_rumo --ros-args \
-    -p preditor:=true -p kp:=1.0 -p ki:=0.5
+ros2 launch robot_motion pilha.launch.py
+ros2 lifecycle get /collision_monitor        # TEM de dizer active
 ```
 
-Na bancada matemática ele **perde** para o detune (mata a divergência mas deixa
-ondulação sustentada de ~3,6°). A ressalva que só o robô resolve está no
-`PLANO_SINTONIA_RUMO.md` §4. Se perder aqui também, fica desligado para sempre.
+🛑 **Se disser `inactive`, o `lifecycle_manager` abortou o bringup** (o Nav2 não
+ativa sem `map → base_link`). Ativar na mão:
 
-### 6. O vídeo da traseira
+```bash
+ros2 lifecycle set /collision_monitor activate
+```
 
-Independente de tudo: é o item mais barato que falta no projeto inteiro.
+⚠️ **Mate o `heading_controller` antes de comandar**: ele publica zero em
+`/auto_vel_raw` e disputa o tópico com o comando de teste. Matar **por PID**.
+
+```bash
+ros2 topic pub -r 10 /auto_vel_raw geometry_msgs/msg/TwistStamped \
+    "{twist: {linear: {x: 0.25}}}"
+```
+
+**Dimensione o tempo pela distância**, e com margem: a 0,25 m/s são 0,75 m em
+3 s. Com a caixa a ~1,1 m, 3 s **não bate** mesmo se o reflexo falhar — foi assim
+que se testou com segurança em 06-08. A zona de parada é `x ∈ [−0,28, +0,49]`,
+então ele deve andar ~60 cm e parar.
+
+**Esperado:** para com ~0,27 m de folga entre o para-choque e a caixa.
 
 ---
 
-## 7. Como o dado volta
+## 7. EXPERIMENTO 4 — teste C, o homem-morto
+
+⚠️ **É o único teste que o DONO opera** — precisa de teclado interativo, e o
+assistente não consegue digitar num ssh dele.
 
 ```bash
-scp 'bara@<ip>:~/Controle_robo_livox/docs/dados/AAAA-MM-DD-*/*.csv' \
-    docs/dados/AAAA-MM-DD-sintonia-rumo/
+# terminal do dono:
+cd ~/Controle_robo_livox && bin/robot-key
+```
+
+Em 06-08 o nó subiu, imprimiu, e **nada saiu em `/key_vel`** (44 s de gravação,
+zero amostras dessa fonte). Agora ele se explica sozinho, a cada 2 s no
+`rosout` — **leia por ssh, não peça para o dono relatar**:
+
+```bash
+ros2 topic echo /rosout --field msg | grep -i "publicadas"
+```
+
+```
+publicadas=0                     -> o timer não roda; o nó subiu quebrado
+publicadas>0  teclas_lidas=0     -> publica, mas não lê o teclado (le_tecla)
+teclas_lidas>0  ouvintes=0       -> lê e publica, mas o twist_mux não assina
+tudo >0 e o robô não anda        -> o problema é da cadeia para baixo
+```
+
+Com isso funcionando, o gravador mede os três intervalos:
+
+```bash
+python3 tools/banco/homem_morto.py --csv $D/homem-morto-a.csv
+```
+
+Protocolo: aperta `w`, segura ~2 s, **solta**, não toca em nada por ~3 s. Uma
+solta por corrida. `[A]` deve dar **0,40–0,45 s** (a régua tem viés de +0,05 s
+porque o teleop publica a 20 Hz).
+
+⚠️ **Se ele não parar sozinho, PARE TUDO.** Teleop que não para é pior que
+teleop nenhum.
+
+---
+
+## 8. Se sobrar
+
+- **vídeo da traseira** durante uma corrida de frente — o item mais barato que
+  falta no projeto. Deixou de ser urgente (o S era do laço, não da boba), mas
+  segue valendo;
+- **desempate do preditor de Smith** — precisa de **corredor longo**, que a sala
+  não dá. Sustentada × assenta só aparece em corrida longa.
+
+---
+
+## 9. Como o dado volta
+
+```bash
+scp 'bara@<ip>:~/Controle_robo_livox/docs/dados/AAAA-MM-DD-*/*.csv' docs/dados/...
 git add docs/dados/ && git commit -m "..." && git push
 ```
 
-**Salve durante a sessão, não no fim** — bateria e rede caem. Em 05-08 os dados
-foram commitados em quatro levas.
+**Salve durante a sessão, não no fim** — em 06-08 o NUC caiu no meio e nada se
+perdeu por causa disso.
 
-**Escreva o `ambiente.txt`** com piso, bateria, commit e a calibração viva que o
-`--checar` imprimiu. Sem ele um limiar medido vira número sem unidade.
+**Escreva o `ambiente.txt`**: piso, bateria (início E fim), commit, e a
+calibração viva que o `--checar` imprimiu.
 
 ---
 
-## 8. Ao terminar
+## 10. Ao terminar
 
 - avisar que **o robô já pode ser desligado**;
 - `docs/DIARIO.md`: entrada da sessão, **incluindo o que falhou**;
 - `ESTADO_PROJETO.md`: atualizar o topo e a lista da próxima ida;
-- se alguma previsão foi falsificada, **dizer isso em voz alta e cedo** — é o
-  resultado mais valioso que uma sessão pode produzir.
+- **atualizar ESTE arquivo** — a versão anterior mandou refazer trabalho pronto.
 
 ---
 
@@ -335,11 +297,15 @@ foram commitados em quatro levas.
 
 | armadilha | como evitar |
 |---|---|
-| `pgrep -c` contando a si mesmo | usar `pgrep -a` e LER quem casou |
-| `ros2 param set` que não chega no nó | matar e subir o nó; conferir a primeira linha do log |
+| `pgrep -c` contando a si mesmo | `pgrep -a` e LER quem casou; na dúvida, `ros2 node list` |
+| `pkill` matando a própria sessão ssh | matar **por PID** |
+| `ros2 param set` que não chega no nó | matar e subir; conferir a primeira linha do log |
 | `git reset --hard` sem `colcon build` | build sempre; a descrição vem do `install/` |
-| trava `--espaco` é RADIAL e usa a fonte mais alarmista | dimensionar pelo **disco varrido**, `--espaco` 1,0–1,2 |
-| `--janela 0.2` no robô | sempre `0.5`; 10 Hz de pose com janela curta inventa ruído |
-| comparar n=1 com n=1 num processo bimodal | n=3, e comparar **faixa** contra faixa |
-| processos órfãos republicando `/Odometry` | matar por PID e conferir **1 publicador** antes de medir |
+| `/tmp/logs` sumindo no reboot | `mkdir -p` antes do `nohup`, senão o launch morre calado |
+| trava `--espaco` é RADIAL | dimensionar pelo **disco varrido**, 1,0–1,2 |
+| `--janela 0.2` no robô | sempre `0.5` |
+| comparar n=1 com n=1 num processo bimodal | n=3, e **faixa** contra faixa |
+| órfãos republicando `/Odometry` | matar por PID e conferir **1 publicador** |
 | dispersão em % sobre número quase nulo | ler o espalho **absoluto** também |
+| calibrar `ff` com o compensador ligado | o integrador come o resíduo — medir **sem** ele |
+| achar que um nó lifecycle está de pé porque aparece no `node list` | `ros2 lifecycle get` |

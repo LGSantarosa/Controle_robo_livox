@@ -61,19 +61,40 @@ class TeleopTeclado(Node):
             ('wz', 0.6),
             ('solta', 0.4),      # [s] sem tecla -> para sozinho
             ('taxa', 20.0),
+            # Em 06-08 este nó subiu, imprimiu, e NADA saiu em /key_vel — 44 s
+            # de gravação, zero amostras dessa fonte. Sem instrumentação não dá
+            # para separar "não lê o teclado" de "lê e não publica" de "publica
+            # e ninguém escuta". Vai por logger (rosout) e não por print: assim
+            # se lê por ssh, sem o dono ter de relatar console.
+            ('diagnostico', True),
         ])
         self.par = {x.name: x.value for x in p}
         qos = QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE)
         self.pub = self.create_publisher(TwistStamped, '~/cmd_vel', qos)
         self.cmd = (0.0, 0.0)
         self.t_tecla = None
+        self.n_pub = 0
+        self.n_teclas = 0
+        self.ultima_tecla = None
         self.create_timer(1.0 / self.par['taxa'], self.passo)
+        if self.par['diagnostico']:
+            self.create_timer(2.0, self.relata)
         print(__doc__.split('## ')[0].split('\n\n', 1)[1])
         print('>>> homem-morto: soltou o teclado, o robô para.\n')
 
+    def relata(self):
+        """A cada 2 s, o suficiente para achar onde a corrente se parte."""
+        self.get_logger().info(
+            f'publicadas={self.n_pub}  teclas_lidas={self.n_teclas}  '
+            f'ultima={self.ultima_tecla!r}  '
+            f'ouvintes_de_{self.pub.topic_name}={self.pub.get_subscription_count()}')
+
     def le_tecla(self):
         if select.select([sys.stdin], [], [], 0.0)[0]:
-            return sys.stdin.read(1)
+            k = sys.stdin.read(1)
+            self.n_teclas += 1
+            self.ultima_tecla = k
+            return k
         return None
 
     def passo(self):
@@ -96,6 +117,7 @@ class TeleopTeclado(Node):
         m.twist.linear.x = float(v)
         m.twist.angular.z = float(wz)
         self.pub.publish(m)
+        self.n_pub += 1
 
 
 def main():
