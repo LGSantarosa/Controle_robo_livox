@@ -1,12 +1,81 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-08-05**.
+> Versionado na `main`. Atualizado em **2026-08-06**.
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+---
+
+## 🎚️ 06-08 — O S tem mecanismo, número e conserto projetado
+
+🔴 **A OSCILAÇÃO DO ROBÔ CRESCE — é instabilidade, não transiente.** Olhando a
+envoltória das três corridas compensadas de 05-08 (o que eu não tinha feito ao
+contar só inversões):
+
+```
+corrida    1ª excursão   2ª excursão   cresceu   meio-período
+a             −2,97°        +6,46°      2,18×       2,38 s
+b             −6,47°       +12,04°      1,86×       2,50 s
+c             −5,43°       +11,84°      2,18×       2,50 s
+```
+
+✅ **O TEMPO MORTO DO LAÇO É 0,94 s**, e o número fecha por **duas rotas
+independentes**: (a) oscilar a 1,277 rad/s com o PI que estava rodando exige
+esse atraso; (b) a placa medida tem 0,27 s de liga (01-08) + 0,52 s de desliga
+(04-08), mais pose a 10 Hz e a janela de 0,2 s ≈ 0,94 s.
+
+✅ **GANHOS REDUZIDOS 4,1× — `kp` 1,00 → 0,25 e `ki` 0,50 → 0,12.** Crescer
+2,07× por meio-período põe o ganho de laço em ~2,07 na travessia de fase, e ele
+precisa ficar abaixo de 1. Os dois caem **juntos** (a razão `ki/kp` não muda —
+é ganho a menos, não controlador diferente). Margem de ganho ~2×.
+
+🔴 **A PLANTA DE BRINQUEDO DO TESTE TINHA O MESMO PONTO CEGO DO GAZEBO.** O
+`_roda_planta` já modelava atraso, mas de **0,26 s** — só a latência de liga.
+Com esse valor **ela não oscila com ganho nenhum**, e era por isso que o S não
+aparecia em lugar nenhum. Corrigida para 0,94 s, ela reproduz o fenômeno e vira
+**o único lugar do projeto onde a estabilidade do rumo se julga sem robô**:
+
+```
+                     atraso 0,26 s (antes)      atraso 0,94 s (medido)
+ganhos ANTIGOS       4,6 · 0,2 · 0,0            15,2 · 15,3 · 12,2 · 10,0 · 8,2
+ganhos NOVOS         8,2 · 0,3 · 0,1            16,5 · 0,4 · 0,2 · 0,1
+```
+
+⚠️ **`int_max` FICA EM 0,6, e isso foi decidido com medida.** Baixar `ki` 4,1×
+encolhe junto a autoridade do integrador (`ki·int_max`: 0,30 → 0,072 rad/s).
+Subi para 2,5 para preservar o produto e **o sino voltou** (9° de segunda
+excursão): com tempo morto, esse teto não é só autoridade, é proteção contra
+**windup**. O preço de mantê-lo baixo: com o ff 25% errado o rumo assenta ~6,8°
+fora da referência. **O conserto disso é acertar o `curv_frente`**, não subir o
+integrador.
+
+🔮 **PREDITOR DE SMITH implementado e OPT-IN (`preditor:=true`) — e ele PERDE.**
+Em vez de baixar o ganho, desconta o que está a caminho. Prevê **só a correção**,
+nunca o feedforward (o efeito futuro do ff é cancelado pelo arco futuro).
+
+```
+configuração                   excursões (graus)      assenta   rumo
+ANTIGOS 1,0/0,5 sem preditor   15,2 15,3 12,2 10,0     39,9 s   +0,94°
+ANTIGOS 1,0/0,5 COM preditor   15,3  2,3  3,7  3,6     nunca    +3,65°
+NOVOS 0,25/0,12 sem preditor   16,5  0,4  0,2  0,1      9,6 s   +0,06°
+```
+
+Mata a **divergência** (12° viram 3,6°) mas deixa ondulação **sustentada**, onde
+o detune assenta abaixo de 0,1°. Fica desligado, com o veredito travado em teste.
+⚠️ Ressalva: a planta de brinquedo aplica o arco **imediatamente** enquanto o wz
+chega atrasado; no robô os dois chegam juntos. Só a máquina desempata — 3 corridas.
+
+⏳ **NADA DISSO FOI VISTO NO ROBÔ.** A previsão que a próxima sessão testa é uma
+só e é falsificável: **a amplitude tem de DECAIR em vez de crescer.** Se
+continuar crescendo, o S não é do laço e o caminho passa a ser o **BO-4**.
+Plano de campo: `docs/PLANO_SINTONIA_RUMO.md`.
+
+**530 testes verdes.** Ganhos, atraso, comparação com o preditor e o caso do
+**modelo errado** travados em teste; quatro verificados por mutação.
 
 ---
 
@@ -26,6 +95,16 @@ compensadas estouram o critério **individualmente**; os dois sentidos falham po
 motivos **opostos** (de frente **oscila** — o S que o dono viu; de ré fica
 **aquém**); e o espalho absoluto **não mudou** (0,035 → 0,044 1/m), porque o
 compensador tira viés e não toca variabilidade de planta.
+
+  ⚠️ **RELEITURA DE 06-08, e ela muda o que aquele `+0,0417` significa**: não é
+  um viés estável, é a **média de uma oscilação que CRESCE, cortada em 1,2 m**.
+  Ou seja, o valor depende de onde a corrida terminou. Consequências:
+  · o número **não** diz nada sobre o sinal do erro do feedforward — o que
+    obriga a retirar a conclusão de 05-08 de que corrigir o `curv_frente`
+    pioraria (ela tinha lido o resíduo como sobrecorreção em regime);
+  · os ganhos que produziram essa tabela **não são mais os do repo** (caíram
+    4,1× em 06-08), então a próxima sessão tem de rodar os antigos como
+    **controle do dia** para a comparação valer.
 
 🔴 **O PIVÔ EM MALHA ABERTA NÃO FUNCIONA NESTE ROBÔ (05-08).** `liga 0,15 s` dá
 16,6–33,4°; `liga 0,20 s` dá 30,3–35,8° — **as faixas se sobrepõem**. Duas
@@ -101,6 +180,35 @@ Nenhuma lib do sistema é tocada.
   (`tools/banco/prova_mux.py`): o humano vence a autonomia, e soltar devolve o
   comando. **Falta o item 1**, que precisa de máquina: soltar o teclado e o robô
   parar sozinho em 0,4 s.
+
+---
+
+## 📋 A PRÓXIMA IDA AO ROBÔ — tudo o que está esperando máquina
+
+Em ordem de valor. O roteiro completo de cada um está nos planos citados.
+
+```
+0. deploy: bundle -> colcon build -> ./setup_twist_mux.sh (uma vez, só o C/D)
+1. sessao.py --checar   🔴 OBRIGATÓRIO: wheel_separation TEM de dar 0,2700.
+                        A descrição do robô mudou em 05-08 e isso nunca rodou lá.
+                        Se não bater, PARE — nenhum número da sessão vale.
+```
+
+| # | o que | por quê é o mais valioso | onde |
+|---|---|---|---|
+| 1 | **sintonia do rumo**: ganhos novos (0,25/0,12) × antigos (1,0/0,5), n=3 | previsão falsificável: a amplitude tem de **decair** em vez de crescer | `PLANO_SINTONIA_RUMO.md` |
+| 2 | **pivô `liga 0,10` e `0,30`, n=3** | previsão falsificável: o `0,10` tem de sair **bimodal** (~0° ou ~16°). São os dois pontos onde o simulador mais discorda, e onde só há n=1 | `PLANO_TESTE_ROBO.md` §1 |
+| 3 | **teste C, item 1** (homem-morto) | único teste cuja falha é *pior que não ter a função* | `PLANO_TESTE_ROBO.md` §1 |
+| 4 | **teste D** (reflexo) — **caixa de 50 cm** | destravado em 05-08 (o `livox_frame` passou a existir) | `PLANO_TESTE_ROBO.md` §1 |
+| 5 | **preditor de Smith**, se sobrar | 3 corridas desempatam; se perder, fica desligado para sempre | `PLANO_SINTONIA_RUMO.md` §4 |
+| 6 | **vídeo da traseira** durante o S | critério (b) do BO-4, aberto desde 28-07. Filmado em 04-08 e **nunca trazido para o repo** — é o item mais barato que falta | BO-4 |
+
+🔴 **PISO E BATERIA, e desta vez não é burocracia.** Ficaram `NÃO INFORMADO` em
+04-08 **e** em 05-08. Na sintonia do rumo a bateria é candidata direta a
+explicar diferença entre valores de ganho, e sem ela uma varredura ao longo de
+uma tarde **não é comparável consigo mesma** — a linha de base repetida no fim
+de 05-08 já sugeriu ~5% de queda de planta na sessão, que vale 0,046 1/m, do
+tamanho do resíduo inteiro depois de compensar.
 
 ---
 
@@ -1339,6 +1447,20 @@ inertes o standdown de porta no `unstuck_supervisor` e o `cone_pose_fix.py`.
   está explicado por `wz²/(2·a_dec)` e há uma lei que o elimina, com 10
   corridas medidas. Falta a comparação valer no robô.
 
+  🟢 **06-08: o segundo candidato virou o mais forte, e por mérito próprio.**
+  Há agora DOIS "S" distintos, com mecanismos diferentes, os dois medidos:
+  · o de **27-07** (simulador), da rampa de desaceleração — `wz²/(2·a_dec)`;
+  · o de **05-08** (robô real), de **tempo morto** — 0,94 s de atraso no laço,
+    com a oscilação CRESCENDO 2,07× por meio-período.
+  O segundo tem o que um artigo precisa: fenômeno medido no hardware, mecanismo
+  confirmado por **duas rotas independentes** (a frequência da oscilação e a
+  soma dos atrasos da placa), um conserto **projetado** a partir do número
+  (ganhos 4,1× menores), uma alternativa clássica **implementada e comparada**
+  (preditor de Smith, que perdeu), e uma **previsão falsificável** esperando o
+  robô. E um achado de método que vale por si: o defeito era invisível em TODOS
+  os modelos do projeto — Gazebo e teste unitário — porque os dois subestimavam
+  o atraso.
+
 - **BO-3 — Zona morta do atuador** (aberto 07-27): comando abaixo da zona morta
   deixa o robô **parado sem erro nenhum** — nó vivo, tópico publicando, log
   limpo, máquina imóvel. Já custou horas de depuração na competição de 2025.
@@ -1414,8 +1536,19 @@ inertes o standdown de porta no `unstuck_supervisor` e o `cone_pose_fix.py`.
   alinhar) segue intocado, e o preço é que **o encoder simulado mente** — o que
   quebra no dia em que ligarem `open_loop: false`.
 
+  🔴 **06-08: o BO-4 ganhou um segundo sintoma, e ele é grande.** O S do robô
+  não aparece no simulador **em ganho nenhum** — varrer `ki` de 1,0 a 0,0 não
+  mudou uma única inversão, e a corrida longa (27 s, 8 m) deu 1 inversão e
+  deriva final 0,0°. Duas razões estruturais, e a segunda é este BO: no
+  simulador o ff cancela o arco por construção (mesmo −0,817 dos dois lados),
+  **e a boba é um patim**. Oscilação de rumo puxada por roda boba arrastada não
+  pode aparecer num modelo cujo contato de boba não participa da dinâmica.
+  ➡️ Se a sintonia de 06-08 falhar no robô (amplitude continuar crescendo com
+  os ganhos novos), o S deixa de ser assunto de laço e passa a ser **este BO**.
+
   ⚠️ **Falta ainda o vídeo da traseira** — foi filmado em 08-04 mas não trazido
   para o repo. É a única evidência direta do garfo, e sem ela o critério (b)
-  não anda. E o dono confirmou, empurrando o robô **com a mão** e com ele
+  não anda. **Virou item da próxima ida** (nº 6 da lista lá em cima): filmar a
+  traseira DURANTE o S é o que liga os dois sintomas. E o dono confirmou, empurrando o robô **com a mão** e com ele
   desligado, que o desvio **se repete** — ou seja, o fenômeno não depende de
   acionamento, o que é um dado forte a favor de causa geométrica.
