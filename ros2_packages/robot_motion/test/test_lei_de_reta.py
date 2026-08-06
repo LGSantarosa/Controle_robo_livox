@@ -343,3 +343,126 @@ def test_o_integrador_ainda_da_conta_do_residuo_do_ff():
     assert autoridade > 2 * residuo_rad_s, (
         f'integrador entrega no máximo {autoridade:.3f} rad/s e o resíduo pede '
         f'{residuo_rad_s:.3f} — sem folga, o rumo fica com erro permanente')
+
+
+# ------------------------------------------- o preditor de Smith (opt-in, 06-08)
+#
+# A alternativa a baixar o ganho: em vez de responder devagar por causa do
+# atraso, DESCONTAR o que já está a caminho. Com o atraso fora de dentro da
+# malha, o ganho pode voltar a subir.
+#
+# ⚠️ Ele depende do modelo (`preditor_atraso`, `preditor_ganho`). Por isso está
+# desligado por padrão e por isso os testes abaixo incluem o caso do modelo
+# ERRADO — um preditor que só é testado com o modelo certo é um preditor cuja
+# pior falha ninguém viu.
+
+def _picos_com_planta(malha, atraso_planta, curv_planta=-0.9116, v_cmd=0.25,
+                      passos=1500, dt=0.02):
+    """Como `_picos`, mas com o atraso da PLANTA escolhível — para poder pôr o
+    modelo do preditor em desacordo com a planta de propósito."""
+    yaw, fila, hist = 0.0, [0.0] * atraso_planta, []
+    for _ in range(passos):
+        fila.append(malha.passo(v_cmd, 0.0, yaw, dt))
+        agindo = fila.pop(0)
+        v_real = math.copysign(0.30, v_cmd)
+        yaw = norm_ang(yaw + (agindo / abs(v_real) + curv_planta)
+                       * abs(v_real) * dt)
+        hist.append(math.degrees(yaw))
+    return [abs(hist[i]) for i in range(1, len(hist) - 1)
+            if (hist[i] - hist[i - 1]) * (hist[i + 1] - hist[i]) < 0]
+
+
+def test_o_preditor_vem_DESLIGADO():
+    """O caminho de produção não pode depender de modelo. Ligar é decisão
+    explícita de quem está sintonizando, não default."""
+    assert MalhaDeReta().preditor is False
+    assert _defaults_do_no()['preditor'] is False
+
+
+def test_desligado_ele_nao_muda_nada():
+    """Garantia de que a fatia é inerte por padrão: com `preditor=False` a
+    saída tem de ser bit a bit a mesma de antes de ele existir."""
+    a, b = MalhaDeReta(), MalhaDeReta(preditor=False)
+    for yaw in (0.0, -0.05, -0.12, -0.2, -0.1):
+        assert a.passo(0.25, 0.0, yaw, 0.1) == b.passo(0.25, 0.0, yaw, 0.1)
+
+
+def test_com_preditor_os_ganhos_ANTIGOS_param_de_tocar_sino():
+    """O que ele compra. Os ganhos que faziam o robô oscilar (1,0 / 0,5) contra
+    a planta com o atraso medido: sem preditor tocam sino, com preditor não."""
+    sem = _picos_com_planta(MalhaDeReta(kp=1.0, ki=0.5), 47)
+    com = _picos_com_planta(
+        MalhaDeReta(kp=1.0, ki=0.5, preditor=True), 47)
+    assert sem[1] > 5.0, 'a planta tem de mostrar o sino sem o preditor'
+    assert com[1] < sem[1] / 2.0, (
+        f'com preditor a 2ª excursão foi {com[1]:.1f}° contra {sem[1]:.1f}° '
+        f'sem — esperava pelo menos metade')
+
+
+def test_ele_preve_so_a_CORRECAO_e_nao_o_feedforward():
+    """O detalhe que faz ele ajudar em vez de atrapalhar. O ff é a maior
+    parcela da saída e o efeito futuro dele é cancelado pelo arco futuro;
+    prever um sem o outro criaria viés do tamanho do ff.
+
+    Com erro de rumo ZERO a correção é zero, então a previsão tem de ser zero
+    — mesmo com o ff mandando 0,2 rad/s há vários passos."""
+    m = MalhaDeReta(preditor=True)
+    for _ in range(30):
+        m.passo(0.25, 0.0, yaw=0.0, dt=0.05)     # rumo em cima: correção ~0
+    assert m.yaw_efetivo(0.0) == pytest.approx(0.0, abs=1e-9), (
+        'o feedforward vazou para a previsão')
+
+
+def test_a_previsao_e_grampeada():
+    """Fila grande não pode deslocar o yaw sem limite: previsão errada com
+    autoridade infinita é pior que atraso nenhum."""
+    m = MalhaDeReta(preditor=True, preditor_max=0.35, kp=5.0, ki=0.0)
+    for _ in range(200):
+        m.passo(0.25, 0.0, yaw=-1.0, dt=0.05)
+    assert abs(m.yaw_efetivo(-1.0) - (-1.0)) <= 0.35 + 1e-9
+
+
+def test_modelo_ERRADO_degrada_sem_explodir():
+    """O caso que importa para confiar nele. O preditor acha que o atraso é
+    0,94 s; a planta entrega 1,4 s (50% pior). Ele tem de degradar — não pode
+    ficar pior que não ter preditor nenhum com os mesmos ganhos."""
+    ganhos = dict(kp=1.0, ki=0.5)
+    sem = _picos_com_planta(MalhaDeReta(**ganhos), 70)          # 1,4 s
+    com = _picos_com_planta(MalhaDeReta(preditor=True, **ganhos), 70)
+    assert com[1] <= sem[1] * 1.1, (
+        f'com modelo 50% errado o preditor PIOROU: 2ª excursão {com[1]:.1f}° '
+        f'contra {sem[1]:.1f}° sem ele')
+
+
+def test_a_fila_morre_quando_a_referencia_morre():
+    """Correções emitidas contra um rumo que não existe mais não podem ser
+    descontadas na próxima reta — seria descontar giro que ninguém pediu."""
+    m = MalhaDeReta(preditor=True)
+    for _ in range(20):
+        m.passo(0.25, 0.0, yaw=-0.2, dt=0.05)
+    assert m.em_transito, 'a fila tinha de ter enchido'
+    m.passo(0.0, 0.0, yaw=-0.2, dt=0.05)     # parou: descarta tudo
+    assert m.em_transito == []
+
+
+def test_o_detune_ganha_do_preditor_na_planta_de_hoje():
+    """Trava o veredito de 06-08 para que ninguém ligue o preditor por default
+    achando que é melhor. Ele mata a divergência, mas deixa ondulação
+    SUSTENTADA (~3,6°) onde a redução de ganho assenta abaixo de 0,1°.
+
+    Se um dia esta comparação virar, é porque o modelo mudou — e aí o default
+    pode ser revisto COM o número novo na mão, não por preferência."""
+    detune = _picos_com_planta(MalhaDeReta(), 47)
+    preditor = _picos_com_planta(MalhaDeReta(kp=1.0, ki=0.5, preditor=True), 47)
+
+    # O detune assenta: depois da primeira excursão sobra ruído, e tão pouco
+    # que ele nem chega a produzir muitos extremos no horizonte.
+    assert all(p < 0.5 for p in detune[1:]), (
+        f'o detune deixou de assentar: {[round(p, 2) for p in detune[:5]]}')
+    # O preditor ondula: extremos que continuam aparecendo, e grandes.
+    assert len(preditor) > len(detune), (
+        f'o preditor tinha mais extremos que o detune; agora {len(preditor)} '
+        f'contra {len(detune)} — reveja o default')
+    assert max(preditor[1:4]) > 2.0, (
+        f'o preditor passou a assentar ({[round(p, 2) for p in preditor[:4]]})'
+        f' — reveja o default, agora COM o número novo')

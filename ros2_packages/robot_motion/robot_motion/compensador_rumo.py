@@ -120,6 +120,22 @@ class CompensadorRumo(Node):
             ('segura_rumo', True),
             # Pose mais velha que isto = sem sensor: passa reto e grita.
             ('validade_pose', 0.5),  # [s]
+
+            # --- preditor de Smith, OPT-IN (racional em `lei_de_reta.py`) ---
+            # Desligado por padrão de propósito: o caminho de produção é o de
+            # ganho baixo, que não depende de modelo nenhum. O preditor troca
+            # "ganho baixo" por "descontar o atraso", e com isso permite subir
+            # os ganhos de volta — mas paga com dependência do modelo.
+            #
+            # Para comparar os dois no robô, lado a lado (`PLANO_SINTONIA_RUMO`):
+            #   ros2 run robot_motion compensador_rumo --ros-args \
+            #       -p preditor:=true -p kp:=1.0 -p ki:=0.5
+            ('preditor', False),
+            ('preditor_atraso', 0.94),   # [s] o atraso MEDIDO do laço
+            # 1,0 SUBESTIMA (o realizado é ~1,19x o comandado na faixa reta).
+            # Subestimar degrada em direção ao caso sem preditor — lado seguro.
+            ('preditor_ganho', 1.0),
+            ('preditor_max', 0.35),      # [rad] grampo da previsão (~20°)
         ])
         par = {x.name: x.value for x in p}
 
@@ -127,7 +143,10 @@ class CompensadorRumo(Node):
             curv_frente=par['curv_frente'], curv_re=par['curv_re'],
             kp=par['kp'], ki=par['ki'], wz_max=par['wz_max'],
             int_max=par['int_max'], limiar_curva=par['limiar_curva'],
-            segura_rumo=par['segura_rumo'])
+            segura_rumo=par['segura_rumo'], preditor=par['preditor'],
+            preditor_atraso=par['preditor_atraso'],
+            preditor_ganho=par['preditor_ganho'],
+            preditor_max=par['preditor_max'])
         self.validade_pose = par['validade_pose']
 
         qos = QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE)
@@ -148,6 +167,13 @@ class CompensadorRumo(Node):
             f"ki={par['ki']:.2f}, correção limitada a ±{par['wz_max']:.2f} "
             f"rad/s. Curva pedida (|wz|≥{par['limiar_curva']:.2f}) passa "
             f"intocada.")
+        if par['preditor']:
+            self.get_logger().warn(
+                f"PREDITOR DE SMITH LIGADO: descontando {par['preditor_atraso']:.2f} s "
+                f"de atraso (ganho {par['preditor_ganho']:.2f}, grampo "
+                f"{par['preditor_max']:.2f} rad). Ele DEPENDE do modelo — se o "
+                f"atraso real divergir, a correção sai errada. O caminho sem "
+                f"modelo é desligá-lo e usar os ganhos baixos.")
 
     def agora(self):
         return self.get_clock().now().nanoseconds * 1e-9

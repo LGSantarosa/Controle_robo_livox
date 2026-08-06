@@ -4139,3 +4139,58 @@ os da lei — default duplicado é default que deriva.
 ⏳ **A conferir no robô** (`docs/PLANO_SINTONIA_RUMO.md`): a mesma corrida tem de
 mostrar a amplitude **decaindo** em vez de crescer. Se continuar crescendo com
 estes ganhos, o S não é do laço e o caminho passa a ser o BO-4.
+
+## 🔮 2026-08-06 (2ª leva) — O preditor de Smith entra, e perde para o detune
+
+A saída que o dono descreveu (*"não dá pra ter um código feito pra arrumar a
+direção dele sem ficar fazendo S?"*) tem nome e está implementada: **preditor de
+Smith**, em `lei_de_reta.py`, **opt-in e desligado por padrão**.
+
+### Como ele funciona aqui
+
+Em vez de baixar o ganho para tolerar o atraso, ele **desconta o que já está a
+caminho**: a malha enxerga `yaw + (giro que os comandos em trânsito ainda vão
+produzir)`. Com o atraso fora de dentro da malha, o ganho poderia voltar a subir.
+
+**Uma decisão fina que faz toda a diferença: ele prevê SÓ A CORREÇÃO, não o
+feedforward.** O efeito futuro do ff é, por construção, cancelado pelo arco
+futuro do corpo — prever um sem o outro criaria viés do tamanho do próprio ff,
+que é a maior parcela da saída. Travado em teste.
+
+### 🔴 E o veredito medido: ele perde
+
+```
+configuração                     excursões (graus)       assenta   rumo
+ANTIGOS 1,0/0,5 sem preditor     15,2 15,3 12,2 10,0      39,9 s   +0,94°
+ANTIGOS 1,0/0,5 COM preditor     15,3  2,3  3,7  3,6      nunca    +3,65°
+NOVOS 0,25/0,12 sem preditor     16,5  0,4  0,2  0,1       9,6 s   +0,06°
+NOVOS 0,25/0,12 COM preditor     16,7  3,4  3,7  3,6      nunca    +3,63°
+```
+
+Ele **mata a divergência** dos ganhos antigos (12° viram 3,6°) — faz o que
+promete. Mas deixa ondulação **sustentada** de ~3,6° e um viés de rumo, onde o
+detune simples assenta abaixo de 0,1° em 9,6 s.
+
+Conferido que não é defeito de parametrização: o grampo não está segurando
+(mesmo resultado de 0,35 a 2,0 rad) e subir o `preditor_ganho` de 1,0 para 1,4
+piora monotonicamente.
+
+⚠️ **Ressalva que a comparação não resolve**: a planta de brinquedo aplica o
+arco IMEDIATAMENTE enquanto o wz comandado chega atrasado; no robô os dois
+nascem do mesmo movimento e chegam juntos. Essa assimetria pode penalizar o
+preditor injustamente. É por isso que ele **fica no código** — e não é por isso
+que ele fica ligado.
+
+### O que ficou travado
+
+Oito testes, incluindo o caso do **modelo errado** (preditor achando 0,94 s
+contra planta de 1,4 s: degrada, não explode) — um preditor testado só com o
+modelo certo é um preditor cuja pior falha ninguém viu. Mais o que trava o
+veredito da comparação, para ninguém ligar o default por preferência. Mutação:
+fazendo `yaw_efetivo` devolver o yaw cru, só o teste do sino falha.
+
+**144 testes no `robot_motion`** (eram 136); **530 na suíte**.
+
+➡️ `PLANO_SINTONIA_RUMO.md` ganhou a seção do preditor: se sobrar sessão, três
+corridas desempatam. Se ele não ganhar no robô, fica desligado para sempre e
+isso vira registro.

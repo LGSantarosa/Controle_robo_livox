@@ -201,16 +201,76 @@ duas amostras e inventa ruído — foi o que gerou a falsa acusação contra o L
 
 ### A varredura
 
-| ordem | `ki` | por quê |
-|---|---|---|
-| 1 | **0,50** | a linha de base — repete o estado de 05-08 no piso e bateria de HOJE |
-| 2 | **0,25** | metade |
-| 3 | **0,10** | um quinto |
-| 4 | **0,00** | sem integrador: só feedforward + proporcional |
+⚠️ **O DEFAULT MUDOU EM 06-08**: `kp=0,25` e `ki=0,12`, reduzidos 4,1× a partir
+da própria oscilação medida (ver a seção 4.1). A varredura abaixo existe para
+**confirmar o projeto**, não para descobrir o valor do zero.
 
-**12 corridas.** Se a bateria apertar, corte pela ordem inversa (0,25 é o menos
-informativo) — mas **nunca corte a de 0,50**: sem ela não há linha de base do
-dia, e a comparação com 05-08 fica sem controle de piso e bateria.
+| ordem | `kp` / `ki` | por quê |
+|---|---|---|
+| 1 | **0,25 / 0,12** (default) | o projeto. É esta que tem de mostrar a amplitude DECAINDO |
+| 2 | **1,00 / 0,50** | os ganhos velhos — repete o estado de 05-08 no piso e bateria de HOJE. É o **controle**: sem ele não se sabe se a planta do dia é a mesma |
+| 3 | **0,15 / 0,07** | mais conservador ainda, se a 1 ainda oscilar |
+| 4 | **0,40 / 0,20** | menos conservador, se a 1 assentar folgado e ficar lenta demais |
+
+**Rodar 1 e 2 sempre** — são o projeto e o controle. As outras duas só conforme
+o que as primeiras mostrarem.
+
+**6 corridas para o essencial** (as duas primeiras condições, n=3), 12 se as
+quatro rodarem. Se a bateria apertar, **nunca corte a condição 2**: sem os
+ganhos velhos no piso e bateria de hoje, não há como saber se uma eventual
+melhora foi do ganho ou do dia.
+
+### 4.1 O que já está decidido, e por quê (leia antes de varrer)
+
+Os ganhos novos não são chute — saíram da oscilação do próprio robô:
+
+```
+a oscilação de 05-08 CRESCE 2,07x por meio-período  (três corridas)
+    -> ganho de laço ~2,07 na travessia; precisa ficar abaixo de 1
+oscilar a 1,277 rad/s com o PI antigo exige 0,94 s de atraso puro
+    -> e a placa medida tem 0,27 (liga) + 0,52 (desliga) + sensor ≈ 0,94 s
+    -> duas rotas independentes, mesmo número
+```
+
+Reduzir 4,1× leva o ganho de ~2 para ~0,5 (margem 2×). **A previsão, e é ela
+que a sessão testa: a amplitude tem de DECAIR em vez de crescer.**
+
+⚠️ **O preço já está calculado**: com o ff errado em 25%, o rumo assenta ~6,8°
+fora da referência capturada, porque o integrador limitado não dá conta sozinho.
+O robô anda **reto** — só apontando alguns graus para o lado. O conserto disso é
+acertar o `curv_frente`, não subir o integrador (subir traz o sino de volta;
+a tabela está no `compensador_rumo.py`).
+
+### E o preditor de Smith, se sobrar sessão
+
+Existe uma segunda saída implementada e **desligada por padrão**: em vez de
+baixar o ganho, descontar o atraso. A malha soma ao yaw medido o giro que os
+comandos já emitidos ainda vão produzir, e fecha nela.
+
+```bash
+ros2 run robot_motion compensador_rumo --ros-args \
+    -p preditor:=true -p kp:=1.0 -p ki:=0.5
+```
+
+🔴 **Na bancada matemática ele PERDE para a redução de ganho**, e o número está
+travado em teste:
+
+```
+configuração                     excursões (graus)       assenta   rumo
+ANTIGOS 1,0/0,5 sem preditor     15,2 15,3 12,2 10,0      39,9 s   +0,94°
+ANTIGOS 1,0/0,5 COM preditor     15,3  2,3  3,7  3,6      nunca    +3,65°
+NOVOS 0,25/0,12 sem preditor     16,5  0,4  0,2  0,1       9,6 s   +0,06°
+```
+
+Ele faz o que promete — mata a **divergência** dos ganhos antigos — mas deixa
+ondulação **sustentada** de ~3,6°, enquanto o detune assenta abaixo de 0,1°.
+
+⚠️ **Por que ainda assim vale rodar no robô, se sobrar tempo:** a bancada
+matemática aplica o arco IMEDIATAMENTE enquanto o wz comandado chega atrasado.
+No robô os dois nascem do mesmo movimento e chegam juntos. Essa assimetria pode
+estar penalizando o preditor injustamente, e só a máquina desempata. **Três
+corridas bastam** — se ele não ganhar do detune ali, ele fica desligado para
+sempre e isso vira registro.
 
 ### E o `kp`, se sobrar sessão
 

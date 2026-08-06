@@ -53,7 +53,8 @@ class MalhaDeReta:
     # dois, porque default duplicado é default que deriva.
     def __init__(self, curv_frente=-0.817, curv_re=-0.098, kp=0.25, ki=0.12,
                  wz_max=0.6, int_max=0.6, limiar_curva=0.05,
-                 segura_rumo=True):
+                 segura_rumo=True, preditor=False, preditor_atraso=0.94,
+                 preditor_ganho=1.0, preditor_max=0.35):
         if kp < 0.0 or ki < 0.0:
             raise ValueError('kp e ki não podem ser negativos')
         # `segura_rumo=False` deixa só o FEEDFORWARD: cancela o arco do corpo
@@ -74,6 +75,13 @@ class MalhaDeReta:
         self.rumo_ref = None      # capturado ao entrar em reta
         self.integral = 0.0       # [rad·s]
         self.sentido = 0          # +1 frente, -1 ré, 0 parado
+
+        # --- preditor de Smith (opcional, DESLIGADO por padrão) ---
+        self.preditor = preditor
+        self.preditor_atraso = preditor_atraso
+        self.preditor_ganho = preditor_ganho
+        self.preditor_max = preditor_max
+        self.em_transito = []     # [(dt, correcao)] ainda a caminho da roda
 
     def passo(self, v_cmd, wz_cmd, yaw, dt, v_real=None):
         """Um ciclo: devolve o wz corrigido para (v_cmd, wz_cmd) dados.
@@ -118,7 +126,7 @@ class MalhaDeReta:
         if self.rumo_ref is None:
             self.rumo_ref = yaw
 
-        e = norm_ang(self.rumo_ref - yaw)
+        e = norm_ang(self.rumo_ref - self.yaw_efetivo(yaw))
 
         # dt não-positivo (relógio andou para trás, primeira amostra) não
         # pode envenenar o integrador; o termo P segue valendo.
@@ -126,10 +134,91 @@ class MalhaDeReta:
             self.integral = max(-self.int_max,
                                 min(self.int_max, self.integral + e * dt))
 
-        wz = ff + self.kp * e + self.ki * self.integral
+        correcao = self.kp * e + self.ki * self.integral
+        self._registra_em_transito(correcao, dt)
+        wz = ff + correcao
         return max(-self.wz_max, min(self.wz_max, wz))
+
+    # ------------------------------------------------- preditor de Smith
+    #
+    # O problema que ele resolve: entre o comando sair e a roda responder
+    # passam ~0,94 s (0,27 s de liga + 0,52 s de desliga da placa, mais a pose
+    # a 10 Hz e a janela de 0,2 s da velocidade — número confirmado também
+    # pela frequência em que o robô oscilou em 05-08). Nesse intervalo a malha
+    # vê um yaw VELHO e corrige de novo o que já mandou corrigir. É isso que
+    # produz o S, e é por isso que os ganhos tiveram de cair 4,1x.
+    #
+    # A saída clássica: em vez de baixar o ganho, **descontar o que já está a
+    # caminho**. A malha passa a enxergar
+    #
+    #     yaw_efetivo = yaw_medido + (o giro que os comandos em trânsito ainda
+    #                                 vão produzir)
+    #
+    # e com o atraso fora de dentro da malha o ganho pode voltar a subir.
+    #
+    # ⚠️ SÓ A CORREÇÃO ENTRA NA PREVISÃO, não o feedforward. O efeito futuro do
+    # ff é, por construção, cancelado pelo arco futuro do corpo — prever um sem
+    # prever o outro criaria um viés do tamanho do próprio ff, que é a maior
+    # parcela da saída. Este é o detalhe que faz o preditor ajudar em vez de
+    # atrapalhar.
+    #
+    # ⚠️ ELE DEPENDE DO MODELO. Se `preditor_atraso` ou `preditor_ganho` errarem
+    # muito, ele prevê errado e pode piorar. Três defesas:
+    #   1. desligado por padrão — o caminho de produção segue o de ganho baixo,
+    #      que não depende de modelo nenhum;
+    #   2. `preditor_ganho` em 1,0, que SUBESTIMA (o realizado é ~1,19x o
+    #      comandado na faixa reta). Subestimar degrada em direção ao caso sem
+    #      preditor, que é o lado seguro do erro — mesma lógica do `a_dec` em
+    #      27-07 ("errar para baixo é de graça");
+    #   3. `preditor_max` grampeia a previsão: por mais que a fila cresça, ela
+    #      não desloca o yaw mais que isso.
+    #
+    # 🔴 **E O VEREDITO MEDIDO (06-08): ele PERDE para simplesmente baixar o
+    # ganho.** Na planta de brinquedo com o atraso medido de 0,94 s:
+    #
+    #     configuração                 excursões              assenta   rumo
+    #     ANTIGOS 1,0/0,5 sem pred.    15,2 15,3 12,2 10,0     39,9 s   +0,94°
+    #     ANTIGOS 1,0/0,5 COM pred.    15,3  2,3  3,7  3,6     nunca    +3,65°
+    #     NOVOS 0,25/0,12 sem pred.    16,5  0,4  0,2  0,1      9,6 s   +0,06°
+    #     NOVOS 0,25/0,12 COM pred.    16,7  3,4  3,7  3,6     nunca    +3,63°
+    #
+    # Ele faz o que promete — mata a DIVERGÊNCIA dos ganhos antigos (12° viram
+    # 3,6°) — mas deixa uma ondulação SUSTENTADA de ~3,6° e um viés de rumo, e
+    # a redução de ganho assenta abaixo de 0,1°. Conferido que não é o grampo
+    # (mesmo resultado de 0,35 a 2,0 rad) nem o `preditor_ganho` (subir de 1,0
+    # para 1,4 piora monotonicamente).
+    #
+    # ⚠️ RESSALVA DA COMPARAÇÃO, que ela não resolve: na planta de brinquedo o
+    # ARCO age imediatamente enquanto o wz comandado chega atrasado. No robô os
+    # dois nascem do mesmo movimento e chegam juntos. Essa assimetria pode
+    # penalizar o preditor injustamente — é por isso que ele fica no código, e
+    # não é por isso que ele fica ligado. Quem arbitra é o robô
+    # (`docs/PLANO_SINTONIA_RUMO.md`).
+
+    def yaw_efetivo(self, yaw):
+        """O yaw que a malha deve enxergar: o medido mais o que está a caminho."""
+        if not self.preditor:
+            return yaw
+        pendente = sum(w * d for d, w in self.em_transito)
+        pendente = max(-self.preditor_max,
+                       min(self.preditor_max, self.preditor_ganho * pendente))
+        return yaw + pendente
+
+    def _registra_em_transito(self, correcao, dt):
+        """Guarda a correção emitida e esquece o que já chegou na roda."""
+        if not self.preditor or dt <= 0.0:
+            return
+        self.em_transito.append((dt, correcao))
+        idade = sum(d for d, _ in self.em_transito)
+        while self.em_transito and idade > self.preditor_atraso:
+            idade -= self.em_transito.pop(0)[0]
 
     def _descarta(self):
         self.rumo_ref = None
         self.integral = 0.0
         self.sentido = 0
+        # A fila do preditor também morre: ela descreve correções emitidas
+        # contra uma referência que não existe mais. Carregá-la para a próxima
+        # reta faria a malha descontar um giro que ninguém pediu — o mesmo
+        # motivo pelo qual o integrador é zerado aqui.
+        self.em_transito.clear()
