@@ -245,7 +245,7 @@ Dois dos três bloqueios de hoje são de dev:
 | # | o que | por quê | onde |
 |---|---|---|---|
 | 1 | **TF `odom → base_link`** | o FAST-LIO publica `/Odometry` como mensagem e **não** publica a transformada. A árvore TF fica partida, o `planner_server` não ativa, o `lifecycle_manager` **aborta o bringup inteiro** e leva o `collision_monitor` junto. Bloqueia Nav2 **e** o teste D | DIÁRIO 06-08 (3ª leva) |
-| 2 | **`curv_frente` errado** | sobra arco de ~0,08 1/m depois de compensar, idêntico com ganhos novos e velhos — é erro de **feedforward**, e nenhum ganho corrige. A corrida `novos-a` assentou a 6,81°, contra os ~6,8° previstos | decisão 011 |
+| 2 | **o `ff` fixo não fecha o arco** | ⚠️ **corrigido em 06-08**: não é "o número está errado", é a **planta mudando de dia**. Crua: −0,8031 em 04-08 contra −0,9116 em 05-08 (13,5%, faixas que não se tocam), com 2–3% de dispersão *dentro* de cada dia. Nenhum valor único serve. Três caminhos possíveis, **escolha do dono** | decisão **013** |
 | 3 | **teleop não publica em `/key_vel`** | 44 s de gravação, **zero** amostras dessa fonte. Não é o `le_tecla()` — é antes disso | `homem_morto.py` |
 | 4 | **`bin/robot-key` com `set -u`** | briga com `COLCON_TRACE` e `AMENT_TRACE_SETUP_FILES` dos `setup.bash`. Uma linha | — |
 
