@@ -28,6 +28,7 @@ setup(
     entry_points={
         'console_scripts': [
             'placa_simulada = robot_base.placa_simulada:main',
+            'tf_odom = robot_base.tf_odom:main',
         ],
     },
 )

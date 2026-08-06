@@ -11,6 +11,11 @@ termos de hardware.
 
 ⚠️ A origem do FAST-LIO zera a cada boot — a pose é relativa ao ponto onde o
 robô ligou, não a um mapa global.
+
+⚠️ **O FAST-LIO publica a pose como MENSAGEM, não como TF.** Quem fecha a
+árvore (`odom → base_link`) é o nosso `tf_odom`, que sobe junto aqui desde
+06-08. Sem ele a árvore fica partida e o Nav2, o `collision_monitor` e o teste
+D caem em cascata — e sem erro que diga que o problema é TF.
 """
 
 import os
@@ -22,6 +27,7 @@ from ament_index_python.packages import (
 from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription, LogInfo
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch_ros.actions import Node
 
 _COMO_RESOLVER = (
     'Esses pacotes não são versionados neste repo (upstream de terceiros, em '
@@ -81,4 +87,11 @@ def generate_launch_description():
             PythonLaunchDescriptionSource(fastlio_launch),
             launch_arguments={'config_file': fastlio_cfg}.items(),
         ),
+        # A TF que o FAST-LIO não publica. Sem ela a árvore fica partida em
+        # dois pedaços e cai em cascata: o Nav2 não ativa, o
+        # `lifecycle_manager` aborta o bringup e leva o `collision_monitor`
+        # junto — que foi como o teste D morreu em 06-08, sem uma linha de erro
+        # dizendo "falta uma TF". Ver `robot_base/tf_odom.py`.
+        Node(package='robot_base', executable='tf_odom', name='tf_odom',
+             output='both'),
     ])
