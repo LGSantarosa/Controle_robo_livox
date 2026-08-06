@@ -1,0 +1,40 @@
+SESSÃO DE BANCADA — 2026-08-06
+================================
+
+piso     : cerâmica da sala
+bateria  : 41,16 V no início / 41,0 V ao fim das 6 corridas de reta
+           (queda de 0,16 V — condições comparáveis entre as duas condições)
+espaço   : ponto 0 marcado com fita, rumo marcado; todas as corridas partem
+           do mesmo ponto e mesmo rumo
+commit   : 8461a1b  (deploy por bundle, colcon build refeito no NUC)
+
+calibração viva (o que o controlador carregou, via sessao.py --checar)
+----------------------------------------------------------------------
+  /Odometry a 10.0 Hz
+  wheel_separation = 0.2700   <- a descrição nova (robo2.urdf.xacro),
+                                 confirmada NO ROBÔ pela primeira vez
+  wheel_radius     = 0.0800
+  rodas: esquerda=['left_wheel_joint'] direita=['right_wheel_joint']
+  swap NÃO aplicado (ordem original)
+
+pilha: 1 fastlio_mapping, 1 livox_ros_driver2_node, 1 publicador de /Odometry
+       (conferido com pgrep -a, não -c)
+
+ensaio
+------
+  reta --v 0.25 --wz 0 --dur 12 --espaco 1.2 --janela 0.5
+  --topico /compensador_rumo/cmd_vel
+  Todas as corridas foram cortadas pela trava de espaço em ~4,6-5,0 s.
+
+condições
+---------
+  novos-*  : kp=0.25 ki=0.12   (o projeto — default do nó)
+  velhos-* : kp=1.00 ki=0.50   (o CONTROLE do dia)
+  ff idêntico nas duas: -0.817 1/m frente, -0.098 ré
+  O nó foi MORTO e subido de novo entre as condições (param set não pega).
+  Primeira linha do log conferida nas duas.
+
+observação do dono, a olho, na condição NOVOS
+---------------------------------------------
+  "ele tá fazendo um S mas tá reto, tá bom"
+  Em 05-08, com os ganhos velhos, o mesmo olho viu o S DIVERGIR.
