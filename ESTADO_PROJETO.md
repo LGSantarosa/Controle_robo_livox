@@ -78,6 +78,44 @@ começo de cada sessão e passar `curv_frente` por parâmetro. Vira passo do
 protocolo de bancada; as três corridas sem compensador já são o experimento nº 2
 do roteiro.
 
+### 🗺️ E o Nav2 do robô real não tinha mapa — decisão **015**
+
+🔴 **A `pilha.launch.py` subia o mapa da pista SIMULADA no robô real** (uma sala
+de 12 × 8 m que não existe), com o `global_costmap` em `StaticLayer` sobre isso.
+O cabeçalho da launch já avisava, mas era aviso **sem saída**: não existia o
+"sem mapa" para escolher. A decisão 014 piorou — o global passou a misturar
+paredes fantasma com marcação real e permanente do Livox.
+
+🟢 **Entra `mapa:=nenhum`** — sem `map_server` (e fora da lista do
+`lifecycle_manager`, que aborta o bringup se um servidor não responder), sem
+`static_layer`, e o `global_costmap` vira **janela rolante de 20 × 20 m**
+alimentada só pelo sensor. É um **overlay** (`config/nav2_sem_mapa.yaml`), não
+um segundo `nav2.yaml`: há teste que falha se ele redefinir geometria.
+
+```
+                    caminho / reta   folga    manchas no global
+com mapa              2,74 / 2,20     0,530 m   2 (as duas surpresas)
+sem mapa nenhum       2,78 / 2,25     0,530 m   6 (surpresas + as paredes)
+```
+
+Sem mapa, o costmap global é **só o que o sensor viu**, e as seis manchas batem
+com a planta (parede oeste 0,19 contra 0,20 real; divisória 3,91 contra 3,90;
+parede norte 7,80/7,81 contra 7,80). O robô planeja sem mapa e chega ao mesmo
+desvio.
+
+⚠️ **O custo é MEMÓRIA CURTA**: fora dos 20 m ele não sabe de nada e o que nunca
+viu conta como livre. Não é regressão — parede fantasma no lugar errado não é
+conservadora, é aleatória.
+
+⚠️ **Armadilha nova para o apêndice**: `ros2 launch` **não morre com os nós**.
+Matar os filhos por PID e deixar o launch vivo empilhou **3 pilhas simultâneas**
+(3 `planner_server`, 5 `tf_map_odom`), e o sintoma foi bringup abortando com
+cara de bug no código. Some-se: **`ros2 node list` mostra fantasma** do daemon
+mesmo com `ps` provando zero processos (`ros2 daemon stop && start` limpa). Para
+saber o que está vivo, `ps`.
+
+**278 testes verdes.**
+
 ---
 
 ## 🤖 06-08 (tarde) — O ROBÔ CONFIRMOU: o S morre com os ganhos novos

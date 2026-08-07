@@ -134,9 +134,13 @@ def main():
 
     rclpy.init()
     no = Percepcao(args.qual)
-    if not no.espera_mapa():
-        print('o /map não chegou — o map_server está de pé?')
-        return 1
+    # Sem `/map` não é erro: é o perfil `mapa:=nenhum` (o do robô real, ver
+    # `config/nav2_sem_mapa.yaml`). Lá não há memória nenhuma para descontar —
+    # TODA célula marcada veio do sensor, que é a resposta certa e não uma
+    # falha de medida.
+    sem_mapa = not no.espera_mapa(segundos=5.0)
+    if sem_mapa:
+        print('sem /map — perfil SEM MAPA: tudo o que estiver marcado é do sensor')
     grade = no.pega_costmap()
     if grade is None:
         print(f'o serviço /{args.qual}/get_costmap não respondeu')
@@ -154,7 +158,7 @@ def main():
         letais += 1
         c, r = i % w, i // w
         x, y = ox + (c + 0.5) * res, oy + (r + 0.5) * res
-        if livre_no_mapa(no.mapa, x, y, args.orla):
+        if sem_mapa or livre_no_mapa(no.mapa, x, y, args.orla):
             do_sensor.append((c, r))
 
     print(f'{args.qual}: {w}x{h} @ {res:.3f} m/célula, '

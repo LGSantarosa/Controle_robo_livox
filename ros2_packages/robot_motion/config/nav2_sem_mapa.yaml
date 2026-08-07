@@ -1,0 +1,71 @@
+# Perfil SEM MAPA — o que o robô 2 usa quando navega no mundo de verdade.
+#
+#     ros2 launch robot_motion pilha.launch.py mapa:=nenhum
+#
+# ⚠️ Este arquivo é um OVERLAY, não um Nav2 completo. Ele entra DEPOIS do
+# `nav2.yaml` na lista de parâmetros e só sobrescreve as chaves abaixo; todo o
+# resto (planner, tolerâncias, inflação, e o racional comentado de cada número)
+# continua vindo de lá, num lugar só. Copiar o `nav2.yaml` inteiro e editar
+# criaria a divergência silenciosa que o `test_configs_coerentes.py` existe para
+# pegar — foi assim que a bitola ficou com dois valores em 29-07.
+#
+# ══════════════════════════════════════════════════════════════════════════
+# POR QUE ISTO EXISTE
+#
+# A decisão 003 tirou o mapa e o AMCL do projeto: a localização é LIO, e o robô
+# não precisa de mapa para saber onde está. Mas o `global_costmap` continuou
+# montado sobre uma `StaticLayer`, e a `pilha.launch.py` continuou subindo um
+# `map_server` apontando para `maps/pista_obstaculos.yaml` — a planta da pista
+# SIMULADA, uma sala de 12 × 8 m que não existe em lugar nenhum.
+#
+# No simulador isso é honesto: mundo e mapa saem da mesma planta
+# (`tools/mundo/gera_pista.py`), e o mapa é o que faz o robô nascer sabendo onde
+# está. **No robô real é ficção**: o costmap global nasce com paredes onde não
+# há nada e livre onde há parede, e o planejador decide rota com isso.
+#
+# Ficou pior com a decisão 014 (07-08): agora o global costmap MISTURA as
+# paredes fantasma do mapa errado com marcações reais e PERMANENTES do Livox.
+# Meio mapa é mais difícil de diagnosticar que mapa nenhum.
+# ══════════════════════════════════════════════════════════════════════════
+#
+# O que muda, e é pouco: o costmap global deixa de ler mapa e passa a ser uma
+# JANELA que anda com o robô, alimentada só pelo sensor. É o mesmo princípio do
+# local costmap, com outro tamanho e outro propósito.
+#
+# ⚠️ O frame continua `map`. A TF `map → odom` que a launch publica é a
+# identidade, então `map ≡ odom` e o goal do RViz continua chegando onde deve.
+# Trocar o frame para `odom` seria mais honesto no nome e obrigaria a mexer no
+# `bt_navigator`, no RViz e em quem publica goal — sem ganho nenhum enquanto a
+# TF for identidade. Quando existir localização que case `map` com `odom` de
+# verdade, é aqui que ela entra.
+
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      # A janela que anda com o robô. 20 × 20 m contra os 4 × 4 do local, e a
+      # diferença é de papel: o local existe para desviar do que está no
+      # caminho, o global para escolher ROTA — e rota se escolhe com o que está
+      # longe. A 0,05 m/célula isto dá 400 × 400 = 160 000 células, que é a
+      # mesma ordem do mapa da pista (240 × 160) que já rodava.
+      rolling_window: true
+      width: 20
+      height: 20
+
+      # Sem `static_layer`: não há mapa para ler. O que sobra é o que o Livox
+      # vê, mais a inflação — que segue sendo a última camada.
+      #
+      # ⚠️ Consequência que precisa estar clara para quem opera: o robô planeja
+      # com MEMÓRIA CURTA. Fora da janela de 20 m ele não sabe de nada, e o que
+      # ele nunca viu conta como LIVRE (`track_unknown_space: false`, herdado do
+      # `nav2.yaml`). O plano pode passar por dentro de uma parede que está
+      # atrás de uma quina — e é o replanejamento a 1 Hz, mais o reflexo, que
+      # respondem por isso. Não é regressão: sem mapa correto, o comportamento
+      # anterior era pior, porque a parede inventada estava no lugar errado.
+      plugins: ["obstacle_layer", "inflation_layer"]
+
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      # Mesmo motivo, e aqui o custo de manter era ainda menor: a janela local
+      # tem 4 m e o mapa errado só serviria para inventar obstáculo perto.
+      plugins: ["obstacle_layer", "inflation_layer"]

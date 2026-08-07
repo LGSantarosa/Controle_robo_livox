@@ -47,8 +47,20 @@ sai num tópico que ninguém escuta. Ver `config/nav2.yaml`.
 entrega `odom`, e não há nada que case `odom` com o `map` do costmap. Enquanto
 for assim, o mapa só serve para o robô nascer onde ele diz — no simulador isso
 vale porque mundo e mapa saem da MESMA planta (`tools/mundo/gera_pista.py`).
-**No robô real isto não vale**, e é por isso que o `mapa` é argumento: sem mapa
-que corresponda ao lugar, o costmap global inventa obstáculo onde não tem.
+
+🔴 **NO ROBÔ REAL, RODE COM `mapa:=nenhum`.** O mapa padrão é a planta da pista
+SIMULADA — uma sala de 12 × 8 m que não existe em lugar nenhum. Com ele, o
+costmap global nasce com parede onde não há nada e livre onde há parede, e desde
+a decisão 014 ainda MISTURA isso com marcação real e permanente do Livox. Meio
+mapa é mais difícil de diagnosticar do que mapa nenhum.
+
+    ros2 launch robot_motion pilha.launch.py mapa:=nenhum        # o robô
+    ros2 launch robot_motion pilha.launch.py sim:=true           # o simulador
+
+Sem mapa: nada de `map_server`, nada de `static_layer`, e o costmap global vira
+uma janela de 20 × 20 m que anda com o robô, alimentada só pelo sensor. O
+racional está em `config/nav2_sem_mapa.yaml`, e a consequência a ter em mente é
+que o robô planeja com MEMÓRIA CURTA — o que ele nunca viu conta como livre.
 """
 import os
 
@@ -83,10 +95,19 @@ def generate_launch_description():
         get_package_share_directory('nav2_bt_navigator'),
         'behavior_trees', 'navigate_w_replanning_time.xml')
 
+    sem_mapa_params = os.path.join(pkg, 'config', 'nav2_sem_mapa.yaml')
+
     sim = LaunchConfiguration('sim')
     mapa = LaunchConfiguration('mapa')
     rviz = LaunchConfiguration('rviz')
     placa = LaunchConfiguration('placa')
+
+    # `mapa:=nenhum` liga o perfil sem mapa. O racional inteiro está em
+    # `config/nav2_sem_mapa.yaml`; em uma linha: no robô real o mapa da pista
+    # SIMULADA é ficção, e desde a decisão 014 o costmap global misturava as
+    # paredes fantasma dele com marcação real e permanente do Livox.
+    sem_mapa = IfCondition(PythonExpression(["'", mapa, "' == 'nenhum'"]))
+    com_mapa = UnlessCondition(PythonExpression(["'", mapa, "' == 'nenhum'"]))
 
     # O perfil da movimentação segue o do simulador quando `sim:=true`: os dois
     # arquivos diferem na zona morta suposta, e rodar o controlador pessimista
@@ -97,11 +118,39 @@ def generate_launch_description():
 
     servidores = ['map_server', 'planner_server', 'controller_server',
                   'bt_navigator', 'collision_monitor']
+    # Sem mapa não há `map_server`, e ele NÃO pode ficar na lista: o
+    # `lifecycle_manager` espera cada servidor da lista responder e **aborta o
+    # bringup inteiro** se um não vier — foi assim que o `collision_monitor`
+    # morreu junto com o Nav2 em 06-08, e o teste D caiu.
+    servidores_sem_mapa = [s for s in servidores if s != 'map_server']
+
+    def nav2_node(pacote, executavel, nome, extras=None, **kwargs):
+        """Um servidor do Nav2 em duas versões, com e sem o overlay sem-mapa.
+
+        Os dois são o MESMO nó; muda só a lista de arquivos de parâmetro. Vale
+        a repetição porque `parameters` não aceita condição — e a alternativa
+        (um segundo `nav2.yaml` completo) é a duplicação que o
+        `test_configs_coerentes.py` existe para impedir.
+        """
+        base = [nav2_params] + list(extras or []) + [{'use_sim_time': sim}]
+        overlay = ([nav2_params, sem_mapa_params] + list(extras or [])
+                   + [{'use_sim_time': sim}])
+        return [
+            Node(package=pacote, executable=executavel, name=nome,
+                 parameters=base, condition=com_mapa, **kwargs),
+            Node(package=pacote, executable=executavel, name=nome,
+                 parameters=overlay, condition=sem_mapa, **kwargs),
+        ]
 
     return LaunchDescription([
         DeclareLaunchArgument('sim', default_value='false',
                               description='true sobe o Gazebo junto'),
-        DeclareLaunchArgument('mapa', default_value=MAPA_PADRAO),
+        DeclareLaunchArgument(
+            'mapa', default_value=MAPA_PADRAO,
+            description='caminho do .yaml do mapa, ou "nenhum" para o perfil '
+                        'SEM MAPA — o do robô real, onde o costmap global vira '
+                        'janela rolante alimentada só pelo Livox '
+                        '(config/nav2_sem_mapa.yaml)'),
         # `mundo` separado de `mapa` de propósito: é fazendo os dois
         # DISCORDAREM que se testa percepção. Mundo com um obstáculo que o
         # mapa não tem = o desvio só pode vir do sensor. Com os dois iguais
@@ -151,26 +200,36 @@ def generate_launch_description():
         ),
 
         # ---------------------------------------------------------- Nav2
+        #
+        # ⚠️ `mapa:=nenhum` NÃO sobe o `map_server` e tira o mapa dos dois
+        # costmaps (overlay `nav2_sem_mapa.yaml`). É o perfil do robô real: a
+        # localização é LIO (decisão 003) e não existe mapa do lugar onde ele
+        # anda. Com mapa, tudo segue como estava — no simulador o mapa é
+        # honesto, porque sai da mesma planta do mundo.
         Node(package='nav2_map_server', executable='map_server',
              name='map_server', output='both',
              parameters=[nav2_params, {'yaml_filename': mapa,
-                                       'use_sim_time': sim}]),
-        Node(package='nav2_planner', executable='planner_server',
-             name='planner_server', output='both',
-             parameters=[nav2_params, {'use_sim_time': sim}]),
-        Node(package='nav2_controller', executable='controller_server',
-             name='controller_server', output='log',
-             parameters=[nav2_params, {'use_sim_time': sim}],
-             # O comando dele morre aqui. Quem dirige é a nossa cadeia.
-             remappings=[('/cmd_vel', '/nav2_cmd_vel_ignorado')]),
-        Node(package='nav2_bt_navigator', executable='bt_navigator',
-             name='bt_navigator', output='both',
-             parameters=[nav2_params, {'use_sim_time': sim,
-                                       'default_nav_to_pose_bt_xml': bt_xml}]),
+                                       'use_sim_time': sim}],
+             condition=com_mapa),
+        *nav2_node('nav2_planner', 'planner_server', 'planner_server',
+                   output='both'),
+        *nav2_node('nav2_controller', 'controller_server', 'controller_server',
+                   output='log',
+                   # O comando dele morre aqui. Quem dirige é a nossa cadeia.
+                   remappings=[('/cmd_vel', '/nav2_cmd_vel_ignorado')]),
+        *nav2_node('nav2_bt_navigator', 'bt_navigator', 'bt_navigator',
+                   extras=[{'default_nav_to_pose_bt_xml': bt_xml}],
+                   output='both'),
         Node(package='nav2_lifecycle_manager', executable='lifecycle_manager',
              name='lifecycle_manager_pilha', output='both',
              parameters=[{'autostart': True, 'use_sim_time': sim,
-                          'node_names': servidores}]),
+                          'node_names': servidores}],
+             condition=com_mapa),
+        Node(package='nav2_lifecycle_manager', executable='lifecycle_manager',
+             name='lifecycle_manager_pilha', output='both',
+             parameters=[{'autostart': True, 'use_sim_time': sim,
+                          'node_names': servidores_sem_mapa}],
+             condition=sem_mapa),
 
         # A TF que falta: sem localização contra o mapa, `map` e `odom` são o
         # mesmo lugar. Provisório, e documentado no cabeçalho.

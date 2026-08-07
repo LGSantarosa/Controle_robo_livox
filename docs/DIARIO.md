@@ -4489,3 +4489,71 @@ sensor).
 uma: no global costmap a marcação é **permanente**, então a deriva do LIO com a
 TF `map→odom` fixa vira obstáculo fantasma acumulado. Seguro no simulador,
 dívida no robô.
+
+### 🗺️ 07-08 (2ª leva) — E o Nav2 do robô real não tem mapa
+
+Fechada a 014, o próximo bloqueio ficou óbvio e é anterior a ela: a
+`pilha.launch.py` sobe `map_server` com **a planta da pista SIMULADA** — sala de
+12 × 8 m que não existe em lugar nenhum — e o `global_costmap` é `StaticLayer`
+sobre isso. O cabeçalho da launch já avisava (*"no robô real isto não vale"*),
+mas era aviso sem saída: não existia o "sem mapa" para escolher.
+
+E a 014 tinha acabado de piorar o quadro: o costmap global passou a **misturar**
+paredes fantasma do mapa errado com marcação real e permanente do Livox.
+
+Entra `mapa:=nenhum` (decisão 015): sem `map_server` — e ele sai também da lista
+do `lifecycle_manager`, que aborta o bringup se um servidor da lista não
+responder, exatamente o que matou o `collision_monitor` em 06-08 —, sem
+`static_layer`, e o global vira janela rolante de 20 × 20 m alimentada só pelo
+sensor.
+
+Feito como **overlay** (`config/nav2_sem_mapa.yaml`), não como segundo
+`nav2.yaml`: copiar 300 linhas de racional comentado para editar duas chaves
+seria o defeito da bitola de 29-07 num lugar novo. Há teste que falha se o
+overlay redefinir geometria.
+
+**Medido**, mesma pista e mesmo par de pontos da leva anterior:
+
+```
+                    caminho / reta   folga    manchas no global
+com mapa              2,74 / 2,20     0,530 m   2 (as duas surpresas)
+sem mapa nenhum       2,78 / 2,25     0,530 m   6 (as surpresas + as paredes)
+```
+
+Sem mapa, o costmap global é feito **só do que o sensor viu**, e as seis manchas
+batem com a planta: parede oeste em 0,19 (real 0,20), divisória em 3,91 (real
+3,90), parede norte em 7,80/7,81 (real 7,80), mais as duas surpresas. O robô
+planeja sem mapa e chega ao mesmo desvio.
+
+⚠️ **O custo, e quem opera precisa saber:** memória curta. Fora dos 20 m ele não
+sabe de nada, e o que nunca viu conta como livre. Não é regressão — parede
+fantasma no lugar errado não é conservadora, é aleatória.
+
+### 🧟 A armadilha do dia: três pilhas rodando ao mesmo tempo
+
+O perfil sem mapa "falhou" na primeira tentativa (`Failed to change state for
+node: bt_navigator`, bringup abortado). **Não era o código.** Rodando o controle
+com mapa, ele falhou também — no `map_server` — e aí ficou claro: `ros2 node
+list` mostrava **3 `planner_server`, 3 `lifecycle_manager`, 5 `tf_map_odom`**.
+
+Causa: eu matava os nós filhos por PID e **deixava o processo `ros2 launch`
+vivo**. Ele não morre com os filhos, e cada nova subida empilhava mais uma
+pilha. É a lição das três pilhas órfãs de 07-31 aparecendo por uma porta nova —
+lá eram `fastlio_mapping` órfãos, aqui é o launch.
+
+Duas leituras que enganam e vale registrar:
+
+- **`pgrep -c` conta o próprio shell.** `pgrep -c -f "gz sim"` dava 2 com zero
+  Gazebos vivos: o `-a` mostrou que quem casava era a linha de comando do
+  próprio `bash -c`. Já está no apêndice do roteiro; mordeu de novo;
+- **`ros2 node list` mostra fantasma.** Depois de matar tudo, com `ps` provando
+  zero processos, ele ainda listava 23 nós — cache do **daemon**. `ros2 daemon
+  stop && ros2 daemon start` limpa. Para saber o que está vivo de verdade, `ps`.
+
+Refeitas as duas medidas com ambiente verificado por `ps`, e o controle com mapa
+reproduz o número da leva anterior **exato** (2,74 / 2,20, folga 0,530, mesmas
+duas manchas) — a refatoração da launch não mexeu naquele caminho.
+
+**278 testes verdes** (eram 274): quatro novos para o perfil sem mapa, três
+verificados por mutação (`static_layer` voltando ao global, geometria redefinida
+no overlay, janela deixando de rolar).

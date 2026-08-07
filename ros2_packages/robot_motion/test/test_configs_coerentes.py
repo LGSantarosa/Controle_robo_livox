@@ -280,6 +280,59 @@ def test_a_coluna_de_voxel_cobre_a_altura_do_sensor(qual):
     assert o['z_voxels'] * o['z_resolution'] > 0.42
 
 
+# ------------------------------------- o perfil SEM MAPA (o do robô real)
+
+SEM_MAPA = os.path.join(RAIZ, 'ros2_packages', 'robot_motion', 'config',
+                        'nav2_sem_mapa.yaml')
+
+
+def _sem_mapa(qual):
+    import yaml
+    return yaml.safe_load(open(SEM_MAPA))[qual][qual]['ros__parameters']
+
+
+@AMBOS
+def test_sem_mapa_nao_le_mapa_e_a_inflacao_segue_por_ultimo(qual):
+    """`mapa:=nenhum` é o perfil do robô real: a localização é LIO (decisão 003)
+    e não existe mapa do lugar onde ele anda. O mapa padrão é a planta da pista
+    SIMULADA — parede onde não há nada, livre onde há parede.
+    """
+    plugins = _sem_mapa(qual)['plugins']
+    assert 'static_layer' not in plugins, f'{qual} ainda lê mapa: {plugins}'
+    assert 'obstacle_layer' in plugins, f'{qual} ficaria cego: {plugins}'
+    assert plugins[-1] == 'inflation_layer', f'{qual}: {plugins}'
+
+
+def test_o_perfil_sem_mapa_e_OVERLAY_e_nao_um_segundo_nav2():
+    """Ele só pode sobrescrever o que MUDA sem mapa.
+
+    Redefinir geometria aqui recria o defeito da bitola de 29-07 num lugar novo:
+    dois arquivos com o mesmo número, um deles envelhecendo sozinho, e o robô
+    rodando com um valor diferente do que a bancada julgou. O `nav2.yaml` é a
+    fonte única — este arquivo é a diferença.
+    """
+    texto_overlay = open(SEM_MAPA).read()
+    for proibida in ('robot_radius', 'inflation_radius', 'cost_scaling_factor',
+                     'minimum_turning_radius', 'motion_model_for_search',
+                     'min_obstacle_height', 'max_obstacle_height'):
+        # ignora comentários: o racional PODE citar os números
+        for linha in texto_overlay.splitlines():
+            corte = linha.split('#')[0]
+            assert f'{proibida}:' not in corte, (
+                f'{proibida} redefinida no overlay — ela mora no nav2.yaml')
+
+
+def test_sem_mapa_o_global_vira_janela_que_anda_com_o_robo():
+    """Sem `static_layer` e sem janela rolante, o costmap global fica fixo no
+    tamanho do mapa que não existe mais: o robô sairia dele e passaria a
+    planejar contra uma grade vazia parada na origem."""
+    g = _sem_mapa('global_costmap')
+    assert g['rolling_window'] is True
+    # Maior que o local (4 m): o global escolhe ROTA, e rota se decide com o
+    # que está longe.
+    assert g['width'] > 4 and g['height'] > 4
+
+
 @AMBOS
 def test_o_alarme_de_nuvem_velha_tem_folga_MEDIDA(qual):
     """`expected_update_rate` apertado desliga a percepção com um aviso amarelo

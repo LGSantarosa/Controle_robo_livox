@@ -203,9 +203,15 @@ não publica nem zero — foi assim que ele morreu em 06-08.
 36 cm. Cadeira serve mas é pior alvo (vazada, pernas finas).
 
 ```bash
-ros2 launch robot_motion pilha.launch.py
+ros2 launch robot_motion pilha.launch.py mapa:=nenhum
 ros2 lifecycle get /collision_monitor        # TEM de dizer active
 ```
+
+🔴 **`mapa:=nenhum` é obrigatório no robô** (decisão 015, 07-08). Sem isso a
+pilha sobe o mapa da pista SIMULADA — parede onde não há nada, livre onde há
+parede — e desde a 014 mistura isso com marcação real do Livox. Com `nenhum`
+não há `map_server`: o costmap global é uma janela de 20 × 20 m feita só do que
+o sensor vê.
 
 🛑 **Se disser `inactive`, o `lifecycle_manager` abortou o bringup** (o Nav2 não
 ativa sem `map → base_link`). Ativar na mão:
@@ -311,6 +317,8 @@ calibração viva que o `--checar` imprimiu.
 |---|---|
 | `pgrep -c` contando a si mesmo | `pgrep -a` e LER quem casou; na dúvida, `ros2 node list` |
 | `pkill` matando a própria sessão ssh | matar **por PID** |
+| matar os nós e deixar o `ros2 launch` vivo | ele **não** morre com os filhos; em 07-08 isso empilhou 3 pilhas e o sintoma foi bringup abortando com cara de bug. Matar o launch também, e conferir com `ps` |
+| `ros2 node list` mostrando nó que já morreu | é cache do **daemon**; `ros2 daemon stop && ros2 daemon start`. Quem está vivo de verdade, `ps` responde |
 | `ros2 param set` que não chega no nó | matar e subir; conferir a primeira linha do log |
 | `git reset --hard` sem `colcon build` | build sempre; a descrição vem do `install/` |
 | `/tmp/logs` sumindo no reboot | `mkdir -p` antes do `nohup`, senão o launch morre calado |
