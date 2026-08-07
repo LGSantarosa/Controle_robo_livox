@@ -1,12 +1,82 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-08-06**.
+> Versionado na `main`. Atualizado em **2026-08-07**.
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+---
+
+## 👁️ 07-08 — O COSTMAP PASSA A ENXERGAR O LIVOX (dev, sem robô)
+
+Sessão de máquina de dev, robô desligado. Decisão **014**; entrada 07-08 do
+diário. **274 testes verdes** (eram 264).
+
+🔴 **O buraco que ninguém tinha na lista: o único consumidor da nuvem era o
+reflexo.** O Mid-360 publica em `/livox/lidar` desde 24-07 (robô) e 04-08
+(simulador), e **os dois costmaps do Nav2 rodavam só com o mapa estático** — o
+comentário no YAML ainda dizia *"o robô simulado ainda não tem lidar"*. O robô
+não desviava de obstáculo novo: **parava** na frente dele. A fatia B estava
+bloqueada por configuração, não por sensor.
+
+🟢 **Entrou uma `VoxelLayer` com a nuvem NOS DOIS costmaps**, com a mesma faixa
+de altura do reflexo (0,10–0,50 m), travada em teste para os dois não
+divergirem em silêncio.
+
+⚠️ **`VoxelLayer` e não `ObstacleLayer`, e é o OPOSTO do robô 1** (que trocou
+voxel por obstacle no `nav2_params_pi.yaml`). Lá o sensor é planar; aqui ele
+olha para cima (−7° a +52°) e enxerga a altura `0,42 − 0,123·d`: uma caixa de
+0,30 m **some quando o robô chega a 0,5 m dela**. Com raytrace 2D, o raio que
+passa por cima apagaria a marca no exato momento de manobrar.
+
+🔴 **A camada só no LOCAL costmap não resolve — medido.** Mundo
+`pista_surpresa.sdf` (obstáculo que o mapa não tem), caminho de (2,0 · 5,0) a
+(2,0 · 7,2):
+
+```
+                      caminho / reta   folga do centro
+só no local             2,20 / 2,20      0,035 m   ATRAVESSA
+nos dois                2,74 / 2,20      0,530 m   CONTORNA
+```
+
+Quem dirige via a caixa; quem planeja não. Obstáculo só no local **não produz
+desvio, produz travamento educado**: o robô vai reto até lá, o reflexo para, e o
+replanejamento a 1 Hz devolve o mesmo plano ruim para sempre.
+
+⚠️ **`expected_update_rate` 0,30 → 0,50 s, corrigido por medida.** Com 0,30 o
+log enchia de `has not been updated for 0.43 seconds` — e a nuvem estava
+perfeita (9,7 Hz, carimbo de 100,0 ms sem cauda em 281 quadros). O atraso é do
+consumidor: 20 000 pontos por quadro. **Buffer vencido deixa a camada
+não-current, e costmap não-current PARA de atualizar** — errar para baixo aqui
+desliga a percepção tendo um aviso amarelo por sintoma.
+
+🧰 **Três instrumentos novos, porque a pista antiga não provava percepção**
+(mundo e mapa saíam da mesma planta, então "viu" e "lembrava" eram
+indistinguíveis):
+
+- `gera_pista.py` agora escreve **`worlds/pista_surpresa.sdf`** — obstáculos que
+  nunca entram no mapa;
+- **`tools/banco/percepcao.py`** — células letais do costmap onde o mapa diz
+  livre;
+- **`tools/banco/plano.py`** — pede caminho por `compute_path_to_pose`, que
+  **planeja sem mover o robô** (serve na bancada com a bateria parada).
+
+⚠️ **O robô só conhece a FACE que viu**: 0,075 m² de uma caixa de 0,25 m². O
+planejador contorna uma lasca do obstáculo, não o obstáculo.
+
+⏳ **NADA DISTO RODOU NO ROBÔ**, e há uma dívida específica: no global costmap a
+marcação é **permanente** (não há janela rolante). Com a TF `map→odom` fixa e
+provisória, toda deriva do LIO vira **obstáculo fantasma acumulado**. Seguro no
+simulador, dívida no robô — a saída é a mesma que já obriga o mapa a ser
+argumento: localização que case `map` com `odom`.
+
+✅ **Decisão 013 RESOLVIDA pelo dono: caminho 3** — medir a curvatura crua no
+começo de cada sessão e passar `curv_frente` por parâmetro. Vira passo do
+protocolo de bancada; as três corridas sem compensador já são o experimento nº 2
+do roteiro.
 
 ---
 

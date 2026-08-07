@@ -51,6 +51,18 @@ corridas — dá folga, mas conversa é o que come tempo, não corrida.
   faltava e que derrubou o teste D. Sobe junto na `localizacao.launch.py`;
 - o **`bin/robot-key` foi consertado** (`set -u` brigava com os `setup.bash`);
 - o **teleop ganhou diagnóstico** por `rosout` a cada 2 s;
+- 🆕 **os dois costmaps do Nav2 passaram a consumir a nuvem do Livox**
+  (decisão 014, 07-08). Antes só o `collision_monitor` a consumia: o robô não
+  desviava de obstáculo novo, **parava** na frente dele. Duas consequências para
+  quem estiver na bancada:
+  - o **teste D muda de figura** — com o obstáculo agora no costmap, o Nav2 pode
+    replanejar em vez de deixar o reflexo agir sozinho. O teste continua sendo
+    do reflexo; só não se assuste se o plano mudar;
+  - ⚠️ **no global costmap a marcação é PERMANENTE** (não há janela rolante), e
+    a TF `map→odom` é fixa e provisória. Deriva do LIO vira **obstáculo
+    fantasma acumulado**. Se o planejador começar a recusar caminho que estava
+    livre, limpe antes de investigar:
+    `ros2 service call /global_costmap/clear_entirely_global_costmap nav2_msgs/srv/ClearEntireCostmap`;
 - **nada disso rodou no robô.** É a primeira coisa a conferir.
 
 ---

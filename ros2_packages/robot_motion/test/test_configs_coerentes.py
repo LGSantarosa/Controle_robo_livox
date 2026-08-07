@@ -196,3 +196,99 @@ def test_o_reflexo_ignora_o_chao_e_o_que_passa_por_cima():
 
 def test_o_reflexo_fala_stamped_como_o_resto_da_cadeia():
     assert _cm()['enable_stamped_cmd_vel'] is True
+
+
+# --------------------------- a nuvem vista pelas duas camadas que a consomem
+
+def _obstaculo(qual='local_costmap'):
+    """A camada de obstáculo de um dos costmaps — a que faz o desvio existir."""
+    import yaml
+    d = yaml.safe_load(open(PRODUCAO))
+    return d[qual][qual]['ros__parameters']['obstacle_layer']
+
+
+AMBOS = pytest.mark.parametrize('qual', ['local_costmap', 'global_costmap'])
+
+
+@AMBOS
+def test_os_DOIS_costmaps_veem_a_nuvem(qual):
+    """O local alimenta quem DIRIGE, o global alimenta quem PLANEJA, e faltar
+    num dos dois tem sintomas diferentes.
+
+    Só no global: o plano desvia mas o seguidor não reage a nada que apareça no
+    caminho. Só no local (medido no simulador com o `pista_surpresa.sdf`): o
+    plano sai RETO por cima do obstáculo — 2,20 m de caminho para 2,20 m de
+    reta, folga de 0,035 m do centro da caixa — e o robô vai até lá e trava,
+    porque o replanejamento a 1 Hz devolve para sempre o mesmo plano ruim.
+    """
+    plugins = _obstaculo(qual)  # levanta KeyError se a camada não existir
+    assert plugins['plugin'] == 'nav2_costmap_2d::VoxelLayer'
+
+
+def test_o_costmap_e_o_reflexo_recortam_a_MESMA_nuvem():
+    """Dois consumidores do `/livox/lidar`, e eles não podem discordar sobre o
+    que é obstáculo.
+
+    Se o costmap marcasse abaixo do reflexo, o planner desviaria de coisa que o
+    reflexo ignora — e o robô ficaria dando volta em chão. Se marcasse acima, o
+    reflexo pararia por algo que o planner nem sabe existir, e o robô travaria
+    sem que ninguém replanejasse. O sintoma dos dois casos é "o robô está
+    esquisito", que é o defeito mais caro de diagnosticar.
+
+    Os números vêm da medida de 05-08 (a nuvem erra até 3,8 cm em incidência
+    rasante) e da altura da caixa; o racional inteiro mora nos dois YAML.
+    """
+    fonte_cm = _cm()[_cm()['observation_sources'][0]]
+    for qual in ('local_costmap', 'global_costmap'):
+        fonte_cost = _obstaculo(qual)['livox']
+        assert fonte_cost['topic'] == fonte_cm['topic'], qual
+        assert fonte_cost['min_obstacle_height'] == fonte_cm['min_height'], qual
+        assert fonte_cost['max_obstacle_height'] == fonte_cm['max_height'], qual
+
+
+@AMBOS
+def test_a_camada_de_obstaculo_e_VOXEL_por_causa_do_sensor_apontar_para_cima(qual):
+    """O Mid-360 varre de −7° a +52°. Com `ObstacleLayer` (raytrace 2D) um raio
+    que passa POR CIMA de uma caixa baixa limpa a célula da própria caixa, e o
+    robô esquece o obstáculo que acabou de ver. O robô 1 fez essa troca ao
+    contrário e estava certo LÁ: o LD06 dele é planar.
+
+    Com o Livox a 0,42 m e feixe mais baixo a −7°, ele enxerga a altura
+    `0,42 − 0,123·d`: uma caixa de 0,30 m é vista a 1–2 m e some quando o robô
+    chega a 0,5 m dela — que é exatamente quando esquecer sai caro.
+    """
+    assert _obstaculo(qual)['plugin'] == 'nav2_costmap_2d::VoxelLayer'
+
+
+def test_a_inflacao_e_a_ultima_camada():
+    """Inflar antes de marcar infla um mapa sem o obstáculo que acabou de
+    chegar — a célula fica ocupada e a auréola dela não, que é pior que não
+    ter inflação nenhuma."""
+    import yaml
+    d = yaml.safe_load(open(PRODUCAO))
+    for qual in ('global_costmap', 'local_costmap'):
+        plugins = d[qual][qual]['ros__parameters']['plugins']
+        assert plugins[-1] == 'inflation_layer', f'{qual}: {plugins}'
+
+
+@AMBOS
+def test_a_coluna_de_voxel_cobre_a_altura_do_sensor(qual):
+    """`z_voxels × z_resolution` tem de passar dos 0,42 m do Livox (trena de
+    05-08) — senão a nuvem do próprio plano do sensor cai fora da grade e a
+    camada marca menos do que vê, sem dizer nada."""
+    o = _obstaculo(qual)
+    assert o['z_voxels'] * o['z_resolution'] > 0.42
+
+
+@AMBOS
+def test_o_alarme_de_nuvem_velha_tem_folga_MEDIDA(qual):
+    """`expected_update_rate` apertado desliga a percepção com um aviso amarelo
+    por sintoma: buffer vencido deixa a camada não-current, e costmap
+    não-current para de atualizar.
+
+    0,30 s (10 Hz + 3 quadros) foi tentado e NÃO sobreviveu: o log encheu de
+    "has not been updated for 0.43 seconds" com a nuvem chegando certinha a
+    9,7 Hz e carimbo de 100,0 ms sem cauda. O atraso é do consumidor — 20 000
+    pontos por quadro para transportar e transformar.
+    """
+    assert _obstaculo(qual)['livox']['expected_update_rate'] >= 0.5

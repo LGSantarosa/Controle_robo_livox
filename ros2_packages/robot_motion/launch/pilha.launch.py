@@ -124,6 +124,12 @@ def generate_launch_description():
             description='"normal" (a que bate com o robô medido) ou "lenta" '
                         '(pessimista de 27-07, para estressar o controlador)'),
         DeclareLaunchArgument('rviz', default_value='true'),
+        # O `sim.launch.py` já tinha `gui:=false` (headless) e esta launch não
+        # repassava, então toda corrida de pilha exigia janela. Medir percepção
+        # é o que mais pede corrida automatizada: a nuvem sai igual com ou sem
+        # render de tela.
+        DeclareLaunchArgument('gui', default_value='true',
+                              description='false roda o Gazebo headless'),
         DeclareLaunchArgument(
             'placa', default_value='medido',
             description='modelo do atuador simulado: "medido" (a placa de '
@@ -140,7 +146,8 @@ def generate_launch_description():
             launch_arguments={'mundo': LaunchConfiguration('mundo'),
                               'x': '2.0', 'y': '5.0',
                               'planta': LaunchConfiguration('planta'),
-                              'placa': placa}.items(),
+                              'placa': placa,
+                              'gui': LaunchConfiguration('gui')}.items(),
         ),
 
         # ---------------------------------------------------------- Nav2

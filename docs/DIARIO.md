@@ -4381,3 +4381,111 @@ elo com `topic info -v`). Falta uma transformada.
 | desempate do preditor | precisa de corredor longo |
 | `heading_controller`: pivô indisponível | pede 1,48 rad/s, teto 1,00 — e o robô **faz** 69,7° com `liga 0,30` |
 | vídeo da traseira | segue barato, deixou de ser urgente |
+
+## 2026-08-07 — O costmap passa a enxergar o Livox (sessão de dev, sem robô)
+
+Sessão inteira na máquina de dev, robô desligado. O dono perguntou o que dava
+para avançar sem máquina, e a resposta estava no `ESTADO`: dos quatro bloqueios
+de 06-08, dois eram de dev e já tinham sido feitos na véspera (`tf_odom`,
+`robot-key`). O que sobrava de maior valor era o Nav2 — e ao ir olhar apareceu
+um buraco que não estava na lista de ninguém.
+
+### O buraco: o único consumidor da nuvem era o reflexo
+
+O Mid-360 publica `PointCloud2` em `/livox/lidar` desde 24-07 no robô e desde
+04-08 no simulador (decisão 012). **Os dois costmaps do Nav2 rodavam só com o
+mapa estático.** O comentário no `nav2.yaml` ainda dizia *"o robô simulado ainda
+não tem lidar"* — velho havia três dias.
+
+Consequência: o robô não desviava de obstáculo novo, **parava** na frente dele.
+A fatia B estava bloqueada por configuração, não por sensor.
+
+Registro completo em `docs/decisoes/014-costmap-enxerga-a-nuvem.md`.
+
+### O que a máquina corrigiu, e é o resultado mais útil do dia
+
+**1. A camada só no local costmap NÃO resolve.** Era como eu tinha escrito, com
+o raciocínio de que o local é quem dirige. Mundo `pista_surpresa.sdf`
+(obstáculo em 2,00 · 6,50 que o mapa não tem), caminho de (2,0 · 5,0) para
+(2,0 · 7,2):
+
+```
+                        caminho / reta   folga do centro
+camada só no local       2,20 / 2,20      0,035 m   ATRAVESSA
+camada nos dois          2,74 / 2,20      0,530 m   CONTORNA
+```
+
+Quem dirige via a caixa; quem planeja não. E isso não dá "desvio pior", dá um
+robô que vai reto até o obstáculo e **trava lá**: o reflexo salva a máquina e o
+replanejamento a 1 Hz devolve para sempre o mesmo plano ruim. Obstáculo só no
+local costmap não produz desvio, produz travamento educado.
+
+**2. `expected_update_rate` 0,30 → 0,50 s.** O 0,30 era conta de padaria (10 Hz
++ 3 quadros) e não sobreviveu à primeira corrida: `has not been updated for
+0.43 seconds`. E a nuvem estava perfeita — 9,7 Hz, carimbo de 100,0 ms com
+mediana = p90 = p99 = máximo, sem cauda (281 quadros). O atraso é do consumidor:
+20 000 pontos por quadro. Isto **não é cosmético**: buffer vencido deixa a
+camada não-current, e costmap não-current **para de atualizar**. Errar para
+baixo aqui desliga a percepção com um aviso amarelo por sintoma.
+
+### O que ficou provado, e como
+
+Duas ferramentas novas, porque a pista antiga não conseguia provar percepção:
+mundo e mapa saíam da MESMA planta, então "desviou porque viu" e "desviou porque
+lembrava" eram indistinguíveis.
+
+- `gera_pista.py` passa a escrever `worlds/pista_surpresa.sdf` — o mesmo mundo
+  com dois obstáculos que **nunca entram no mapa**;
+- `tools/banco/percepcao.py` — células letais do costmap onde o mapa diz LIVRE;
+- `tools/banco/plano.py` — pede caminho por `compute_path_to_pose`, que
+  **planeja sem mover o robô** (serve para o robô real com a bateria parada).
+
+```
+local_costmap   1 mancha: (2,00 · 6,28)  0,075 m²
+global_costmap  2 manchas: (2,00 · 6,28) e (3,79 · 2,64)
+```
+
+A primeira é a face SUL da caixa (x 1,75–2,25 / y 6,25–6,75) — a única que o
+lidar vê daquela posição, com o centróide batendo em x exatamente. A segunda é
+o obstáculo do vão da porta, a 3,5 m: o alcance de 3,0 m do global funcionando.
+
+⚠️ **O robô só conhece a face que viu** — 0,075 m² de uma caixa de 0,25 m². O
+planejador está contornando uma lasca do obstáculo, não o obstáculo.
+
+### Meia hora perdida num limiar, e vale registrar
+
+A primeira leitura do `percepcao.py` acusou as paredes conhecidas como
+"marcação que só o sensor explica", 16 cm deslocadas para dentro e com 0,35 m
+de espessura. Fui atrás na nuvem crua, ponto a ponto: ela estava **certa** —
+parede real em x = 0,20, pontos a 1,765–1,78 m do robô em (2,0 · 5,0),
+elevações de −7,00° a +3,84°, exatamente a folha do sensor.
+
+O erro era do meu instrumento: contei `>= 253` como letal, e **253 é
+`INSCRIBED_INFLATED_OBSTACLE`** — inflação. Letal é 254. Os 35 cm de "obstáculo
+inventado" eram o `robot_radius` de 0,32 pintado pela `InflationLayer`. Está
+comentado no topo do `percepcao.py` para não morder de novo.
+
+Segundo ajuste do mesmo instrumento: as faces das paredes reais apareciam como
+marcação nova (parede em 0,20, mancha em 0,23) porque a célula marcada cai logo
+FORA da parede rasterizada — ruído de 2 cm sobre grade de 5 cm. Entrou o
+`--orla` (0,10 m, duas células), e aí sobra só o que é obstáculo de verdade.
+
+### Decisão 013: o dono escolheu o caminho 3
+
+**Medir a curvatura crua no começo de cada sessão** e passar `curv_frente` por
+parâmetro. Barato, honesto, sem automação — vira passo do protocolo de bancada.
+As três corridas sem compensador já são o experimento nº 2 do roteiro da
+próxima ida.
+
+### Estado no fim da sessão
+
+**274 testes verdes** (eram 264), rodando por pacote: `robot_motion` 154,
+`tools` 61, `robot_base` 47, `robot_planning` 12. Seis testes novos, quatro
+verificados por mutação (Voxel→Obstacle, faixa de altura discordando do reflexo,
+inflação deixando de ser a última camada, coluna de voxel mais curta que o
+sensor).
+
+⏳ **Nada disto rodou no robô** — vale a mesma ressalva da decisão 012, e mais
+uma: no global costmap a marcação é **permanente**, então a deriva do LIO com a
+TF `map→odom` fixa vira obstáculo fantasma acumulado. Seguro no simulador,
+dívida no robô.
