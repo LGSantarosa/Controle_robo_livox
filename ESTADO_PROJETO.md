@@ -10,6 +10,60 @@
 
 ---
 
+## 🎚️ 07-08 (4ª leva) — O ff DO DIA TEM POR ONDE ENTRAR (dev, sem robô)
+
+A decisão **013** foi escolhida de manhã (caminho 3: medir a curvatura crua no
+começo da sessão e passar por parâmetro) e, olhando o código à tarde, **não
+existia parâmetro para passar**:
+
+- `compensador_rumo.py` declarava `curv_frente` com default **−0,817** — o valor
+  de 04-08, o número que a própria decisão diz não valer como verdade;
+- `pilha.launch.py` subia os dois compensadores com **só** `use_sim_time` e
+  `segura_rumo`; nenhum YAML carrega a curvatura;
+- sobrava `ros2 param set`, que o apêndice do roteiro lista como armadilha.
+
+➡️ **O experimento nº 2 da próxima ida produziria um número sem destino.**
+
+🟢 **O protocolo agora fecha ponta a ponta:**
+
+```
+três corridas SEM compensador -> medir.py --resumo curvatura
+  -> a linha pronta para colar -> pilha.launch.py curv_frente:= curv_medido_em:=
+  -> rosout: "ff MEDIDO em <data>"
+```
+
+- **`pilha.launch.py`**: `curv_frente`, `curv_re` e `curv_medido_em`, nos DOIS
+  compensadores (sim e robô), com os defaults do nó. ⚠️ Numéricos vão como
+  `ParameterValue(..., value_type=float)` — argumento de launch chega como texto
+  e o parâmetro é double; cru, o compensador **cai na subida** com *parameter
+  type mismatch*, e o robô arca 0,82 1/m com a pilha inteira de pé;
+- **o nó anuncia a procedência do ff no `rosout`**, em WARN, com default
+  `HERDADO`: pilha que sobe sem a medida do dia se denuncia. Ler com
+  `ros2 topic echo /rosout --field msg | grep -i "^ff "`;
+- **`medir.py --resumo curvatura`** imprime a linha de launch com a média e a
+  data de hoje — e **se recusa** com n<3, dispersão acima de 5% (dentro do dia o
+  robô repete em 2–3%) ou frente misturada com ré. Linha colável a partir de
+  medida ruim é pior que nenhuma: ela seria colada.
+
+⚠️ **O que isto NÃO resolve**: a curvatura segue medida **uma vez por sessão**.
+Planta que mude no meio da bancada envelhece o valor dentro da própria sessão —
+isso é o caminho (2) da 013 (estimador online), que segue fora.
+
+⏳ **Nada foi ao robô**; o que a próxima sessão confirma é operacional: a linha
+sai, sobe a pilha, e o `rosout` diz `ff MEDIDO em <hoje>`. Se disser `HERDADO`,
+o número não chegou.
+
+**300 testes verdes** (eram 281), por pacote: `robot_motion` 171, `tools` 70,
+`robot_base` 47, `robot_planning` 12. Três novos verificados por mutação.
+
+🔧 **Dívida vista e não paga**: rodar `robot_motion/test` e `tools/` no MESMO
+processo pytest derruba `test_o_raio_de_chegada_do_nav2_bate_com_o_do_seguidor`
+(o `sys.path.insert` do `test_lei_de_reta.py` quebra o import relativo do
+`path_follower`). É anterior a esta leva — confirmado com `git stash` — e não
+aparece rodando por pacote.
+
+---
+
 ## 👁️ 07-08 — O COSTMAP PASSA A ENXERGAR O LIVOX (dev, sem robô)
 
 Sessão de máquina de dev, robô desligado. Decisão **014**; entrada 07-08 do
@@ -375,7 +429,7 @@ Dois dos três bloqueios de hoje são de dev:
 | # | o que | por quê | onde |
 |---|---|---|---|
 | 1 | **TF `odom → base_link`** | o FAST-LIO publica `/Odometry` como mensagem e **não** publica a transformada. A árvore TF fica partida, o `planner_server` não ativa, o `lifecycle_manager` **aborta o bringup inteiro** e leva o `collision_monitor` junto. Bloqueia Nav2 **e** o teste D | DIÁRIO 06-08 (3ª leva) |
-| 2 | **o `ff` fixo não fecha o arco** | ⚠️ **corrigido em 06-08**: não é "o número está errado", é a **planta mudando de dia**. Crua: −0,8031 em 04-08 contra −0,9116 em 05-08 (13,5%, faixas que não se tocam), com 2–3% de dispersão *dentro* de cada dia. Nenhum valor único serve. Três caminhos possíveis, **escolha do dono** | decisão **013** |
+| 2 | ~~**o `ff` fixo não fecha o arco**~~ ✅ **FECHADO NO DEV (07-08, 4ª leva)** | a planta muda de dia (−0,8031 em 04-08 contra −0,9116 em 05-08; 13,5%, faixas que não se tocam, contra 2–3% *dentro* do dia), então nenhum valor único serve. O dono escolheu o caminho 3, e ele agora existe na máquina: `pilha.launch.py curv_frente:=… curv_medido_em:=…`, a linha sai pronta do `medir.py --resumo curvatura`, e o `rosout` denuncia ff herdado. **Falta só rodar** | decisão **013** |
 | 3 | **teleop não publica em `/key_vel`** | 44 s de gravação, **zero** amostras dessa fonte. Não é o `le_tecla()` — é antes disso | `homem_morto.py` |
 | 4 | **`bin/robot-key` com `set -u`** | briga com `COLCON_TRACE` e `AMENT_TRACE_SETUP_FILES` dos `setup.bash`. Uma linha | — |
 

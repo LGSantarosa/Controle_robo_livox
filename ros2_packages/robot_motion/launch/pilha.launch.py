@@ -71,6 +71,7 @@ from launch.conditions import IfCondition, UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 
 RAIZ = os.path.abspath(os.path.join(
     get_package_share_directory('robot_motion'), '..', '..', '..', '..'))
@@ -98,6 +99,19 @@ def generate_launch_description():
     sem_mapa_params = os.path.join(pkg, 'config', 'nav2_sem_mapa.yaml')
 
     sim = LaunchConfiguration('sim')
+    # ⚠️ `ParameterValue(..., value_type=float)` e não a substituição crua: o
+    # argumento de launch chega como TEXTO, e o nó declarou `curv_frente` como
+    # double. Passar cru derruba o compensador na subida com "parameter type
+    # mismatch" — e um compensador que não sobe é o robô arcando 0,82 1/m com
+    # a pilha inteira de pé.
+    curv = [
+        {'curv_frente': ParameterValue(LaunchConfiguration('curv_frente'),
+                                       value_type=float),
+         'curv_re': ParameterValue(LaunchConfiguration('curv_re'),
+                                   value_type=float),
+         'curv_medido_em': ParameterValue(LaunchConfiguration('curv_medido_em'),
+                                          value_type=str)},
+    ]
     mapa = LaunchConfiguration('mapa')
     rviz = LaunchConfiguration('rviz')
     placa = LaunchConfiguration('placa')
@@ -183,6 +197,33 @@ def generate_launch_description():
             'placa', default_value='medido',
             description='modelo do atuador simulado: "medido" (a placa de '
                         '31-07, com patamar), "cru" ou "ideal"'),
+
+        # ---- o feedforward do dia (decisão 013, caminho 3, escolhido em 07-08)
+        #
+        # A curvatura crua deste robô muda 13,5% de um dia para o outro
+        # (04-08: −0,8031 · 05-08: −0,9116, faixas que não se tocam) e só 2–3%
+        # dentro do mesmo dia. Não existe valor fixo que sirva, e o protocolo
+        # passou a ser: três corridas SEM compensador no começo da sessão, e a
+        # média entra AQUI. Sem estes argumentos a única via era `ros2 param
+        # set`, que o roteiro lista como armadilha (não chega no nó; matar e
+        # subir) — ou seja, a medida do dia não tinha para onde ir.
+        #
+        #   ros2 launch robot_motion pilha.launch.py mapa:=nenhum \
+        #       curv_frente:=-0.9116 curv_medido_em:=2026-08-05
+        #
+        # Os defaults são os do nó, então quem não passa nada não muda nada —
+        # e sobe com o log gritando que o ff é herdado.
+        DeclareLaunchArgument(
+            'curv_frente', default_value='-0.817',
+            description='curvatura crua indo para a FRENTE [1/m], medida hoje '
+                        'sem compensador (medir.py --resumo curvatura)'),
+        DeclareLaunchArgument(
+            'curv_re', default_value='-0.098',
+            description='idem, de ré. Muda menos e raramente se remede'),
+        DeclareLaunchArgument(
+            'curv_medido_em', default_value='HERDADO',
+            description='a data da medida acima. Não entra na conta: entra no '
+                        'log, para o número herdado não passar por medido'),
 
         # ---------------------------------------------------- o simulador
         IncludeLaunchDescription(
@@ -287,13 +328,13 @@ def generate_launch_description():
         # defeito que o `ensaio.py` tinha e que o `--topico` consertou.
         Node(package='robot_motion', executable='compensador_rumo',
              name='compensador_rumo', output='both',
-             parameters=[{'use_sim_time': sim, 'segura_rumo': False}],
+             parameters=[{'use_sim_time': sim, 'segura_rumo': False}] + curv,
              remappings=[('/hoverboard_base_controller/cmd_vel',
                           '/cmd_vel_bruto')],
              condition=IfCondition(sim)),
         Node(package='robot_motion', executable='compensador_rumo',
              name='compensador_rumo', output='both',
-             parameters=[{'use_sim_time': sim, 'segura_rumo': False}],
+             parameters=[{'use_sim_time': sim, 'segura_rumo': False}] + curv,
              condition=UnlessCondition(sim)),
         Node(package='robot_motion', executable='path_follower',
              name='path_follower', output='both',

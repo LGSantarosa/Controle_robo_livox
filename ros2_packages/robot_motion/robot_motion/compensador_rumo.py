@@ -33,7 +33,7 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 
 from robot_motion.heading_controller import yaw_de
-from robot_motion.lei_de_reta import MalhaDeReta
+from robot_motion.lei_de_reta import MalhaDeReta, herdado_ff
 
 
 class CompensadorRumo(Node):
@@ -45,6 +45,32 @@ class CompensadorRumo(Node):
             # com sinal, na convenção da bancada (Δyaw/caminho).
             ('curv_frente', -0.817),
             ('curv_re', -0.098),
+            # ⚠️ OS DOIS ACIMA SÃO O ÚLTIMO VALOR VISTO, NÃO UMA CONSTANTE DO
+            # ROBÔ — decisão 013, caminho 3 (escolhido pelo dono em 07-08).
+            #
+            # A curvatura crua muda de um dia para o outro mais do que muda
+            # dentro do dia:
+            #
+            #     04-08   média −0,8031   faixa −0,8282 a −0,7832   disp. 3%
+            #     05-08   média −0,9116   faixa −0,9310 a −0,8958   disp. 2%
+            #
+            # 13,5% entre dias, com as faixas NÃO se tocando. Não é ruído de
+            # medida: é a planta em dois estados. Nenhum valor fixo serve para
+            # os dois, e o limiar de aceitação da 011 (|curvatura| < 0,05) cai
+            # dentro da faixa em que ela se move sozinha.
+            #
+            # O protocolo é medir três corridas SEM compensador no começo da
+            # sessão e subir a pilha com o valor do dia:
+            #
+            #   ros2 launch robot_motion pilha.launch.py mapa:=nenhum \
+            #       curv_frente:=-0.9116 curv_medido_em:=2026-08-05
+            #
+            # `curv_medido_em` não entra na conta — entra no LOG. Sem ele, o
+            # nó sobe anunciando um número que parece medido e é herdado, e a
+            # bancada mede um robô que não existe (o defeito da bitola, 29-07).
+            # A régua que produz o valor e a linha pronta para colar é
+            # `medir.py --resumo curvatura`.
+            ('curv_medido_em', 'HERDADO'),
             # ⚠️ GANHOS REDUZIDOS 4,1x EM 05-08, e o número saiu do robô.
             #
             # Com kp=1,0 e ki=0,5 o robô OSCILA, e a oscilação CRESCE — não é
@@ -167,6 +193,24 @@ class CompensadorRumo(Node):
             f"ki={par['ki']:.2f}, correção limitada a ±{par['wz_max']:.2f} "
             f"rad/s. Curva pedida (|wz|≥{par['limiar_curva']:.2f}) passa "
             f"intocada.")
+        # De onde veio o feedforward — a linha que separa "medido hoje" de
+        # "herdado". Ela é WARN nos dois casos de propósito: o `rosout` é como
+        # eu leio a bancada por ssh (o dono só roda), e um INFO se perde no
+        # meio do bringup do Nav2.
+        if herdado_ff(par['curv_medido_em']):
+            self.get_logger().warn(
+                f"⚠️ ff HERDADO: curv_frente {par['curv_frente']:+.4f} NÃO foi "
+                f"medido nesta sessão. A planta muda ~13,5% entre dias "
+                f"(04-08: −0,8031 · 05-08: −0,9116, faixas que não se tocam), "
+                f"e o resíduo disso é maior que o critério de aceitação da 011. "
+                f"Protocolo (decisão 013): três corridas SEM compensador, "
+                f"`medir.py --resumo curvatura`, e subir a pilha com "
+                f"`curv_frente:=<média> curv_medido_em:=<data>`.")
+        else:
+            self.get_logger().warn(
+                f"ff MEDIDO em {par['curv_medido_em']}: curv_frente "
+                f"{par['curv_frente']:+.4f} 1/m. Se esta data não for a de "
+                f"hoje, o valor é de outra sessão e vale como herdado.")
         if par['preditor']:
             self.get_logger().warn(
                 f"PREDITOR DE SMITH LIGADO: descontando {par['preditor_atraso']:.2f} s "

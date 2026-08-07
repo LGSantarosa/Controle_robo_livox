@@ -14,7 +14,7 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__))), 'robot_motion'))
 
-from lei_de_reta import MalhaDeReta, norm_ang  # noqa: E402
+from lei_de_reta import MalhaDeReta, herdado_ff, norm_ang  # noqa: E402
 
 
 # ------------------------------------------------------------ o feedforward
@@ -466,3 +466,34 @@ def test_o_detune_ganha_do_preditor_na_planta_de_hoje():
     assert max(preditor[1:4]) > 2.0, (
         f'o preditor passou a assentar ({[round(p, 2) for p in preditor[:4]]})'
         f' — reveja o default, agora COM o número novo')
+
+
+# ----------------- o ff é do dia, e o log tem de dizer qual (decisão 013)
+#
+# A curvatura crua muda 13,5% entre dias (04-08: −0,8031 · 05-08: −0,9116,
+# faixas que não se tocam) e 2–3% dentro do dia. O caminho 3 escolhido pelo
+# dono em 07-08 é medir no começo da sessão e passar por parâmetro — o que só
+# funciona se o valor NÃO medido se denunciar. Estes testes travam a denúncia.
+
+def test_o_default_do_no_se_declara_HERDADO():
+    """Quem sobe a pilha sem passar nada tem de ver `HERDADO` no rosout. O
+    default de `curv_frente` é o número de 04-08, e ele parece medido: é a
+    mesma classe de defeito da bitola (29-07), um valor copiado que envelhece
+    sozinho e não dá sintoma."""
+    assert _defaults_do_no()['curv_medido_em'] == 'HERDADO'
+    assert herdado_ff(_defaults_do_no()['curv_medido_em'])
+
+
+def test_data_preenchida_conta_como_medida():
+    """Quem digitou uma data afirmou ter medido. O log mostra qual é, e cabe
+    ao dono desmentir — a régua aqui não tem como saber."""
+    assert not herdado_ff('2026-08-05')
+
+
+@pytest.mark.parametrize('texto', ['', '   ', 'HERDADO', 'herdado 04-08',
+                                   'Herdado?'])
+def test_a_duvida_cai_para_o_lado_que_AVISA(texto):
+    """Vazio e as formas de escrever "herdado" à mão. Errar para o lado de
+    avisar custa uma linha de log; errar para o outro deixa a bancada medir um
+    robô que não existe."""
+    assert herdado_ff(texto)

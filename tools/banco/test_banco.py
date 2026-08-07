@@ -10,6 +10,7 @@ que permite exercitá-lo com um dublê e testar a LÓGICA, não a plumbing.
 """
 import argparse
 import csv
+import datetime
 import importlib.util
 import math
 import os
@@ -741,6 +742,91 @@ def test_curvatura_reproduz_o_robo_medido_em_0804(capsys):
     assert mr == pytest.approx(-0.11, abs=0.03), 'arco de ré'
     assert mf / mr == pytest.approx(7.4, abs=1.5), 'a assinatura da boba'
     assert mf < 0 and mr < 0, 'os dois sentidos arcam para o mesmo lado do corpo'
+
+
+# ------------------ do número medido ao comando que o usa (decisão 013)
+#
+# O caminho 3 da 013 só existe se a medida do dia CHEGAR ao compensador. Até
+# 07-08 a régua parava na média impressa: o valor era lido em voz alta na
+# bancada e não tinha para onde ir. Estes testes travam a ponte — e travam
+# principalmente as RECUSAS, porque uma linha colável impressa a partir de
+# medida ruim é pior que nenhuma: ela seria colada.
+
+def arqs_de_arco(tmp_path, curvs, cmd_v=0.25, prefixo='c'):
+    """N corridas de curvatura conhecida, gravadas como o ensaio gravaria."""
+    saida = []
+    for i, c in enumerate(curvs):
+        r = csv_arco(c, cmd_v=cmd_v)
+        p = tmp_path / f'{prefixo}{i}.csv'
+        with open(p, 'w', newline='') as f:
+            w = csv.DictWriter(f, fieldnames=list(r[0].keys()))
+            w.writeheader()
+            w.writerows(r)
+        saida.append(str(p))
+    return saida
+
+
+def test_tres_corridas_que_concordam_viram_linha_de_launch(tmp_path, capsys):
+    """O produto do experimento nº 2 da bancada: a média vira o comando que
+    sobe a pilha com o ff do dia, com a data de hoje já preenchida."""
+    medir.resumo('curvatura', arqs_de_arco(tmp_path, [-0.90, -0.91, -0.92]))
+    saida = capsys.readouterr().out
+    assert 'curv_frente:=-0.91' in saida
+    assert 'pilha.launch.py' in saida
+    assert f'curv_medido_em:={datetime.date.today().isoformat()}' in saida
+
+
+def test_a_re_vira_o_OUTRO_parametro(tmp_path, capsys):
+    """Frente e ré são parâmetros diferentes e diferem 8x. Colar a ré em
+    `curv_frente` poria o robô arcando com o viés somado por cima."""
+    medir.resumo('curvatura', arqs_de_arco(tmp_path, [-0.10, -0.098, -0.102],
+                                           cmd_v=-0.25))
+    saida = capsys.readouterr().out
+    assert 'curv_re:=-0.10' in saida
+    assert 'curv_frente' not in saida
+
+
+def test_dispersao_alta_nao_vira_feedforward(tmp_path, capsys):
+    """Dentro do dia este robô repete em 2–3% (04-08 e 05-08) — é essa
+    repetibilidade que sustenta a 013. Espalho de 20% descreve duas plantas, e
+    a média entre elas não é o ff de nenhuma."""
+    medir.resumo('curvatura', arqs_de_arco(tmp_path, [-0.70, -0.90, -1.05]))
+    saida = capsys.readouterr().out
+    assert 'não vira feedforward' in saida
+    assert 'curv_frente:=' not in saida
+
+
+def test_duas_corridas_nao_viram_feedforward(tmp_path, capsys):
+    """O mesmo mínimo de três que o resumo já exige para a média significar
+    algo — aqui ele vale como trava, não como aviso."""
+    medir.resumo('curvatura', arqs_de_arco(tmp_path, [-0.90, -0.91]))
+    saida = capsys.readouterr().out
+    assert 'não vira feedforward' in saida
+    assert 'curv_frente:=' not in saida
+
+
+def test_frente_misturada_com_re_nao_vira_feedforward(tmp_path, capsys):
+    """Acontece de verdade: as corridas de um dia caem todas na mesma pasta e
+    o glob pega as duas famílias. A média de −0,90 com −0,10 não descreve
+    sentido nenhum, e sairia parecendo medida."""
+    arqs = (arqs_de_arco(tmp_path, [-0.90, -0.91], prefixo='f')
+            + arqs_de_arco(tmp_path, [-0.10], cmd_v=-0.25, prefixo='r'))
+    medir.resumo('curvatura', arqs)
+    saida = capsys.readouterr().out
+    assert 'não vira feedforward' in saida
+    assert 'curv_frente:=' not in saida
+
+
+def test_a_receita_so_aparece_na_curvatura(tmp_path, capsys):
+    """Nenhuma outra leitura do banco vira parâmetro do compensador."""
+    r = csv_dente([0.20] * 4, [0.15] * 4)
+    p = tmp_path / 'zm.csv'
+    with open(p, 'w', newline='') as f:
+        w = csv.DictWriter(f, fieldnames=list(r[0].keys()))
+        w.writeheader()
+        w.writerows(r)
+    medir.resumo('zona_morta_linear', [str(p)] * 3)
+    assert 'pilha.launch.py' not in capsys.readouterr().out
 
 
 # ------------------------------- campo de visão do LiDAR (decisão 012)

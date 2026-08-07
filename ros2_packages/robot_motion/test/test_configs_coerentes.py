@@ -345,3 +345,88 @@ def test_o_alarme_de_nuvem_velha_tem_folga_MEDIDA(qual):
     pontos por quadro para transportar e transformar.
     """
     assert _obstaculo(qual)['livox']['expected_update_rate'] >= 0.5
+
+
+# ------------- o ff do dia tem de CHEGAR ao compensador (decisão 013)
+#
+# O dono escolheu em 07-08 o caminho 3: medir a curvatura crua no começo de
+# cada sessão e passar por parâmetro. A escolha ficou registrada e a plumbing
+# não existia — a launch subia o compensador só com `use_sim_time` e
+# `segura_rumo`, nenhum YAML carrega o número, e sobrava `ros2 param set`, que
+# o roteiro lista como armadilha (não chega no nó; matar e subir). Ou seja: a
+# medida do dia não tinha para onde ir.
+
+def _launch_ast():
+    import ast
+    p = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                     'launch', 'pilha.launch.py')
+    return ast.parse(open(p).read()), open(p).read()
+
+
+def _nos_compensador():
+    """Os `Node(...)` do compensador na pilha — são DOIS (sim e robô)."""
+    import ast
+    arvore, _ = _launch_ast()
+    achados = []
+    for no in ast.walk(arvore):
+        if not (isinstance(no, ast.Call)
+                and getattr(no.func, 'id', None) == 'Node'):
+            continue
+        kw = {k.arg: k.value for k in no.keywords}
+        exe = kw.get('executable')
+        if isinstance(exe, ast.Constant) and exe.value == 'compensador_rumo':
+            achados.append(kw)
+    return achados
+
+
+@pytest.mark.parametrize('arg', ['curv_frente', 'curv_re', 'curv_medido_em'])
+def test_a_launch_declara_o_ff_do_dia(arg):
+    _, texto = _launch_ast()
+    assert f"DeclareLaunchArgument(\n            '{arg}'" in texto \
+        or f"'{arg}'" in texto, f'{arg} não é argumento da pilha'
+
+
+def test_OS_DOIS_compensadores_recebem_o_ff():
+    """Sim e robô. Se só um receber, a sessão de bancada mede uma coisa e o
+    robô roda outra — a divergência silenciosa que este arquivo existe para
+    impedir."""
+    import ast
+    nos = _nos_compensador()
+    assert len(nos) == 2, f'esperava 2 compensadores na pilha, achei {len(nos)}'
+    for kw in nos:
+        fonte = ast.dump(kw['parameters'])
+        assert "'curv'" in fonte or "id='curv'" in fonte, \
+            'este compensador sobe sem o ff do dia'
+
+
+def test_o_ff_vai_TIPADO_para_o_no():
+    """Argumento de launch chega como TEXTO e o nó declarou `curv_frente` como
+    double. Passar a substituição crua derruba o compensador na subida com
+    "parameter type mismatch" — e compensador que não sobe é o robô arcando
+    0,82 1/m com a pilha inteira de pé."""
+    _, texto = _launch_ast()
+    assert texto.count('value_type=float') >= 2, \
+        'curv_frente e curv_re têm de ir como float'
+    assert 'value_type=str' in texto, 'curv_medido_em é texto'
+
+
+def test_o_default_da_launch_e_o_default_do_no():
+    """Default duplicado é default que deriva (o caso da bitola, 29-07). Quem
+    não passa nada tem de subir exatamente como subia antes destes argumentos
+    existirem."""
+    import ast
+    fonte_no = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        'robot_motion', 'compensador_rumo.py')
+    arvore = ast.parse(open(fonte_no).read())
+    par = {}
+    for no in ast.walk(arvore):
+        if (isinstance(no, ast.Call)
+                and getattr(no.func, 'attr', None) == 'declare_parameters'):
+            par = {ast.literal_eval(t.elts[0]): ast.literal_eval(t.elts[1])
+                   for t in no.args[1].elts}
+    _, texto = _launch_ast()
+    for chave in ('curv_frente', 'curv_re'):
+        assert f"default_value='{par[chave]}'" in texto, \
+            f'{chave}: launch e nó divergiram ({par[chave]} não está na launch)'
+    assert f"default_value='{par['curv_medido_em']}'" in texto

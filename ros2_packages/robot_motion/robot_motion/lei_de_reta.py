@@ -25,6 +25,25 @@ def norm_ang(a):
     return math.atan2(math.sin(a), math.cos(a))
 
 
+# O que conta como "não foi medido nesta sessão". Mora aqui, e não no nó,
+# porque é a mesma pergunta que a lei faz sobre o `curv_frente` que recebe: o
+# feedforward vale enquanto o número for do dia (decisão 013, caminho 3).
+HERDADO = 'HERDADO'
+
+
+def herdado_ff(medido_em):
+    """O `curv_frente` que está rodando foi medido na sessão, ou é herança?
+
+    Vale como herdado o default (`HERDADO`), o vazio e qualquer texto que
+    comece por "herdado" — porque a forma de escrever isso à mão varia
+    ("herdado 04-08", "herdado?") e a dúvida tem de cair para o lado que
+    AVISA. Data que não se reconhece conta como medida: quem digitou uma data
+    afirmou tê-la medido, e cabe ao log mostrar qual é para o dono desmentir.
+    """
+    t = (medido_em or '').strip()
+    return not t or t.upper().startswith(HERDADO)
+
+
 class MalhaDeReta:
     """Segura o rumo capturado enquanto o comando pedir reta.
 

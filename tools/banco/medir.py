@@ -14,6 +14,7 @@ padrão dos dois). Não é preferência de leitura: é a mesma escolha, do outro
 lado do CSV.
 """
 import csv
+import datetime
 import math
 import os
 import sys
@@ -480,6 +481,7 @@ def resumo(tipo, arqs, fonte='lio', bitola=0.270):
         print(f'  um laudo por corrida. Comparar as {len(arqs)} acima, a olho.')
         return
     vals = []
+    sentidos = []
     for a in arqs:
         try:
             r = le(a)
@@ -489,6 +491,7 @@ def resumo(tipo, arqs, fonte='lio', bitola=0.270):
         v = leituras[tipo](r) if tipo in leituras else None
         if v is not None:
             vals.append((os.path.basename(a), v))
+            sentidos.append(sentido_da_corrida(r))
 
     if not vals:
         print('  nenhuma corrida devolveu número — ver as leituras acima')
@@ -514,6 +517,74 @@ def resumo(tipo, arqs, fonte='lio', bitola=0.270):
     else:
         print(f'  dispersão de {100 * abs(dp / m):.0f}% da média — as corridas '
               f'concordam.')
+
+    if tipo == 'curvatura':
+        receita_do_ff(m, dp, len(ns), sentidos)
+
+
+# ------------------------------------------ o número medido vira comando (013)
+
+# Acima disto a média não vira feedforward. O critério NÃO é o de 15% do
+# resumo: aquele pergunta "as corridas concordam?", este pergunta "isto serve
+# como constante do dia?", e a resposta veio da própria medida — dentro do dia
+# o robô repete em 2 a 3% (04-08 e 05-08), e é essa repetibilidade que faz o
+# caminho 3 da decisão 013 valer a pena. Dispersão maior que isso é sinal de
+# que alguma coisa mudou ENTRE as corridas (ponto de partida, piso, bateria), e
+# aí a média descreve duas plantas, não uma.
+DISPERSAO_MAX_FF = 0.05
+
+
+def sentido_da_corrida(r):
+    """'frente' ou 'ré' pelo primeiro comando não nulo — ou None se não houve.
+
+    A curvatura de frente e a de ré são parâmetros DIFERENTES do compensador
+    (−0,82 contra −0,10, 8x), então quem vai colar o número precisa saber em
+    qual dos dois. A leitura já sabe disso corrida a corrida; o resumo é que
+    perdia a informação ao guardar só o float.
+    """
+    for l in r:
+        if abs(l.get('cmd_v') or 0.0) > 1e-9:
+            return 're' if l['cmd_v'] < 0 else 'frente'
+    return None
+
+
+def receita_do_ff(media, dp, n, sentidos):
+    """A linha pronta para colar — o passo que faltava entre medir e usar.
+
+    Decisão 013, caminho 3: o `curv_frente` é medido no começo de cada sessão
+    e passado por parâmetro. Até 07-08 a régua parava na média impressa, e o
+    número medido não tinha para onde ir: o YAML não o carrega e `ros2 param
+    set` é armadilha conhecida (não chega no nó; matar e subir).
+
+    Ela se RECUSA a sair quando a medida não sustenta um feedforward — com
+    menos de três corridas, com dispersão acima de `DISPERSAO_MAX_FF`, ou com
+    frente e ré misturadas. Imprimir uma linha colável a partir de uma medida
+    ruim seria pior que não imprimir nada: ela seria colada.
+    """
+    quais = {s for s in sentidos if s}
+    if len(quais) != 1:
+        print('  [não vira feedforward] as corridas misturam frente e ré '
+              '(ou não têm comando): são parâmetros diferentes, e a média '
+              'entre eles não descreve nada.')
+        return
+    par = 'curv_frente' if quais == {'frente'} else 'curv_re'
+    if n < 3:
+        print(f'  [não vira feedforward] {n} corrida(s): três é o mínimo para '
+              f'a média valer como constante do dia (decisão 013).')
+        return
+    if media and abs(dp / media) > DISPERSAO_MAX_FF:
+        print(f'  [não vira feedforward] dispersão de {100*abs(dp/media):.0f}%, '
+              f'acima dos {100*DISPERSAO_MAX_FF:.0f}% que o robô repete dentro '
+              f'do dia. Alguma coisa mudou entre as corridas — repetir antes '
+              f'de usar como ff.')
+        return
+
+    hoje = datetime.date.today().isoformat()
+    print(f'\n  ➡️ o ff do dia (decisão 013) — subir a pilha com:')
+    print(f'     ros2 launch robot_motion pilha.launch.py mapa:=nenhum \\')
+    print(f'         {par}:={media:.4f} curv_medido_em:={hoje}')
+    print(f'     (o nó registra no rosout de onde veio o número; sem '
+          f'`curv_medido_em` ele sobe avisando que o ff é HERDADO)')
 
 
 def _silencioso(f):

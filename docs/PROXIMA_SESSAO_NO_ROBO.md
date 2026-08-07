@@ -63,6 +63,11 @@ corridas — dá folga, mas conversa é o que come tempo, não corrida.
     fantasma acumulado**. Se o planejador começar a recusar caminho que estava
     livre, limpe antes de investigar:
     `ros2 service call /global_costmap/clear_entirely_global_costmap nav2_msgs/srv/ClearEntireCostmap`;
+- 🆕 **o ff do dia entra por argumento de launch** (decisão 013, caminho 3,
+  implementado na 4ª leva de 07-08): `pilha.launch.py` aceita `curv_frente:=`,
+  `curv_re:=` e `curv_medido_em:=`, e o compensador **anuncia no `rosout`** se o
+  feedforward foi medido hoje ou é herdado. O default é `HERDADO` — pilha que
+  sobe sem a medida do dia se denuncia sozinha. Ver §5;
 - **nada disso rodou no robô.** É a primeira coisa a conferir.
 
 ---
@@ -206,6 +211,39 @@ está como em 04-08; perto de −0,91, como em 05-08; no meio, a tendência é
 contínua e o caminho 3 da decisão 013 (medir no início de cada sessão) fica bem
 justificado.
 
+### 🆕 E o número agora TEM PARA ONDE IR (07-08, 4ª leva)
+
+O `--resumo` termina imprimindo a linha de launch pronta, com a média e a data
+de hoje já preenchidas — é só colar:
+
+```
+  ➡️ o ff do dia (decisão 013) — subir a pilha com:
+     ros2 launch robot_motion pilha.launch.py mapa:=nenhum \
+         curv_frente:=-0.9000 curv_medido_em:=2026-08-07
+```
+
+⚠️ **Se a linha NÃO sair, o número não serve como ff** e ela diz por quê:
+menos de três corridas válidas, dispersão acima de 5% (dentro do dia este robô
+repete em 2–3%) ou frente misturada com ré no glob. Nesses casos, repetir a
+condição antes de usar — não colar a média assim mesmo.
+
+✅ **A conferência de que o valor chegou** é uma linha do `rosout`, e ela vale
+por todo o resto:
+
+```bash
+ros2 topic echo /rosout --field msg | grep -i "^ff "
+```
+
+```
+ff MEDIDO em 2026-08-07: curv_frente -0.9116 1/m   -> o número do dia entrou
+⚠️ ff HERDADO: curv_frente -0.8170 NÃO foi medido  -> subiu com o valor velho
+```
+
+`HERDADO` é o default do nó de propósito: pilha que sobe sem o ff do dia tem de
+se denunciar, senão a bancada mede um robô que não existe (o defeito da bitola,
+29-07). **Todo experimento com compensador daqui para a frente roda depois
+desta conferência.**
+
 ---
 
 ## 6. EXPERIMENTO 3 — teste D, o reflexo de colisão
@@ -217,7 +255,10 @@ não publica nem zero — foi assim que ele morreu em 06-08.
 36 cm. Cadeira serve mas é pior alvo (vazada, pernas finas).
 
 ```bash
-ros2 launch robot_motion pilha.launch.py mapa:=nenhum
+# o curv_frente é o que o experimento 2 acabou de medir (§5) — a linha sai
+# pronta do `medir.py --resumo curvatura`
+ros2 launch robot_motion pilha.launch.py mapa:=nenhum \
+    curv_frente:=<a média de hoje> curv_medido_em:=$(date +%F)
 ros2 lifecycle get /collision_monitor        # TEM de dizer active
 ```
 

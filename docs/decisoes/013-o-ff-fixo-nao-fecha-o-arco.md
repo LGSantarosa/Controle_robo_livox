@@ -102,6 +102,40 @@ O dono escolheu **medir a curvatura crua no começo de cada sessão** e passar o
   tendência entre dias virar previsível com três ou mais pontos, o (2)
   (estimador online) volta à mesa com dado para se justificar.
 
+## 🔧 Como o caminho 3 ficou implementado (07-08, 4ª leva)
+
+A escolha ficou registrada de manhã e, olhando o código à tarde, **não havia
+por onde passar o número**: o nó declarava `curv_frente` com default −0,817
+(o valor de 04-08), a `pilha.launch.py` subia os dois compensadores só com
+`use_sim_time` e `segura_rumo`, nenhum YAML carrega a curvatura, e sobrava
+`ros2 param set` — armadilha conhecida do apêndice do roteiro. O experimento
+nº 2 produziria um número sem destino.
+
+O protocolo agora fecha em três peças:
+
+```
+ três corridas SEM compensador  ->  medir.py --resumo curvatura
+   -> a linha pronta para colar -> pilha.launch.py curv_frente:=... curv_medido_em:=...
+   -> o rosout dizendo "ff MEDIDO em <data>"
+```
+
+1. **`pilha.launch.py`** ganhou `curv_frente`, `curv_re` e `curv_medido_em`,
+   repassados aos DOIS compensadores (sim e robô). Defaults iguais aos do nó.
+   ⚠️ Os numéricos vão como `ParameterValue(..., value_type=float)`: argumento
+   de launch chega como texto e o parâmetro é double — cru, o compensador cai
+   na subida com *parameter type mismatch*.
+2. **`curv_medido_em` não entra na conta, entra no log.** O nó anuncia se o ff
+   é do dia ou herdado, em WARN (o `rosout` é como a bancada é lida por ssh).
+   O default é `HERDADO`: subir sem medir se denuncia.
+3. **`medir.py --resumo curvatura`** imprime a linha de launch já com a média e
+   a data de hoje — e **se recusa** com menos de três corridas, dispersão acima
+   de 5% (o robô repete em 2–3% dentro do dia) ou frente misturada com ré.
+
+**O que isto NÃO resolve**: a curvatura segue medida **uma vez por sessão**. Se
+a planta mudar *durante* a sessão — hipótese que os dados de hoje não testam,
+porque nenhum dia tem duas medidas cruas separadas por horas — o valor
+envelhece dentro da própria bancada. Isso é o caminho (2), e continua fora.
+
 ## O que fica pendente de medida
 
 Falta a curvatura crua de **06-08** — a sessão foi direto para as condições com

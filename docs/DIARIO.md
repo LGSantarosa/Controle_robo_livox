@@ -4597,3 +4597,87 @@ calado como ⚠️, não ❌, quando a entrada é só zero.
 
 **Rodado contra o simulador no perfil da sessão de hoje (`mapa:=nenhum`): 20/20.**
 Suíte: **281 verdes**, três novos para o pré-voo.
+
+### 🎚️ 07-08 (4ª leva) — A decisão 013 sai do papel: o ff do dia tem por onde entrar
+
+Sessão de dev, robô desligado. O dono perguntou o que dava para fazer sem
+máquina; levantei o que estava aberto e o item escolhido foi o mais barato dos
+que **bloqueiam a próxima ida**.
+
+🔴 **A escolha do caminho 3 estava registrada e não existia plumbing para ela.**
+De manhã o dono decidiu medir a curvatura crua no começo de cada sessão e passar
+`curv_frente` por parâmetro. À tarde, olhando o código:
+
+- `compensador_rumo.py` declarava `curv_frente` com default **−0,817** — o valor
+  de 04-08, exatamente o número que a decisão diz não valer como verdade;
+- `pilha.launch.py` subia os dois compensadores (sim e robô) com **só**
+  `use_sim_time` e `segura_rumo`;
+- nenhum YAML carrega o número;
+- sobrava `ros2 param set`, que o apêndice do roteiro lista como armadilha
+  conhecida (não chega no nó; matar e subir).
+
+Ou seja: o experimento nº 2 da próxima sessão produziria um número **sem
+destino**. O protocolo tinha sido escolhido e a máquina não sabia recebê-lo.
+
+🟢 **A ponte, em três pedaços, e o do meio é o que faltava.**
+
+1. **`pilha.launch.py` ganhou `curv_frente`, `curv_re` e `curv_medido_em`**,
+   repassados aos DOIS compensadores. Defaults iguais aos do nó — quem não passa
+   nada sobe como sempre subiu.
+
+   ⚠️ Os dois numéricos vão como `ParameterValue(..., value_type=float)`.
+   Argumento de launch chega como TEXTO e o nó declarou `curv_frente` como
+   double: passar a substituição crua derruba o compensador na subida com
+   *parameter type mismatch*, e compensador que não sobe é o robô arcando
+   0,82 1/m com a pilha inteira de pé. Conferido resolvendo a launch fora do
+   ROS: `-0.9116 (float)` e `'2026-08-07' (str)` chegam tipados nos dois nós.
+
+2. **`curv_medido_em` não entra na conta — entra no LOG.** O nó passou a
+   registrar de onde veio o feedforward, e as duas saídas foram vistas vivas:
+
+   ```
+   [WARN] ff MEDIDO em 2026-08-07: curv_frente -0.9116 1/m. Se esta data não
+          for a de hoje, o valor é de outra sessão e vale como herdado.
+   [WARN] ⚠️ ff HERDADO: curv_frente -0.8170 NÃO foi medido nesta sessão. [...]
+   ```
+
+   É WARN nos dois casos de propósito: o `rosout` é como eu leio a bancada por
+   ssh (o dono só roda), e um INFO se perde no meio do bringup do Nav2. O
+   default do nó é `HERDADO`, então **subir sem medir se denuncia** — a classe
+   de defeito da bitola (29-07): um número copiado que envelhece sozinho e não
+   dá sintoma.
+
+3. **`medir.py --resumo curvatura` passou a imprimir a linha pronta para
+   colar**, com a data de hoje preenchida. Contra o dado real de 05-08:
+
+   ```
+   média = -0.9000   faixa -0.9310 a -0.8652   desvio 0.0274
+   dispersão de 3% da média — as corridas concordam.
+   ➡️ ros2 launch robot_motion pilha.launch.py mapa:=nenhum \
+          curv_frente:=-0.9000 curv_medido_em:=2026-08-07
+   ```
+
+   ⚠️ **E ela se RECUSA a sair** com menos de três corridas, com dispersão acima
+   de 5%, ou com frente e ré misturadas (são parâmetros diferentes, e diferem
+   8x). O critério não é o de 15% do resumo: aquele pergunta *as corridas
+   concordam?*, este pergunta *isto serve como constante do dia?* — e a resposta
+   veio da medida, porque dentro do dia o robô repete em 2–3% (04-08 e 05-08).
+   Linha colável impressa a partir de medida ruim é pior que nenhuma: ela seria
+   colada.
+
+**300 testes verdes** (eram 281), rodados por pacote: `robot_motion` 171,
+`tools` 70, `robot_base` 47, `robot_planning` 12. Dezenove novos, **três
+verificados por mutação** no `medir.py` (a trava de dispersão afrouxada para
+100%, o sentido da corrida sempre 'frente', e o mínimo de três corridas
+removido — cada mutação derrubou exatamente o seu teste e nenhum outro).
+
+⏳ **Nada disto foi ao robô.** O que a próxima sessão confirma é operacional, não
+físico: o experimento 2 imprime a linha, a linha sobe a pilha, e o `rosout` diz
+`ff MEDIDO em <hoje>`. Se disser `HERDADO`, o número não chegou.
+
+🔧 **Dívida vista de passagem, não paga**: rodar `ros2_packages/robot_motion/test`
+e `tools/` no MESMO processo pytest derruba
+`test_o_raio_de_chegada_do_nav2_bate_com_o_do_seguidor` — o `sys.path.insert` do
+`test_lei_de_reta.py` faz o `path_follower` ser importado por um caminho em que
+o import relativo quebra. É anterior a esta leva (confirmado com `git stash`) e
+não aparece rodando por pacote, que é como a suíte é rodada aqui.
