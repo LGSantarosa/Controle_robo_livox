@@ -1,7 +1,8 @@
 # 013 — O feedforward fixo não fecha o arco, porque a planta muda de dia
 
 **Data:** 2026-08-06
-**Estado:** análise fechada; a escolha de conserto fica **aberta** para o dono
+**Estado:** análise fechada; **escolha feita pelo dono em 07-08 — caminho 3**
+(medir a curvatura crua no começo de cada sessão e passar por parâmetro)
 **Depende de:** [011 — malha fechada de rumo em reta](011-malha-fechada-de-rumo-em-reta.md)
 
 ## O que se sabia, e o que mudou
@@ -85,6 +86,21 @@ muda". Três caminhos, e eles têm custos diferentes:
 **Não escolhi.** A (1) mexe no que acabou de ser validado no robô, a (2) é uma
 mudança grande que o método deste projeto manda não levar blind para a máquina,
 e a (3) muda o protocolo de trabalho do dono. É decisão dele.
+
+## ✅ A escolha (2026-08-07): caminho 3
+
+O dono escolheu **medir a curvatura crua no começo de cada sessão** e passar o
+`curv_frente` por parâmetro. Consequências práticas:
+
+- as **três corridas sem compensador** deixam de ser "o experimento que falta" e
+  viram **passo fixo do protocolo de bancada**, antes de qualquer outra medida
+  do dia — já estão como experimento nº 2 em `docs/PROXIMA_SESSAO_NO_ROBO.md`;
+- o valor medido no dia entra por parâmetro; **nenhum número fixo de
+  `curv_frente` no YAML deve ser tratado como verdade** — é só o último valor
+  visto;
+- os caminhos (1) e (2) ficam **descartados por ora**, não refutados: se a
+  tendência entre dias virar previsível com três ou mais pontos, o (2)
+  (estimador online) volta à mesa com dado para se justificar.
 
 ## O que fica pendente de medida
 
