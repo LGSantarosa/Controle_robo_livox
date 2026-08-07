@@ -66,6 +66,30 @@ PAREDES = [
     ('beco_fundo',   10.0, 2.3, 11.0, 2.5),
 ]
 
+# ------------------------------------------------------------- a SURPRESA
+#
+# Obstáculos que entram SÓ NO MUNDO e nunca no mapa. É o que separa as duas
+# explicações possíveis para um robô que desvia:
+#
+#   desviou porque o mapa dizia que tinha algo ali  -> memória, não percepção
+#   desviou de algo que o mapa diz LIVRE            -> só pode ter vindo do sensor
+#
+# Sem isto a pista não prova percepção nenhuma, porque mundo e mapa saem da
+# MESMA planta e concordam em tudo. A `pilha.launch.py` já separava `mundo` de
+# `mapa` como argumento esperando este arquivo existir.
+#
+# Onde ficam, e por quê: o robô nasce em (2,0 · 5,0), então o primeiro está
+# 1,5 m ao NORTE dele — dentro do alcance de marcação (2,0 m) e longe da zona
+# cega. Com o Livox a 0,42 m e feixe mais baixo a −7°, a 1,5 m ele varre a
+# partir de 0,42 − 0,123 × 1,5 = 0,235 m de altura: uma caixa de 0,60 m é
+# vista com folga. O segundo fica no meio do vão da porta, para o caso em que
+# o plano PRECISA mudar por causa do sensor.
+SURPRESAS = [
+    ('surpresa_norte', 1.75, 6.25, 2.25, 6.75),
+    ('surpresa_porta', 3.75, 2.35, 4.25, 2.65),
+]
+ALTURA_SURPRESA = 0.6
+
 # ---------------------------------------------------------------- mundo SDF
 
 CABECALHO = f'''<?xml version="1.0"?>
@@ -145,12 +169,21 @@ PAREDE_SDF = '''
 '''
 
 
-def escreve_mundo(caminho):
+def escreve_mundo(caminho, com_surpresa=False):
+    """Rasteriza a planta em SDF. `com_surpresa` acrescenta o que o mapa NÃO tem.
+
+    O mapa nunca recebe as surpresas — é essa assimetria que faz o teste de
+    percepção existir. Ver o bloco `SURPRESAS`.
+    """
     partes = [CABECALHO]
-    for nome, x0, y0, x1, y1 in PAREDES:
+    corpos = [(n, x0, y0, x1, y1, ALTURA_PAREDE) for n, x0, y0, x1, y1 in PAREDES]
+    if com_surpresa:
+        corpos += [(n, x0, y0, x1, y1, ALTURA_SURPRESA)
+                   for n, x0, y0, x1, y1 in SURPRESAS]
+    for nome, x0, y0, x1, y1, altura in corpos:
         partes.append(PAREDE_SDF.format(
-            nome=nome, cx=(x0 + x1) / 2, cy=(y0 + y1) / 2, cz=ALTURA_PAREDE / 2,
-            sx=x1 - x0, sy=y1 - y0, sz=ALTURA_PAREDE))
+            nome=nome, cx=(x0 + x1) / 2, cy=(y0 + y1) / 2, cz=altura / 2,
+            sx=x1 - x0, sy=y1 - y0, sz=altura))
     partes.append('\n  </world>\n</sdf>\n')
     with open(caminho, 'w') as f:
         f.write(''.join(partes))
@@ -194,16 +227,21 @@ def main():
     raiz = os.path.dirname(os.path.dirname(os.path.dirname(
         os.path.abspath(__file__))))
     mundo = os.path.join(raiz, 'worlds', 'pista_obstaculos.sdf')
+    surpresa = os.path.join(raiz, 'worlds', 'pista_surpresa.sdf')
     pgm = os.path.join(raiz, 'maps', 'pista_obstaculos.pgm')
     yaml = os.path.join(raiz, 'maps', 'pista_obstaculos.yaml')
     os.makedirs(os.path.dirname(pgm), exist_ok=True)
     escreve_mundo(mundo)
+    escreve_mundo(surpresa, com_surpresa=True)
     w, h = escreve_mapa(pgm, yaml)
-    print(f'mundo -> {mundo}')
-    print(f'mapa  -> {pgm} ({w}x{h} px, {RES} m/px)')
-    print(f'        {yaml}')
+    print(f'mundo    -> {mundo}')
+    print(f'surpresa -> {surpresa}  ({len(SURPRESAS)} obstáculos fora do mapa)')
+    print(f'mapa     -> {pgm} ({w}x{h} px, {RES} m/px)')
+    print(f'            {yaml}')
     print(f'{len(PAREDES)} obstáculos; sala {LARG:.0f}x{ALT:.0f} m; '
           'vãos: porta 0,90 m e aperto 0,80 m (robô 0,50 m)')
+    print('teste de percepção:  pilha.launch.py sim:=true '
+          'mundo:=worlds/pista_surpresa.sdf   (mapa fica o mesmo)')
 
 
 if __name__ == '__main__':

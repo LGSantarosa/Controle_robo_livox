@@ -267,3 +267,39 @@ python3 ensaio.py --ensaio degrau_giro --csv sim_deg.csv --v 0.3 --wz 1.0 --sim
 **Um simulador por vez.** Dois Gazebos vivos publicam dois `/clock`, o tempo
 anda para trás e o CSV sai embaralhado — o banco morre de propósito quando
 detecta isso, em vez de gravar dado sujo.
+
+## Percepção — o costmap vê o mundo ou repete o mapa?
+
+Estes dois não medem o robô, medem o que a pilha **sabe**. Nasceram em 07-08
+com a decisão 014 (a nuvem entrando nos costmaps) e servem tanto no simulador
+quanto no robô parado.
+
+```bash
+# o que o costmap marcou que o mapa NÃO conhece — só o sensor explica
+python3 tools/banco/percepcao.py --qual local_costmap
+python3 tools/banco/percepcao.py --qual global_costmap --csv manchas.csv
+
+# o Nav2 desvia? planeja SEM MOVER o robô (ação compute_path_to_pose)
+python3 tools/banco/plano.py --alvo 2.0 7.2 --de 2.0 5.0 --obstaculo 2.0 6.5 0.35
+```
+
+**Como se prova percepção, e por que a pista antiga não provava:** mundo e mapa
+saem da mesma planta (`tools/mundo/gera_pista.py`), então um robô que desvia
+pode estar vendo com o lidar OU repetindo o mapa — indistinguível. Rode com o
+mundo que tem o que o mapa não tem:
+
+```bash
+python3 tools/mundo/gera_pista.py          # escreve também pista_surpresa.sdf
+ros2 launch robot_motion pilha.launch.py sim:=true gui:=false \
+     mundo:=$PWD/worlds/pista_surpresa.sdf     # o mapa continua o mesmo
+```
+
+⚠️ **`percepcao.py` conta 254, não 253.** No costmap cru do Nav2, 253 é
+`INSCRIBED_INFLATED_OBSTACLE` — **inflação**, não obstáculo. Contar 253 faz cada
+parede aparecer 0,32 m mais gorda (o `robot_radius`) e parecer marcação
+inventada pelo sensor. Custou meia hora em 07-08, com a nuvem crua conferida
+ponto a ponto — e ela estava certa.
+
+⚠️ **O robô só marca a FACE que viu.** Uma caixa de 0,25 m² vira 0,075 m² de
+costmap. Ao julgar folga de plano, lembre que ele está contornando a lasca
+marcada, não o corpo inteiro do obstáculo.
