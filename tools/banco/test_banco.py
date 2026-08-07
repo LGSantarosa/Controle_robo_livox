@@ -901,3 +901,69 @@ def test_le_o_mapa_de_verdade_da_pista():
     assert g.largura > 100 and g.altura > 100
     assert folga_mod.folga(g, 2.0, 5.0) > 0.5, 'a largada tem de ser livre'
     assert folga_mod.folga(g, 0.1, 4.0) < 0.2, 'a borda oeste é parede'
+
+
+# ------------------------------------------- o pré-voo (checa_pilha.py)
+
+def _carrega_checa_pilha():
+    """Carrega o pré-voo com o ROS DUBLADO.
+
+    O módulo importa rclpy e meia dúzia de pacotes de mensagem no topo, e a
+    suíte roda sem `source /opt/ros`. O que se quer testar aqui não toca ROS
+    nenhum: é a contagem de processos, que é onde mora a armadilha.
+    """
+    import sys
+    falsos = {}
+    for nome in ('rclpy', 'rclpy.node', 'rclpy.qos', 'rclpy.time',
+                 'lifecycle_msgs', 'lifecycle_msgs.srv', 'nav2_msgs',
+                 'nav2_msgs.srv', 'nav_msgs', 'nav_msgs.msg', 'sensor_msgs',
+                 'sensor_msgs.msg', 'geometry_msgs', 'geometry_msgs.msg',
+                 'tf2_ros'):
+        mod = types.ModuleType(nome)
+        mod.__getattr__ = lambda _nome: type('Falso', (), {})
+        falsos[nome] = mod
+    guardados = {n: sys.modules.get(n) for n in falsos}
+    sys.modules.update(falsos)
+    try:
+        return _carrega('checa_pilha')
+    finally:
+        for n, antigo in guardados.items():
+            if antigo is None:
+                sys.modules.pop(n, None)
+            else:
+                sys.modules[n] = antigo
+
+
+def test_a_contagem_de_processos_nao_conta_a_si_mesma():
+    """A armadilha que mordeu duas vezes neste projeto: `pgrep -c -f "gz sim"`
+    devolvia 2 com ZERO Gazebos vivos, porque casava com a linha de comando do
+    próprio shell que o executou (roteiro, apêndice; de novo em 07-08).
+
+    Aqui a busca é por um padrão que só existe no comando de teste — se a
+    função contasse a si mesma, este número não seria zero.
+    """
+    cp = _carrega_checa_pilha()
+    assert cp.quantos('padrao_que_nao_existe_em_processo_nenhum_xyz') == 0
+    # E ela acha o que existe de verdade: o próprio interpretador.
+    assert cp.quantos('python') >= 1
+
+
+def test_o_pre_voo_sabe_que_o_reflexo_nao_republica_zero():
+    """Medido em 07-08: 3 s de zeros em `/auto_vel_raw` dão 0 mensagens em
+    `/auto_vel`; 3 s de 0,05 m/s dão 150. Com o robô parado o silêncio do
+    reflexo é a resposta CERTA, e um pré-voo que o marcasse como falha mandaria
+    o dono caçar um defeito que não existe — foi o que a leitura de 06-08 fez.
+    """
+    cp = _carrega_checa_pilha()
+    exigencia = {t: e for t, _, e in cp.CADEIA}
+    assert exigencia['/auto_vel'] == 'se_nao_nulo'
+    assert exigencia['/auto_vel_raw'] is True
+
+
+def test_o_pre_voo_exige_hardware_so_quando_nao_ha_simulador():
+    """`0 fastlio_mapping` é correto no simulador e é falha GRAVE no robô. Um
+    pré-voo que dissesse ✅ para os dois seria pior que pré-voo nenhum."""
+    cp = _carrega_checa_pilha()
+    assert cp.UNICOS['fastlio_mapping'][1] is True
+    assert cp.UNICOS['livox_ros_driver2_node'][1] is True
+    assert cp.UNICOS['ros2 launch robot_motion'][1] is False

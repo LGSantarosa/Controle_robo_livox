@@ -134,22 +134,36 @@ a última em 06-08 com `teleop_teclado`. Quando houver dúvida, `ros2 node list`
 
 ---
 
-## 4. EXPERIMENTO 1 — o `tf_odom` funciona? (5 min, destrava o resto)
+## 4. EXPERIMENTO 1 — o PRÉ-VOO (30 s, não move o robô)
 
-**É o primeiro porque o teste D depende dele.** Não move o robô.
+**Um comando responde por tudo o que foi escrito sem robô**, incluindo o
+`tf_odom`, a camada de obstáculo (014) e o perfil sem mapa (015):
 
 ```bash
-grep -i "tf_odom\|primeira TF" /tmp/logs/base.log | head
-ros2 run tf2_ros tf2_echo odom base_link
+D=docs/dados/$(date +%Y-%m-%d)-sessao && mkdir -p $D
+python3 tools/banco/checa_pilha.py --csv $D/preflight.csv
 ```
 
-```
-✅ PASSOU   o log diz "primeira TF publicada", e o tf2_echo imprime translação
-            que MUDA quando o robô é empurrado com a mão
-❌ FALHOU   "NÃO EXISTE TF <frame> -> base_link" -> o nó está dizendo qual frame
-            faltou. Provável: o child_frame_id do FAST-LIO não existe no URDF.
-            Conserto na hora:  -p frame_da_pose:=<o frame que ele citou>
-```
+Ele confere, item a item, com o número que produziu o veredito e o conserto
+escrito na própria linha quando falha: uma pilha só (lendo `ps`, não `pgrep
+-c`), nuvem e taxa, TF `odom → base_link`, TF `base_link → livox_frame` contra
+os 0,42 m da trena, fração de nuvem transformável, `lifecycle` dos quatro
+servidores, perfil sem mapa, os dois costmaps marcando, e a cadeia de comando
+inteira.
+
+**Leia de cima para baixo e conserte o PRIMEIRO ❌** — ele costuma explicar os
+de baixo.
+
+⚠️ **Uma coisa ele não faz sozinho: empurrar o robô.** A TF `odom → base_link`
+parada só prova que existe. Rode, **empurre o robô com a mão**, rode de novo: a
+translação tem de mudar. Se não mudar, o LIO não está seguindo o corpo.
+
+Se o `tf_odom` falhar, o nó diz **qual frame** faltou; conserto na hora:
+`-p frame_da_pose:=<o frame que ele citou>`.
+
+⚠️ `/auto_vel` calado com o robô parado **é o certo**: o `collision_monitor` não
+republica comando nulo (medido 07-08), e parado o `heading_controller` só
+publica zero. O pré-voo já sabe disso e marca ⚠️, não ❌.
 
 ⚠️ Repare em **qual** mensagem o nó dá ao subir: ele diz se compôs com o URDF ou
 se a pose já era do corpo. Se disser "já era o corpo" mas o `child_frame_id` for

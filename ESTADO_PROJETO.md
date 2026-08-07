@@ -114,7 +114,29 @@ cara de bug no código. Some-se: **`ros2 node list` mostra fantasma** do daemon
 mesmo com `ps` provando zero processos (`ros2 daemon stop && start` limpa). Para
 saber o que está vivo, `ps`.
 
-**278 testes verdes.**
+### 🛫 O PRÉ-VOO — um comando responde por tudo (`tools/banco/checa_pilha.py`)
+
+30 s, **não move o robô**: uma pilha só, nuvem e taxa, as duas TFs (incluindo
+`base_link → livox_frame` contra os 0,42 m da trena), fração de nuvem
+transformável, `lifecycle` dos quatro servidores, perfil sem mapa, os dois
+costmaps marcando e a cadeia de comando inteira — cada falha com o conserto na
+própria linha. **20/20 contra o simulador** no perfil da sessão. É o
+experimento 1 do roteiro.
+
+🔵 **HIPÓTESE RETIRADA — o registro de 06-08 estava errado num ponto.** Lá o
+`collision_monitor` *"recebe e não publica nem zero"* foi lido como evidência de
+que ele não conseguia transformar a nuvem. Medido em 07-08:
+
+```
+3 s de comando ZERO  em /auto_vel_raw  ->  /auto_vel recebeu    0
+3 s de comando 0,05  em /auto_vel_raw  ->  /auto_vel recebeu  150
+```
+
+**Ele não republica comando nulo — é como o Nav2 funciona**, e parado o
+`heading_controller` só publica zero. A falta da TF segue provada por outras
+duas vias (o `tf2_echo` e o `lifecycle`), mas aquele silêncio não era prova.
+
+**281 testes verdes.**
 
 ---
 

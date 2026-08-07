@@ -303,3 +303,27 @@ ponto a ponto — e ela estava certa.
 ⚠️ **O robô só marca a FACE que viu.** Uma caixa de 0,25 m² vira 0,075 m² de
 costmap. Ao julgar folga de plano, lembre que ele está contornando a lasca
 marcada, não o corpo inteiro do obstáculo.
+
+## Pré-voo — o que sobreviveu ao robô?
+
+```bash
+python3 tools/banco/checa_pilha.py --csv docs/dados/AAAA-MM-DD-.../preflight.csv
+```
+
+30 s, **não move o robô**, e responde item a item se o que foi escrito sem
+máquina funciona nela: uma pilha só, nuvem e taxa, as duas TFs (incluindo
+`base_link → livox_frame` contra os 0,42 m da trena), fração de nuvem
+transformável, `lifecycle` dos quatro servidores, perfil sem mapa (decisão 015),
+os dois costmaps marcando e a cadeia de comando inteira. Cada falha traz o
+conserto na própria linha.
+
+Duas leituras que ele já embute, porque as duas enganaram alguém neste projeto:
+
+- **conta processo lendo `ps`, nunca `pgrep -c`** — que casa com o próprio shell
+  e devolve 2 com zero processos vivos;
+- **`/auto_vel` calado com o robô parado é o CERTO**: o `collision_monitor` não
+  republica comando nulo (medido 07-08 — 3 s de zeros dão 0 mensagens, 3 s de
+  0,05 m/s dão 150). Marca ⚠️, não ❌.
+
+⚠️ Ele mede a TF parada. **Empurre o robô com a mão e rode de novo**: a
+translação de `odom → base_link` tem de mudar.

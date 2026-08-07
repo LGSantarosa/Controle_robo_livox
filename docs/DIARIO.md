@@ -4557,3 +4557,43 @@ duas manchas) — a refatoração da launch não mexeu naquele caminho.
 **278 testes verdes** (eram 274): quatro novos para o perfil sem mapa, três
 verificados por mutação (`static_layer` voltando ao global, geometria redefinida
 no overlay, janela deixando de rolar).
+
+### 🛫 07-08 (3ª leva) — O pré-voo, e uma leitura de 06-08 que estava errada
+
+O dono avisou que vai ao robô hoje e pediu um script que testasse tudo. Nasceu
+`tools/banco/checa_pilha.py`: 30 s, **não move o robô**, e responde item a item
+se o que foi escrito sem máquina sobrevive a ela — uma pilha só, nuvem e taxa,
+as duas TFs, fração de nuvem transformável, `lifecycle` dos quatro servidores,
+perfil sem mapa, os dois costmaps marcando, e a cadeia de comando inteira. Cada
+falha traz o conserto na própria linha, para não ter de procurar no roteiro com
+a bateria correndo.
+
+Os que MOVEM continuam separados e cada um espera o "pode": `ensaio.py`,
+`plano.py` (que planeja parado), `homem_morto.py`.
+
+🔵 **HIPÓTESE RETIRADA, e ela estava no registro de 06-08.** Rodando o pré-voo
+contra o simulador, `/auto_vel` apareceu com ZERO mensagens e o script marcou
+falha. Antes de aceitar, medi:
+
+```
+3 s de comando ZERO  em /auto_vel_raw  ->  /auto_vel recebeu    0
+3 s de comando 0,05  em /auto_vel_raw  ->  /auto_vel recebeu  150
+```
+
+**O `collision_monitor` não republica comando nulo** — é como o Nav2 funciona.
+Com o robô parado o `heading_controller` publica só zeros, então o reflexo cala
+**por construção**.
+
+Isso corrige o que a 3ª leva de 06-08 registrou. Lá está escrito que o
+`collision_monitor`, ativado na mão, *"passou a receber e continuou sem publicar
+nada, nem zero"*, e o silêncio foi usado como evidência de que ele não conseguia
+transformar a nuvem. **O sintoma era esperado.** A TF faltava — isso segue de
+pé, provado pelo `tf2_echo` e pelo `lifecycle` naquele dia —, mas aquele silêncio
+não era prova de nada.
+
+O script já embute as duas leituras que enganaram alguém aqui: conta processo
+lendo `ps` (nunca `pgrep -c`, que casa com o próprio shell) e trata `/auto_vel`
+calado como ⚠️, não ❌, quando a entrada é só zero.
+
+**Rodado contra o simulador no perfil da sessão de hoje (`mapa:=nenhum`): 20/20.**
+Suíte: **281 verdes**, três novos para o pré-voo.
