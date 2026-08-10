@@ -4681,3 +4681,148 @@ e `tools/` no MESMO processo pytest derruba
 `test_lei_de_reta.py` faz o `path_follower` ser importado por um caminho em que
 o import relativo quebra. É anterior a esta leva (confirmado com `git stash`) e
 não aparece rodando por pacote, que é como a suíte é rodada aqui.
+
+---
+
+## 2026-08-10 — O S estava lá o tempo todo; a régua é que era curta
+
+Sessão no robô, na sala. Doze corridas. Os dados estão em
+`docs/dados/2026-08-10-{sessao,curva-crua,ff-velho}/`, cada pasta com o seu
+`ambiente.txt`. **Bateria não foi lida** — pedi duas vezes e a sessão andou sem
+ela; é a única condição do dia que ficou sem registro.
+
+### O acesso, que custou meia hora e não devia
+
+O robô não respondia. Varri a rede errada inteira (422 hosts vivos), casei
+chaves de host contra o `known_hosts`, cheguei a apontar uma máquina que **não
+era** o NUC e mandei o dono rodar `ssh-copy-id` nela — a senha foi recusada, e
+foi só por isso que a chave dele não foi parar num host de terceiro. A causa era
+outra: **o PC de dev estava no wifi errado**. Fica a regra: antes de procurar o
+robô, conferir em que SSID a máquina está. `10.244.3.x` = "Trafico de banana".
+
+### O deploy e o pré-voo — dois defeitos reais, e o primeiro destravou o Nav2
+
+Deploy por bundle, `colcon build`, `sessao.py --checar` ✅ (`wheel_separation
+0.2700`, `/Odometry` 10,0 Hz, Livox 9,99 Hz, uma pilha só).
+
+🔴 **O `tf_odom` não publicava, e ele estava CERTO em não publicar.** O FAST-LIO
+manda a pose no frame `body`, que não existe na árvore do URDF; o nó recusa
+porque publicar seria embutir os 42 cm do Mid-360 sem sintoma nenhum. O
+comentário do próprio código previa este caso. Conserto na hora:
+`-p frame_da_pose:=livox_frame`. Depois dele, **os quatro servidores do Nav2
+subiram `active` — a primeira vez no robô real** (em 06-08 o `lifecycle_manager`
+abortava o bringup). Pré-voo foi de 10/19 para 16/19.
+
+⚠️ Dívida: `body` é o frame da **IMU**, 5 cm do lidar (`extrinsic_T` do
+`mid360.yaml`). Melhor que 42 cm, mas não é zero.
+
+🔴 **A DECISÃO 014 ESTÁ INERTE NO ROBÔ REAL:**
+
+```
+/livox/lidar   publisher:  livox_ros_driver2/msg/CustomMsg
+costmaps, collision_monitor e o pré-voo assinam  sensor_msgs/msg/PointCloud2
+```
+
+O FAST-LIO funciona porque lê CustomMsg — por isso a localização vai bem e a
+percepção é **zero**. No simulador o lidar é `gpu_lidar` e publica PointCloud2:
+a 014 foi escrita e aceita num ambiente onde o defeito não existe. Sintomas:
+"nuvem NADA chegou" no pré-voo com `topic hz` medindo 9,96 Hz, e os dois
+costmaps com 0 células letais.
+
+⚠️ **Previsão falsificável (não testada)**: converter a nuvem **sozinho não vai
+fazer os costmaps marcarem**. Com o `tf_odom` compondo a pose do sensor, o
+`odom` fica na altura do sensor (`tf2_echo odom→base_link` deu **z = −0,477 m**),
+o chão vai para z ≈ −0,42 e a faixa de altura do costmap (0,10–0,50) rejeita
+tudo. São dois defeitos em série.
+
+### Experimento 2 — a planta deriva 19% em 5 minutos
+
+Seis retas cruas idênticas (`v=0,25`, corte em 1,2 m), mesmo ponto, mesmo rumo:
+
+```
+   +0,0 min  0,8395      +2,5 min  0,9175
+   +0,9 min  0,8154      +4,8 min  0,9313
+   +1,5 min  0,9358      +5,4 min  0,9687
+                    ajuste +0,022 1/m por minuto (r = +0,80)
+```
+
+Mesma velocidade linear nas seis (0,254–0,264 m/s); o que muda é o giro (wz
+médio −0,21 → −0,24). **Não é o mundo** — as seis partiram do mesmo rumo e do
+mesmo pedaço de chão, e caimento de piso é força fixa no mundo.
+
+➡️ **Isto atinge a decisão 013 em cheio.** Os 13,5% entre 04-08 e 05-08 que
+motivaram o caminho 3 ("medir no começo da sessão") acontecem aqui em **cinco
+minutos**. Uma medida por sessão envelhece dentro da própria sessão.
+
+🔵 **O dono cortou a investigação de causa, e estava certo:** *"não é isso, está
+focando no bagulho errado, o compensador deve conseguir identificar o erro atual
+para ajeitar, se tem essa diferenciação aí, por isso um PID."* Térmico contra
+bateria não muda o que fazer — o ff é um número parado e a planta não é. A
+sessão virou para testar a tese dele.
+
+### A tese testada: quanto a malha absorve de um ff velho?
+
+A conta dizia que caberia: `ki·int_max = 0,072 rad/s` de autoridade, e cancelar
+a deriva do dia (Δcurv 0,15) a v=0,25 custa 0,038 rad/s. Três corridas de 1,2 m
+com o ff **velho** de propósito (−0,8275, o que uma medida do começo teria dado,
+contra planta em ~0,94):
+
+```
+   comp-ffvelho-a  +0,0546     "foi reto para um caralho" (o dono, a olho)
+   comp-ffvelho-b  +0,0680
+   comp-ffvelho-c  +0,1841
+```
+
+As três com a **mesma forma**: mergulham 3–6°, cruzam zero, e são cortadas
+**ainda subindo**. Hipótese de integrador atravessando corridas: **morta** — o
+`ensaio.py` publica `(0,0)` ao parar e o `_descarta()` zera integral e
+referência.
+
+### 🔴 O ACHADO DO DIA — a régua de 1,2 m aprova robô oscilando
+
+Corrida longa (2,5 m, 10 s), ff velho:
+
+```
+   0 → −13,5° (2,7 s) → +22,3° (8,0 s) → +13,1° no corte
+   envoltória CRESCE 1,65x     meio-período ~5,3 s
+```
+
+E então **a mesma corrida**, truncada em 1,2 m de percurso, no mesmo
+`medir.py --resumo curvatura`:
+
+```
+   medida em 1,2 m  ->  −0,0162   PASSA no critério da 011 (|curv| < 0,05)
+   medida em 2,5 m  ->  +0,0882   REPROVA
+```
+
+Mesmo robô, mesma corrida, mesmo instrumento — **só a régua mudou**. O corte de
+1,2 m cai no cruzamento de zero do S. É isto que explica o "primeiro foi tão bom
+e agora só piora" que o dono estranhou: G, H e I não mediam qualidade, mediam
+**em que ponto do S a corrida foi cortada**.
+
+➡️ **Mudança de protocolo**: corrida de aceitação tem de durar ao menos um
+período (~10 s / 2,5 m). O `+0,0417` que deu "aceito" em 05-08 foi medido com a
+régua curta — a releitura de 06-08 já suspeitava, e agora está provado com a
+mesma corrida medida de duas formas.
+
+### O ff do dia melhora 2,7×, e ainda assim não assenta
+
+```
+   ff VELHO −0,8275    −13,5° → +22,3°     excursão 35,8°
+   ff HOJE  −0,9383      0,0° → +13,0°     excursão 13,0°
+```
+
+Com o ff de hoje ele não mergulha: sai **sobrecorrigindo** para a esquerda,
+chega a +13° aos 6,7 s e começa a voltar. O dono, a olho: *"foi melhor essa
+reta, mas com o tempo jogou pra esquerda"* — o olho e o LIO concordam.
+
+### Veredito e o que fica para a próxima
+
+- fechar a malha **não** compensa um ff errado: com ff velho a envoltória cresce;
+- o ff do dia melhora 2,7× e **não assenta em 10 s**;
+- logo o conserto não é medir o ff mais vezes — é o compensador **estimar a
+  curvatura enquanto anda** (caminho 2 da decisão 013), que é exatamente o que
+  o dono pediu. Fica para a próxima sessão de dev, com o robô desligado.
+
+Aberto também: o conversor CustomMsg → PointCloud2 e a altura do `odom`, que
+juntos destravam a percepção (e o teste D, que hoje não tinha como rodar).
