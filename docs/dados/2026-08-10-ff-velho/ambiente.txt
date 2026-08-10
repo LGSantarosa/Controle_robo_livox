@@ -1,0 +1,68 @@
+SESSÃO DE BANCADA — 2026-08-10 (2ª leva) — a malha fechada com ff errado
+=========================================================================
+
+piso/bateria/espaço: idem 2026-08-10-curva-crua (bateria NÃO INFORMADA)
+compensador: nó solto (`ros2 run robot_motion compensador_rumo`), NÃO a pilha.
+             kp=0.25 ki=0.12 int_max=0.6 (os defaults do nó, ganhos de 06-08)
+             O nó foi MORTO e subido de novo para trocar o ff (param set não
+             pega), e a linha `ff MEDIDO em ...` do rosout foi conferida nas
+             duas condições.
+
+A PERGUNTA: o dono levantou que perseguir a causa da deriva é o foco errado —
+o compensador tem de IDENTIFICAR o erro atual e corrigir. Estas corridas testam
+isso: quanto a malha fechada absorve de um ff velho?
+
+conta que motivou o teste: autoridade do integrador = ki·int_max = 0,072 rad/s;
+para cancelar Δcurv a v=0,25 basta Δcurv·0,25. Logo a malha cobriria até
+Δcurv ≈ 0,29 1/m, e a deriva do dia inteira foi 0,15. Pela conta, caberia.
+
+corridas curtas (1,2 m), ff VELHO −0,8275 (a média de a,b — o que uma medida
+"no começo da sessão" teria dado; a planta já estava em ~0,94)
+-----------------------------------------------------------------------------
+  comp-ffvelho-a.csv   +0,0546      "foi reto para um caralho" (o dono, a olho)
+  comp-ffvelho-b.csv   +0,0680
+  comp-ffvelho-c.csv   +0,1841
+
+  As três têm a MESMA forma: mergulham (−2,8° / −6,0° / −5,0°), cruzam zero e
+  passam do ponto, e são cortadas AINDA SUBINDO (+3,8° / +4,7° / +12,9°).
+
+corridas longas (2,5 m, ~10 s) — a régua certa
+-----------------------------------------------
+  comp-longa-a.csv         ff VELHO −0,8275    +0,0882
+      rumo: 0 → −13,5° (2,7 s) → +22,3° (8,0 s) → +13,1° no corte
+      envoltória CRESCE 1,65x; meio-período ~5,3 s (período ~10,6 s)
+  comp-longa-fresco-a.csv  ff HOJE  −0,9383    +0,0710
+      rumo: 0 → +13,0° (6,7 s) → +10,3° no corte; NÃO mergulha
+      excursão 13,0° contra 35,8° = 2,7x menor com o ff do dia
+
+🔴 O ACHADO QUE MUDA O PROTOCOLO — a régua de 1,2 m aprova robô oscilando
+--------------------------------------------------------------------------
+  A MESMA corrida (comp-longa-a.csv), cortada em 1,2 m de percurso e passada
+  no mesmo `medir.py --resumo curvatura`:
+
+      medida em 1,2 m  ->  −0,0162   PASSA no critério da 011 (|curv| < 0,05)
+      medida em 2,5 m  ->  +0,0882   REPROVA
+
+  O corte em 1,2 m cai no cruzamento de zero do S: o rumo foi a −13° e voltou,
+  e de ponta a ponta dá quase reto. O arquivo derivado está em
+  ../../../ (não versionado) mas o corte é reproduzível: truncar em 1,22 m.
+
+  ➡️ Corrida de aceitação precisa durar ao menos um período (~10 s / 2,5 m).
+     É assim que 05-08 deu "aceito" com +0,0417.
+
+VEREDITO
+--------
+  · fechar a malha NÃO compensa um ff errado: com ff velho a envoltória cresce;
+  · o ff do dia melhora 2,7x e ainda assim não assenta em 10 s;
+  · logo o conserto não é medir o ff mais vezes — é o compensador estimar a
+    curvatura da planta ENQUANTO anda (caminho 2 da decisão 013).
+
+observação do dono, a olho
+---------------------------
+  na corrida curta com ff velho (comp-ffvelho-a): "foi reto para um caralho"
+    -> era o corte em 1,2 m; a mesma corrida em 2,5 m reprova.
+  na corrida longa com ff de hoje (comp-longa-fresco-a): "ele foi melhor essa
+  reta, mas com o tempo jogou pra esquerda"
+    -> bate com o traçado: +13,0° de excursão à esquerda aos 6,7 s. O olho e
+       o LIO concordam, e a deriva para a esquerda é a assinatura do ff
+       SOBREcorrigindo (a planta naquele momento arcava menos que 0,9383).

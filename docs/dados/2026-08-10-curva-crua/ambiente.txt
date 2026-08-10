@@ -1,0 +1,47 @@
+SESSÃO DE BANCADA — 2026-08-10
+================================
+
+piso     : cerâmica da sala (mesma de 06-08)
+bateria  : NÃO INFORMADA — pedida duas vezes durante a sessão e não lida.
+           É a hipótese que ficou sem teste (ver a deriva abaixo).
+espaço   : B, C, D, E, F partem do mesmo ponto (±3 cm no LIO) e mesmo rumo
+           (−1,4° a −2,4°). A partiu ~60 cm adiante, mesmo rumo (−4,4°).
+commit   : 4519afc + tf_odom subido na mão com frame_da_pose:=livox_frame
+           (ver DIARIO 08-10; sem isso a árvore TF fica partida)
+
+calibração viva (sessao.py --checar)
+------------------------------------
+  /Odometry a 10.0 Hz     wheel_separation = 0.2700     wheel_radius = 0.0800
+  swap NÃO aplicado. 1 fastlio_mapping, 1 livox_ros_driver2_node (lido com ps).
+
+ensaio (as seis idênticas)
+--------------------------
+  reta --v 0.25 --wz 0 --dur 12 --espaco 1.2 --janela 0.5
+  SEM compensador: comando direto em /hoverboard_base_controller/cmd_vel.
+  Todas cortadas pela trava de espaço em ~4,5-4,7 s, 1,18-1,19 m percorridos.
+
+O QUE ELAS MEDIRAM — curvatura crua, e ela DERIVA DENTRO DA SESSÃO
+-------------------------------------------------------------------
+   corrida   t desde A    |curv| [1/m]
+   a          +0,0 min      0,8395
+   b          +0,9 min      0,8154
+   c          +1,5 min      0,9358
+   d          +2,5 min      0,9175
+   e          +4,8 min      0,9313
+   f          +5,4 min      0,9687
+
+  ajuste linear: +0,022 1/m por minuto (r = +0,80)
+  amplitude: 0,815 -> 0,969 = +19% em 5,4 minutos
+
+  A velocidade linear é a mesma nas seis (v_pose 0,254-0,264 m/s); o que muda
+  é o giro: wz médio −0,21 (a,b) contra −0,24 (c..f), +11% com o mesmo comando.
+
+  NÃO é o mundo: as seis partiram do mesmo rumo (−1° a −4°) e do mesmo pedaço
+  de chão. Caimento de piso é força fixa no mundo e não sobreviveria a isso.
+
+  CAUSA NÃO INVESTIGADA (decisão do dono, e ela estava certa): térmico contra
+  bateria não muda o que fazer. O ff é um número parado e a planta não é.
+
+  ⚠️ Isto atinge a decisão 013: o caminho 3 (medir no começo da sessão e usar
+  o valor a sessão inteira) supõe planta estável dentro do dia. Os 13,5% entre
+  04-08 e 05-08 que motivaram a 013 acontecem aqui em CINCO MINUTOS.

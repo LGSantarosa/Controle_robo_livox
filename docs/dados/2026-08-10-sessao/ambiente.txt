@@ -1,0 +1,33 @@
+PRÉ-VOO — 2026-08-10
+=====================
+
+preflight.csv   : primeira passada, 10/19
+preflight2.csv  : depois do conserto do tf_odom, 16/19
+
+O que o pré-voo achou, e os dois defeitos REAIS que ele destravou:
+
+1. TF odom → base_link não existia. O FAST-LIO publica a pose no frame `body`,
+   que não está na árvore do URDF, e o tf_odom se recusa a publicar (por
+   projeto: publicar seria embutir os 42 cm do Mid-360 sem sintoma).
+   Conserto na hora: `-p frame_da_pose:=livox_frame`. Depois dele os QUATRO
+   servidores do Nav2 subiram `active` — primeira vez no robô real.
+   ⚠️ `body` é o frame da IMU, 5 cm do lidar (extrinsic_T do mid360.yaml).
+      Errar 5 cm é melhor que 42, mas não é zero. Dívida.
+
+2. A NUVEM NÃO CHEGA NA PERCEPÇÃO, e a decisão 014 está inerte no robô:
+       /livox/lidar  publisher: livox_ros_driver2/msg/CustomMsg
+       costmaps, collision_monitor e o pré-voo assinam sensor_msgs/PointCloud2
+   O FAST-LIO funciona porque lê CustomMsg. No simulador o lidar é `gpu_lidar`
+   e publica PointCloud2 — por isso a 014 passou lá e nunca foi exercitada.
+   Sintomas no pré-voo: "nuvem NADA chegou" (com o topic hz medindo 9,96 Hz)
+   e os dois costmaps com 0 células letais.
+
+3. ⚠️ PREVISÃO NÃO TESTADA: converter a nuvem sozinho NÃO deve fazer os
+   costmaps marcarem. Com tf_odom compondo a pose do sensor, o `odom` fica na
+   ALTURA DO SENSOR (tf2_echo odom→base_link deu z = −0,477 m), então o chão
+   está em z ≈ −0,42 e a faixa de altura do costmap (0,10–0,50 m) rejeita
+   tudo. São dois defeitos em série.
+
+4. Falso positivo do próprio script: "2 processos ros2 launch robot_motion" —
+   o `bash -c` do ssh tem a string na linha de comando e é contado. Ler `ps`
+   não basta se quem lê está dentro do `ps`.
