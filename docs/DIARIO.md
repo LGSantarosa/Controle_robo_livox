@@ -4826,3 +4826,91 @@ reta, mas com o tempo jogou pra esquerda"* — o olho e o LIO concordam.
 
 Aberto também: o conversor CustomMsg → PointCloud2 e a altura do `odom`, que
 juntos destravam a percepção (e o teste D, que hoje não tinha como rodar).
+
+---
+
+## 2026-08-11 — O ff deixa de ser um número e vira uma estimativa
+
+Sessão de dev, robô desligado. Decisão **016**. **311 testes verdes** (eram
+300), por pacote: `robot_motion` 182, `tools` 70, `robot_base` 47,
+`robot_planning` 12. Onze novos, **cinco verificados por mutação**.
+
+### O que foi construído, e por quê nesta forma
+
+O dono cortou a caça à causa da deriva de 10-08 e apontou o alvo: *"o
+compensador deve conseguir identificar o erro atual para ajeitar"*. O
+diagnóstico que fecha com os dados: **o integrador já identifica o erro, mas na
+unidade errada e com a memória errada** — ele é rumo acumulado [rad·s], vive
+num laço com 0,94 s de tempo morto, e o `_descarta` o zera a cada parada. Cada
+corrida reaprende do zero o que a anterior sabia.
+
+A mudança é de **escala de tempo**, não de ganho: o que o integrador segura em
+regime é drenado devagar para a `curv_*`, que é curvatura [1/m] e sobrevive à
+parada.
+
+```
+transf = integral · dt / adapta_t        [rad·s]
+Δcurv  = −(ki · transf) / v_real         [1/m]
+integral −= transf
+```
+
+A drenagem é **sem solavanco por construção**: o ff cresce exatamente o que o
+termo integral encolhe, então no instante da transferência o `wz` de saída não
+muda. Isso não é elegância — degrau de comando num laço com 0,94 s de tempo
+morto é como se fabrica a oscilação que o estimador veio matar.
+
+Opt-in (`-p adapta:=true`), grampeado a ±0,5 1/m da semente, e não estima com
+`v_real < 0,05 m/s`. O nó publica `curv_hat` no `rosout` a cada 2 s, porque a
+diferença entre "aprendeu" e "encostou no grampo" não aparece no comportamento:
+o robô anda torto dos dois jeitos.
+
+### 🔧 A bancada de teste estava mentindo, e o teste que falhou é que mostrou
+
+O teste "a corrida seguinte já começa corrigida" reprovou com **13,2° contra
+13,6°** — quase nenhuma melhora, mesmo com o estimador já convergido
+(`curv_hat = −0,9407` contra planta −0,94). A conta explicou: `0,94 s × 0,244
+rad/s = 13°`. **A excursão inteira era a fila de atraso começando vazia** — o
+`_roda_planta` aplica o arco desde o instante zero enquanto o comando chega
+0,94 s depois.
+
+É a ressalva que o próprio `lei_de_reta.py` já registrava no bloco do preditor
+("no robô os dois chegam juntos") e que o robô confirmou em 10-08: a corrida com
+o ff fresco começou **sem mergulho nenhum**, o que seria impossível se o arco
+agisse antes do comando. Robô parado não arca, porque não anda.
+
+O ajudante novo (`_roda_com_v_real`) atrasa os dois juntos. O `_roda_planta`
+antigo ficou como está, com os testes que ele já sustentava.
+
+### 🔴 Dois erros meus na sessão, os dois de ferramenta
+
+**1. Apaguei minha própria implementação com `git checkout --`.** A rotina de
+mutação desfazia cada mutação com `git checkout -- <arquivo>` — que restaura o
+**último commit**, e o estimador ainda não estava commitado. As mutações 2, 3 e
+4 daquela leva rodaram contra um arquivo já sem estimador, e os "11 failed" que
+elas produziram não provavam nada. Refeito com cópia de segurança em vez de
+`git checkout`, e as cinco mutações passaram a derrubar exatamente o seu teste.
+
+**2. Bytecode velho fez a suíte reprovar um arquivo correto.** Depois de
+restaurar o fonte, dois testes seguiam falhando com `adapta_t = 0.8` enquanto o
+arquivo dizia `8.0`. Causa: `adapta_t=8.0` e `adapta_t=0.80`… a mutação anterior
+(`8.0` → `0.8`) tinha **o mesmo número de bytes**, e a restauração caiu no mesmo
+segundo da escrita do `.pyc`. Python valida bytecode por (mtime, tamanho): os
+dois bateram e ele seguiu usando o compilado da mutação.
+➡️ **Em mutação, limpar `__pycache__` entre as rodadas** — e desconfiar de
+teste que reprova um arquivo que você acabou de conferir a olho.
+
+### O que o mecanismo promete, e o que ele NÃO prova
+
+Três corridas de 10 s com a planta derivando +0,022 1/m por minuto:
+
+```
+                corrida 1     corrida 2     corrida 3     curv_hat
+SEM estimador   pico 4,1°     pico 4,1°     pico 4,1°     −0,8275 (parado)
+COM estimador   pico 4,1°     pico 1,2°     pico 0,4°     −0,9383
+```
+
+⚠️ **Os valores absolutos são otimistas**: a mesma bancada dá 4,1° onde o robô
+fez 13–22° em 10-08. Ela erra o sobrepasso por 3,7× — é otimista justamente onde
+este estimador precisa ser julgado. O que vale é o **formato**: sem estimador
+toda corrida repete o mesmo erro; com ele, cada uma começa melhor que a
+anterior. **Quem arbitra é o robô**, com corridas de 2,5 m (nunca 1,2 m).
