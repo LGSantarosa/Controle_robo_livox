@@ -1,12 +1,54 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-08-10**.
+> Versionado na `main`. Atualizado em **2026-08-11**.
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+---
+
+## 🧠 11-08 — O ff DEIXA DE SER UM NÚMERO E VIRA UMA ESTIMATIVA (dev, sem robô)
+
+Decisão **016**, que implementa o caminho 2 da 013 — o que o dono pediu na
+bancada de 10-08 (*"o compensador deve conseguir identificar o erro atual"*).
+
+🟢 **O integrador já identificava o erro; o que estava errado era a unidade e a
+memória.** Ele é rumo acumulado [rad·s], vive num laço com 0,94 s de tempo morto
+e é zerado a cada parada. A mudança é de **escala de tempo**: o que ele segura
+em regime é drenado devagar para a `curv_*` [1/m], que sobrevive à parada.
+
+```
+transf = integral · dt / adapta_t      Δcurv = −(ki·transf)/v_real
+integral −= transf                     (adapta_t = 8 s, valor de partida)
+```
+
+⚠️ **Sem solavanco por construção**: o ff cresce exatamente o que o termo
+integral encolhe. Degrau de comando num laço com 0,94 s de tempo morto é como se
+fabrica a oscilação que o estimador veio matar.
+
+**Opt-in** (`-p adapta:=true`), grampeado a ±0,5 1/m da semente, não estima
+abaixo de 0,05 m/s, e o nó publica `curv_hat` no `rosout` a cada 2 s — a
+diferença entre "aprendeu" e "encostou no grampo" não aparece no comportamento.
+
+⏳ **NADA DISTO FOI AO ROBÔ.** Previsão falsificável: três corridas de 2,5 m
+seguidas, com ff velho de propósito — a corrida 2 tem de ser MENOR que a 1, e a
+3 menor que a 2. Se a 2 empatar com a 1, o mecanismo não está agindo.
+
+⚠️ **A planta de brinquedo não arbitra isto**: ela dá 4,1° de pico onde o robô
+fez 13–22°, e erra o sobrepasso por 3,7×. Os testes provam o MECANISMO
+(converge, é lento, não dá solavanco, grampeia, sobrevive à parada).
+
+**311 testes verdes** (eram 300), cinco novos verificados por mutação.
+
+🔧 **Duas armadilhas de ferramenta, pagas caro nesta sessão** (detalhe no
+diário): desfazer mutação com `git checkout --` **apaga trabalho não commitado**
+— use cópia de segurança; e mutação do mesmo tamanho em bytes restaurada no
+mesmo segundo deixa o `.pyc` velho valendo (Python valida por mtime + tamanho),
+fazendo a suíte reprovar um arquivo correto. **Limpar `__pycache__` entre
+rodadas de mutação.**
 
 ---
 
