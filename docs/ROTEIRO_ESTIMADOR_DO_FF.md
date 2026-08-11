@@ -88,6 +88,12 @@ quiser subir a pilha para outra coisa, o `tf_odom` precisa de
 ⚪ **Erros de TF `NaN` nas juntas das rodas são cosméticos** — o driver não
 publica posição, só velocidade. Não afetam `/Odometry` nem o ensaio.
 
+⚠️ **Sobe um nó novo junto (11-08): o `nuvem_pontos`**, que converte a nuvem do
+Livox para `PointCloud2` (decisões 017/018). **Este ensaio não precisa dele** —
+se o NUC estiver apertado de CPU (ele converte ~20 mil pontos por quadro, a
+10 Hz, em Python), mate por PID e siga. O que NÃO pode faltar é o `/Odometry` a
+10 Hz: confira antes e depois de matar.
+
 📋 **ANOTE A TENSÃO DA BATERIA agora e no fim.** Em 10-08 ela foi pedida duas
 vezes e a sessão andou sem ela — é a única condição do dia que ficou sem
 registro, e a deriva de planta é exatamente o que ela ajudaria a explicar.

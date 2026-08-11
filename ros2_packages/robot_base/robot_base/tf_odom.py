@@ -60,7 +60,7 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 from tf2_ros import Buffer, TransformBroadcaster, TransformListener
 
-from robot_base.transformadas import compoe
+from robot_base.transformadas import compoe, inverte
 
 
 class TfOdom(Node):
@@ -125,10 +125,36 @@ class TfOdom(Node):
                     'Confira se o robot_state_publisher está de pé e se o '
                     f"URDF descreve '{pose_frame}'."))
                 return
-            t, q = compoe(
-                t, q,
-                (tr.translation.x, tr.translation.y, tr.translation.z),
-                (tr.rotation.x, tr.rotation.y, tr.rotation.z, tr.rotation.w))
+            t_s = (tr.translation.x, tr.translation.y, tr.translation.z)
+            q_s = (tr.rotation.x, tr.rotation.y, tr.rotation.z, tr.rotation.w)
+            t, q = compoe(t, q, t_s, q_s)
+
+            # 🔴 E AGORA O `odom` VAI PARA O CHÃO (10-08).
+            #
+            # Compor só à direita põe o `base_link` no lugar certo em relação
+            # ao sensor, mas deixa a ORIGEM do `odom` onde o LIO a criou: em
+            # cima do Mid-360, a 0,42 m. Medido no robô:
+            #
+            #     tf2_echo odom base_link  ->  z = −0,477 m
+            #
+            # ou seja, o robô 48 cm ABAIXO da origem do próprio odom (os 42 cm
+            # da trena mais a deriva de z do LIO). A TF está "certa" no sentido
+            # de descrever a geometria, e errada como convenção: o chão passa a
+            # ficar em z ≈ −0,42.
+            #
+            # Quem quebra com isso é a percepção, em dois lugares independentes
+            # do Nav2, os dois no frame GLOBAL:
+            #   · `min_obstacle_height`/`max_obstacle_height` (0,10–0,50 m)
+            #     rejeitam a nuvem inteira, que chega em −0,42 ± altura;
+            #   · a `VoxelLayer` descarta o que está abaixo do `origin_z` dela.
+            # Sintoma: costmap com ZERO células letais e nuvem perfeita.
+            #
+            # Pré-compor com a inversa põe a origem do `odom` onde o base_link
+            # estava na largada — o chão volta para z ≈ 0. Para o robô no plano
+            # isso é tirar os 42 cm; a forma geral (com a inversa de verdade)
+            # existe porque em rampa a mesma conta não é uma subtração.
+            t_i, q_i = inverte(t_s, q_s)
+            t, q = compoe(t_i, q_i, t, q)
 
         msg = TransformStamped()
         msg.header.stamp = m.header.stamp

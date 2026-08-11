@@ -4914,3 +4914,42 @@ fez 13–22° em 10-08. Ela erra o sobrepasso por 3,7× — é otimista justamen
 este estimador precisa ser julgado. O que vale é o **formato**: sem estimador
 toda corrida repete o mesmo erro; com ele, cada uma começa melhor que a
 anterior. **Quem arbitra é o robô**, com corridas de 2,5 m (nunca 1,2 m).
+
+### 11-08 (2ª leva) — a percepção sai do papel: dois defeitos em série
+
+Mesma sessão de dev, robô desligado. Decisões **017** e **018**, as duas vindas
+do pré-voo de 10-08. **327 testes verdes** (eram 311), por pacote:
+`robot_motion` 185, `tools` 70, `robot_base` 60, `robot_planning` 12.
+
+🔴 **017 — o contrato da nuvem era um nome, não um tipo.** `/livox/lidar` sai do
+driver como `CustomMsg` e os consumidores assinavam `PointCloud2`: nunca
+receberam nada. O comentário da ponte do Gazebo explicava o erro com todas as
+letras — *"remapeada para `/livox/lidar`, o MESMO nome do driver real (…) quem
+consome não sabe a diferença"*. **Um tópico é (nome, tipo)**; igualar só o nome
+escondeu a diferença por três semanas, e fez a decisão 014 nascer inerte.
+
+Entra `/livox/pontos`, sempre `PointCloud2`: no robô um nó novo converte
+(`robot_base/nuvem_pontos.py`, na `localizacao.launch.py`), no simulador a ponte
+publica direto. O ponto `(0,0,0)` — que o Mid-360 emite quando o raio não volta
+e que no frame do sensor é **o próprio robô** — é descartado, senão o costmap
+marcaria célula letal em cima do robô a cada quadro.
+
+⚠️ **Nenhum dos testes de config pegou isto, e eles são muitos**: todos
+conferiam que os consumidores concordavam ENTRE SI, e concordavam. Faltava
+perguntar *quem publica, e em que tipo*. Três testes novos fecham isso.
+
+🔴 **018 — o `odom` estava na altura do sensor.** O `z = −0,477 m` medido ontem
+não era detalhe: compondo só à direita, a origem do `odom` fica em cima do
+Mid-360, o chão vai para z ≈ −0,42 e a percepção do Nav2 rejeita a nuvem em dois
+lugares independentes (faixa de altura e `origin_z` da `VoxelLayer`, os dois no
+frame global). Passa a pré-compor com a inversa: `odom` é a pose do `base_link`
+na largada.
+
+🔧 **A cobertura estava fina e a mutação mostrou**: as duas primeiras mutações
+da inversa derrubavam **um teste só**, porque todas as travas usavam o sensor
+sem rotação. Com um oráculo em matriz 4×4 (implementação independente) e um
+sensor **inclinado**, as mesmas mutações passam a derrubar três.
+
+⏳ **Previsão que separa as duas**: a 017 sozinha **não** faz os costmaps
+marcarem. Se marcarem só com ela, minha hipótese sobre a faixa de altura está
+errada e a suspeita seguinte é a `VoxelLayer`, não a altura.
