@@ -129,3 +129,54 @@ medida inteira, porque o corte curto cai no cruzamento de zero do S.
 - `docs/decisoes/011-malha-fechada-de-rumo-em-reta.md` — o critério de aceitação
 - `docs/DIARIO.md`, 10-08 e 11-08
 - `docs/dados/2026-08-10-curva-crua/` e `docs/dados/2026-08-10-ff-velho/`
+
+---
+
+## ⚖️ VEREDITO NO ROBÔ — 11-08 (tarde): NÃO PROVADO, e fica opt-in
+
+Ensaio completo em `docs/dados/2026-08-11-estimador/` (13 corridas) e na entrada
+11-08 (3ª leva) do `DIARIO`. Semente deliberadamente velha (−0,8275), planta
+crua do dia −0,9145, todas as corridas de 2,5 m.
+
+```
+na ordem do tempo →   controle (adapta OFF)    8,9°   21,1°   18,4°
+                      adapta ON               10,3°   10,1°    8,2°
+                      VOLTA ao controle OFF    8,1°    6,2°
+```
+
+**A previsão falsificável desta decisão PASSOU e mesmo assim o veredito é
+negativo.** 10,3 > 10,1 > 8,2 é a monotonicidade pedida. O que a derrubou foi um
+**A-B-A** decidido na bancada: voltando à condição de controle, o robô deu 8,1°
+e 6,2° — as melhores corridas do dia, **sem** estimador. A melhora era da ordem
+temporal (planta assentando ao longo da tarde), não do mecanismo.
+
+⚠️ **A previsão estava mal desenhada, e este é o aprendizado transferível**:
+comparar uma sequência de corridas contra uma sequência anterior não protege
+contra confundimento de ordem quando a planta deriva — e esta planta deriva 19%
+em 5 minutos (10-08). **Ensaio de estimador exige retorno à condição de
+controle.** Custou 2 corridas; teria custado uma sessão inteira de conclusão
+errada.
+
+✅ **O que sobrevive**: o mecanismo age no robô, como a implementação promete. O
+`curv_hat` andou `−0,8275 → −0,6935` em três corridas, sem encostar no grampo, e
+o nó anunciou tudo no `rosout`. A implementação não está em dúvida; a **utilidade**
+está.
+
+🔵 **Achado que a bancada não previu — o estimador anda para o lado errado.** A
+planta crua do dia mediu −0,9145 (mais curvatura) e o `curv_hat` foi para −0,69
+(menos). Duas leituras, nenhuma testada:
+
+- **(a)** o ff efetivo em malha fechada não é a curvatura crua medida em malha
+  aberta, e o estimador está achando o valor certo para o laço;
+- **(b)** o sinal da drenagem está invertido, e o rumo foi segurado pelo termo
+  proporcional apesar do estimador.
+
+**Isto se resolve sem robô**, na planta de brinquedo: semear com erro dos dois
+lados (semente maior e menor que a planta) e conferir se `curv_hat` caminha na
+direção da planta nos dois casos. Se (b) for verdade, é um defeito de sinal e a
+decisão volta a valer com o conserto.
+
+**Estado da decisão**: implementação mantida, **default segue `adapta:=false`**.
+Não vira padrão até (1) o sinal estar esclarecido e (2) um ensaio com A-B-A
+mostrar ganho. A configuração adotada para operação é o compensador com o ff do
+dia e o estimador desligado.

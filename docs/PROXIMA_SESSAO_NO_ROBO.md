@@ -37,15 +37,32 @@ corridas — dá folga, mas conversa é o que come tempo, não corrida.
 
 ---
 
-## 0.5 🆕 SE A SESSÃO É A DE 11-08 (tarde), O ROTEIRO É OUTRO
+## 0.5 ✅ O ENSAIO DO ESTIMADOR JÁ RODOU (11-08 tarde) — não repita
 
-O ensaio do **estimador do ff** (decisão 016, implementado em 11-08 de manhã)
-tem roteiro próprio, com a sequência de corridas já montada e a previsão
-falsificável escrita: **`docs/ROTEIRO_ESTIMADOR_DO_FF.md`**. Ele não precisa do
-Nav2 — só base e o compensador solto.
+`docs/ROTEIRO_ESTIMADOR_DO_FF.md` **está cumprido**. Veredito: o estimador
+**não está provado** (o A-B-A mostrou que a melhora era ordem temporal), e a
+configuração adotada é compensador com ff do dia e **`adapta` desligado**. Ver
+o veredito no fim da decisão 016.
 
-Volte para este documento aqui se a sessão for retomar o teste C, o teste D ou
-a percepção.
+🔴 **AS DUAS PRIMEIRAS COISAS DA PRÓXIMA SESSÃO, nesta ordem:**
+
+1. **Puxar os 8 CSV que ficaram no NUC** — o robô desligou antes do `scp`. Eles
+   estão em `~/Controle_robo_livox/docs/dados/2026-08-11-estimador/`, não são
+   rastreados pelo git (o `reset --hard` não os toca, mas **`git clean -fd`
+   apaga**). Puxar ANTES de qualquer deploy:
+
+   ```bash
+   scp 'bara@<ip>:~/Controle_robo_livox/docs/dados/2026-08-11-estimador/*.csv' \
+       docs/dados/2026-08-11-estimador/
+   ```
+
+2. **Três corridas de 2,5 m com o robô FRIO**, mesma configuração de 11-08
+   (`curv_frente:=-0.8275`, sem `adapta`, `--topico /compensador_rumo/cmd_vel`).
+   É a previsão barata que fecha o dia de ontem: **~6° confirma que a melhora é
+   do controlador; 18–21° significa que ela era térmica** e o rumo não está
+   resolvido. Julgar com `mede_o_s.py`, nunca com curvatura média.
+
+Volte para este documento aqui para o teste C, o teste D ou a percepção.
 
 ## 1. Contexto mínimo
 

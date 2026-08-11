@@ -1,0 +1,91 @@
+SESSÃO 2026-08-11 (tarde/noite) — ensaio do estimador do ff (decisão 016)
+=========================================================================
+
+Commit deployado no NUC : 1ea3b0b  ("estado: as decisoes 017 e 018 no topo")
+Piso                    : cerâmica da sala (o mesmo de 06-08 e 10-08)
+Espaço                  : sala; corridas de aceitação com --espaco 2.5
+
+Bateria (as três leituras, e elas contam uma história)
+------------------------------------------------------
+  40,17 V   com a placa recém-ligada, início da sessão
+  40,73 V   depois de ~1 h com o robô desligado (queda de energia, ver abaixo)
+  40,65 V   no fim, depois das 8 corridas de 2,5 m
+  -> queda de 0,08 V nas oito corridas longas; o salto 40,17 -> 40,73 é
+     recuperação de repouso, não carga.
+
+Calibração viva (sessao.py --checar, depois do reboot)
+------------------------------------------------------
+  wheel_separation = 0.2700   (bate com a trena)
+  wheel_radius     = 0.0800   (bate com a trena)
+  /Odometry a 9,9–10,0 Hz     (min 0,069 s · max 0,130 s)
+  /hoverboard/connected = true   (ver o BO da placa desligada, abaixo)
+
+Configuração dos nós durante as corridas
+-----------------------------------------
+  base.launch.py (ros2_control + livox + FAST-LIO + tf_odom)
+  tf_odom  subido À MÃO com -p frame_da_pose:=livox_frame
+           (a launch não passa o parâmetro e o nó se recusa a publicar sem ele)
+  nuvem_pontos  MORTO durante as corridas — comia 91% de um core convertendo
+           ~11 mil pontos/quadro em Python. /Odometry conferido antes e depois.
+  compensador_rumo  kp=0,25  ki=0,12  correção limitada a ±0,60 rad/s
+           ff semente -0,8275 (curv_medido_em=2026-08-10-VELHO) em TODAS as
+           corridas compensadas — o que muda entre condições é só o adapta.
+
+As corridas, na ordem em que foram feitas
+------------------------------------------
+  cru-a/b/c            1,2 m · SEM compensador     · planta do dia
+  controle-a/b/c       2,5 m · ff -0,8275, adapta OFF
+  adapta-a/b/c         2,5 m · ff -0,8275, adapta ON  (-p adapta:=true)
+  volta-controle-a/b   2,5 m · ff -0,8275, adapta OFF  (A-B-A, decidido na hora)
+
+  Todas: --ensaio reta --v 0.25 --wz 0 --janela 0.5
+         compensadas com --topico /compensador_rumo/cmd_vel
+
+Números (medir.py --resumo curvatura nas cruas; mede_o_s.py nas compensadas)
+-----------------------------------------------------------------------------
+  PLANTA CRUA           média -0,9145   faixa -0,8777 a -0,9790   dispersão 6%
+    cru-a -0,8867   cru-b -0,9790   cru-c -0,8777
+    -> o medir.py RECUSOU virar feedforward: 6% > os 5% que o robô repete
+       dentro do dia. A corrida b é a fora-da-curva.
+
+                        amp    invs   T[s]   deriva   dur
+    controle-a          8,9°     0      —     4,1°   9,8s
+    controle-b         21,1°     2    5,22    7,9°   9,9s
+    controle-c         18,4°     1      —    -6,7°   9,8s
+    adapta-a           10,3°     1      —     0,1°   9,8s
+    adapta-b           10,1°     1      —     5,1°   9,9s
+    adapta-c            8,2°     0      —    -0,1°   9,8s
+    volta-controle-a    8,1°     0      —     1,1°   9,8s
+    volta-controle-b    6,2°     1      —     0,6°   9,9s
+
+  curv_hat (só no bloco adapta): -0,8275 -> -0,7561 -> -0,7380 -> -0,6935
+    Andou ~0,13 1/m em três corridas, NUNCA encostou no grampo (±0,50), e foi
+    para MENOS curvatura enquanto a planta crua mediu MAIS (-0,914).
+
+O que o dono viu a olho
+------------------------
+  controle-a  : "ele foi bem pra porra"
+  adapta-a    : "nossa, muito mais reto"
+  adapta      : "no início joga um tico pra esquerda depois estabiliza
+                 lindamente, tá ÓTIMO"
+  no fim      : "o robô anda reto"
+  -> casa com o instrumento: excursão inicial de ~10°, 0–1 inversão, deriva
+     ~1° no fim. Em 10-08 nenhuma corrida assentava.
+
+BOs da sessão (todos custaram tempo, nenhum custou dado)
+---------------------------------------------------------
+  1. A PLACA ESTAVA DESLIGADA e a base subiu assim mesmo. /hoverboard/connected
+     = false, battery_voltage e temperature mudos — e o
+     /hoverboard_base_controller/odom seguia a 9,7 Hz, porque ele é open_loop
+     e integra o comando. ODOM DE RODA NÃO PROVA PLACA VIVA: quem prova é o
+     `connected`. Conserto: ligar a placa e subir a base de novo.
+  2. O NUC CAIU no meio da sessão (~17:05) e voltou às 17:57 com `up 0 min`.
+     Ele cai junto com o robô, como 06-08 já tinha mostrado. Nada se perdeu:
+     os CSV vivem em docs/dados/ (disco), não em /tmp. /tmp/logs teve de ser
+     recriado.
+  3. `pkill -f compensador_rumo` MATOU A PRÓPRIA SESSÃO SSH — duas vezes. O
+     colchete do pgrep protege contra o pgrep, não contra a linha de comando
+     do ssh, que continha a string no `setsid ros2 run ...`. Matar por PID,
+     em dois passos (listar, depois matar).
+  4. O pré-voo acusou "2 processos ros2 launch robot_motion": falso positivo
+     conhecido — o `bash -c` do ssh é o pai do launch. 19/20 que são 20/20.

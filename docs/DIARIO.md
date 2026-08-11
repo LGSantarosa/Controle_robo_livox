@@ -4953,3 +4953,89 @@ sensor **inclinado**, as mesmas mutações passam a derrubar três.
 ⏳ **Previsão que separa as duas**: a 017 sozinha **não** faz os costmaps
 marcarem. Se marcarem só com ela, minha hipótese sobre a faixa de altura está
 errada e a suspeita seguinte é a `VoxelLayer`, não a altura.
+
+### 11-08 (3ª leva) — O ROBÔ ANDA RETO, e o estimador não é o motivo
+
+Sessão no robô, 13 corridas (3 cruas + 10 de 2,5 m). Dados e condições em
+`docs/dados/2026-08-11-estimador/ambiente.txt`. Bateria 40,17 → 40,65 V.
+
+🟢 **A percepção acordou no robô real — as decisões 017 e 018 funcionam.** O
+pré-voo, com o robô parado, deu **20/20** (o único ❌ é o falso positivo do
+`bash -c` do ssh contado como segunda pilha):
+
+```
+                       10-08            11-08
+local_costmap        0 células      138 células letais (0,35 m²)
+global_costmap       0 células      504 células letais (1,26 m²)
+nuvem /livox/pontos     —           10,3 Hz · 10 661 pontos · 100% transformável
+odom → base_link     z = −0,477 m   z = −0,060 m
+```
+
+⚠️ **A previsão que separava as duas ficou sem teste**, e isso é culpa do
+planejamento, não do robô: elas entraram **juntas** no mesmo deploy. Para
+falsificar "a 017 sozinha não marca" seria preciso reverter a 018 e rodar de
+novo — não vale a bateria, e o registro fica assim, honesto.
+
+🔴 **O ENSAIO DO ESTIMADOR: a previsão passou e o veredito é NEGATIVO.** Foi o
+A-B-A, decidido na hora, que virou o resultado.
+
+```
+na ordem do tempo →   controle (adapta OFF)    8,9°   21,1°   18,4°
+                      adapta ON               10,3°   10,1°    8,2°
+                      VOLTA ao controle OFF    8,1°    6,2°
+```
+
+A previsão pré-registrada era *"com estimador, a corrida 2 menor que a 1 e a 3
+menor que a 2"*. **Ela passou** — 10,3 > 10,1 > 8,2 — e passar não bastou: as
+duas corridas **sem** estimador, rodadas logo depois, deram 8,1° e 6,2°, as
+melhores do dia. O robô melhorou a tarde inteira **independentemente da
+condição**. O que a sequência a→b→c mostrava era **ordem**, não mecanismo.
+
+➡️ **A lição de método é maior que o resultado**: uma previsão falsificável
+sobre uma sequência temporal não protege contra confundimento de ordem. Só o
+retorno à condição de controle protege. Custou 2 corridas.
+
+✅ **O mecanismo AGE — isso está provado, e é a metade que sobrevive.** O
+`curv_hat` andou `−0,8275 → −0,7561 → −0,7380 → −0,6935` sem nunca encostar no
+grampo (±0,50 da semente). O nó faz o que a decisão 016 diz que ele faz.
+
+🔵 **E ele anda para o lado ERRADO.** A planta crua do dia mediu **−0,9145**
+(mais curvatura) e o estimador foi para **−0,69** (menos). Duas leituras
+possíveis, nenhuma testada: (a) o ff efetivo em malha fechada não é a curvatura
+crua, e o estimador está achando o valor certo para o laço; (b) o sinal da
+drenagem está invertido e o que segurou o rumo foi o termo proporcional. **A
+diferença importa** e se resolve sem robô, na planta de brinquedo, semeando com
+erro dos dois lados.
+
+🟢 **O NÚMERO DO DIA, que é o que o dono viu:** 6,2° a 10,3° de excursão em
+2,5 m, com deriva final de ~1°, contra **35,8°** em 10-08 com o mesmo ff velho.
+Nas palavras dele: *"no início joga um tico pra esquerda depois estabiliza
+lindamente"* e *"o robô anda reto"*. Em 10-08 nenhuma corrida assentava.
+
+⚠️ **E ninguém sabe por que ele melhorou.** A planta crua repetiu 6% de
+dispersão entre três corridas seguidas (`−0,8867 · −0,9790 · −0,8777`) e o
+`medir.py` **recusou** transformá-la em feedforward, corretamente. O robô das
+17 h não é o robô das 19 h. **A previsão barata para a próxima sessão**: três
+corridas de 2,5 m com o robô FRIO, no começo do dia, com esta mesma
+configuração. Se der ~6°, a melhora é do controlador; se voltar aos 18–21°, ela
+era térmica ou de assentamento e o problema não está fechado.
+
+🔧 **Três armadilhas de operação, todas já conhecidas e todas mordendo de novo:**
+
+- **a placa estava DESLIGADA e a base subiu igual.** `/hoverboard/connected` =
+  false, bateria e temperatura mudas — e o `/hoverboard_base_controller/odom`
+  seguia a 9,7 Hz, porque é `open_loop` e integra o comando. **Odometria de roda
+  não prova placa viva**; quem prova é o `connected`;
+- **`pkill -f compensador_rumo` matou a própria sessão ssh, duas vezes.** O
+  colchete do `pgrep` protege contra o `pgrep`, não contra a linha de comando do
+  ssh — que continha a string dentro do `setsid ros2 run ...`. Listar com `ps`,
+  matar por PID, em dois passos;
+- **o NUC caiu junto com o robô no meio da sessão** (17:05 → voltou 17:57 com
+  `up 0 min`). Nada se perdeu: CSV vive em `docs/dados/`, não em `/tmp`.
+
+🔴 **PENDÊNCIA QUE ABRE A PRÓXIMA SESSÃO: os 8 CSV de 2,5 m ainda estão no
+NUC.** Ele desligou antes do `scp`. Estão em
+`~/Controle_robo_livox/docs/dados/2026-08-11-estimador/` (não rastreados pelo
+git, então `git reset --hard` não os toca — mas **`git clean -fd` apaga**).
+Puxar ANTES de qualquer deploy. Os números já estão neste diário e no
+`ambiente.txt`; o que falta é o dado cru para o artigo.

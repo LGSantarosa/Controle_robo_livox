@@ -10,6 +10,74 @@
 
 ---
 
+## 🏁 11-08 (3ª leva) — O ROBÔ ANDA RETO, e o estimador NÃO é o motivo (robô)
+
+13 corridas na cerâmica da sala, bateria 40,17 → 40,65 V. Dados e condições em
+`docs/dados/2026-08-11-estimador/ambiente.txt`; entrada 11-08 (3ª leva) do
+diário. ⚠️ **Os 8 CSV de 2,5 m ainda estão no NUC** — ele desligou antes do
+`scp`. Puxar ANTES do próximo deploy (`git clean -fd` no NUC os apagaria).
+
+🟢 **A PERCEPÇÃO ACORDOU — 017 e 018 funcionam no robô real.** Pré-voo com o
+robô parado: **20/20** (o ❌ que apareceu é o falso positivo do `bash -c` do ssh
+contado como segunda pilha).
+
+```
+                       10-08            11-08
+local_costmap        0 células      138 células letais (0,35 m²)
+global_costmap       0 células      504 células letais (1,26 m²)
+nuvem /livox/pontos     —           10,3 Hz · 10 661 pontos · 100% transformável
+odom → base_link     z = −0,477 m   z = −0,060 m
+```
+
+⚠️ A previsão que **separava** as duas ficou sem teste: elas entraram juntas no
+mesmo deploy. Falsificá-la exigiria reverter a 018 e rodar de novo.
+
+🔴 **O ESTIMADOR DO ff (016) NÃO ESTÁ PROVADO — e a previsão dele PASSOU.**
+
+```
+na ordem do tempo →   controle (adapta OFF)    8,9°   21,1°   18,4°
+                      adapta ON               10,3°   10,1°    8,2°
+                      VOLTA ao controle OFF    8,1°    6,2°
+```
+
+A monotonicidade pedida (10,3 > 10,1 > 8,2) apareceu. Quem derrubou foi o
+**A-B-A decidido na bancada**: sem estimador, logo depois, o robô deu 8,1° e
+6,2° — as melhores do dia. **A melhora era da ordem temporal, não do mecanismo.**
+
+➡️ **Lição de método, e ela vale para o artigo**: previsão falsificável sobre
+uma sequência **não** protege contra confundimento de ordem quando a planta
+deriva (19% em 5 min, medido em 10-08). Só o retorno à condição de controle
+protege. Custou 2 corridas.
+
+✅ **O mecanismo age**: `curv_hat` andou −0,8275 → −0,6935 em três corridas, sem
+encostar no grampo. A implementação não está em dúvida; a **utilidade** está.
+
+🔵 **E ele anda para o lado ERRADO** — planta crua do dia −0,9145 (mais), o
+estimador foi para −0,69 (menos). Ou o ff efetivo em malha fechada não é a
+curvatura crua, ou o sinal da drenagem está invertido. **Resolve-se sem robô**,
+semeando a planta de brinquedo com erro dos dois lados. É a próxima tarefa de
+dev.
+
+🟢 **O NÚMERO QUE O DONO VIU: 6,2° a 10,3° de excursão em 2,5 m**, deriva final
+~1°, contra **35,8°** em 10-08 com o mesmo ff velho. *"No início joga um tico
+pra esquerda depois estabiliza lindamente"* — e em 10-08 nenhuma corrida
+assentava. **Configuração adotada**: compensador com ff do dia, ganhos
+0,25/0,12, `adapta` DESLIGADO.
+
+⚠️ **Ninguém sabe por que ele melhorou ao longo da tarde**, e a planta crua
+repetiu 6% de dispersão em três corridas seguidas (o `medir.py` **recusou**
+virar ff, corretamente). **Previsão barata que abre a próxima sessão**: três
+corridas de 2,5 m com o robô **frio**. ~6° confirma o controlador; 18–21°
+significa que a melhora era térmica e o problema não está fechado.
+
+🔧 **Armadilhas que morderam de novo** (detalhe no `ambiente.txt`): a **placa
+desligada com a base de pé** (`odom` de roda é `open_loop` e mente — quem prova
+é `/hoverboard/connected`); **`pkill -f` matando a própria sessão ssh**, duas
+vezes, porque a linha do ssh continha o nome do nó; e o **NUC caindo junto com o
+robô** no meio da sessão.
+
+---
+
 ## 👁️ 11-08 (2ª leva) — A PERCEPÇÃO SAI DO PAPEL: dois defeitos em série (dev)
 
 Decisões **017** e **018**, as duas do pré-voo de 10-08. **327 testes verdes**
