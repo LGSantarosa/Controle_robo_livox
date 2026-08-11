@@ -10,6 +10,41 @@
 
 ---
 
+## 👁️ 11-08 (2ª leva) — A PERCEPÇÃO SAI DO PAPEL: dois defeitos em série (dev)
+
+Decisões **017** e **018**, as duas do pré-voo de 10-08. **327 testes verdes**
+(eram 311).
+
+🔴 **017 — o contrato da nuvem era um NOME, não um tipo.** `/livox/lidar` sai do
+driver como `CustomMsg`; costmaps, reflexo e pré-voo assinavam `PointCloud2` e
+**nunca receberam nada**. No simulador o `gpu_lidar` publicava PointCloud2 no
+mesmo nome — a 014 nasceu inerte e ninguém viu.
+
+```
+/livox/lidar    CRU (robô: CustomMsg · simulador: PointCloud2)
+/livox/pontos   PointCloud2 SEMPRE — o que a percepção consome
+```
+
+No robô converte o nó novo `nuvem_pontos` (sobe na `localizacao.launch.py`); no
+simulador a ponte publica direto. ⚠️ O ponto `(0,0,0)` do Mid-360 (raio que não
+volta) é **descartado**: no frame do sensor ele é o próprio robô, e marcaria
+célula letal em cima dele a cada quadro.
+
+⚠️ **Nenhum dos muitos testes de config pegou isto** — todos conferiam que os
+consumidores concordavam ENTRE SI. Faltava perguntar *quem publica, e em que
+tipo*. Três testes novos fecham o buraco.
+
+🔴 **018 — o `odom` estava na altura do sensor** (o `z = −0,477` de 10-08). Com
+o chão em z ≈ −0,42, a percepção do Nav2 rejeita a nuvem em dois lugares
+independentes (faixa de altura e `origin_z` da `VoxelLayer`, no frame global).
+Passa a pré-compor com a inversa: **`odom` é a pose do `base_link` na largada**.
+
+⏳ **Previsão que separa as duas**: a 017 sozinha **não** faz os costmaps
+marcarem. Se marcarem só com ela, a hipótese da altura está errada e a suspeita
+seguinte é a `VoxelLayer`, não a altura.
+
+---
+
 ## 🧠 11-08 — O ff DEIXA DE SER UM NÚMERO E VIRA UMA ESTIMATIVA (dev, sem robô)
 
 Decisão **016**, que implementa o caminho 2 da 013 — o que o dono pediu na
