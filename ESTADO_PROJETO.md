@@ -1,12 +1,83 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-08-07**.
+> Versionado na `main`. Atualizado em **2026-08-10**.
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+---
+
+## 📏 10-08 — O S ESTAVA LÁ O TEMPO TODO; A RÉGUA É QUE ERA CURTA (robô)
+
+Doze corridas na sala. Dados em `docs/dados/2026-08-10-*`; entrada 08-10 do
+diário. **Bateria não foi lida** — pedida duas vezes, a sessão andou sem ela.
+
+🔴 **O ACHADO: a mesma corrida passa ou reprova conforme o tamanho da régua.**
+
+```
+comp-longa-a.csv   medida em 1,2 m  ->  −0,0162   PASSA no critério da 011
+                   medida em 2,5 m  ->  +0,0882   REPROVA
+```
+
+Mesmo robô, mesma corrida, mesmo `medir.py`. O corte de 1,2 m cai no cruzamento
+de zero do S: o rumo vai a −13,5°, volta, e de ponta a ponta dá quase reto. Em
+2,5 m aparece o ciclo inteiro — **envoltória crescendo 1,65×**, meio-período
+~5,3 s.
+
+➡️ **MUDANÇA DE PROTOCOLO: corrida de aceitação tem de durar ao menos um
+período (~10 s / 2,5 m).** Isso reclassifica o `+0,0417` que deu "aceito" em
+05-08: ele foi medido com a régua curta. A releitura de 06-08 suspeitava; agora
+está provado com a mesma corrida medida das duas formas.
+
+🔴 **A PLANTA DERIVA 19% EM 5,4 MINUTOS** (seis retas cruas idênticas, mesmo
+ponto e mesmo rumo):
+
+```
++0,0 min 0,8395   +1,5 min 0,9358   +4,8 min 0,9313
++0,9 min 0,8154   +2,5 min 0,9175   +5,4 min 0,9687
+                  ajuste +0,022 1/m por minuto (r = +0,80)
+```
+
+Velocidade linear igual nas seis; o que muda é o giro. Não é o mundo (mesmo
+rumo, mesmo chão). **Os 13,5% entre 04-08 e 05-08 que motivaram a decisão 013
+acontecem aqui dentro de uma bancada** — o caminho 3 (medir no começo da sessão)
+envelhece dentro da própria sessão. Causa não investigada **por decisão do
+dono**, e ela estava certa: térmico ou bateria não muda o que fazer.
+
+🔴 **E FECHAR A MALHA NÃO SALVA UM ff ERRADO** — a conta dizia que caberia
+(`ki·int_max` = 0,072 rad/s de autoridade contra 0,038 rad/s necessários), a
+máquina disse que não:
+
+```
+ff VELHO −0,8275   −13,5° → +22,3°   excursão 35,8°   envoltória cresce
+ff HOJE  −0,9383     0,0° → +13,0°   excursão 13,0°   sobrecorrige, não assenta
+```
+
+➡️ **O conserto não é medir o ff mais vezes — é o compensador ESTIMAR a
+curvatura enquanto anda** (caminho 2 da 013). É o que o dono pediu com todas as
+letras: *"o compensador deve conseguir identificar o erro atual para ajeitar"*.
+Próxima sessão de dev.
+
+🟢 **O Nav2 SUBIU INTEIRO NO ROBÔ REAL PELA PRIMEIRA VEZ** — os quatro
+servidores `active`. O que faltava era a TF `odom → base_link`: o FAST-LIO manda
+a pose no frame `body`, que não está no URDF, e o `tf_odom` **se recusava a
+publicar, corretamente** (publicar embutiria os 42 cm do Mid-360 sem sintoma).
+Conserto: `-p frame_da_pose:=livox_frame`. Pré-voo 10/19 → **16/19**.
+⚠️ Dívida: `body` é o frame da IMU, 5 cm do lidar.
+
+🔴 **A DECISÃO 014 ESTÁ INERTE NO ROBÔ**: `/livox/lidar` sai em
+**`livox_ros_driver2/msg/CustomMsg`** e costmaps, `collision_monitor` e o
+pré-voo assinam `PointCloud2`. O FAST-LIO funciona porque lê CustomMsg — a
+localização vai bem e a percepção é zero. No simulador o lidar é `gpu_lidar` e
+publica PointCloud2: a 014 foi aceita num ambiente onde o defeito não existe.
+
+⚠️ **Previsão falsificável, não testada**: converter a nuvem **sozinho não faz
+os costmaps marcarem**. Com o `tf_odom` compondo a pose do sensor, o `odom` fica
+na altura do sensor (`z = −0,477 m` medido), o chão vai para z ≈ −0,42 e a faixa
+de altura do costmap (0,10–0,50) rejeita tudo. Dois defeitos em série.
 
 ---
 
