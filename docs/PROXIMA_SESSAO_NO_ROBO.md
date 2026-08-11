@@ -68,7 +68,20 @@ corridas — dá folga, mas conversa é o que come tempo, não corrida.
   `curv_re:=` e `curv_medido_em:=`, e o compensador **anuncia no `rosout`** se o
   feedforward foi medido hoje ou é herdado. O default é `HERDADO` — pilha que
   sobe sem a medida do dia se denuncia sozinha. Ver §5;
-- **nada disso rodou no robô.** É a primeira coisa a conferir.
+- 🆕 **08-10 RODOU, e mudou três coisas** (leia a entrada 08-10 do diário antes
+  de qualquer corrida):
+  - **a régua de aceitação mudou**: corrida de 1,2 m **não serve** para julgar
+    rumo. A mesma corrida mede −0,0162 (passa a 011) cortada em 1,2 m e +0,0882
+    (reprova) medida em 2,5 m — o corte curto cai no cruzamento de zero do S.
+    Aceitação agora é `--espaco 2.5` (~10 s), pelo menos um período;
+  - **a percepção está morta no robô e não é config**: `/livox/lidar` sai em
+    `livox_ros_driver2/msg/CustomMsg` e os costmaps assinam `PointCloud2`. Não
+    adianta mexer em faixa de altura antes de existir conversor — e, quando
+    existir, há um segundo defeito em série (o `odom` fica na altura do sensor,
+    `z = −0,477 m`, e a faixa 0,10–0,50 rejeita tudo);
+  - **o ff do dia (caminho 3 da 013) é piso, não solução**: melhora a excursão
+    2,7× e o rumo continua sem assentar. Ver o adendo da decisão 013.
+- **o resto não rodou no robô.** É a primeira coisa a conferir.
 
 ---
 
@@ -163,8 +176,19 @@ de baixo.
 parada só prova que existe. Rode, **empurre o robô com a mão**, rode de novo: a
 translação tem de mudar. Se não mudar, o LIO não está seguindo o corpo.
 
-Se o `tf_odom` falhar, o nó diz **qual frame** faltou; conserto na hora:
-`-p frame_da_pose:=<o frame que ele citou>`.
+🔴 **O `tf_odom` VAI falhar na subida, e o conserto está medido (08-10).** Ele
+reclama `NÃO EXISTE TF body -> base_link` — e a resposta **não** é passar o
+frame que ele citou: `body` é o frame da IMU do FAST-LIO, que não está no URDF.
+O certo é dizer a que link do URDF aquela pose corresponde:
+
+```bash
+ros2 run robot_base tf_odom --ros-args -p frame_da_pose:=livox_frame
+```
+
+Sem isso a árvore TF fica partida e **os quatro servidores do Nav2 não ativam**
+(foi o que matou 06-08). Com isso, em 08-10, os quatro subiram `active` pela
+primeira vez no robô real e o pré-voo foi de 10/19 para 16/19.
+⚠️ Dívida conhecida: `body` fica 5 cm do lidar (`extrinsic_T` do `mid360.yaml`).
 
 ⚠️ `/auto_vel` calado com o robô parado **é o certo**: o `collision_monitor` não
 republica comando nulo (medido 07-08), e parado o `heading_controller` só
