@@ -37,6 +37,16 @@ corridas — dá folga, mas conversa é o que come tempo, não corrida.
 
 ---
 
+## 0.5 🆕 SE A SESSÃO É A DE 11-08 (tarde), O ROTEIRO É OUTRO
+
+O ensaio do **estimador do ff** (decisão 016, implementado em 11-08 de manhã)
+tem roteiro próprio, com a sequência de corridas já montada e a previsão
+falsificável escrita: **`docs/ROTEIRO_ESTIMADOR_DO_FF.md`**. Ele não precisa do
+Nav2 — só base e o compensador solto.
+
+Volte para este documento aqui se a sessão for retomar o teste C, o teste D ou
+a percepção.
+
 ## 1. Contexto mínimo
 
 | ler | por quê |
