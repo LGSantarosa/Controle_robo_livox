@@ -150,3 +150,58 @@ primeiro item do ensaio de qualquer um dos três caminhos acima.
 - `docs/dados/2026-08-04-aceitacao-simulador/normal-frente-*.csv` — cru, 04-08
 - `docs/dados/2026-08-05-bancada-robo/A1-sem-comp-frente-*.csv` — cru, 05-08
 - `docs/dados/2026-08-06-sintonia-rumo/` — as nove corridas com compensador
+
+---
+
+## ADENDO 2026-08-10 — a máquina respondeu, e o caminho 3 não se sustenta
+
+O texto acima diz, na seção "o que isto NÃO resolve", que a planta mudar
+*durante* a sessão era "hipótese que os dados de hoje não testam, porque nenhum
+dia tem duas medidas cruas separadas por horas". **Em 08-10 essa hipótese foi
+testada e confirmada — e nem precisou de horas.**
+
+Seis retas cruas idênticas, mesmo ponto, mesmo rumo, mesmo pedaço de chão:
+
+```
++0,0 min 0,8395   +1,5 min 0,9358   +4,8 min 0,9313
++0,9 min 0,8154   +2,5 min 0,9175   +5,4 min 0,9687
+              ajuste +0,022 1/m por minuto (r = +0,80)   amplitude +19%
+```
+
+Os **13,5% entre 04-08 e 05-08** que motivaram esta decisão acontecem **em 5,4
+minutos**. Uma medida no começo da sessão envelhece dentro da própria sessão.
+
+E a saída "deixa o integrador absorver" foi medida e **falhou**, apesar de a
+conta dizer que caberia (`ki·int_max` = 0,072 rad/s de autoridade contra
+0,038 rad/s necessários para a deriva do dia):
+
+```
+corrida longa (2,5 m, ~10 s)     excursão de rumo
+ff VELHO −0,8275   −13,5° → +22,3°    35,8°   envoltória CRESCE 1,65x
+ff HOJE  −0,9383     0,0° → +13,0°    13,0°   sobrecorrige, não assenta
+```
+
+⚠️ **E as corridas de 1,2 m que sustentavam o critério de aceitação da 011 não
+serviam para julgar isto**: a mesma corrida longa, truncada em 1,2 m, mede
+−0,0162 (passa) e, inteira, +0,0882 (reprova). O corte cai no cruzamento de zero
+do S. Ver `docs/dados/2026-08-10-ff-velho/ambiente.txt`.
+
+### Consequência para esta decisão
+
+O caminho 3 (escolhido em 07-08) **fica como piso, não como solução**: melhora
+2,7× a excursão e continua sem segurar o rumo. O caminho a implementar é o
+**(2) — estimador online da curvatura**, que era a direção do dono já na
+bancada:
+
+> *"o compensador deve conseguir identificar o erro atual para ajeitar, se tem
+> essa diferenciação aí, por isso um PID"*
+
+A plumbing do caminho 3 (`curv_frente:=` por launch, `curv_medido_em:=`,
+`medir.py --resumo`) **não se perde**: ela vira a condição de controle contra a
+qual o estimador tem de ganhar, e o valor medido segue servindo de chute inicial.
+
+### Referências novas
+
+- `docs/DIARIO.md`, 08-10
+- `docs/dados/2026-08-10-curva-crua/` — as seis cruas e a deriva
+- `docs/dados/2026-08-10-ff-velho/` — ff velho × ff do dia, curto × longo
