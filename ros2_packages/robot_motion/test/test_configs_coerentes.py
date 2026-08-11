@@ -488,3 +488,102 @@ def test_ninguem_consome_o_topico_CRU_do_driver():
         fonte = d[qual][qual]['ros__parameters']['obstacle_layer']['livox']
         assert fonte['topic'] == NUVEM, qual
     assert _cm()[_cm()['observation_sources'][0]]['topic'] == NUVEM
+
+
+# ---------------------------------------------------------------------------
+# OS DEFAULTS DA PILHA TÊM DE SER SEGUROS NO ROBÔ REAL (11-08)
+#
+# A decisão 015 resolveu o mapa fantasma criando `mapa:=nenhum` — e deixou a
+# escolha como algo que o operador digita. Config que precisa ser digitada é
+# config que vai ser esquecida, e o preço é silencioso: `StaticLayer` com uma
+# sala de 12 × 8 m que não existe, misturada desde a 014 com marcação real do
+# Livox. O robô recusa caminho livre e o sintoma não aponta para o mapa.
+#
+# A regra que estes testes travam: **o caso perigoso exige intenção, o seguro é
+# o default.**
+# ---------------------------------------------------------------------------
+
+def _default_declarado(texto, arg):
+    """O `default_value=` do DeclareLaunchArgument de `arg`, como texto.
+
+    Ancorado no `DeclareLaunchArgument(` e não na primeira aparição do nome: o
+    cabeçalho desta launch cita `mapa` e `rviz` em prosa muito antes de
+    declará-los.
+    """
+    m = re.search(r"DeclareLaunchArgument\(\s*'" + re.escape(arg) + r"'",
+                  texto)
+    assert m, f'`{arg}` não é argumento declarado da pilha'
+    trecho = texto[m.end():m.end() + 500]
+    j = trecho.index('default_value=')
+    corte = trecho.index('description=') if 'description=' in trecho else 200
+    return trecho[j:corte]
+
+
+@pytest.mark.parametrize('arg,perigoso', [
+    ('mapa', 'nenhum'),     # sem mapa é o seguro no robô
+    ('rviz', 'false'),      # o NUC não tem tela
+])
+def test_o_default_do_robo_real_e_o_seguro(arg, perigoso):
+    _, texto = _launch_ast()
+    d = _default_declarado(texto, arg)
+    assert 'LaunchConfiguration' in d and "'sim'" in d, (
+        f'o default de `{arg}` tem de depender do `sim` — no robô real ele '
+        f'precisa valer {perigoso!r} sem ninguém digitar nada')
+    assert perigoso in d, f'o ramo do robô real de `{arg}` tem de ser {perigoso!r}'
+
+
+def _resolve_default(arg, sim):
+    """Resolve o `default_value=` QUE ESTÁ NA LAUNCH, com o `sim` dado.
+
+    Avalia a expressão escrita no arquivo em vez de remontá-la aqui — foi a
+    primeira versão deste teste que remontava, e ela **passou** com o
+    condicional invertido na launch. Teste que reconstrói o alvo não testa o
+    alvo.
+    """
+    import ast
+
+    from launch import LaunchContext
+    from launch.substitutions import LaunchConfiguration, PythonExpression
+
+    arvore, texto = _launch_ast()
+    fonte = None
+    for no in ast.walk(arvore):
+        if not (isinstance(no, ast.Call)
+                and getattr(no.func, 'id', None) == 'DeclareLaunchArgument'):
+            continue
+        if not (no.args and isinstance(no.args[0], ast.Constant)
+                and no.args[0].value == arg):
+            continue
+        for kw in no.keywords:
+            if kw.arg == 'default_value':
+                fonte = ast.get_source_segment(texto, kw.value)
+    assert fonte, f'`{arg}` não tem default_value declarado'
+
+    ambiente = {
+        'PythonExpression': PythonExpression,
+        'LaunchConfiguration': LaunchConfiguration,
+        # Só o nome importa; o valor é opaco para o sentido do condicional.
+        'MAPA_PADRAO': '/QUALQUER/mapa.yaml',
+    }
+    expr = eval(fonte, ambiente)  # noqa: S307 - fonte é o nosso próprio repo
+    ctx = LaunchContext()
+    ctx.launch_configurations['sim'] = sim
+    if isinstance(expr, str):
+        return expr
+    return expr.perform(ctx)
+
+
+@pytest.mark.parametrize('arg,no_robo,no_sim', [
+    ('mapa', 'nenhum', '/QUALQUER/mapa.yaml'),
+    ('rviz', 'false', 'true'),
+])
+def test_o_default_RESOLVE_para_o_seguro_quando_sim_e_false(arg, no_robo, no_sim):
+    """Não basta o texto citar `sim`: a substituição tem de RESOLVER, e no
+    sentido certo. É este teste que pega o condicional escrito ao contrário —
+    o modo de falha em que o robô real ganha o mapa da pista simulada e o
+    simulador roda sem mapa nenhum, os dois em silêncio."""
+    pytest.importorskip('launch')
+    assert _resolve_default(arg, 'false') == no_robo, (
+        f'com sim:=false (robô real) o default de `{arg}` tem de ser {no_robo!r}')
+    assert _resolve_default(arg, 'true') == no_sim, (
+        f'com sim:=true o default de `{arg}` tem de ser {no_sim!r}')

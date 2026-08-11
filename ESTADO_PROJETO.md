@@ -10,6 +10,40 @@
 
 ---
 
+## 🧭 11-08 (4ª leva) — A NAVEGAÇÃO COMEÇA TIRANDO AS TRAVAS MANUAIS (dev)
+
+Decisão **019**, primeira leva do ritmo acelerado que o dono pediu para a
+navegação. **333 testes verdes** (eram 327).
+
+🔴 **A pré-condição de tudo subia quebrada há três sessões.** A
+`localizacao.launch.py` não passava `frame_da_pose` ao `tf_odom` → ele caía no
+`child_frame_id` do FAST-LIO (`body`, frame da IMU, ausente do URDF) → não
+publicava TF → **os quatro servidores do Nav2 não ativam**. Em 08-10 e 11-08
+alguém matou o nó e subiu na mão.
+
+🔴 **E `mapa:=nenhum` era obrigatório no robô e opcional na sintaxe** — esquecer
+punha o mapa da pista simulada no robô real, misturado com marcação do Livox.
+
+```
+localizacao.launch.py   frame_da_pose   '' -> 'livox_frame'
+pilha.launch.py         mapa            pista -> 'nenhum' quando sim:=false
+pilha.launch.py         rviz            true  -> false    quando sim:=false
+```
+
+➡️ **A regra registrada: o default é o caso seguro; o perigoso exige intenção.**
+Mesma família do defeito da bitola (29-07) e do `ff HERDADO` (07-08).
+
+🔧 **E o teste desta leva nasceu errado**: a primeira versão **passou com o
+condicional invertido na launch**, porque montava a expressão dentro do próprio
+teste em vez de ler a do arquivo. A mutação pegou. A versão final lê o
+`default_value` por AST e resolve num `LaunchContext`. **Teste que reconstrói o
+alvo não testa o alvo** — parente exato do buraco da 017.
+
+⏳ **Não foi ao robô**; confirma-se no pré-voo: a base sozinha deixa a TF
+`odom → base_link` de pé, e a pilha sem argumento nenhum sobe sem `map_server`.
+
+---
+
 ## 🏁 11-08 (3ª leva) — O ROBÔ ANDA RETO, e o estimador NÃO é o motivo (robô)
 
 13 corridas na cerâmica da sala, bateria 40,17 → 40,65 V. Dados e condições em

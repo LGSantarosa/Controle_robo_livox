@@ -203,19 +203,22 @@ de baixo.
 parada só prova que existe. Rode, **empurre o robô com a mão**, rode de novo: a
 translação tem de mudar. Se não mudar, o LIO não está seguindo o corpo.
 
-🔴 **O `tf_odom` VAI falhar na subida, e o conserto está medido (08-10).** Ele
-reclama `NÃO EXISTE TF body -> base_link` — e a resposta **não** é passar o
-frame que ele citou: `body` é o frame da IMU do FAST-LIO, que não está no URDF.
-O certo é dizer a que link do URDF aquela pose corresponde:
+✅ **O `tf_odom` NÃO precisa mais ser subido à mão (consertado em 11-08).** A
+`localizacao.launch.py` passa `frame_da_pose:=livox_frame` como argumento de
+launch, com esse default. Em 08-10 e 11-08 ele subia inerte (reclamando `NÃO
+EXISTE TF body -> base_link`, porque `body` é o frame da IMU do FAST-LIO e não
+está no URDF) e alguém tinha de matá-lo e subir de novo com o parâmetro.
+
+Se por algum motivo você precisar de outro frame:
 
 ```bash
-ros2 run robot_base tf_odom --ros-args -p frame_da_pose:=livox_frame
+ros2 launch robot_base base.launch.py frame_da_pose:=<outro>
 ```
 
-Sem isso a árvore TF fica partida e **os quatro servidores do Nav2 não ativam**
-(foi o que matou 06-08). Com isso, em 08-10, os quatro subiram `active` pela
-primeira vez no robô real e o pré-voo foi de 10/19 para 16/19.
-⚠️ Dívida conhecida: `body` fica 5 cm do lidar (`extrinsic_T` do `mid360.yaml`).
+⚠️ Dívida conhecida: `body` fica 5 cm do lidar (`extrinsic_T` do `mid360.yaml`),
+e é esse erro que `livox_frame` embute. O conserto certo é o URDF descrever
+`body`. Conferir na subida a linha `primeira TF publicada (pose vinha de
+'livox_frame', composta com o URDF)`.
 
 ⚠️ `/auto_vel` calado com o robô parado **é o certo**: o `collision_monitor` não
 republica comando nulo (medido 07-08), e parado o `heading_controller` só
@@ -313,11 +316,14 @@ ros2 launch robot_motion pilha.launch.py mapa:=nenhum \
 ros2 lifecycle get /collision_monitor        # TEM de dizer active
 ```
 
-🔴 **`mapa:=nenhum` é obrigatório no robô** (decisão 015, 07-08). Sem isso a
-pilha sobe o mapa da pista SIMULADA — parede onde não há nada, livre onde há
-parede — e desde a 014 mistura isso com marcação real do Livox. Com `nenhum`
-não há `map_server`: o costmap global é uma janela de 20 × 20 m feita só do que
-o sensor vê.
+✅ **`mapa:=nenhum` deixou de precisar ser digitado (11-08, decisão 019).** Com
+`sim:=false` — o robô real — o default JÁ é `nenhum`: sem `map_server`, com o
+costmap global virando janela de 20 × 20 m feita só do que o sensor vê. Digitar
+continua funcionando e não faz mal.
+
+🔴 **O que isso evitava, e por que valia uma correção**: com o mapa da pista
+SIMULADA, o robô real ganha parede onde não há nada e livre onde há parede, e
+desde a 014 isso se mistura com marcação real do Livox (decisão 015, 07-08).
 
 🛑 **Se disser `inactive`, o `lifecycle_manager` abortou o bringup** (o Nav2 não
 ativa sem `map → base_link`). Ativar na mão:

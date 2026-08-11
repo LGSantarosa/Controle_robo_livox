@@ -159,11 +159,28 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('sim', default_value='false',
                               description='true sobe o Gazebo junto'),
+        # 🔴 O DEFAULT SEGUE O `sim`, e isto é uma correção de 11-08.
+        #
+        # A decisão 015 diz que `mapa:=nenhum` é OBRIGATÓRIO no robô real — e
+        # deixava isso como algo que o operador tem de digitar. Config que
+        # precisa ser digitada é config que vai ser esquecida, e o preço aqui é
+        # silencioso: a pilha sobe o mapa da pista SIMULADA (uma sala de
+        # 12 × 8 m que não existe), o `global_costmap` põe `StaticLayer` sobre
+        # isso e, desde a 014, mistura parede fantasma com marcação real do
+        # Livox. O robô recusa caminho livre e ninguém sabe por quê.
+        #
+        # Quem quiser mapa no robô real (quando houver um mapa REAL) passa
+        # `mapa:=<caminho>` explicitamente — que é a ordem certa: o caso
+        # perigoso exige intenção, o seguro é o default.
         DeclareLaunchArgument(
-            'mapa', default_value=MAPA_PADRAO,
+            'mapa',
+            default_value=PythonExpression(
+                ["'", MAPA_PADRAO, "' if '", LaunchConfiguration('sim'),
+                 "' == 'true' else 'nenhum'"]),
             description='caminho do .yaml do mapa, ou "nenhum" para o perfil '
-                        'SEM MAPA — o do robô real, onde o costmap global vira '
-                        'janela rolante alimentada só pelo Livox '
+                        'SEM MAPA. Default: a pista quando sim:=true, e '
+                        '"nenhum" no robô real (decisão 015) — onde o costmap '
+                        'global vira janela rolante alimentada só pelo Livox '
                         '(config/nav2_sem_mapa.yaml)'),
         # `mundo` separado de `mapa` de propósito: é fazendo os dois
         # DISCORDAREM que se testa percepção. Mundo com um obstáculo que o
@@ -186,7 +203,14 @@ def generate_launch_description():
             'planta', default_value='normal',
             description='"normal" (a que bate com o robô medido) ou "lenta" '
                         '(pessimista de 27-07, para estressar o controlador)'),
-        DeclareLaunchArgument('rviz', default_value='true'),
+        # Mesmo raciocínio do `mapa`: no NUC não há tela, e o rviz2 só gasta
+        # CPU de um computador que já converte 11 mil pontos por quadro. Quem
+        # quiser rviz no robô (por X forwarding) passa `rviz:=true`.
+        DeclareLaunchArgument(
+            'rviz',
+            default_value=PythonExpression(
+                ["'true' if '", LaunchConfiguration('sim'),
+                 "' == 'true' else 'false'"])),
         # O `sim.launch.py` já tinha `gui:=false` (headless) e esta launch não
         # repassava, então toda corrida de pilha exigia janela. Medir percepção
         # é o que mais pede corrida automatizada: a nuvem sai igual com ou sem

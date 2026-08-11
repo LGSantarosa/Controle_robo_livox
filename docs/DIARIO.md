@@ -5039,3 +5039,42 @@ NUC.** Ele desligou antes do `scp`. Estão em
 git, então `git reset --hard` não os toca — mas **`git clean -fd` apaga**).
 Puxar ANTES de qualquer deploy. Os números já estão neste diário e no
 `ambiente.txt`; o que falta é o dado cru para o artigo.
+
+### 11-08 (4ª leva) — a navegação começa tirando as duas travas manuais
+
+Sessão de dev, robô desligado, aberta a pedido do dono: *"dá continuidade na
+parte de navegação, temos que dar vazão pra isso logo"*. Decisão **019**.
+**333 testes verdes** (eram 327).
+
+🔴 **A pré-condição de toda navegação subia quebrada, e ninguém tinha
+consertado**: a `localizacao.launch.py` não passava `frame_da_pose` ao
+`tf_odom`, então o nó caía no `child_frame_id` do FAST-LIO (`body`, o frame da
+IMU, que não existe no URDF), o lookup falhava e ele **se recusava a publicar**
+— corretamente. Custo: os quatro servidores do Nav2 não ativam. Aconteceu em
+**06-08, 08-10 e 11-08**, e nas duas últimas alguém matou o nó e subiu na mão.
+
+🔴 **E `mapa:=nenhum` era obrigatório no robô e opcional na sintaxe.** Esquecer
+sobe o mapa da pista simulada no robô real — parede onde não há nada — e desde
+a 014 isso se mistura com marcação real do Livox. A decisão 015 tinha criado a
+opção e parado aí.
+
+➡️ **O padrão vale mais que os dois casos**: o valor perigoso era o default e o
+seguro exigia digitação. Agora os dois defaults seguem o `sim`, e quem quiser o
+caso perigoso passa o argumento. O `rviz` foi junto (o NUC não tem tela).
+
+🔧 **O ERRO DE TESTE DESTA LEVA, e ele é do mesmo tipo que a 017 pegou.** A
+primeira versão do teste de resolução **passou com o condicional invertido na
+launch**: ela montava a expressão dentro do próprio teste para conferir o
+sentido do `if`, isto é, testava uma cópia. Só percebi porque rodei a mutação —
+inverter os ramos na launch e ver se a suíte reclama. Não reclamou.
+
+A versão que ficou lê o `default_value` **do arquivo** (via AST,
+`ast.get_source_segment`) e resolve com um `LaunchContext` de verdade. Com ela a
+mesma mutação falha. **Teste que reconstrói o alvo não testa o alvo** — é o
+parente exato do buraco da 017, onde todos os testes conferiam que os
+consumidores concordavam entre si e nenhum perguntava quem publicava.
+
+⏳ **Nada disto foi ao robô.** O que a próxima sessão confirma é barato e cabe
+no pré-voo: `ros2 launch robot_base base.launch.py` sozinho tem de deixar a TF
+`odom → base_link` de pé, e `ros2 launch robot_motion pilha.launch.py` sem
+argumento nenhum tem de subir **sem** `map_server`.

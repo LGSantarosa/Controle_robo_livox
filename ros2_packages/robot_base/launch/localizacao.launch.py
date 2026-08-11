@@ -25,8 +25,13 @@ from ament_index_python.packages import (
     get_package_share_directory,
 )
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, LogInfo
+from launch.actions import (
+    DeclareLaunchArgument,
+    IncludeLaunchDescription,
+    LogInfo,
+)
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 _COMO_RESOLVER = (
@@ -80,6 +85,23 @@ def generate_launch_description():
     ], 'config mid360.yaml do FAST-LIO')
 
     return LaunchDescription([
+        # De que frame é a pose que o FAST-LIO publica em `/Odometry`.
+        #
+        # 🔴 NÃO deixar vazio. Vazio significa "confie no child_frame_id da
+        # mensagem", e o FAST-LIO manda `body` — o frame da IMU, que NÃO existe
+        # no URDF. O `tf_odom` faz a coisa certa e se recusa a publicar, e o
+        # sintoma cai longe daqui: os quatro servidores do Nav2 não ativam, o
+        # `lifecycle_manager` aborta o bringup e leva o `collision_monitor`
+        # junto. Foi assim em 06-08, e em 08-10 e 11-08 a base subiu com o nó
+        # inerte e alguém teve de matá-lo e subir na mão com o parâmetro.
+        #
+        # ⚠️ Dívida conhecida (08-10): `body` fica ~5 cm do lidar
+        # (`extrinsic_T` do `mid360.yaml`), então dizer `livox_frame` embute
+        # esses 5 cm. É 8× menor que os 42 cm que a composição com o URDF já
+        # evita, e o conserto certo é o URDF descrever `body`.
+        DeclareLaunchArgument(
+            'frame_da_pose', default_value='livox_frame',
+            description='Frame do URDF a que a pose do FAST-LIO corresponde.'),
         LogInfo(msg=f'[livox]    {livox_launch}'),
         LogInfo(msg=f'[fast_lio] {fastlio_launch} (cfg: {fastlio_cfg})'),
         IncludeLaunchDescription(PythonLaunchDescriptionSource(livox_launch)),
@@ -93,7 +115,10 @@ def generate_launch_description():
         # junto — que foi como o teste D morreu em 06-08, sem uma linha de erro
         # dizendo "falta uma TF". Ver `robot_base/tf_odom.py`.
         Node(package='robot_base', executable='tf_odom', name='tf_odom',
-             output='both'),
+             output='both',
+             parameters=[{
+                 'frame_da_pose': LaunchConfiguration('frame_da_pose'),
+             }]),
         # A nuvem que a percepção consegue ler. O driver publica `CustomMsg`
         # (é o que o FAST-LIO come); costmaps e `collision_monitor` falam
         # `PointCloud2`, e em 10-08 isso significou os dois costmaps com ZERO

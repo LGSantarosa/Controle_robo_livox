@@ -231,3 +231,51 @@ def test_com_sensor_TORTO_a_largada_ainda_e_a_origem():
         t, q = compoe_como_o_no((0.0, 0.0, 0.0), IDENT, s_t, s_q)
         perto(t, (0.0, 0.0, 0.0))
         perto(q, IDENT)
+
+
+# ---------------------------------------------------------------------------
+# A LAUNCH TEM DE PASSAR O FRAME — o defeito de 11-08
+#
+# A composição acima está certa desde 08-10, e mesmo assim o nó subiu INERTE em
+# duas sessões seguidas no robô: a `localizacao.launch.py` não passava
+# `frame_da_pose`, o nó caía no `child_frame_id` da mensagem (`body`, o frame
+# da IMU do FAST-LIO, que não está no URDF), o lookup falhava e ele se recusava
+# a publicar — corretamente. O custo aparece longe: os quatro servidores do
+# Nav2 não ativam e o `lifecycle_manager` aborta o bringup.
+#
+# Estes testes leem a launch como TEXTO de propósito: importar exige `launch`
+# instalado, e o que se quer travar é a intenção escrita no arquivo.
+# ---------------------------------------------------------------------------
+
+def _texto_da_launch():
+    p = os.path.join(os.path.dirname(__file__), '..', 'launch',
+                     'localizacao.launch.py')
+    with open(p) as f:
+        return f.read()
+
+
+def test_a_launch_passa_frame_da_pose_para_o_tf_odom():
+    """Sem isto o nó sobe e não publica, e o sintoma cai no Nav2."""
+    texto = _texto_da_launch()
+    assert "'frame_da_pose'" in texto, (
+        'a launch precisa declarar `frame_da_pose` — sem ele o tf_odom cai no '
+        'child_frame_id do FAST-LIO (`body`), que não existe no URDF')
+    assert 'LaunchConfiguration' in texto and 'parameters=[{' in texto, (
+        'o valor tem de chegar ao nó como parâmetro, não só como argumento '
+        'declarado e ignorado')
+
+
+def test_o_default_da_launch_e_um_frame_que_o_URDF_TEM():
+    """`body` é o frame da IMU do FAST-LIO e NÃO está no URDF — foi por isso
+    que o nó se recusou a publicar em 06-08, 08-10 e 11-08. O default tem de
+    ser um link que o `robo2.urdf.xacro` descreve."""
+    texto = _texto_da_launch()
+    assert "default_value='livox_frame'" in texto, (
+        'o default tem de ser um frame do URDF; `body` (o da IMU) faz o nó '
+        'ficar inerte')
+
+    urdf = os.path.join(os.path.dirname(__file__), '..', 'description',
+                        'robo2.urdf.xacro')
+    with open(urdf) as f:
+        assert 'livox_frame' in f.read(), (
+            'o default da launch tem de existir no URDF')
