@@ -94,4 +94,10 @@ def generate_launch_description():
         # dizendo "falta uma TF". Ver `robot_base/tf_odom.py`.
         Node(package='robot_base', executable='tf_odom', name='tf_odom',
              output='both'),
+        # A nuvem que a percepção consegue ler. O driver publica `CustomMsg`
+        # (é o que o FAST-LIO come); costmaps e `collision_monitor` falam
+        # `PointCloud2`, e em 10-08 isso significou os dois costmaps com ZERO
+        # células letais enquanto o sensor entregava 9,96 Hz. Ver decisão 017.
+        Node(package='robot_base', executable='nuvem_pontos',
+             name='nuvem_pontos', output='both'),
     ])

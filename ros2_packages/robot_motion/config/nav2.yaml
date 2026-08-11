@@ -246,7 +246,7 @@ global_costmap:
         publish_voxel_map: false
         observation_sources: livox
         livox:
-          topic: /livox/lidar
+          topic: /livox/pontos
           data_type: "PointCloud2"
           marking: true
           clearing: true
@@ -366,7 +366,7 @@ local_costmap:
         publish_voxel_map: true
         observation_sources: livox
         livox:
-          topic: /livox/lidar
+          topic: /livox/pontos
           data_type: "PointCloud2"
           marking: true
           clearing: true

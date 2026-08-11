@@ -152,14 +152,21 @@ def generate_launch_description():
             # Livox Mid-360 fingido (decisão 012). O `gpu_lidar` publica DOIS
             # tópicos: o `<topic>` do SDF leva um LaserScan (uma linha só,
             # inútil aqui) e `<topic>/points` leva a nuvem. É a nuvem que
-            # queremos — e ela é remapeada para `/livox/lidar`, o MESMO nome
-            # do driver real, como o /Odometry: quem consome não sabe a
-            # diferença. Escutar o tópico sem `/points` cria a ponte e não
-            # entrega nada, que foi o primeiro sintoma em 05-08.
+            # queremos — e ela é remapeada para `/livox/pontos`, que é o
+            # tópico que a percepção consome nos DOIS mundos. Escutar o tópico
+            # sem `/points` cria a ponte e não entrega nada, que foi o primeiro
+            # sintoma em 05-08.
+            #
+            # ⚠️ ATÉ 10-08 ELA IA PARA `/livox/lidar`, "o MESMO nome do driver
+            # real", e o comentário aqui dizia que assim "quem consome não sabe
+            # a diferença". Era falso: no robô aquele nome carrega `CustomMsg`,
+            # e quem assinava PointCloud2 não recebia NADA. Um tópico é (nome,
+            # tipo) — igualar só o nome escondeu a diferença por três semanas.
+            # Ver decisão 017.
             '/livox/lidar/points@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked',
         ],
         remappings=[('/tf_odom', '/tf'),
-                    ('/livox/lidar/points', '/livox/lidar')],
+                    ('/livox/lidar/points', '/livox/pontos')],
         parameters=[{'use_sim_time': True}],
         output='both',
     )

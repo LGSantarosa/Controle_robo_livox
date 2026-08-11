@@ -38,6 +38,15 @@ from tf2_ros import Buffer, TransformListener
 
 # Altura do Livox medida com trena em 05-08. O URDF tem 0,42; se a TF discordar,
 # a nuvem inteira sai deslocada em altura e o filtro de chão passa a mentir.
+# 🔴 O TÓPICO DA PERCEPÇÃO NÃO É O DO DRIVER (decisão 017, 11-08).
+#
+# Em 10-08 este script disse "nuvem NADA chegou" com o `ros2 topic hz` medindo
+# 9,96 Hz no mesmo instante, e o veredito estava CERTO: `/livox/lidar` sai do
+# driver como `livox_ros_driver2/msg/CustomMsg`, e quem assina `PointCloud2`
+# não recebe nada. Quem converte é o `nuvem_pontos`; quem consome, aqui e nos
+# costmaps, lê daqui.
+NUVEM = '/livox/pontos'
+
 LIVOX_Z = 0.42
 TOLERANCIA_Z = 0.02
 
@@ -114,7 +123,7 @@ class Preflight(Node):
         self.nuvens = []
         self.pontos = 0
         self.mapa = None
-        self.create_subscription(PointCloud2, '/livox/lidar', self._nuvem,
+        self.create_subscription(PointCloud2, NUVEM, self._nuvem,
                                  qos_profile_sensor_data)
         self.create_subscription(
             OccupancyGrid, '/map', self._mapa,
@@ -182,13 +191,13 @@ def main():
 
     # ------------------------------------------------------ 2. a nuvem
     if not no.nuvens:
-        c.diz('nuvem em /livox/lidar', False, 'NADA chegou',
+        c.diz(f'nuvem em {NUVEM}', False, 'NADA chegou',
               'driver do Livox caído; power-cycle no lidar já resolveu antes')
     else:
         dt = no.nuvens[-1][0] - no.nuvens[0][0]
         hz = (len(no.nuvens) - 1) / dt if dt > 0 else 0
         frame = no.nuvens[-1][2]
-        c.diz('nuvem em /livox/lidar', hz > 5,
+        c.diz(f'nuvem em {NUVEM}', hz > 5,
               f'{hz:.1f} Hz, {no.pontos} pontos/quadro, frame `{frame}`',
               'abaixo de 5 Hz o costmap vence o expected_update_rate (0,5 s) '
               'e PARA de atualizar')

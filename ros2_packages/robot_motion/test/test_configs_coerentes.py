@@ -184,6 +184,16 @@ def test_o_poligono_cobre_a_distancia_de_parada_MEDIDA():
         f'o polígono tem de chegar a {frente_min:.3f} m à frente'
 
 
+# 🔴 O TÓPICO QUE A PERCEPÇÃO CONSOME, e ele NÃO é o do driver (decisão 017).
+#
+# Medido no robô em 10-08: `/livox/lidar` sai do driver como
+# `livox_ros_driver2/msg/CustomMsg`, e todo mundo que assinava `PointCloud2`
+# recebia NADA — os dois costmaps com 0 células letais e o reflexo mudo, com o
+# sensor a 9,96 Hz. No simulador o `gpu_lidar` publicava PointCloud2 no MESMO
+# nome, então a decisão 014 passou lá e nunca foi exercitada.
+NUVEM = '/livox/pontos'
+
+
 def test_o_reflexo_ignora_o_chao_e_o_que_passa_por_cima():
     """Abaixo de ~0,05 m o próprio chão vira obstáculo (a nuvem erra até
     3,8 cm em rasância, medido 05-08) e o robô se trancaria sozinho. Acima de
@@ -191,7 +201,7 @@ def test_o_reflexo_ignora_o_chao_e_o_que_passa_por_cima():
     fonte = _cm()[_cm()['observation_sources'][0]]
     assert fonte['min_height'] >= 0.08
     assert fonte['max_height'] <= 0.60
-    assert fonte['topic'] == '/livox/lidar'
+    assert fonte['topic'] == NUVEM
 
 
 def test_o_reflexo_fala_stamped_como_o_resto_da_cadeia():
@@ -226,7 +236,7 @@ def test_os_DOIS_costmaps_veem_a_nuvem(qual):
 
 
 def test_o_costmap_e_o_reflexo_recortam_a_MESMA_nuvem():
-    """Dois consumidores do `/livox/lidar`, e eles não podem discordar sobre o
+    """Dois consumidores da nuvem, e eles não podem discordar sobre o
     que é obstáculo.
 
     Se o costmap marcasse abaixo do reflexo, o planner desviaria de coisa que o
@@ -430,3 +440,51 @@ def test_o_default_da_launch_e_o_default_do_no():
         assert f"default_value='{par[chave]}'" in texto, \
             f'{chave}: launch e nó divergiram ({par[chave]} não está na launch)'
     assert f"default_value='{par['curv_medido_em']}'" in texto
+
+
+# ------------------------------------- o contrato da nuvem entre os DOIS mundos
+#
+# Este bloco existe porque o defeito de 10-08 passou por três semanas e nenhuma
+# das dezenas de testes de config o pegou: eles conferiam que os consumidores
+# concordavam ENTRE SI, e concordavam — todos liam `/livox/lidar`. O que
+# faltava era conferir que alguém PUBLICA aquilo no formato que eles leem.
+
+def _sim_launch():
+    return open(os.path.join(RAIZ, 'ros2_packages', 'robot_base', 'launch',
+                             'sim.launch.py')).read()
+
+
+def _localizacao_launch():
+    return open(os.path.join(RAIZ, 'ros2_packages', 'robot_base', 'launch',
+                             'localizacao.launch.py')).read()
+
+
+def test_o_simulador_publica_no_topico_que_a_percepcao_LE():
+    """No Gazebo quem entrega a nuvem é a ponte, e o destino do remap tem de
+    ser o tópico dos consumidores. Antes de 10-08 ele apontava para
+    `/livox/lidar` "para ser igual ao robô" — e no robô aquele nome carrega
+    CustomMsg, então a igualdade era só de nome."""
+    texto = _sim_launch()
+    assert f"'{NUVEM}')" in texto, (
+        f'a ponte do Gazebo não remapeia para {NUVEM} — no simulador a '
+        f'percepção fica sem nuvem')
+
+
+def test_o_robo_sobe_a_ponte_que_converte_a_nuvem():
+    """No robô quem entrega `PointCloud2` é o `nuvem_pontos`. Sem ele no
+    launch, o sintoma é o de 10-08: sensor a 9,96 Hz, costmaps com 0 células
+    letais e reflexo mudo — tudo com cara de config errada de altura."""
+    assert 'nuvem_pontos' in _localizacao_launch(), (
+        'a localização do robô não sobe o conversor: a percepção fica cega')
+
+
+def test_ninguem_consome_o_topico_CRU_do_driver():
+    """`/livox/lidar` é do FAST-LIO (CustomMsg no robô, PointCloud2 no
+    simulador) — tipo que depende do mundo não serve de contrato. Consumidor
+    que voltar a apontar para lá volta a receber nada no robô."""
+    import yaml
+    d = yaml.safe_load(open(PRODUCAO))
+    for qual in ('local_costmap', 'global_costmap'):
+        fonte = d[qual][qual]['ros__parameters']['obstacle_layer']['livox']
+        assert fonte['topic'] == NUVEM, qual
+    assert _cm()[_cm()['observation_sources'][0]]['topic'] == NUVEM

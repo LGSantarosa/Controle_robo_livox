@@ -92,7 +92,7 @@ collision_monitor:
     observation_sources: ["livox"]
     livox:
       type: "pointcloud"
-      topic: "/livox/lidar"
+      topic: "/livox/pontos"
       # Mesma faixa de altura do costmap, e pelo mesmo motivo medido: abaixo
       # de ~0,05 m o próprio chão vira obstáculo (em 05-08 a nuvem mostrou
       # retornos errando até 3,8 cm em incidência rasante). 0,10 dá 2,6x de
