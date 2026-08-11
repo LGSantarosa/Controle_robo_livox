@@ -73,7 +73,9 @@ class MalhaDeReta:
     def __init__(self, curv_frente=-0.817, curv_re=-0.098, kp=0.25, ki=0.12,
                  wz_max=0.6, int_max=0.6, limiar_curva=0.05,
                  segura_rumo=True, preditor=False, preditor_atraso=0.94,
-                 preditor_ganho=1.0, preditor_max=0.35):
+                 preditor_ganho=1.0, preditor_max=0.35,
+                 adapta=False, adapta_t=8.0, adapta_desvio_max=0.5,
+                 adapta_v_min=0.05):
         if kp < 0.0 or ki < 0.0:
             raise ValueError('kp e ki não podem ser negativos')
         # `segura_rumo=False` deixa só o FEEDFORWARD: cancela o arco do corpo
@@ -94,6 +96,71 @@ class MalhaDeReta:
         self.rumo_ref = None      # capturado ao entrar em reta
         self.integral = 0.0       # [rad·s]
         self.sentido = 0          # +1 frente, -1 ré, 0 parado
+
+        # --- estimador do ff (opt-in, decisão 013 caminho 2) ---
+        #
+        # 🔴 O PROBLEMA QUE ELE RESOLVE, medido no robô em 10-08: a curvatura
+        # crua da planta DERIVA DENTRO DA SESSÃO. Seis retas idênticas, mesmo
+        # ponto, mesmo rumo, mesmo chão:
+        #
+        #     +0,0 min 0,8395   +1,5 min 0,9358   +4,8 min 0,9313
+        #     +0,9 min 0,8154   +2,5 min 0,9175   +5,4 min 0,9687
+        #                  +0,022 1/m por minuto (r=0,80), +19% em 5,4 min
+        #
+        # Os 13,5% ENTRE DIAS que motivaram a decisão 013 acontecem em cinco
+        # minutos. Um `curv_frente` medido no começo da bancada envelhece
+        # dentro da própria bancada — o caminho 3 é piso, não solução.
+        #
+        # E deixar o integrador cobrir a diferença NÃO funciona, embora a conta
+        # dissesse que caberia (ki·int_max = 0,072 rad/s de autoridade contra
+        # 0,038 rad/s necessários). Medido no mesmo dia, corridas de 2,5 m:
+        #
+        #     ff VELHO −0,8275   −13,5° → +22,3°   envoltória CRESCE 1,65x
+        #     ff HOJE  −0,9383     0,0° → +13,0°   sobrecorrige, não assenta
+        #
+        # A razão é de ESCALA DE TEMPO: o integrador é o único que enxerga o
+        # erro, mas vive dentro de um laço com 0,94 s de tempo morto (por isso
+        # os ganhos caíram 4,1x em 06-08) e é ZERADO a cada parada pelo
+        # `_descarta`. Cada corrida recomeça do zero e passa os 10 s inteiros
+        # reaprendendo o que a anterior já sabia.
+        #
+        # 🟢 A SAÍDA: separar as duas escalas. O integrador continua com o
+        # rápido (rad·s de rumo, descartado na parada); o que ele segura em
+        # REGIME é drenado devagar para a `curv_*`, que é uma curvatura [1/m] e
+        # SOBREVIVE à parada. A corrida seguinte já começa corrigida.
+        #
+        #     transf = integral · dt / adapta_t          [rad·s]
+        #     Δcurv  = −(ki · transf) / v_real           [1/m]
+        #     integral −= transf
+        #
+        # ⚠️ A transferência é SEM SOLAVANCO por construção, e isso não é
+        # detalhe: no instante em que ela acontece o `wz` de saída não muda.
+        # O feedforward cresce de `−Δcurv·v = ki·transf` e o termo integral
+        # encolhe de exatamente `ki·transf`. Sem isso, cada transferência seria
+        # um degrau no comando — e degrau num laço com 0,94 s de tempo morto é
+        # como se fabrica a oscilação que este estimador veio matar.
+        #
+        # ⚠️ `adapta_t` PRECISA ser lento perto do laço (8 s contra ~9,6 s de
+        # assentamento é pouca margem; é o valor de partida, e quem arbitra é o
+        # robô). Dois integradores em série com escalas parecidas oscilam
+        # juntos: a adaptação passa a perseguir o transiente em vez do viés.
+        #
+        # ⚠️ DESLIGADO POR PADRÃO, como o preditor entrou. A condição de
+        # controle da próxima bancada é o comportamento de hoje; ligar por
+        # `-p adapta:=true`. Régua de aceitação: corrida de 2,5 m (~10 s), NÃO
+        # de 1,2 m — em 10-08 a mesma corrida mediu −0,0162 (passa) cortada em
+        # 1,2 m e +0,0882 (reprova) medida inteira, porque o corte curto cai no
+        # cruzamento de zero do S.
+        self.adapta = adapta
+        self.adapta_t = adapta_t
+        self.adapta_desvio_max = adapta_desvio_max
+        self.adapta_v_min = adapta_v_min
+        # A semente é o que o launch passou (medido ou herdado). O grampo é
+        # RELATIVO a ela: o estimador corrige deriva de planta, não inventa um
+        # robô novo. Sem isso, um `/Odometry` travado ou uma referência de rumo
+        # ruim empurrariam a curvatura para o grampo absoluto e ela ficaria lá.
+        self.curv_frente_semente = curv_frente
+        self.curv_re_semente = curv_re
 
         # --- preditor de Smith (opcional, DESLIGADO por padrão) ---
         self.preditor = preditor
@@ -156,7 +223,43 @@ class MalhaDeReta:
         correcao = self.kp * e + self.ki * self.integral
         self._registra_em_transito(correcao, dt)
         wz = ff + correcao
+        # A drenagem entra DEPOIS de o comando deste ciclo estar formado: ela
+        # muda o `curv_*` do ciclo seguinte, nunca este. É o que mantém a
+        # transferência sem solavanco também no tempo.
+        if dt > 0.0:
+            self._drena_para_o_ff(sentido, v_ff, dt)
         return max(-self.wz_max, min(self.wz_max, wz))
+
+    def _drena_para_o_ff(self, sentido, v_ff, dt):
+        """Passa devagar, do integrador para a curvatura, o que é viés de planta.
+
+        O integrador é rápido e some na parada; a curvatura é lenta e fica.
+        Só o que ele segura em REGIME é viés — por isso a constante de tempo.
+
+        Não adapta parado nem devagar: `Δcurv` divide por `v_ff`, e velocidade
+        perto de zero transformaria qualquer resíduo do integrador em curvatura
+        enorme. É a mesma razão pela qual `passo` descarta com `v_cmd` nulo.
+        """
+        if not self.adapta or self.ki <= 0.0 or v_ff < self.adapta_v_min:
+            return
+        transf = self.integral * dt / self.adapta_t          # [rad·s]
+        dcurv = -(self.ki * transf) / v_ff                   # [1/m]
+        atual = self.curv_frente if sentido > 0 else self.curv_re
+        semente = (self.curv_frente_semente if sentido > 0
+                   else self.curv_re_semente)
+        novo = max(semente - self.adapta_desvio_max,
+                   min(semente + self.adapta_desvio_max, atual + dcurv))
+        aplicado = novo - atual
+        if aplicado == 0.0:
+            return
+        # Tira do integrador EXATAMENTE o que virou feedforward — inclusive
+        # quando o grampo cortou a transferência pela metade. Devolver mais do
+        # que entrou deixaria o comando com um degrau para baixo.
+        self.integral -= -(aplicado * v_ff) / self.ki
+        if sentido > 0:
+            self.curv_frente = novo
+        else:
+            self.curv_re = novo
 
     # ------------------------------------------------- preditor de Smith
     #

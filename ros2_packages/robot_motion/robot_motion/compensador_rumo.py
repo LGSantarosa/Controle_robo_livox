@@ -162,6 +162,26 @@ class CompensadorRumo(Node):
             # Subestimar degrada em direção ao caso sem preditor — lado seguro.
             ('preditor_ganho', 1.0),
             ('preditor_max', 0.35),      # [rad] grampo da previsão (~20°)
+
+            # --- estimador do ff, OPT-IN (decisão 013 caminho 2) ---
+            # O racional inteiro, com os números de 10-08, está em
+            # `lei_de_reta.py`, ao lado dos atributos `adapta_*`. Resumo:
+            # a curvatura crua deriva +19% em 5,4 minutos, então o `curv_frente`
+            # medido no começo da sessão envelhece dentro dela; e o integrador
+            # não cobre a diferença porque é rápido demais (tempo morto de
+            # 0,94 s) e some a cada parada. O estimador drena para a curvatura,
+            # devagar e sem solavanco, o que o integrador segura em regime.
+            #
+            #   ros2 run robot_motion compensador_rumo --ros-args \
+            #       -p adapta:=true -p curv_frente:=<a média do dia>
+            #
+            # ⚠️ Régua de aceitação: 2,5 m (~10 s). Corrida de 1,2 m NÃO julga
+            # rumo — em 10-08 a mesma corrida deu −0,0162 (passa) cortada em
+            # 1,2 m e +0,0882 (reprova) medida inteira.
+            ('adapta', False),
+            ('adapta_t', 8.0),           # [s] constante de tempo da drenagem
+            ('adapta_desvio_max', 0.5),  # [1/m] quanto pode fugir da semente
+            ('adapta_v_min', 0.05),      # [m/s] abaixo disso não estima
         ])
         par = {x.name: x.value for x in p}
 
@@ -172,7 +192,10 @@ class CompensadorRumo(Node):
             segura_rumo=par['segura_rumo'], preditor=par['preditor'],
             preditor_atraso=par['preditor_atraso'],
             preditor_ganho=par['preditor_ganho'],
-            preditor_max=par['preditor_max'])
+            preditor_max=par['preditor_max'],
+            adapta=par['adapta'], adapta_t=par['adapta_t'],
+            adapta_desvio_max=par['adapta_desvio_max'],
+            adapta_v_min=par['adapta_v_min'])
         self.validade_pose = par['validade_pose']
 
         qos = QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE)
@@ -211,6 +234,15 @@ class CompensadorRumo(Node):
                 f"ff MEDIDO em {par['curv_medido_em']}: curv_frente "
                 f"{par['curv_frente']:+.4f} 1/m. Se esta data não for a de "
                 f"hoje, o valor é de outra sessão e vale como herdado.")
+        if par['adapta']:
+            self.get_logger().warn(
+                f"ESTIMADOR DO ff LIGADO (decisão 013, caminho 2): a curvatura "
+                f"parte de {par['curv_frente']:+.4f} e passa a ser aprendida, "
+                f"com constante de tempo {par['adapta_t']:.1f} s e desvio "
+                f"máximo {par['adapta_desvio_max']:.2f} 1/m da semente. "
+                f"Acompanhe por `ros2 topic echo /rosout --field msg | grep "
+                f"'^curv_hat'` — se ele encostar no grampo, a semente está "
+                f"errada ou o rumo de referência é ruim, não é deriva.")
         if par['preditor']:
             self.get_logger().warn(
                 f"PREDITOR DE SMITH LIGADO: descontando {par['preditor_atraso']:.2f} s "
@@ -257,8 +289,17 @@ class CompensadorRumo(Node):
 
         dt = 0.0 if self.t_passo is None else t - self.t_passo
         self.t_passo = t
-        self.publica(msg, v,
-                     self.malha.passo(v, wz, self.yaw, dt, self.v_real))
+        saida = self.malha.passo(v, wz, self.yaw, dt, self.v_real)
+        # O estimador tem de ser LEGÍVEL na bancada: o dono só roda, e a
+        # diferença entre "aprendeu" e "encostou no grampo" não aparece no
+        # comportamento — o robô anda torto dos dois jeitos.
+        if self.malha.adapta and abs(v) > 1e-9:
+            self.get_logger().warn(
+                f'curv_hat {self.malha.curv_frente:+.4f} 1/m (frente, semente '
+                f'{self.malha.curv_frente_semente:+.4f}) · integrador '
+                f'{self.malha.integral:+.3f} rad·s',
+                throttle_duration_sec=2.0)
+        self.publica(msg, v, saida)
 
     def publica(self, msg, v, wz):
         fora = TwistStamped()

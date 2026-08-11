@@ -497,3 +497,192 @@ def test_a_duvida_cai_para_o_lado_que_AVISA(texto):
     avisar custa uma linha de log; errar para o outro deixa a bancada medir um
     robô que não existe."""
     assert herdado_ff(texto)
+
+
+# --------------------------------------------------------------------------
+# O ESTIMADOR DO ff (decisão 013, caminho 2) — 10-08
+#
+# O que o robô disse em 10-08 e motivou este bloco:
+#   · a curvatura crua DERIVA +19% em 5,4 minutos (seis retas idênticas);
+#   · com ff velho a envoltória CRESCE 1,65x em corrida de 2,5 m;
+#   · com o ff do dia ela cai 2,7x e ainda assim não assenta em 10 s.
+#
+# ⚠️ O QUE ESTES TESTES NÃO PROVAM: que o robô vai andar reto. A planta de
+# brinquedo reproduz a PRIMEIRA excursão de 10-08 quase exata (−13,6° contra
+# −13,5° medidos) e erra o sobrepasso por 3,7x (+6,0° contra +22,3°) — ela é
+# otimista justamente onde este estimador precisa ser julgado. Aqui se prova o
+# MECANISMO: que ele converge, que é lento, que não dá solavanco, que não
+# inventa robô novo e que sobrevive à parada. Quem arbitra o valor de
+# `adapta_t` é a bancada, com corridas de 2,5 m.
+
+
+def _roda_com_v_real(malha, curv_planta, dur=90.0, dt=0.02, atraso=47,
+                     v=0.26, deriva=0.0):
+    """Como `_roda_planta`, mas com três diferenças que importam:
+
+    1. `v_real` é informado à lei — é o que o nó faz, e o feedforward escala
+       com a velocidade MEDIDA (05-08: pedir 0,50 e andar 0,30 dava ff 67%
+       grande demais);
+    2. a planta pode DERIVAR (`deriva` em 1/m por minuto), que é a grandeza
+       medida em 10-08: +0,022;
+    3. ⚠️ **o ARCO sofre o mesmo atraso que o `wz`.** O `_roda_planta` aplica o
+       arco desde o instante zero enquanto o comando chega 0,94 s depois — e
+       isso fabrica ~13° de excursão (0,94 s × 0,244 rad/s) em TODA corrida,
+       que nenhum feedforward pode evitar. É a ressalva que o `lei_de_reta.py`
+       registra no bloco do preditor ("no robô os dois chegam juntos"), e o
+       robô confirmou em 10-08: a corrida com o ff fresco começou **sem
+       mergulho nenhum**, coisa impossível se o arco agisse antes do comando.
+       Robô parado não arca, porque não anda.
+
+    Devolve o traço (t, yaw em graus).
+    """
+    yaw, t, traco = 0.0, 0.0, []
+    fila_wz, fila_v = [0.0] * atraso, [0.0] * atraso
+    while t < dur:
+        fila_wz.append(malha.passo(0.25, 0.0, yaw, dt, v))
+        fila_v.append(v)
+        wz_agindo, v_agindo = fila_wz.pop(0), fila_v.pop(0)
+        planta = curv_planta + deriva * (t / 60.0)
+        yaw = norm_ang(yaw + (wz_agindo + planta * v_agindo) * dt)
+        traco.append((t, math.degrees(yaw)))
+        t += dt
+    return traco
+
+
+def test_o_estimador_aprende_a_curvatura_que_o_ff_nao_sabia():
+    """O caso de 10-08: sobe com o ff do começo da sessão (−0,8275) contra uma
+    planta que já está em −0,94. Sem estimador esse déficit fica com o
+    integrador para sempre; com ele, vira feedforward."""
+    m = MalhaDeReta(curv_frente=-0.8275, adapta=True)
+    _roda_com_v_real(m, curv_planta=-0.94)
+    assert m.curv_frente == pytest.approx(-0.94, abs=0.02), (
+        f'aprendeu {m.curv_frente:.4f}, planta −0,94')
+    assert abs(m.integral) < 0.05, (
+        f'o integrador ficou com {m.integral:.3f} rad·s — a drenagem não '
+        f'chegou ao fim, ou está devolvendo mais do que transferiu')
+
+
+def test_o_estimador_persegue_a_planta_que_DERIVA():
+    """A deriva medida em 10-08 é +0,022 1/m por minuto. Em 3 minutos são
+    0,066 1/m — mais que o critério da 011 inteiro. O estimador tem de seguir
+    isso, que é a coisa que uma medida por sessão não faz."""
+    m = MalhaDeReta(curv_frente=-0.85, adapta=True)
+    _roda_com_v_real(m, curv_planta=-0.85, dur=180.0, deriva=-0.022)
+    esperado = -0.85 - 0.022 * 3.0
+    assert m.curv_frente == pytest.approx(esperado, abs=0.02), (
+        f'a planta terminou em {esperado:.4f} e ele ficou em {m.curv_frente:.4f}')
+
+
+def test_a_transferencia_nao_da_solavanco_no_comando():
+    """No instante da drenagem o `wz` de saída NÃO pode mudar: o feedforward
+    cresce exatamente o que o termo integral encolhe. Degrau de comando num
+    laço com 0,94 s de tempo morto é como se fabrica a oscilação que este
+    estimador veio matar."""
+    m = MalhaDeReta(curv_frente=-0.8275, adapta=True)
+    m.integral = 0.45
+    v = 0.26
+    antes = -m.curv_frente * v + m.ki * m.integral
+    m._drena_para_o_ff(1, v, dt=0.1)
+    depois = -m.curv_frente * v + m.ki * m.integral
+    assert depois == pytest.approx(antes, abs=1e-12), (
+        f'o comando saltou {depois - antes:+.6f} rad/s na transferência')
+    assert m.curv_frente < -0.8275, 'não transferiu nada'
+
+
+def test_o_estimador_nao_trabalha_parado_nem_devagar():
+    """`Δcurv` divide por `v_real`: perto de zero, qualquer resíduo do
+    integrador viraria curvatura enorme."""
+    m = MalhaDeReta(curv_frente=-0.8275, adapta=True)
+    m.integral = 0.45
+    m._drena_para_o_ff(1, v_ff=0.01, dt=0.1)
+    assert m.curv_frente == -0.8275, 'estimou com o robô praticamente parado'
+    assert m.integral == 0.45
+
+
+def test_o_grampo_prende_o_estimador_perto_da_semente():
+    """Ele corrige DERIVA DE PLANTA, não inventa um robô novo. Uma referência
+    de rumo ruim ou um `/Odometry` travado empurram o integrador para um lado
+    só; sem grampo a curvatura iria atrás e ficaria lá."""
+    m = MalhaDeReta(curv_frente=-0.85, adapta=True, adapta_desvio_max=0.1)
+    for _ in range(5000):
+        m.integral = 0.6            # integrador colado no teto, sempre
+        m._drena_para_o_ff(1, v_ff=0.26, dt=0.02)
+    assert m.curv_frente == pytest.approx(-0.95, abs=1e-9), (
+        f'passou do grampo: {m.curv_frente:.4f}')
+
+
+def test_o_grampo_nao_devolve_ao_integrador_o_que_nao_transferiu():
+    """Quando o grampo corta a transferência pela metade, só a metade que virou
+    feedforward pode sair do integrador. Devolver o valor cheio deixaria o
+    comando com um degrau para baixo — o solavanco pela porta dos fundos."""
+    m = MalhaDeReta(curv_frente=-0.85, adapta=True, adapta_desvio_max=0.1)
+    m.curv_frente = -0.949        # a um milésimo do grampo (semente −0,85)
+    m.integral = 0.6
+    v = 0.26
+    antes = -m.curv_frente * v + m.ki * m.integral
+    m._drena_para_o_ff(1, v, dt=1.0)          # pediria muito mais que 0,001
+    depois = -m.curv_frente * v + m.ki * m.integral
+    assert m.curv_frente == pytest.approx(-0.95, abs=1e-9), 'furou o grampo'
+    assert depois == pytest.approx(antes, abs=1e-12), (
+        f'o grampo produziu um degrau de {depois - antes:+.6f} rad/s')
+
+
+def test_a_parada_apaga_o_integrador_mas_NAO_o_aprendido():
+    """É a razão de existir do estimador. O integrador é rumo acumulado e some
+    na parada (referência velha é pior que nenhuma); a curvatura é propriedade
+    do robô e fica. Sem isso, cada corrida recomeça reaprendendo — que é
+    exatamente o mergulho seguido de sobrepasso medido em 10-08."""
+    m = MalhaDeReta(curv_frente=-0.8275, adapta=True)
+    _roda_com_v_real(m, curv_planta=-0.94, dur=60.0)
+    aprendido = m.curv_frente
+    assert aprendido < -0.90, 'não aprendeu nada para haver o que preservar'
+    m.passo(0.0, 0.0, 0.0, 0.02, 0.0)         # parou
+    assert m.integral == 0.0 and m.rumo_ref is None
+    assert m.curv_frente == aprendido, 'a parada apagou o que ele aprendeu'
+
+
+def test_a_corrida_seguinte_ja_comeca_corrigida():
+    """O ganho prático: a corrida seguinte não repete o aprendizado.
+
+    ⚠️ A janela COMEÇA em 1,5 s, e a razão é um defeito conhecido da planta de
+    brinquedo: ela aplica o arco desde o instante zero enquanto o `wz` chega
+    com 0,94 s de atraso, então TODA corrida nasce com ~13° de excursão
+    (0,94 s × 0,244 rad/s) que nenhum feedforward pode evitar. No robô parado
+    não há arco, porque não há movimento — a corrida de 10-08 com o ff fresco
+    começou sem mergulho nenhum. Medir a partir de 1,5 s tira o artefato e
+    deixa o que este teste quer julgar: o que a malha faz DEPOIS.
+    """
+    m = MalhaDeReta(curv_frente=-0.8275, adapta=True)
+    primeira = _roda_com_v_real(m, curv_planta=-0.94, dur=30.0)
+    m.passo(0.0, 0.0, 0.0, 0.02, 0.0)         # parada entre corridas
+    segunda = _roda_com_v_real(m, curv_planta=-0.94, dur=30.0)
+    janela = lambda tr: max(abs(y) for t, y in tr if 1.5 <= t <= 10.0)
+    p1, p2 = janela(primeira), janela(segunda)
+    assert p2 < 0.5 * p1, (
+        f'a segunda corrida excursionou {p2:.1f}° contra {p1:.1f}° da '
+        f'primeira — o aprendido não está valendo na largada')
+
+
+def test_o_estimador_vem_DESLIGADO_de_fabrica():
+    """Entra como o preditor entrou: opt-in. A condição de controle da próxima
+    bancada é o comportamento de hoje, senão não há com o que comparar."""
+    assert MalhaDeReta().adapta is False
+    assert _defaults_do_no()['adapta'] is False
+
+
+def test_o_no_e_a_lei_concordam_nos_parametros_do_estimador():
+    """Default duplicado é default que deriva — o `placa_simulada` já pagou."""
+    par = _defaults_do_no()
+    m = MalhaDeReta()
+    assert m.adapta_t == par['adapta_t']
+    assert m.adapta_desvio_max == par['adapta_desvio_max']
+    assert m.adapta_v_min == par['adapta_v_min']
+
+
+def test_a_drenagem_e_mais_lenta_que_o_laco():
+    """Dois integradores em série com escalas parecidas oscilam juntos. O laço
+    assenta em ~9,6 s (planta de brinquedo, ganhos de 06-08); a drenagem tem de
+    ser da mesma ordem ou mais lenta, nunca mais rápida."""
+    assert MalhaDeReta().adapta_t >= 8.0, (
+        'drenagem rápida demais: ela passa a perseguir o transiente do laço '
+        'em vez do viés de planta')
