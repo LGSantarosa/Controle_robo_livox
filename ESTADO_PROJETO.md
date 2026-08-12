@@ -151,6 +151,24 @@ ele é geometria, não sintonia de rumo. Hipóteses na ordem em que eu atacaria:
 cega e diria "livre" onde o robô raspa), e o `corrida_nav.py` já grava quando o
 reflexo agiu. Corrida que dispara o reflexo contra obstáculo mapeado reprova.
 
+### 🔴 O QUE VAI MORDER NO ROBÔ — planejar no `meu_mapa` é MARGINAL
+
+Medido em 12-08 e **quase perdido**: eu derrubei este aviso do handoff ao
+reescrevê-lo em 12-08 (4ª leva), e ele voltou porque é o que decide a sessão
+no robô.
+
+```
+mediana de folga das células livres do meu_mapa   0,35 m
+robot_radius configurado                          0,32 m
+inflation_radius 0,50  ->  0 de 8 pontos de partida planejam
+inflation_radius 0,20  ->  4 de 8
+```
+
+A `inflation_radius: 0,50` da produção foi escolhida em 05-08 **para a porta de
+0,90 m da pista simulada**, e ela é o que centra o robô no vão. No corredor
+real ela **proíbe planejar**. Decisão em aberto, e o roteiro
+`docs/ROTEIRO_NAV2_NO_ROBO.md` a trata como passo com número.
+
 ### ⚠️ Duas dívidas abertas nesta sessão
 
 - **Ele entra torto na porta**: 0,16 m fora do centro de um vão de 0,90 m com
