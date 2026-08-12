@@ -6009,3 +6009,51 @@ do seguidor (o ângulo que ele pede contra o desvio lateral, ponto a ponto).
 🔧 **Dívida nova**: `corrida_nav.py` não encerra ao entrar no raio de chegada —
 gastou 51 s de robô parado em corrida de 8 s, e isso derruba a fração de
 `raw_v` do critério para 77,6% quando medida na fase certa dá 92–94%.
+
+## 🎉 2026-08-12 (11ª leva) — O ROBÔ VAI RETO COM O NAV2, e o ganho era o dono do S
+
+`a_dec` do `heading_controller` de **0,3 → 0,1 rad/s²**. Mesma pilha, mesmo
+alvo, `bt_navigator` planejando e replanejando 8 vezes. Reação do dono:
+*"RETO RETO RETO, LINDO LINDO, PERFEITO"*.
+
+```
+                       referência   yaw     |y| máx   chegada
+com a peça, a_dec 0,3     43,8°    62,8°    0,168 m   0,054 m
+a_dec 0,3, ff de ontem    30,6°    32,9°    0,106 m   0,087 m
+olhar 0,60 (piorou)       38,1°    42,6°    0,179 m   0,134 m
+a_dec 0,1                 14,7°    10,0°    0,067 m   0,037 m
+```
+
+**Previsão: yaw abaixo de 30°. Entregou 10,0°** — e a melhor chegada do dia.
+
+🔵 **O achado que explica o resto: a REFERÊNCIA também caiu (30,6° → 14,7°).**
+Baixar o ganho não fez só o robô obedecer melhor; fez a ORDEM ficar mansa. É a
+prova do ciclo fechado que a 10ª leva tinha deduzido no papel:
+
+```
+desvio lateral -> rumo_para(robô, ponto a 0,30 m) pede ângulo grande
+              -> lei responde com wz alto (a placa entrega ainda mais)
+              -> passa da linha -> desvio lateral do outro lado
+```
+
+O seguidor **aponta para o ponto** (`rumo_para`, sem termo de erro lateral),
+então quem controla a amplitude da ordem é o quanto o robô sai da linha — e
+quem faz ele sair da linha era o próprio ganho. **Quebrar o ciclo no ganho
+resolve as duas pontas.** Por isso mexer no `lookahead` não resolvia: ele muda
+o braço da alavanca, e o ciclo se reajusta em torno do novo braço (medido:
+`atan(0,10/0,30) = 18°` e `atan(0,18/0,60) = 17°`).
+
+⚠️ **Isto é a terceira vez que o mesmo remédio funciona neste projeto**: 06-08
+baixou `kp`/`ki` 4,1× e matou o S das retas; 023 tirou o pivô do caminho porque
+a placa não entrega módulo; agora `a_dec` 3×. **Contra 0,94 s de tempo morto, a
+resposta tem sido sempre baixar ganho, e nunca melhorar o modelo.** Vale para o
+artigo.
+
+⚠️ **n=1**, e a régua honesta continua sendo faixa contra faixa. O que sustenta
+a conclusão aqui é o TAMANHO do efeito (3,3× no yaw, com a referência caindo
+junto) e o fato de a previsão ter sido escrita antes.
+
+⏳ **O que falta antes de chamar de resolvido**: repetir 2 ou 3 vezes para ter
+faixa; e ver como ele se comporta perto de parede (passo 7), que é o teste que
+o dono quer de verdade. O `a_dec: 0.1` fica no `movimentacao.yaml`, com o
+racional escrito no próprio arquivo.
