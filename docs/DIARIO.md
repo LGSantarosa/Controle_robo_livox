@@ -6057,3 +6057,58 @@ junto) e o fato de a previsão ter sido escrita antes.
 faixa; e ver como ele se comporta perto de parede (passo 7), que é o teste que
 o dono quer de verdade. O `a_dec: 0.1` fica no `movimentacao.yaml`, com o
 racional escrito no próprio arquivo.
+
+## 🧹 2026-08-12 (12ª leva) — A faixa confirma o ganho, e o fantasma do costmap é o DONO
+
+Repetição do `a_dec: 0.1` para ter faixa, e o susto que virou prova.
+
+```
+a_dec 0,3 controle              ref  30,6°   yaw  32,9°   |y| 0,106 m
+a_dec 0,1  corrida a            ref  14,7°   yaw  10,0°   |y| 0,067 m
+a_dec 0,1  corrida b            ref 154,0°   yaw 147,3°   |y| 0,640 m  🔴
+a_dec 0,1  corrida c (limpo)    ref  22,4°   yaw   6,5°   |y| 0,119 m
+```
+
+🟢 **A faixa fecha**: 6,5° e 10,0° contra 32,9° do controle. 3–5×, com a
+previsão escrita antes. Deixa de ser n=1.
+
+🔴 **A corrida `b` saiu virando 48° para a ESQUERDA logo no início**, com o alvo
+a 2,04 m em linha reta à frente. O dono viu e perguntou por que o robô "se
+perdeu". Ele não se perdeu — **obedeceu a um plano torto**, e a causa foi
+provada sem mover o robô, pedindo o mesmo plano antes e depois de limpar:
+
+```
+mesmo ponto, mesmo alvo
+ANTES de limpar    2,27 m de caminho para 2,00 m de reta    1,13x
+DEPOIS de limpar   2,00 / 2,00                              1,00x
+```
+
+Não houve engasgo de pose (nenhum salto acima de 0,15 s no CSV): não era o LIO.
+
+➡️ **E o fantasma é o PRÓPRIO DONO.** Hipótese dele, e ela explica tudo: o
+Mid-360 enxerga 360°, então **enquanto ele pega o robô na mão para devolver ao
+ponto de partida, o corpo dele é marcado** — e no costmap global a marcação é
+**permanente** (decisão 015: sem janela rolante, sem raytrace, com `map→odom`
+fixa). Ele se afasta e senta; a silhueta fica. O plano da corrida seguinte
+desvia de uma pessoa que não está mais lá, à esquerda do ponto de partida —
+exatamente para onde a `b` foi. Casa também com o `plano VAZIO` para 4 m.
+
+✅ **REGRA NOVA DE PROTOCOLO, e ela entra no roteiro**: **limpar o costmap
+global depois de recolocar o robô e antes de cada corrida.**
+
+```bash
+ros2 service call /global_costmap/clear_entirely_global_costmap \
+    nav2_msgs/srv/ClearEntireCostmap
+```
+
+⚠️ **Isto é remendo de bancada, não conserto.** Enquanto a marcação global for
+permanente, qualquer pessoa que passe perto do robô vira obstáculo eterno — e
+em operação de verdade ninguém vai limpar costmap na mão. O conserto de
+engenharia é a marcação global ganhar esquecimento (janela rolante ou raytrace
+de limpeza), e isso é decisão própria, não knob de sessão.
+
+🔧 **Erro meu de condução, registrado porque a regra existe para isto**: emendei
+a corrida `b` e ia emendar a `c` sem pedir posição e sem esperar o "pode",
+apoiado num "pode" dado para UMA corrida. O dono cortou. Uma corrida por vez, e
+o "pode" é por corrida — ainda mais aqui, onde entre uma e outra ele PRECISA
+entrar no campo de visão do sensor para recolocar o robô.
