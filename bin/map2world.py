@@ -23,16 +23,58 @@ def load_map(yaml_path):
         meta = yaml.safe_load(f)
     pgm_path = os.path.join(os.path.dirname(yaml_path), meta["image"])
     with open(pgm_path, "rb") as f:
-        magic = f.readline().strip()
+        magic = _token(f)
         if magic != b"P5":
             sys.exit(f"só PGM binário (P5); achei {magic!r}")
-        line = f.readline()
-        while line.startswith(b"#"):
-            line = f.readline()
-        w, h = map(int, line.split())
-        maxval = int(f.readline())
+        w, h, maxval = (_numero(f, nome) for nome in ("largura", "altura",
+                                                      "maxval"))
         data = f.read(w * h)
     return meta, w, h, maxval, data
+
+
+def _token(f):
+    """Próximo campo do cabeçalho PGM, pulando espaço em branco e comentários.
+
+    Lido TOKEN A TOKEN, e não linha a linha, porque a especificação do PGM
+    separa os campos por espaço em branco *qualquer* — e os formatos convivem
+    no mesmo diretório de mapas:
+
+        P5\\n973 808\\n255\\n      largura e altura na MESMA linha
+        P5\\n1468\\n399\\n255\\n   uma por linha
+
+    A versão anterior lia uma linha e exigia os dois números nela. O mapa do
+    segundo formato derrubava o conversor com `not enough values to unpack`,
+    que não diz nada sobre mapa nenhum — e mapa é o insumo de toda esta
+    ferramenta.
+
+    ⚠️ O espaço em branco que FECHA o token é consumido aqui, de propósito: a
+    especificação manda exatamente um separador entre o `maxval` e o primeiro
+    byte de dado, e é este `read` que o come.
+    """
+    while True:
+        byte = f.read(1)
+        if not byte:
+            return b""
+        if byte == b"#":                       # comentário: até o fim da linha
+            while byte and byte not in b"\r\n":
+                byte = f.read(1)
+            continue
+        if byte.isspace():
+            continue
+        token = byte
+        while True:
+            byte = f.read(1)
+            if not byte or byte.isspace():
+                return token
+            token += byte
+
+
+def _numero(f, nome):
+    token = _token(f)
+    if not token.isdigit():
+        sys.exit(f"cabeçalho PGM truncado ou inválido: esperava {nome}, "
+                 f"achei {token!r}")
+    return int(token)
 
 
 def occupied_grid(meta, w, h, maxval, data):

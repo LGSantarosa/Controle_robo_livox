@@ -1142,3 +1142,82 @@ def test_chegou_e_a_distancia_final_contra_o_raio_do_seguidor():
     m = leitura_nav.metricas([_amostra(0.0, x=0.0), _amostra(1.0, x=1.5)],
                              (2.0, 0.0), 0.25)
     assert not m['chegou']
+
+
+# ---------------------------------------------------------------------------
+# O CONVERSOR DE MAPA REAL EM MUNDO DO GAZEBO (`bin/map2world.py`)
+#
+# Ele existe para provar a localização ANTES do robô: o mundo simulado nasce do
+# MESMO mapa que o AMCL vai usar, então "o robô se acha" pode ser respondido sem
+# bancada. Não tinha teste, e o primeiro mapa real que passou por ele derrubou o
+# parser — com uma mensagem (`not enough values to unpack`) que não diz nada
+# sobre mapa nenhum.
+# ---------------------------------------------------------------------------
+
+def _carrega_bin(nome):
+    caminho = os.path.join(os.path.dirname(os.path.dirname(AQUI)), 'bin',
+                           f'{nome}.py')
+    spec = importlib.util.spec_from_file_location(nome, caminho)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+map2world = _carrega_bin('map2world')
+
+
+def _escreve_pgm(tmp_path, nome, cabecalho, dados):
+    p = tmp_path / nome
+    p.write_bytes(cabecalho + dados)
+    return p
+
+
+@pytest.mark.parametrize('cabecalho,caso', [
+    (b'P5\n3 2\n255\n', 'largura e altura na MESMA linha'),
+    (b'P5\n3\n2\n255\n', 'uma por linha'),
+    (b'P5\n# feito pelo slam_toolbox\n3 2\n255\n', 'com comentário'),
+    (b'P5 3 2 255\n', 'tudo numa linha só'),
+])
+def test_os_formatos_de_cabecalho_pgm_dao_o_MESMO_mapa(tmp_path, cabecalho, caso):
+    """A especificação do PGM separa os campos por espaço em branco QUALQUER.
+
+    Os dois primeiros casos são reais e convivem no mesmo diretório de mapas:
+    `mapa_3_andar.pgm` traz largura e altura juntas, `scan_andar3_ajustado.pgm`
+    traz uma por linha. Ler linha a linha atende um e quebra o outro.
+    """
+    dados = bytes([0, 255, 0, 255, 0, 255])
+    pgm = _escreve_pgm(tmp_path, 'm.pgm', cabecalho, dados)
+    yml = tmp_path / 'm.yaml'
+    yml.write_text('image: m.pgm\nresolution: 0.05\norigin: [0.0, 0.0, 0.0]\n')
+    meta, w, h, maxval, data = map2world.load_map(str(yml))
+    assert (w, h, maxval) == (3, 2, 255), caso
+    assert data == dados, caso
+
+
+def test_cabecalho_truncado_morre_falando_de_cabecalho(tmp_path):
+    """Arquivo cortado não pode sair como erro de desempacotamento de tupla."""
+    pgm = _escreve_pgm(tmp_path, 'm.pgm', b'P5\n3\n', b'')
+    yml = tmp_path / 'm.yaml'
+    yml.write_text('image: m.pgm\nresolution: 0.05\norigin: [0.0, 0.0, 0.0]\n')
+    with pytest.raises(SystemExit) as e:
+        map2world.load_map(str(yml))
+    assert 'cabeçalho' in str(e.value)
+
+
+def test_a_parede_do_mundo_cai_onde_o_mapa_diz():
+    """O mundo tem de nascer no MESMO frame do mapa — é isso que faz o AMCL
+    localizar de cara, e é a única razão de o simulador provar alguma coisa
+    sobre a localização real. `origin` errado dá um simulador coerente consigo
+    mesmo e mentiroso sobre o robô."""
+    meta = {'resolution': 0.05, 'origin': [-28.672, -15.476, 0.0]}
+    # uma célula ocupada, canto inferior esquerdo do mapa (última linha do PGM)
+    rects = [(1, 1, 0, 0)]
+    import tempfile
+    with tempfile.NamedTemporaryFile('r+', suffix='.obj') as f:
+        map2world.rects_to_obj(rects, meta, w=3, h=2, wall_height=0.5,
+                               obj_path=f.name)
+        vertices = [l.split()[1:3] for l in open(f.name) if l.startswith('v ')]
+    xs = sorted({float(v[0]) for v in vertices})
+    ys = sorted({float(v[1]) for v in vertices})
+    assert xs == [-28.672, -28.622], f'x fora do origin do mapa: {xs}'
+    assert ys == [-15.476, -15.426], f'y fora do origin do mapa: {ys}'
