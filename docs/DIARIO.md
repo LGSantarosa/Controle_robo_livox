@@ -5906,3 +5906,34 @@ ruído — por isso a sessão parou aqui para consertar.
 - ⚠️ **Assimetria de roda grande na arrancada do teleop**: encoders acusaram
   esquerda 3,23 rad contra direita 6,65 rad. É muito mais que o arco conhecido
   (raio 1,22 m). Não investigado — anotado para a próxima leva.
+
+## 🔩 2026-08-12 (9ª leva) — A peça saiu do robô, e o filtro do corpo entra por escrito
+
+Sessão curta, **robô desligado**, logo depois da 8ª leva. Decisão **027**.
+
+🔧 **O dono arrancou a estrutura que havia em volta do Mid-360** ao ver a
+medida dos pontos dentro do polígono de parada. O sintoma de hoje deve ter ido
+junto — e é justamente por isso que o registro importa: **o defeito de software
+continua lá**, esperando o próximo suporte ou cabo montado perto do lidar.
+
+🟢 **Entrou o `raio_cego` (default 0,15 m)**: o `nuvem_pontos` passa a descartar
+todo ponto a menos disso do EIXO do sensor, e não só a origem exata. Cilindro e
+não esfera — o corpo fica ABAIXO do lidar, e esfera deixaria passar exatamente a
+coluna que atrapalha. O nó anuncia o valor no `rosout` na subida.
+
+⚠️ **É reincidência da 017**, e essa é a lição de método da leva: lá o ponto
+`(0,0,0)` foi reconhecido como sendo "o próprio robô" e descartado — tratou-se
+UM ponto, sem generalizar para "o sensor enxerga o corpo em que está montado".
+O vizinho a 10 cm passou reto por doze dias e só apareceu quando dirigiu o robô.
+
+⏳ **A previsão ficou de graça, e a ORDEM dela é o que vale**: a peça saiu
+DEPOIS da medida e ANTES do conserto, então dá para separar hardware de
+software. Primeira corrida com `raio_cego:=0.0` (comportamento velho): se o
+`PolygonStop` calar com o robô parado, a causa está confirmada **por
+intervenção**. Se continuar disparando, a peça não era a culpada e o suspeito
+seguinte é a faixa de altura pegando o chão. Só depois disso o default de 0,15.
+**Não misturar os dois num deploy só** — foi esse o erro de 11-08 com o
+estimador do ff, que deixou a previsão separadora sem teste possível.
+
+**75 testes verdes no `robot_base`** (eram 70), os cinco novos verificados por
+mutação nas duas direções.

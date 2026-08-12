@@ -52,6 +52,12 @@ class NuvemPontos(Node):
         p = self.declare_parameters('', [
             ('entrada', '/livox/lidar'),
             ('saida', '/livox/pontos'),
+            # [m] raio do CILINDRO em torno do eixo do sensor cujos pontos são
+            # do próprio robô e não podem virar obstáculo. Ver a decisão 027 e
+            # o docstring de `ponto_valido`: com 0,0 o nó volta ao
+            # comportamento de antes de 12-08, que é como se MEDE se a peça ao
+            # lado do sensor era a culpada.
+            ('raio_cego', 0.15),
         ])
         self.par = {x.name: x.value for x in p}
 
@@ -77,6 +83,13 @@ class NuvemPontos(Node):
         self.campos = [PointField(name=n, offset=o, datatype=d, count=c)
                        for n, o, d, c in CAMPOS]
         self.n = 0
+        # O pré-voo e a bancada procuram esta linha: sem ela não há como saber,
+        # olhando o robô rodando, se o filtro do corpo está valendo ou não.
+        self.get_logger().warn(
+            f"raio cego do proprio robo: {self.par['raio_cego']:.3f} m "
+            '(decisão 027 — pontos mais perto que isto do EIXO do sensor são '
+            'peça do robô e saem da nuvem). Com 0,000 o reflexo volta a poder '
+            'disparar contra o próprio robô, que foi o defeito de 12-08.')
         self.get_logger().warn(
             f"nuvem_pontos: {self.par['entrada']} (CustomMsg) -> "
             f"{self.par['saida']} (PointCloud2). Sem esta ponte os costmaps e o "
@@ -85,7 +98,8 @@ class NuvemPontos(Node):
 
     def passo(self, msg):
         dados, quantos, fora = empacota(
-            (p.x, p.y, p.z, float(p.reflectivity)) for p in msg.points)
+            ((p.x, p.y, p.z, float(p.reflectivity)) for p in msg.points),
+            raio_cego=self.par['raio_cego'])
 
         fora_msg = PointCloud2()
         fora_msg.header = msg.header

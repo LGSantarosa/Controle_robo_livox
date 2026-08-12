@@ -69,3 +69,56 @@ def test_o_tamanho_do_buffer_bate_com_a_contagem():
     dados, n, fora = empacota(pontos)
     assert (n, fora) == (100, 0)
     assert len(dados) == n * PASSO_PONTO
+
+
+# ---------------------------------------------------------------------------
+# O raio cego — decisão 027. Os números vêm do robô real (12-08), não de
+# suposição: com ele PARADO, 0 a 2 pontos por quadro caíam dentro do polígono
+# de parada, sempre em x ≈ +0,04 · y ≈ +0,09 · z ≈ 0,00–0,05 no frame do
+# sensor, e o `collision_monitor` disparou 928 vezes.
+# ---------------------------------------------------------------------------
+
+PONTO_DO_ROBO = (0.045, 0.102, 0.019)      # medido, raio horizontal 0,112 m
+
+
+def test_o_ponto_do_proprio_robo_medido_em_12_08_sai_com_o_raio_padrao():
+    """O caso que produziu a decisão 027. Com 0,15 m ele tem de sair; se este
+    teste passar a falhar, o reflexo volta a disparar com o robô parado."""
+    x, y, z = PONTO_DO_ROBO
+    assert not ponto_valido(x, y, z, 0.15)
+    _, n, fora = empacota([(x, y, z, 1.0)], raio_cego=0.15)
+    assert (n, fora) == (1 - 1, 1)
+
+
+def test_o_mesmo_ponto_PASSA_com_raio_zero():
+    """`raio_cego=0.0` é o comportamento de antes de 12-08, e existe para
+    MEDIR: com a peça arrancada do robô, este ponto tem de sumir da nuvem
+    sozinho. Se sumir com 0,0, a causa está confirmada por intervenção."""
+    x, y, z = PONTO_DO_ROBO
+    assert ponto_valido(x, y, z, 0.0)
+    _, n, fora = empacota([(x, y, z, 1.0)], raio_cego=0.0)
+    assert (n, fora) == (1, 0)
+
+
+def test_o_raio_e_um_CILINDRO_e_nao_uma_esfera():
+    """O corpo do robô fica ABAIXO do lidar: o que cega é estrutura ao longo de
+    todo o z. Um ponto perto do eixo tem de sair mesmo estando longe em z —
+    esfera deixaria passar exatamente a coluna que atrapalha."""
+    assert not ponto_valido(0.05, 0.05, -2.0, 0.15)     # longe em z, perto do eixo
+    assert ponto_valido(0.50, 0.00, 0.01, 0.15)         # longe do eixo, perto em z
+
+
+def test_obstaculo_de_verdade_continua_visivel():
+    """O custo do filtro tem limite: a 0,20 m do eixo — ainda dentro do
+    polígono de parada, que vai a 0,49 m em x — o ponto PASSA. Raio que
+    engolisse isto trocaria segurança por silêncio."""
+    assert ponto_valido(0.20, 0.0, 0.10, 0.15)
+    assert ponto_valido(0.0, -0.26, 0.10, 0.15)
+
+
+def test_a_origem_exata_sai_mesmo_com_raio_zero():
+    """A regra da 017 não pode ter sido substituída pela da 027: (0,0,0) é o
+    raio que não voltou e sai sempre, inclusive com o filtro desligado."""
+    assert not ponto_valido(0.0, 0.0, 0.0, 0.0)
+    _, n, fora = empacota([(0.0, 0.0, 0.0, 0.0)], raio_cego=0.0)
+    assert (n, fora) == (0, 1)
