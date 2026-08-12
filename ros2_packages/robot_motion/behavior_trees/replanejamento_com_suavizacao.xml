@@ -1,0 +1,65 @@
+<!--
+  Replaneja a 1 Hz e SUAVIZA o plano antes de segui-lo.  Decisão 026.
+
+  Derivada da `navigate_w_replanning_time.xml` de fábrica, com uma única
+  adição: `SmoothPath` entre o planejamento e o seguimento.
+
+  POR QUE ÁRVORE PRÓPRIA, se existem doze de fábrica: **nenhuma delas chama
+  `SmoothPath`** (conferido no `nav2_bt_navigator/behavior_trees` do Jazzy).
+  Ou se escreve esta, ou o plano continua indo cru para o seguidor.
+
+  ⚠️ A RECUPERAÇÃO CONTINUA SENDO ZERO, e isso é escolha de 29-07 preservada
+  de propósito. Os nós de recuperação do Nav2 são `spin` — que é PIVÔ, e a
+  decisão 023 tirou o pivô do caminho porque a placa não entrega módulo — e
+  `backup`, que é a ré que a decisão 009 tirou do Nav2. Pior: as duas seriam
+  NO-OP, porque o `cmd_vel` delas sai pelo tópico ignorado e a árvore acharia
+  que recuperou sem nada ter acontecido. Quem recupera é o seguidor (025).
+
+  QUEM SUAVIZA É O `simples` (SimpleSmoother), E ISSO SAIU DE MEDIDA, não de
+  gosto. Bancada `tools/banco/suavizador.py`, n=4 no mesmo par (2,0 · 5,0) ->
+  (6,0 · 1,5), com o MESMO plano entregue aos três:
+
+      quina máx (4 corridas)                          mediana
+      cru        45,0 · 23,3 · 30,1 · 36,9             33,5°
+      simples    19,9 · 22,6 · 22,8 · 26,4             22,7°
+      savgol     24,2 · 33,5 · 33,6 · 35,6             33,6°
+      suave      NÃO COMPLETOU nas 4 (error_code 504)
+
+  O ganho do `simples` não está só na mediana: o ESPALHO cai de 23–45° para
+  20–26°. Folga contra o mapa nunca piorou e as invasões foram 0 nas quatro —
+  suavizar não empurrou o caminho para a ombreira, que era o risco real num
+  vão de 0,90 m.
+
+  ⚠️ O `suave` (ConstrainedSmoother) é o ÚNICO que olha o costmap e era o
+  favorito a priori. Falhou nas quatro. Fica no `nav2.yaml` porque a bancada
+  o compara, e porque quando alguém acertar os parâmetros dele ele é o
+  candidato de mérito. Não está aqui por não ter sido escolhido; está fora por
+  não ter funcionado.
+
+  ⚠️ `SmoothPath` NÃO pode derrubar a navegação quando falha. Ele vive dentro
+  do mesmo `RateController` do planejamento, e o plano suavizado é escrito de
+  volta em `{path}`: se o suavizador recusar, o `FollowPath` segue com o que
+  havia. Suavização é melhoria, não pré-requisito — plano cru anda, e o robô
+  já andou assim.
+-->
+
+<root BTCPP_format="4" main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <PipelineSequence name="NavigateWithReplanning">
+      <ControllerSelector selected_controller="{selected_controller}" default_controller="FollowPath" topic_name="controller_selector"/>
+      <PlannerSelector selected_planner="{selected_planner}" default_planner="GridBased" topic_name="planner_selector"/>
+      <RateController hz="1.0">
+        <Sequence name="PlanejaESuaviza">
+          <ComputePathToPose goal="{goal}" path="{path}" planner_id="{selected_planner}" error_code_id="{compute_path_error_code}"/>
+          <!-- Falha do suavizador NÃO derruba o ciclo: o RecoveryNode devolve
+               sucesso deixando `{path}` como o planner o entregou. -->
+          <RecoveryNode number_of_retries="1" name="SuavizaSePuder">
+            <SmoothPath unsmoothed_path="{path}" smoothed_path="{path}" smoother_id="simples" max_smoothing_duration="0.2" error_code_id="{smoother_error_code}"/>
+            <AlwaysSuccess/>
+          </RecoveryNode>
+        </Sequence>
+      </RateController>
+      <FollowPath path="{path}" controller_id="{selected_controller}" error_code_id="{follow_path_error_code}"/>
+    </PipelineSequence>
+  </BehaviorTree>
+</root>

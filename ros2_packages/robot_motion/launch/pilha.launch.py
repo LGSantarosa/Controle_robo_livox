@@ -138,9 +138,13 @@ def generate_launch_description():
     # Nav2 são `spin` (pivô, que este robô não faz) e `backup` (a ré que a
     # decisão 009 tirou do Nav2), e ainda seriam no-op porque o comando deles
     # sai pelo tópico ignorado.
-    bt_xml = os.path.join(
-        get_package_share_directory('nav2_bt_navigator'),
-        'behavior_trees', 'navigate_w_replanning_time.xml')
+    # 🔴 ÁRVORE PRÓPRIA DESDE a decisão 026: a de fábrica não suaviza, e
+    # nenhuma das doze do Jazzy chama `SmoothPath`. O plano do Theta* ia cru
+    # para o seguidor, com quinas de 23° a 46 cm da porta — dentro da mira de
+    # 0,37 m dele, e portanto impossíveis de seguir. A recuperação continua
+    # sendo ZERO; o arquivo diz por quê.
+    bt_xml = os.path.join(pkg, 'behavior_trees',
+                          'replanejamento_com_suavizacao.xml')
 
     sem_mapa_params = os.path.join(pkg, 'config', 'nav2_sem_mapa.yaml')
 
@@ -191,8 +195,8 @@ def generate_launch_description():
         ["'", mov_params_sim, "' if '", sim, "' == 'true' else '",
          mov_params_real, "'"])
 
-    servidores = ['map_server', 'planner_server', 'controller_server',
-                  'bt_navigator', 'collision_monitor']
+    servidores = ['map_server', 'planner_server', 'smoother_server',
+                  'controller_server', 'bt_navigator', 'collision_monitor']
     # Sem mapa não há `map_server`, e ele NÃO pode ficar na lista: o
     # `lifecycle_manager` espera cada servidor da lista responder e **aborta o
     # bringup inteiro** se um não vier — foi assim que o `collision_monitor`
@@ -381,6 +385,11 @@ def generate_launch_description():
                                        'use_sim_time': sim}],
              condition=com_mapa),
         *nav2_node('nav2_planner', 'planner_server', 'planner_server',
+                   output='both'),
+        # O suavizador (026). Entra na lista do `lifecycle_manager` e por isso
+        # tem de SUBIR: servidor da lista que não responde aborta o bringup
+        # inteiro (o defeito de 06-08 que levou o collision_monitor junto).
+        *nav2_node('nav2_smoother', 'smoother_server', 'smoother_server',
                    output='both'),
         *nav2_node('nav2_controller', 'controller_server', 'controller_server',
                    output='log',

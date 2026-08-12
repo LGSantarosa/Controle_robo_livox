@@ -444,3 +444,56 @@ local_costmap:
         # encontram no meio do vão, criando um mínimo exatamente no centro.
         # É o gradiente que empurra o caminho para o meio.
         cost_scaling_factor: 3.0
+
+# ---------------------------------------------------------------------------
+# O SUAVIZADOR — decisão 026
+#
+# O Theta* entrega poligonal de GRADE: pontos a 5 cm e quinas vivas. Medido no
+# plano da porta de 12-08, reamostrado a 0,20 m: 14 viradas acima de 2°, com
+# 23,0° a 0,46 m da porta e 15,7° a 0,23 m dela.
+#
+# O `lookahead` do seguidor é 0,37 m. Uma quina de 23° a 46 cm à frente está
+# DENTRO da mira, e a cenoura salta por cima dela — o robô não tem como seguir
+# o que o plano desenhou. Erro de trajeto medido na aproximação: p50 0,174 m,
+# máx 0,325 m, contra os 0,118 m de margem que o vão de 0,90 m concede.
+#
+# ⚠️ TRÊS PLUGINS NO AR AO MESMO TEMPO, e é de propósito — mesmo formato da
+# `bancada_planner.yaml`. Comparar suavizadores em corridas separadas é
+# comparar fotos de dias diferentes. Quem escolhe é `tools/banco/suavizador.py`,
+# que pede o MESMO plano aos três e mede quina, folga contra o mapa e
+# comprimento. A produção usa `suave` (ver a launch).
+smoother_server:
+  ros__parameters:
+    smoother_plugins: ["suave", "simples", "savgol"]
+
+    # --- ConstrainedSmoother: o único que olha o COSTMAP ---
+    # Otimiza contra o costmap e respeita raio de curva. É o favorito a priori
+    # justamente porque suavizar pode empurrar o caminho para DENTRO da
+    # ombreira, e num vão de 0,90 m para um robô de 0,63 m isso é o oposto do
+    # que se quer. Favorito a priori é o que a bancada existe para derrubar.
+    suave:
+      plugin: "nav2_constrained_smoother/ConstrainedSmoother"
+      reversing_enabled: false      # a ré é nossa, por gatilho (009)
+      path_downsampling_factor: 3
+      path_upsampling_factor: 1
+      keep_goal_orientation: false  # o rumo final não é requisito (023)
+      keep_start_orientation: true
+      minimum_turning_radius: 0.37  # o raio que a MÁQUINA fecha (29-07)
+      w_curve: 30.0                 # peso de não estourar o raio
+      w_dist: 0.0                   # não gruda no caminho original
+      w_smooth: 15000.0
+      w_cost: 0.015                 # afastar de célula cara
+      cost_check_points: [-0.185, 1.0, 0.0]
+
+    # --- SimpleSmoother: gradiente cego ao costmap ---
+    simples:
+      plugin: "nav2_smoother::SimpleSmoother"
+      tolerance: 1.0e-10
+      max_its: 1000
+      do_refinement: true
+
+    # --- Savitzky-Golay: filtro polinomial, também cego ao costmap ---
+    savgol:
+      plugin: "nav2_smoother::SavitzkyGolaySmoother"
+      do_refinement: true
+      refinement_num: 2

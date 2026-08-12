@@ -88,6 +88,11 @@ def test_o_raio_de_chegada_do_nav2_bate_com_o_do_seguidor():
 
 # ------------------------------ o árbitro de comando (levantamento da 010)
 
+def _nav2():
+    import yaml
+    return yaml.safe_load(open(PRODUCAO))
+
+
 def _mux():
     import yaml
     p = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -1232,3 +1237,69 @@ def test_a_re_para_de_insistir_quando_nao_esta_resolvendo():
     assert 'res_seguidas' in fonte and 'dist_antes_da_re' in fonte, (
         'o seguidor não contabiliza rés que não melhoraram nada — o teto '
         'existe no parâmetro e não na lógica.')
+
+
+# ---------------------------------------------------------------------------
+# O SUAVIZADOR — decisão 026
+# ---------------------------------------------------------------------------
+
+ARVORE = os.path.join(RAIZ, 'ros2_packages', 'robot_motion', 'behavior_trees',
+                      'replanejamento_com_suavizacao.xml')
+
+
+def _arvore():
+    import xml.etree.ElementTree as ET
+    return ET.parse(ARVORE).getroot()
+
+
+def test_a_arvore_propria_chama_o_suavizador():
+    """Se ninguém chama `SmoothPath`, o `smoother_server` sobe e não faz nada.
+
+    Nenhuma das doze árvores de fábrica do Jazzy chama `SmoothPath` — foi por
+    isso que esta existe. Servidor de pé sem ninguém chamando é a pior forma
+    de falha deste projeto: log limpo, nó vivo, zero efeito (BO-3).
+    """
+    ids = [n.get('smoother_id') for n in _arvore().iter('SmoothPath')]
+    assert ids, 'a árvore não chama SmoothPath — o smoother_server é inerte'
+    plugins = _nav2()['smoother_server']['ros__parameters']['smoother_plugins']
+    for i in ids:
+        assert i in plugins, (
+            f'a árvore pede o suavizador `{i}` e o nav2.yaml não o declara')
+
+
+def test_a_arvore_NAO_tem_recuperacao():
+    """A escolha de 29-07, preservada de propósito.
+
+    `spin` é PIVÔ, que a 023 tirou do caminho porque a placa não entrega
+    módulo. `backup` é a ré que a 009 tirou do Nav2. E as duas seriam NO-OP:
+    o `cmd_vel` delas sai pelo tópico ignorado, e a árvore acharia que
+    recuperou sem nada ter acontecido. Quem recupera é o seguidor (025).
+    """
+    r = _arvore()
+    for proibido in ('Spin', 'BackUp', 'Wait', 'DriveOnHeading',
+                     'ClearEntireCostmap'):
+        assert not list(r.iter(proibido)), (
+            f'`{proibido}` voltou para a árvore — ver 29-07 e a decisão 023')
+
+
+def test_o_suavizador_esta_na_lista_do_lifecycle():
+    """Servidor que sobe fora da lista nunca é ativado; servidor na lista que
+    não sobe **aborta o bringup inteiro** (o defeito de 06-08 que levou o
+    collision_monitor junto). Os dois lados quebram, então é par travado."""
+    with open(os.path.join(RAIZ, 'ros2_packages', 'robot_motion', 'launch',
+                           'pilha.launch.py')) as f:
+        launch = f.read()
+    assert "'smoother_server'" in launch.split('servidores = ')[1][:200], (
+        'smoother_server fora da lista do lifecycle_manager — ele sobe e '
+        'nunca ativa')
+    assert "'nav2_smoother', 'smoother_server'" in launch, (
+        'o nó do smoother não é lançado, mas está na lista: isso ABORTA o '
+        'bringup inteiro')
+
+
+def test_a_launch_usa_a_arvore_PROPRIA_e_nao_a_de_fabrica():
+    with open(os.path.join(RAIZ, 'ros2_packages', 'robot_motion', 'launch',
+                           'pilha.launch.py')) as f:
+        launch = f.read()
+    assert 'replanejamento_com_suavizacao.xml' in launch
+    assert 'navigate_w_replanning_time.xml' not in launch.split('bt_xml =')[1][:400]
