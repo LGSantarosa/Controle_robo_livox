@@ -5624,3 +5624,64 @@ exatamente a janela das corridas da manhã. As corridas de 12-08 rodaram com at�
 quatro `map→odom` concorrentes. Não muda o diagnóstico do pivô (que se mede em
 yaw e comando), mas **muda a régua**: a varredura de processo tem de casar com
 a linha de comando inteira, não com o nome curto.
+
+## 🚪 2026-08-12 (6ª leva) — O robô atravessa a porta, e a recuperação aprende a parar
+
+Decisão **025**. **246 testes verdes** no total (`robot_motion` 234). Seis
+mutações, seis pegas — duas delas só depois de eu consertar o próprio teste.
+
+### O furo, e por que ele é aceitável
+
+A ré da 024 era vetada pelo reflexo (831/831). O dono apontou a estratégia:
+*"o recuo deve ser um furo do bloqueio, ele vê se não tem nada atrás e aí dá a
+ré furando o bloqueio todo"*. Canal `unstuck_vel` no mux com prioridade 30 —
+acima da autonomia, **abaixo do humano** —, e a ré só sai depois de medir o vão
+traseiro em metros num corredor retangular da largura do robô.
+
+⚠️ **Retangular e não cone**, e isso não é preferência: cone traseiro é cego
+para a quina, porque o feixe que pega o canto cai fora do ângulo. Teste com o
+caso exato — feixe a 145°, fora de ±30°, com `y = 0,34 m` dentro da meia-largura
+de 0,35.
+
+### E a primeira versão fabricou uma FUGA
+
+Ele atravessou a porta, mas cobrando 16,41 m para 5,32 m de reta, com 9 rés:
+2,50 m → 5,10 m do objetivo, andando de costas em linha reta até o vão traseiro
+cair de 3,17 m para 0,31 m. Quem viu foi o dono, na tela: *"ele ativou dnv a ré
+mesmo estando reto na porta"*.
+
+`re_parado_s` era 1,5 s e a própria ré dura 1,6–2,8 s. O relógio rearmava antes
+de o robô ter chance física de aproveitar a manobra anterior — realimentação
+positiva.
+
+➡️ **E aqui está a lição que vale para o artigo**: o gatilho por sintoma da 009
+foi projetado supondo que a manobra é instantânea em relação ao relógio que a
+dispara. Não é. **Recuperação que demora mais que o próprio detector de
+emperramento se auto-alimenta**, e o sintoma não parece um erro de tempo —
+parece o robô "decidindo" recuar sem motivo.
+
+Consertos: `re_parado_s` → 4,0 s (acima da manobra mais longa medida) e
+`re_max_seguidas` = 2, que **não depende de sintonia**: recuo que não faz o robô
+bater a distância que ele já tinha antes da ré não é recuperação.
+
+```
+                                     chegou     dist mín   rés
+recuperação inalcançável (pré-024)     não       2,49 m      0
+ré alcançável, vetada pelo reflexo     não       2,46 m      0
+ré furando, sem teto                  65,8 s     0,07 m      9
+ré com teto e relógio medido          29,9 s     0,08 m      1
+```
+
+Tortuosidade 3,09 → **1,30**. A única ré é exatamente a que o dono aprovou.
+
+### 🔧 Um teste meu nasceu errado, e da forma mais instrutiva
+
+O teste do relógio derivava `re_orcamento_cego / v_piso` = 1,48 s — e por isso
+**aprovava os 1,5 s que tinham acabado de produzir a fuga**. A derivação estava
+correta como aritmética e era da grandeza errada: o robô não precisa desfazer a
+ré inteira (o `reinicia()` põe a marca no ponto pós-recuo), precisa gastar a
+manobra mais a inércia da placa. A mutação pegou.
+
+➡️ **Derivação bonita da grandeza errada aprova o defeito.** É a terceira vez
+nesta sessão que só a mutação separou "teste que vale" de "teste que passa", e
+as três foram testes que eu mesmo tinha acabado de escrever.

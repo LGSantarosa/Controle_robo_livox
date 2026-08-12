@@ -23,7 +23,7 @@ main            020 (zona morta medida) + corrida_nav/roteiro   [2 commits locai
 slam-meu-mapa   021 (fatia 2D) + 022 (AMCL) + 023 (pivô fora)   [branch de hoje]
 ```
 
-**391 testes verdes**: `robot_motion` 220 · `robot_base` 70 · `robot_planning` 12
+**405 testes verdes**: `robot_motion` 234 · `robot_base` 70 · `robot_planning` 12
 · `tools` 89. Rodar SEMPRE por pacote (`python3 -m pytest ros2_packages/robot_motion`);
 por arquivo dá `ModuleNotFoundError`, é dívida antiga.
 
@@ -85,30 +85,34 @@ Alvo (6,0 · 1,5), pela porta de 0,90 m: `Robot to stop due to PolygonStop
 polygon`. O `ESTADO` listava o `collision_monitor` como *"configurado, NUNCA
 visto parando o robô"* — agora está medido, e **ele não bateu**.
 
-### 🔴 O QUE FALTA — o robô para diante do obstáculo e não sai de lá
+### 🟢 E ELE ATRAVESSA A PORTA — decisões 024 e 025
 
 ```
-1. reflexo para o robô a 0,34 m da ombreira      (correto, e é o principal)
-2. planner: Start occupied -> bt_navigator aborta
-3. plano vence -> seguidor pede RÉ               (a 024, funcionando)
-4. reflexo VETA a ré:  831 / 831 amostras zeradas
+alvo (6,0 · 1,5), pela porta de 0,90 m   chegou    dist mín   rés
+recuperação inalcançável (pré-024)         não      2,49 m      0
+ré alcançável, vetada pelo reflexo         não      2,46 m      0
+ré furando o bloqueio, sem teto           65,8 s    0,07 m      9
+ré com teto e relógio medido              29,9 s    0,08 m      1
 ```
 
-A 024 tornou a recuperação alcançável (era defeito de ORDEM: a guarda de plano
-velho dava `return` antes da checagem de progresso). Mas o `PolygonStop` é
-**cego para direção** — polígono estático de −0,28 a +0,49 m, `action_type:
-stop`: ponto lá dentro zera QUALQUER comando, inclusive o que afasta.
+Tortuosidade 3,09 → **1,30**, replanejamentos 59 → 28.
 
-### 🎯 A PRÓXIMA TAREFA — decisão 025, o recuo que fura o bloqueio
+Três defeitos em série, cada um escondendo o seguinte:
 
-O dono apontou a estratégia e ela está descrita no `unstuck_supervisor.py`:
-canal de twist_mux **acima da autonomia e abaixo do humano**, que entra depois
-do reflexo e portanto o fura; e a ré **com olho no vão** — `vao_traseiro`
-medido em METROS num corredor retangular da largura do robô sobre o `/scan`,
-nunca por setor angular (isso já causou uma batida).
+1. **023** — o pivô por corte girava o robô no lugar para sempre (a placa não
+   entrega módulo; ela preserva razão);
+2. **024** — a ré existia e era **inalcançável por ordem de linhas**: a guarda
+   de plano velho retornava antes da checagem de progresso, e o plano vence
+   justamente quando o robô trava;
+3. **025** — a ré era **vetada pelo reflexo** (831/831), porque o `PolygonStop`
+   é cego para direção. Canal `unstuck_vel` (prioridade 30: acima da autonomia,
+   **abaixo do humano**) fura o bloqueio, e só depois de medir o vão traseiro
+   em metros num corredor **retangular** da largura do robô.
 
-`orcamento_de_re(vao_traseiro=...)` já existe e já aceita o parâmetro; o
-`path_follower` chama com `None`. A fatia 2D da 021 fornece o `/scan`.
+⚠️ **A primeira 025 fabricou uma fuga** — 9 rés seguidas, 2,50 → 5,10 m de
+distância, de costas até acabar o espaço. `re_parado_s` (1,5 s) era menor que a
+própria manobra (1,6–2,8 s). Agora 4,0 s, mais `re_max_seguidas=2`, que não
+depende de sintonia.
 
 ### ⚠️ Duas dívidas abertas nesta sessão
 
