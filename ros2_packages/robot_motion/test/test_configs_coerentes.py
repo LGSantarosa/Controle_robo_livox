@@ -716,3 +716,165 @@ def test_a_zona_morta_supoe_a_compensacao_do_driver_LIGADA():
         f'`zona_morta={valor(MOVIMENTACAO, "zona_morta")}` no '
         'movimentacao.yaml supõe ela ligada. Sem ela a zona morta real é '
         '0,25–0,50 m/s (MODELO_ROBO2 §2) e o piso tem de subir junto.')
+
+
+# ---------------------------------------------------------------------------
+# A LOCALIZAÇÃO CONTRA O MAPA (decisão 022)
+#
+# O AMCL e o `tf_map_odom` publicam a MESMA transformada (`map → odom`). Subir
+# os dois deixa a TF disputada entre um publicador que diz "identidade" e outro
+# que diz a verdade: a pose pisca a cada consulta, e o sintoma — robô em
+# ziguezague no RViz, plano que salta — não aponta para TF nenhuma.
+# ---------------------------------------------------------------------------
+
+AMCL = os.path.join(RAIZ, 'ros2_packages', 'robot_motion', 'config',
+                    'localizacao_amcl.yaml')
+SCAN_2D = os.path.join(RAIZ, 'ros2_packages', 'robot_base', 'config',
+                       'scan_2d.yaml')
+
+
+def _no_da_pilha(nome):
+    """O `Node(...)` da pilha cujo `name=` é `nome`, como nó de AST.
+
+    Lê o alvo em vez de reconstruí-lo — a lição que este arquivo já aprendeu
+    três vezes (017, 019, 021).
+    """
+    import ast
+    arvore, _ = _launch_ast()
+    for no in ast.walk(arvore):
+        if not (isinstance(no, ast.Call)
+                and getattr(no.func, 'id', None) == 'Node'):
+            continue
+        for kw in no.keywords:
+            if (kw.arg == 'name' and isinstance(kw.value, ast.Constant)
+                    and kw.value.value == nome):
+                return no
+    raise AssertionError(f'a pilha não declara um nó chamado {nome!r}')
+
+
+def _condicao(no_ast):
+    import ast
+    for kw in no_ast.keywords:
+        if kw.arg == 'condition':
+            return ast.unparse(kw.value)
+    return None
+
+
+def test_o_AMCL_e_a_TF_FIXA_nunca_sobem_juntos():
+    """Duas fontes para `map → odom` é pose piscando entre elas.
+
+    A trava é de condição: o publicador fixo só sobe quando a localização NÃO
+    é amcl, e o amcl só sobe quando ela é (e há mapa).
+    """
+    fixa = _condicao(_no_da_pilha('tf_map_odom'))
+    amcl = _condicao(_no_da_pilha('amcl'))
+    assert fixa is not None, (
+        'o `tf_map_odom` sobe SEMPRE — com o AMCL de pé, os dois publicam '
+        '`map → odom` e a pose pisca')
+    assert 'tf_fixa' in fixa, f'condição inesperada no tf_map_odom: {fixa}'
+    assert amcl is not None and 'amcl' in amcl, (
+        f'o `amcl` precisa de condição própria; achei {amcl}')
+
+
+def test_o_amcl_entra_na_lista_do_lifecycle():
+    """Nó de ciclo de vida fora da lista NÃO ativa, e não avisa.
+
+    Ele sobe, fica em `unconfigured`, não publica TF — e como o `tf_map_odom`
+    também não subiu (exclusão mútua), a árvore fica partida e o Nav2 inteiro
+    não ativa. Silêncio total, que é o modo de falha mais caro deste projeto.
+    """
+    _, texto = _launch_ast()
+    m = re.search(r'servidores_com_amcl\s*=\s*(.+?)\n\n', texto, re.S)
+    assert m, 'a pilha não monta uma lista de servidores com amcl'
+    assert "'amcl'" in m.group(1), (
+        'o `amcl` ficou fora da lista do lifecycle_manager: sobe e nunca ativa')
+    assert "'map_server'" in m.group(1), (
+        'sem `map_server` na lista o AMCL espera um mapa que nunca vem')
+
+
+@pytest.mark.parametrize('chave_amcl,chave_scan', [
+    ('laser_min_range', 'range_min'),
+    ('laser_max_range', 'range_max'),
+])
+def test_o_alcance_do_amcl_bate_com_o_do_SCAN(chave_amcl, chave_scan):
+    """O AMCL não pode esperar um alcance que a fatia 2D não entrega.
+
+    Pedir mais longe que o scan corta faz ele tratar "não medi" como "medi
+    longe" — feixe fantasma de 20 m atravessando parede. E os dois números
+    moram em pacotes diferentes (`robot_motion` e `robot_base`), que é
+    exatamente a distância em que números copiados envelhecem.
+    """
+    a, s = valor(AMCL, chave_amcl), valor(SCAN_2D, chave_scan)
+    assert a == s, (
+        f'{chave_amcl}={a} no AMCL contra {chave_scan}={s} na fatia 2D')
+
+
+def test_o_amcl_sabe_que_o_robo_e_DIFERENCIAL():
+    """Modelo omnidirecional espalha partícula para o lado — movimento que
+    este robô (2 rodas + boba) não faz. Partícula gasta em pose impossível é
+    partícula a menos onde ele de fato pode estar."""
+    with open(AMCL) as f:
+        texto = f.read()
+    assert 'DifferentialMotionModel' in texto
+
+
+def test_a_pose_inicial_do_amcl_vem_por_PARAMETRO():
+    """🔴 O NUC NÃO TEM TELA.
+
+    O jeito normal de dizer ao AMCL onde o robô está é clicar "2D Pose
+    Estimate" no RViz — que no robô real não existe (desde a 019 o rviz nem
+    sobe por padrão lá). Sem pose inicial o filtro nasce espalhado pelo mapa
+    inteiro e converge para qualquer lugar, ou para lugar nenhum.
+    """
+    _, texto = _launch_ast()
+    for arg in ('pose_x', 'pose_y', 'pose_yaw'):
+        # `\s*` porque a declaração pode quebrar a linha — o teste não pode
+        # depender da formatação do arquivo que ele julga.
+        assert re.search(r"DeclareLaunchArgument\(\s*'" + arg + r"'", texto), (
+            f'`{arg}` não é argumento da pilha — sem tela no NUC, a pose '
+            'inicial só pode chegar por parâmetro')
+    with open(AMCL) as f:
+        assert 'set_initial_pose: true' in f.read()
+
+
+@pytest.mark.parametrize('mapa,loc,vale', [
+    ('/QUALQUER/mapa.yaml', 'amcl', True),
+    ('/QUALQUER/mapa.yaml', 'fixa', True),
+    ('nenhum', 'fixa', True),
+    ('nenhum', 'amcl', False),      # AMCL sem mapa não é pilha degradada
+    ('nenhum', 'AMCL', False),      # valor inexistente
+])
+def test_a_combinacao_sem_sentido_morre_na_SUBIDA(mapa, loc, vale):
+    """`amcl` sem mapa não é uma pilha pior: é uma pilha que não funciona.
+
+    Sem `map_server` o AMCL espera um mapa que nunca vem e não ativa; com o
+    `tf_map_odom` fora (exclusão mútua), a árvore fica partida e o bringup
+    aborta. Melhor morrer na subida, com a frase certa, do que trinta segundos
+    depois com cara de bug de código.
+
+    Esta função é Python puro — aqui ela roda DE VERDADE, não por leitura.
+    """
+    pytest.importorskip('launch')
+    from launch import LaunchContext
+
+    import ast
+    _, texto = _launch_ast()
+    arvore = ast.parse(texto)
+    fonte = None
+    for no in ast.walk(arvore):
+        if (isinstance(no, ast.FunctionDef)
+                and no.name == '_recusa_combinacao_sem_sentido'):
+            fonte = ast.get_source_segment(texto, no)
+    assert fonte, 'a pilha não tem a função de recusa'
+
+    from launch.substitutions import LaunchConfiguration
+    ambiente = {'LaunchConfiguration': LaunchConfiguration}
+    exec(fonte, ambiente)                     # noqa: S102 - fonte do repo
+    ctx = LaunchContext()
+    ctx.launch_configurations.update({'mapa': mapa, 'localizacao': loc})
+
+    if vale:
+        assert ambiente['_recusa_combinacao_sem_sentido'](ctx) == []
+    else:
+        with pytest.raises(RuntimeError):
+            ambiente['_recusa_combinacao_sem_sentido'](ctx)

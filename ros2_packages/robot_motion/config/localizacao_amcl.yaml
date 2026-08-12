@@ -1,0 +1,72 @@
+# AMCL — a localização contra o mapa. Decisão 021/022.
+#
+# OVERLAY sobre o `nav2.yaml`, como o `nav2_sem_mapa.yaml`: só entra quando
+# `localizacao:=amcl`, e não redefine nada que já esteja lá. Há teste.
+#
+# 🔴 O QUE ELE SUBSTITUI: sem AMCL a pilha publica `map → odom` FIXO, identidade
+# (o `tf_map_odom`). Com mapa de verdade isso significa "o robô acredita estar
+# eternamente na origem do mapa" — paredes fantasma no lugar errado, misturadas
+# com marcação real do Livox desde a decisão 014. Os dois NUNCA sobem juntos:
+# duas fontes para a mesma TF é pose piscando entre elas.
+
+amcl:
+  ros__parameters:
+
+    # ── quadro e modelo da máquina ───────────────────────────────────────
+    global_frame_id: "map"
+    odom_frame_id: "odom"
+    base_frame_id: "base_link"
+    # Este robô é DIFERENCIAL (2 rodas + boba). O modelo omnidirecional
+    # espalharia partículas para os lados, que é movimento que ele não faz.
+    robot_model_type: "nav2_amcl::DifferentialMotionModel"
+
+    scan_topic: "scan"
+
+    # ── o alcance TEM de casar com a fatia 2D ────────────────────────────
+    # `robot_base/config/scan_2d.yaml` corta em 0,35 e 20,0 m. Pedir aqui um
+    # alcance maior que o do scan faz o AMCL tratar "não medi" como "medi
+    # longe" — e há teste travando os dois arquivos juntos.
+    laser_min_range: 0.35
+    laser_max_range: 20.0
+    laser_model_type: "likelihood_field"
+    # 360 feixes chegam do scan; 60 bastam para casar e custam menos CPU, que
+    # no NUC é recurso disputado (a ponte da nuvem já come ~91% de um core).
+    max_beams: 60
+
+    # ── ruído de odometria: o nosso `odom` é LIO, não roda ───────────────
+    # `alpha1..5` dizem quanto o AMCL desconfia do deslocamento que a TF
+    # `odom → base_link` reporta. Aqui ela vem do FAST-LIO, que é MUITO melhor
+    # que odometria de roda — e a de roda deste robô é `open_loop` e mente.
+    # Valores baixos, mas não zero: em 10-08 a planta derivou 19% em 5 min, e
+    # zero desconfiança faz o filtro colapsar num ponto e nunca se recuperar.
+    alpha1: 0.1     # giro estimado a partir de giro
+    alpha2: 0.1     # giro a partir de translação
+    alpha3: 0.1     # translação a partir de translação
+    alpha4: 0.1     # translação a partir de giro
+    alpha5: 0.1     # só o modelo omni usa; fica declarado para não sumir
+
+    min_particles: 500
+    max_particles: 2000
+    update_min_d: 0.25      # m andados antes de reamostrar
+    update_min_a: 0.20      # rad girados antes de reamostrar
+    resample_interval: 1
+    transform_tolerance: 1.0
+    recovery_alpha_slow: 0.001
+    recovery_alpha_fast: 0.1
+    tf_broadcast: true
+
+    # ── a pose inicial VEM POR PARÂMETRO, e isto não é conveniência ──────
+    # 🔴 O NUC NÃO TEM TELA. O jeito normal de dizer ao AMCL onde o robô está é
+    # clicar "2D Pose Estimate" no RViz — que no robô real não existe (desde a
+    # decisão 019 o rviz nem sobe por padrão lá). Sem pose inicial o filtro
+    # nasce espalhado pelo mapa inteiro e converge para qualquer lugar, ou para
+    # lugar nenhum.
+    #
+    # Os valores abaixo são sobrescritos pela launch (`pose_x`, `pose_y`,
+    # `pose_yaw`), e o padrão é a origem do mapa.
+    set_initial_pose: true
+    initial_pose:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+      yaw: 0.0

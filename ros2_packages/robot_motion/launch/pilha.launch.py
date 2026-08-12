@@ -43,10 +43,27 @@ comportamento padrão usa `FollowPath` e sem esse servidor ela falha, levando o
 replanejamento junto — que é justamente o que queremos do Nav2. O `cmd_vel` dele
 sai num tópico que ninguém escuta. Ver `config/nav2.yaml`.
 
-⚠️ **TF `map→odom` fixa e provisória.** A localização é LIO (decisão 003), que
-entrega `odom`, e não há nada que case `odom` com o `map` do costmap. Enquanto
-for assim, o mapa só serve para o robô nascer onde ele diz — no simulador isso
-vale porque mundo e mapa saem da MESMA planta (`tools/mundo/gera_pista.py`).
+⚠️ **TF `map→odom` fixa por padrão.** A localização é LIO (decisão 003), que
+entrega `odom`, e por padrão nada casa `odom` com o `map` do costmap: o
+`tf_map_odom` publica identidade. Assim o mapa só serve para o robô nascer onde
+ele diz — no simulador isso vale porque mundo e mapa saem da MESMA planta
+(`tools/mundo/gera_pista.py`).
+
+🗺️ **`localizacao:=amcl` troca isso por localização de verdade** (decisão 022):
+o AMCL casa o `/scan` — a fatia 2D da nuvem, decisão 021 — contra o mapa e
+publica `map→odom` de fato. É o que destrava mapa grande (corredor, andar), onde
+a janela rolante de 20 m da decisão 015 não alcança.
+
+    ros2 launch robot_motion pilha.launch.py \
+        mapa:=maps/andar3/andar3.yaml localizacao:=amcl \
+        pose_x:=0.0 pose_y:=0.0 pose_yaw:=0.0
+
+🔴 **O AMCL e o `tf_map_odom` NUNCA sobem juntos** — publicam a mesma TF, e
+juntos a pose pisca entre "identidade" e a verdade a cada consulta. A launch
+garante a exclusão, e há teste.
+🔴 **A pose inicial vem por PARÂMETRO porque o NUC não tem tela**: o "2D Pose
+Estimate" do RViz não existe no robô real. Sem ela o filtro nasce espalhado pelo
+mapa inteiro.
 
 🔴 **NO ROBÔ REAL, RODE COM `mapa:=nenhum`.** O mapa padrão é a planta da pista
 SIMULADA — uma sala de 12 × 8 m que não existe em lugar nenhum. Com ele, o
@@ -66,7 +83,12 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, LogInfo
+from launch.actions import (
+    DeclareLaunchArgument,
+    IncludeLaunchDescription,
+    LogInfo,
+    OpaqueFunction,
+)
 from launch.conditions import IfCondition, UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PythonExpression
@@ -79,9 +101,33 @@ MAPA_PADRAO = os.path.join(RAIZ, 'maps', 'pista_obstaculos.yaml')
 MUNDO_PADRAO = os.path.join(RAIZ, 'worlds', 'pista_obstaculos.sdf')
 
 
+def _recusa_combinacao_sem_sentido(contexto, *_args, **_kwargs):
+    """Combinação que não existe morre AQUI, e não trinta segundos depois.
+
+    `localizacao:=amcl` sem mapa não é uma pilha degradada: é uma pilha que não
+    funciona. O AMCL casa scan contra mapa — sem `map_server` ele sobe, fica
+    esperando um mapa que nunca vem, não ativa, e como o `tf_map_odom` também
+    não sobe (exclusão mútua), a árvore TF fica partida e o Nav2 inteiro não
+    ativa. O sintoma seria o bringup abortando, que já apareceu em 06-08 por
+    outro motivo e custou uma sessão para diagnosticar.
+    """
+    mapa = LaunchConfiguration('mapa').perform(contexto)
+    loc = LaunchConfiguration('localizacao').perform(contexto)
+    if loc not in ('fixa', 'amcl'):
+        raise RuntimeError(
+            f'localizacao:={loc!r} não existe. Use "fixa" ou "amcl".')
+    if loc == 'amcl' and mapa == 'nenhum':
+        raise RuntimeError(
+            'localizacao:=amcl exige um mapa, e mapa:=nenhum é o default do '
+            'robô real (decisão 015/019). Passe mapa:=<caminho.yaml> junto — '
+            'ou fique em localizacao:=fixa, que é o perfil sem mapa.')
+    return []
+
+
 def generate_launch_description():
     pkg = get_package_share_directory('robot_motion')
     nav2_params = os.path.join(pkg, 'config', 'nav2.yaml')
+    amcl_params = os.path.join(pkg, 'config', 'localizacao_amcl.yaml')
     mux_params = os.path.join(pkg, 'config', 'twist_mux.yaml')
     cm_params = os.path.join(pkg, 'config', 'collision_monitor.yaml')
     mov_params_real = os.path.join(pkg, 'config', 'movimentacao.yaml')
@@ -123,6 +169,21 @@ def generate_launch_description():
     sem_mapa = IfCondition(PythonExpression(["'", mapa, "' == 'nenhum'"]))
     com_mapa = UnlessCondition(PythonExpression(["'", mapa, "' == 'nenhum'"]))
 
+    # `localizacao:=amcl` troca a TF `map → odom` FIXA por localização de
+    # verdade contra o mapa. Decisão 021/022.
+    #
+    # 🔴 EXCLUSÃO MÚTUA, e é o ponto mais fácil de errar aqui: `tf_map_odom` e
+    # `amcl` publicam a MESMA transformada. Subir os dois deixa a TF disputada
+    # entre um publicador que diz "identidade" e outro que diz a verdade — a
+    # pose PISCA entre as duas a cada consulta, e o sintoma (robô que anda em
+    # ziguezague no RViz, plano que salta) não aponta para TF nenhuma.
+    loc = LaunchConfiguration('localizacao')
+    tf_fixa = UnlessCondition(PythonExpression(["'", loc, "' == 'amcl'"]))
+    com_mapa_amcl = IfCondition(PythonExpression(
+        ["'", mapa, "' != 'nenhum' and '", loc, "' == 'amcl'"]))
+    com_mapa_fixa = IfCondition(PythonExpression(
+        ["'", mapa, "' != 'nenhum' and '", loc, "' != 'amcl'"]))
+
     # O perfil da movimentação segue o do simulador quando `sim:=true`: os dois
     # arquivos diferem na zona morta suposta, e rodar o controlador pessimista
     # contra a planta otimista mede uma máquina que não existe (nota de 29-07).
@@ -137,6 +198,12 @@ def generate_launch_description():
     # bringup inteiro** se um não vier — foi assim que o `collision_monitor`
     # morreu junto com o Nav2 em 06-08, e o teste D caiu.
     servidores_sem_mapa = [s for s in servidores if s != 'map_server']
+    # ...e pelo mesmo motivo, ao contrário: o `amcl` é nó de ciclo de vida e
+    # NÃO ativa sozinho. Fora desta lista ele sobe, fica em `unconfigured`, não
+    # publica TF nenhuma — e como o `tf_map_odom` também não está lá (exclusão
+    # mútua), a árvore fica partida e o Nav2 inteiro não ativa. Silêncio total.
+    servidores_com_amcl = ['map_server', 'amcl'] + [
+        s for s in servidores if s != 'map_server']
 
     def nav2_node(pacote, executavel, nome, extras=None, **kwargs):
         """Um servidor do Nav2 em duas versões, com e sem o overlay sem-mapa.
@@ -188,6 +255,30 @@ def generate_launch_description():
         # (o padrão, os dois saem de `gera_pista.py`) o robô poderia estar
         # desviando de memória e ninguém saberia.
         DeclareLaunchArgument('mundo', default_value=MUNDO_PADRAO),
+
+        # ---------------------------------- localização contra mapa (021/022)
+        #
+        # `fixa` é o default nos DOIS mundos, e por enquanto isso é o certo:
+        # nada do AMCL rodou ainda, nem no simulador. Entra opt-in, como o
+        # preditor de Smith (06-08) e o estimador do ff (016) entraram.
+        #
+        # ⚠️ Quando estiver provado, o default deveria SEGUIR O MAPA (a regra da
+        # decisão 019: o caso perigoso é que exige intenção). Com mapa e sem
+        # AMCL o robô acredita estar na origem do mapa para sempre — hoje isso
+        # é seguro só porque o único mapa que sobe por padrão é o da pista
+        # simulada, cujo mundo sai da MESMA planta.
+        DeclareLaunchArgument(
+            'localizacao', default_value='fixa',
+            description='"fixa" (map→odom identidade, provisório) ou "amcl" '
+                        '(localiza contra o mapa; exige mapa)'),
+        DeclareLaunchArgument('pose_x', default_value='0.0'),
+        DeclareLaunchArgument('pose_y', default_value='0.0'),
+        DeclareLaunchArgument(
+            'pose_yaw', default_value='0.0',
+            description='pose inicial do AMCL [m, m, rad]. Vem por parâmetro '
+                        'porque o NUC não tem tela: "2D Pose Estimate" do '
+                        'RViz não existe no robô real'),
+        OpaqueFunction(function=_recusa_combinacao_sem_sentido),
         # ⚠️ PADRÃO `normal`, e isto é uma CORREÇÃO de 05-08. Esta launch não
         # passava `planta` nenhuma, então o `sim.launch.py` caía no default
         # dele (`lenta`) e a pilha inteira rodava contra a planta
@@ -285,23 +376,53 @@ def generate_launch_description():
         *nav2_node('nav2_bt_navigator', 'bt_navigator', 'bt_navigator',
                    extras=[{'default_nav_to_pose_bt_xml': bt_xml}],
                    output='both'),
+        # ---------------------------------------- localização contra o mapa
+        # O AMCL casa o `/scan` (a fatia 2D da nuvem, decisão 021) contra o
+        # mapa e publica `map → odom` de verdade. Sobe SÓ com mapa e SÓ quando
+        # pedido — e quando ele sobe, o publicador fixo não sobe.
+        Node(package='nav2_amcl', executable='amcl', name='amcl',
+             output='both',
+             parameters=[nav2_params, amcl_params,
+                         {'use_sim_time': sim},
+                         # A pose inicial vem por PARÂMETRO porque o NUC não
+                         # tem tela: "2D Pose Estimate" do RViz não existe no
+                         # robô real. Sem ela o filtro nasce espalhado pelo
+                         # mapa inteiro. Ver o YAML.
+                         {'initial_pose.x': ParameterValue(
+                             LaunchConfiguration('pose_x'), value_type=float),
+                          'initial_pose.y': ParameterValue(
+                              LaunchConfiguration('pose_y'), value_type=float),
+                          'initial_pose.yaw': ParameterValue(
+                              LaunchConfiguration('pose_yaw'),
+                              value_type=float)}],
+             condition=com_mapa_amcl),
+
         Node(package='nav2_lifecycle_manager', executable='lifecycle_manager',
              name='lifecycle_manager_pilha', output='both',
              parameters=[{'autostart': True, 'use_sim_time': sim,
                           'node_names': servidores}],
-             condition=com_mapa),
+             condition=com_mapa_fixa),
+        Node(package='nav2_lifecycle_manager', executable='lifecycle_manager',
+             name='lifecycle_manager_pilha', output='both',
+             parameters=[{'autostart': True, 'use_sim_time': sim,
+                          'node_names': servidores_com_amcl}],
+             condition=com_mapa_amcl),
         Node(package='nav2_lifecycle_manager', executable='lifecycle_manager',
              name='lifecycle_manager_pilha', output='both',
              parameters=[{'autostart': True, 'use_sim_time': sim,
                           'node_names': servidores_sem_mapa}],
              condition=sem_mapa),
 
-        # A TF que falta: sem localização contra o mapa, `map` e `odom` são o
-        # mesmo lugar. Provisório, e documentado no cabeçalho.
+        # A TF que falta quando NÃO há localização contra mapa: `map` e `odom`
+        # viram o mesmo lugar. Provisório, e documentado no cabeçalho.
+        #
+        # 🔴 NÃO SOBE COM O AMCL. Os dois publicam `map → odom`; juntos, a pose
+        # pisca entre "identidade" e a verdade a cada consulta.
         Node(package='tf2_ros', executable='static_transform_publisher',
              name='tf_map_odom', output='log',
              arguments=['--frame-id', 'map', '--child-frame-id', 'odom'],
-             parameters=[{'use_sim_time': sim}]),
+             parameters=[{'use_sim_time': sim}],
+             condition=tf_fixa),
 
         # ------------------------------------------------------- os nossos
         #
