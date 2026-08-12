@@ -5418,3 +5418,116 @@ sem robô, alimentando-as com o plano real.
 ⚠️ **O que isto reclassifica**: "o Nav2 está funcionando" é verdade e sempre foi
 — ele planeja. O que nunca funcionou é o nosso seguidor percorrer o que ele
 planeja, e isso não era regressão de hoje: nunca tinha sido olhado.
+
+## 🔄 2026-08-13 — O pivô era o culpado, e a régua de 12-08 media o robô desligado
+
+Sessão de dev, sem robô e sem Gazebo. Tudo aqui saiu de releitura dos CSV de
+12-08 e de aritmética. Decisão **023**. **388 testes verdes** (eram 376), doze
+novos, quatro verificados por mutação.
+
+O dono abriu a sessão dizendo, com todas as letras, que já tinha visto o robô
+seguindo o Nav2 no Gazebo e entrando na porta. **Ele estava certo, e a entrada
+anterior deste diário estava errada.** Vale escrever qual erro foi, porque ele é
+de método e não de máquina.
+
+### O artefato que produziu "o robô nunca percorreu o plano"
+
+A leitura de 12-08 concluiu que o erro de rumo tinha **mediana 0°** e que,
+portanto, o culpado era a lei de velocidade do seguidor. A conta que derruba
+isso é de duas linhas, em `pista-fixa-a.csv`:
+
+```
+amostras de erro_rumo                1494
+zeros exatos                          847
+amostras depois de o robô congelar    847     (1500 − 653)
+```
+
+Batem na unidade. **Todos os zeros vêm do trecho morto**, depois de o seguidor
+já ter parado — e `para()` publica `rumo_alvo = rumo atual` de propósito, o que
+fabrica erro zero. A mediana estava medindo o robô desligado. Na fase viva,
+`|erro| > 15°` em **530 de 964** amostras.
+
+➡️ **Lição, e ela vale para o artigo**: estatística sobre uma corrida inteira
+mistura o regime que se quer medir com o rabo em que o sistema já desistiu. A
+régua tem de recortar a fase viva ANTES de resumir. É parente da mudança de
+protocolo de 10-08 (corrida curta demais aprovava robô oscilando) — lá a régua
+era curta, aqui ela era longa demais.
+
+### O que as corridas mostram quando se olha a fase viva
+
+```
+                fase viva   giro total   deslocamento   raw_v≠0
+pista-fixa-a      32,6 s      1321°         0,20 m       1/1500
+pista-limiar45    31,9 s      1260°         0,06 m      14/1800
+pista-amcl-a      15,1 s       647°         0,11 m       0/1500
+objetivo-a         8,3 s       382°         0,23 m       0/2563
+```
+
+Não é "não pede velocidade". É **girar no lugar**: 3,7 voltas para 20 cm.
+
+### A placa não entrega módulo, e é isso o tempo todo
+
+```
+pedido 0,10 rad/s  ->  entrega 2,204 rad/s
+pedido 1,00 rad/s  ->  entrega 2,204 rad/s        CSV de 12-08: pico 2,152
+```
+
+A compensação de zona morta do driver escala as duas rodas pelo mesmo `k` até a
+maior vencer o deadband. E depois do corte a placa **segura a saída cheia** por
+0,52 s (medido no robô, 04-08), decaindo em rampa: o robô ainda ACELERA depois
+de mandarem parar. Varredura pós-corte medida no Gazebo: **93–101°** (n=5),
+contra 25–32° que a lei previa.
+
+**Os 28 disparos de pivô das quatro corridas tinham erro entre 35° e 81°.**
+Nenhum era executável. O ciclo-limite era obrigatório.
+
+### O conserto óbvio não era conserto, e o argumento é estrutural
+
+Baixar `pivo_a_dec` é o que a própria lei sanciona (*"errar para baixo é de
+graça"*). Varri de 0,60 a 0,05, alvos de 20° a 180°: **o acerto vira sorteio por
+ângulo, não tendência.** A razão:
+
+> a sobra **prevista** é `wz²/(2·a_dec)`, parábola no `wz` do corte;
+> a sobra **real** é a retenção da placa, e ela **não depende do `wz` do corte**.
+> Parábola não casa com constante em valor nenhum de `a_dec`.
+
+### E a planta de brinquedo tinha o mesmo ponto cego do simulador
+
+Exatamente o achado de 06-08 repetido: lá a planta do rumo modelava 0,26 s de
+atraso contra os 0,94 s medidos. Aqui ela **congelava** o `wz` por 0,2 s depois
+do corte, em vez de segurar a saída cheia por 0,52 s como a placa faz. Corrigida,
+**10 dos testes do pivô caem na hora** — e eles vinham passando desde 05-08
+contra um atuador que não existe.
+
+Os testes ficaram separados em duas seções, e a separação é o produto: uma roda
+contra `Planta(atraso_desliga=0.0)`, o atuador que a lei SUPÕE, e lá a aritmética
+do corte está certa; a outra roda contra a placa de verdade, e lá a manobra não
+fecha em ângulo nenhum. É isso que permite dizer QUAL das duas quebrou.
+
+### A decisão
+
+O pivô sai do caminho do seguidor (`limiar_pivo` acima de π, `aponta_no_fim`
+false, e o caso `parado` sai do `precisa_pivo`). Quem responde por rumo é a lei
+contínua da 005, que contra a MESMA placa assenta em **0,5–0,6° de 20° a 180°**,
+andando 97–99% do tempo.
+
+> A compensação escala as duas rodas juntas: preserva a RAZÃO, destrói o MÓDULO.
+> **Arco é razão** — 0,515 m pedido, 0,515 m entregue. **Pivô é módulo.**
+
+### Quando quebrou, por git
+
+```
+9f00854  05-08  batidas: 2509 -> 0 invasões, passa no meio da porta
+...
+6aa347a  05-08  simulador: as duas pontas da placa      <- a retenção entra
+```
+
+A corrida boa é **ancestral** da que quebrou. E a aceitação de `6aa347a` já
+registrava *"O pivô, n=3 por ponto — **NÃO passou**"*. O defeito estava escrito
+no diário desde 05-08. **O que faltou foi ligá-lo à navegação** — entre 05-08 e
+12-08 a corrente inteira não voltou a rodar ponta a ponta, e um resultado
+negativo isolado não viaja sozinho até o lugar onde ele importa.
+
+⚠️ **Nada disto foi ao Gazebo nem ao robô.** A previsão que a próxima corrida
+testa está na 023 e é uma só: `raw_v` não-nulo em mais de 80% das amostras, com
+a distância ao alvo caindo de forma monótona.

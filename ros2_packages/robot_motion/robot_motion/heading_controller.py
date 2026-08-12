@@ -88,7 +88,28 @@ class HeadingController(Node):
             # pivô mínimo da máquina é ~4°, então limiar perto disso faria a
             # manobra disparar sem parar e o robô nunca andaria. 15° dá folga
             # de 2,5x sobre a tolerância.
-            ('limiar_pivo', 0.26),          # rad (~15°)
+            #
+            # 🔴 3,20 rad DESDE 13-08 (decisão 023), era 0,26 (~15°). Acima de
+            # π: nenhum erro de rumo alcança, e o pivô por corte NÃO DISPARA.
+            # Não é sintonia — é a manobra saindo do caminho, porque contra
+            # esta placa ela não fecha em ângulo NENHUM. A placa segura a saída
+            # cheia por `atraso_desliga` (0,52 s, medido no robô em 04-08), o
+            # robô ainda ACELERA depois do corte, e a varredura pós-corte fica
+            # em 93–101° — contra 25–32° previstos. Com 15° o Gazebo deu 28
+            # disparos com erro entre 35° e 81°, 1321° de giro e 0,20 m de
+            # deslocamento em 32,6 s: ciclo-limite, o robô nunca sai do lugar.
+            #
+            # O que responde no lugar é a lei CONTÍNUA (`lei_de_rumo.comando`),
+            # que assenta em 0,5–0,6° de 20° a 180° contra a MESMA placa. A
+            # razão é a compensação do driver: ela escala as duas rodas juntas,
+            # preservando a RAZÃO e destruindo o MÓDULO. Arco é razão — a placa
+            # entrega o raio pedido (0,515 m pedido, 0,515 m entregue). Pivô é
+            # módulo — e é justamente o que ela não sabe entregar.
+            #
+            # Para religar: baixe este número. O mecanismo continua no
+            # `lei_de_pivo.py`, com os testes que dizem contra qual atuador ele
+            # vale e contra qual não vale.
+            ('limiar_pivo', 3.20),          # rad — acima de π: nunca dispara
             # ⚠️ Este a_dec é do PIVÔ e NÃO é o `a_dec` acima. Ele entra numa
             # desigualdade de segurança (`a_dec da lei ≤ a_dec real`): baixo
             # demais custa pulsos, alto demais traz sobrepasso. Ver
@@ -140,8 +161,19 @@ class HeadingController(Node):
             f"zona_morta={self.par['zona_morta']} m/s, "
             f"bitola={self.par['bitola']} m. "
             'Rodar tools/banco/ e corrigir (BO-3).')
-        if pivo_disponivel(self.par['zona_morta'], self.par['bitola'],
-                           self.par['margem_piso'], self.par['wz_max']):
+        # O portão vem ANTES da disponibilidade: dizer "pivô DISPONÍVEL" com a
+        # manobra fora do caminho é log que mente, e log que mente é o BO-3
+        # com outra roupa. O pré-voo de campo procura esta linha.
+        if self.par['limiar_pivo'] > math.pi:
+            self.get_logger().warn(
+                f"pivô por corte FORA DO CAMINHO (limiar_pivo="
+                f"{self.par['limiar_pivo']:.2f} rad, acima de π): nenhum erro "
+                'de rumo dispara a manobra, e quem responde é a lei contínua. '
+                'Decisão 023 — contra a retenção da placa (0,52 s segurando a '
+                'saída cheia) a manobra varre 93–101° depois do corte e não '
+                'fecha em ângulo nenhum. Baixar este número religa.')
+        elif pivo_disponivel(self.par['zona_morta'], self.par['bitola'],
+                             self.par['margem_piso'], self.par['wz_max']):
             self.get_logger().info(
                 f'pivô DISPONÍVEL acima de {wz_min:.2f} rad/s — o robô '
                 'consegue virar no próprio eixo')
@@ -260,16 +292,17 @@ class HeadingController(Node):
         # (`lei_de_pivo.py`). Uma vez começada ela vai até o fim — trocar de
         # modo no meio deixaria o robô girando sem ninguém responsável pelo
         # corte, e a sobra é de ~113°.
-        # Com velocidade ZERO pedida, arcar não existe: o robô só pode girar
-        # parado. É o caso da fase 2 da chegada (o seguidor manda `v=0` e o
-        # ângulo do objetivo). Sem esta condição o erro pequeno cairia na lei
-        # de arco, que aplica piso de linear e ARRASTA o robô para fora do
-        # ponto — exatamente o defeito de 27-07 que a decisão 006 evitou
-        # cortando o rumo de chegada. Aqui o limiar é a própria tolerância do
-        # pivô, porque abaixo dela não há manobra possível.
-        parado = abs(self.v_alvo) < 1e-6
-        precisa_pivo = abs(erro) > (self.par['pivo_tolerancia'] if parado
-                                    else self.par['limiar_pivo'])
+        # 🔴 13-08 (decisão 023): O CASO `parado` SAIU DAQUI, e com ele o
+        # último caminho que ainda entrava na manobra bang-bang.
+        #
+        # Ele existia porque, com `v=0` pedido, arcar não existe e o erro
+        # pequeno cairia na lei de arco — que "aplica piso de linear e ARRASTA
+        # o robô para fora do ponto", o defeito de 27-07. **Isso não acontece**,
+        # e a conta é de uma linha: a lei de arco recebe `v_max=self.v_alvo`, e
+        # com ele em zero o `v_teto` de `ajusta_para_zona_morta` fecha a saída
+        # "por cima". Medido nos dois perfis, de 2° a 150°: `v` sai 0,000 em
+        # toda a faixa. O piso de linear é inalcançável quando o teto é zero.
+        precisa_pivo = abs(erro) > self.par['limiar_pivo']
         if self.pivo is None and precisa_pivo:
             self.pivo = PivoPorCorte(
                 a_dec=self.par['pivo_a_dec'],

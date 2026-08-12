@@ -23,12 +23,27 @@ class Planta:
     """O atuador medido, em miniatura.
 
     Números de 04-08: latência de liga 0,27 s; sobe a ~1,6 rad/s²; a placa
-    entrega um patamar de ~2,2 rad/s; depois do corte segue empurrando ~0,2 s
-    e então desacelera. `a_real` é o que a lei NÃO conhece.
+    entrega um patamar de ~2,2 rad/s; depois do corte segue empurrando e então
+    desacelera. `a_real` é o que a lei NÃO conhece.
+
+    🔴 **O QUE ESTA PLANTA ERRAVA ATÉ 13-08, e era o mesmo ponto cego que o
+    Gazebo teve em 06-08**: depois do corte ela CONGELAVA o `wz` por 0,2 s e
+    só então desacelerava. A placa não faz isso. O `placa_simulada` segura a
+    **saída cheia** (o patamar) decaindo em rampa por `atraso_desliga`, e a
+    docstring dele diz o que isso significa com todas as letras: *"entre o
+    corte e o pico de `wz` passam 0,40–0,60 s, e nesse trecho o robô ainda
+    ACELERA"*.
+
+    A diferença não é de grau. Congelando, a sobra depois do corte é menor que
+    a velocidade de corte manda supor, e a lei — que erra `a_dec` para baixo de
+    propósito — chega por baixo e converge por pulsos. Acelerando depois do
+    corte, a sobra explode e a manobra passa do alvo TODA VEZ. Foi este o
+    ciclo-limite medido no Gazebo em 12-08: 28 pivôs disparados com erro entre
+    35° e 81°, e uma varredura pós-corte de 93–101° (n=5, repetível).
     """
 
     def __init__(self, a_real=1.0, latencia=0.27, sobe=1.6, patamar=2.2,
-                 atraso_desliga=0.2, piso_tempo=0.0):
+                 atraso_desliga=0.52, piso_tempo=0.0):
         self.a_real = a_real
         self.latencia = latencia
         self.sobe = sobe
@@ -39,6 +54,7 @@ class Planta:
         self.yaw = 0.0
         self.t_lig = None
         self.t_desl = None
+        self.retido = 0.0              # o que a placa segue empurrando
         self.t = 0.0
 
     def passo(self, wz_cmd, dt):
@@ -50,13 +66,23 @@ class Planta:
             ligado = self.t - self.t_lig
             if ligado >= self.latencia and ligado >= self.piso_tempo:
                 alvo = math.copysign(self.patamar, wz_cmd)
+                self.retido = alvo
                 self.wz += math.copysign(min(self.sobe * dt, abs(alvo - self.wz)),
                                          alvo - self.wz)
         else:
             self.t_lig = None
             if self.t_desl is None:
                 self.t_desl = self.t
-            if self.t - self.t_desl >= self.atraso_desliga:
+            passado = self.t - self.t_desl
+            if passado < self.atraso_desliga:
+                # A placa ainda empurra — a saída retida DECAI em rampa, e é a
+                # cheia, não a de agora. Enquanto ela for maior que o `wz`
+                # atual, o robô ACELERA depois do corte.
+                alvo = self.retido * (1.0 - passado / self.atraso_desliga)
+                self.wz += math.copysign(min(self.sobe * dt, abs(alvo - self.wz)),
+                                         alvo - self.wz)
+            else:
+                self.retido = 0.0
                 d = self.a_real * dt
                 self.wz = (0.0 if abs(self.wz) <= d
                            else self.wz - math.copysign(d, self.wz))
@@ -94,13 +120,25 @@ def test_a_sobra_e_a_lei_da_005_invertida():
 
 
 # ------------------------------------------------- fechar a manobra
+#
+# ⚠️ LEIA ANTES DE MEXER (13-08). Os testes desta seção rodam contra
+# `Planta(atraso_desliga=0.0)` — um atuador que PARA quando mandam parar. Não é
+# o robô e não é o simulador: é a máquina que a lei SUPÕE, e é contra ela que
+# faz sentido julgar a aritmética do corte.
+#
+# Contra a placa de verdade (a seção seguinte) a manobra não fecha em ângulo
+# nenhum, e isso não é defeito de implementação — é a premissa da lei que não
+# vale ali. Separar as duas coisas é o que permite dizer QUAL das duas quebrou.
+
+ATUADOR_QUE_OBEDECE = dict(atraso_desliga=0.0)
+
 
 @pytest.mark.parametrize('graus', [20, 45, 90, 135, 180, -45, -90, -170])
 def test_fecha_o_pivo_em_varios_angulos(graus):
     """A manobra tem de fechar dentro da tolerância em toda a faixa útil,
     para os dois lados."""
     lei = PivoPorCorte()
-    erro, estado, _ = gira(lei, math.radians(graus), Planta())
+    erro, estado, _ = gira(lei, math.radians(graus), Planta(**ATUADOR_QUE_OBEDECE))
     assert estado == PRONTO, f'{graus}° terminou em {estado}'
     assert abs(erro) <= lei.tolerancia + 1e-9, \
         f'{graus}° sobrou {math.degrees(erro):.1f}°'
@@ -110,7 +148,7 @@ def test_nao_sobrepassa_alem_da_tolerancia():
     """O defeito que a lei existe para evitar: varrer além do alvo. Com corte
     conservador ele tem de chegar POR BAIXO, não por cima."""
     lei = PivoPorCorte()
-    p = Planta()
+    p = Planta(**ATUADOR_QUE_OBEDECE)
     erro, _, _ = gira(lei, math.radians(90), p)
     assert math.degrees(p.yaw) <= 90 + math.degrees(lei.tolerancia)
 
@@ -122,9 +160,84 @@ def test_fecha_com_qualquer_a_dec_ACIMA_do_suposto(a_real):
     — a faixa medida entre robô (0,83) e simulador (0,67–1,46), com folga.
     Em todos, a manobra tem de FECHAR, não só 'quase'."""
     lei = PivoPorCorte()                      # a_dec 0,6, o padrão
-    erro, estado, _ = gira(lei, math.radians(120), Planta(a_real=a_real))
+    erro, estado, _ = gira(lei, math.radians(120),
+                           Planta(a_real=a_real, **ATUADOR_QUE_OBEDECE))
     assert estado == PRONTO, f'a_real={a_real} terminou em {estado}'
     assert abs(erro) <= lei.tolerancia + 1e-9
+
+
+# ------------------------------------------ e a placa de verdade, que RETÉM
+#
+# Decisão 023. O que está travado aqui é o motivo de o pivô ter saído do
+# caminho normal do seguidor — e é um resultado NEGATIVO, do tipo que costuma
+# não ser escrito e voltar a custar caro.
+
+def test_a_manobra_NAO_FECHA_contra_a_retencao_da_placa():
+    """O ciclo-limite de 12-08, reproduzido sem Gazebo.
+
+    Medido no Gazebo (`docs/dados/2026-08-12-sim-meu-mapa/`): 28 pivôs
+    disparados com erro entre 35° e 81°, varredura pós-corte de 93–101°
+    (n=5), 1321° de giro em 32,6 s e 0,20 m de deslocamento. O robô girava no
+    lugar e nunca saía.
+
+    Com a retenção da placa no lugar, a manobra falha na faixa inteira. Se
+    algum dia ela passar a fechar, alguém consertou o mecanismo — e aí a 023
+    precisa ser relida, não este teste apagado.
+    """
+    falharam = []
+    for graus in (20, 45, 90, 135, 180, -45, -90, -170):
+        _, estado, _ = gira(PivoPorCorte(), math.radians(graus), Planta())
+        if estado != PRONTO:
+            falharam.append(graus)
+    assert len(falharam) >= 6, (
+        f'a manobra fechou em quase toda a faixa ({falharam} falharam) — '
+        'a retenção da placa deixou de derrubar o pivô, e a decisão 023 '
+        'perdeu a premissa')
+
+
+@pytest.mark.parametrize('a_dec', [0.6, 0.4, 0.3, 0.2, 0.15, 0.10, 0.05])
+def test_NENHUM_a_dec_salva_o_corte_contra_a_retencao(a_dec):
+    """E o conserto óbvio não é conserto — o argumento é estrutural.
+
+    A sobra PREVISTA é `wz²/(2·a_dec)`: uma parábola no `wz` do corte. A sobra
+    REAL contra esta placa é a retenção, `patamar·atraso/2` ≈ 33°, que **não
+    depende do wz do corte** — a placa segura a saída CHEIA, não a de agora.
+    Parábola não casa com constante em valor nenhum de `a_dec`, e a varredura
+    mostra exatamente isso: o acerto vira sorteio por ângulo, não tendência.
+
+    É por isso que a 023 não baixou `pivo_a_dec` e mexeu em quem CHAMA o pivô.
+    """
+    fechou = []
+    for graus in (20, 45, 90, 135, 180):
+        _, estado, _ = gira(PivoPorCorte(a_dec=a_dec), math.radians(graus),
+                            Planta())
+        fechou.append(estado == PRONTO)
+    assert not all(fechou), (
+        f'a_dec={a_dec} fechou a faixa inteira contra a retenção — se isto '
+        'passar a valer, o corte VOLTA a ser alavanca e a 023 muda')
+
+
+def test_a_sobra_da_retencao_nao_depende_de_quando_se_corta():
+    """O número que sustenta o teste acima, medido na própria planta.
+
+    Cortar cedo (wz baixo) ou tarde (wz alto) tem de dar quase a mesma
+    varredura — é isso que torna o corte uma alavanca inútil.
+    """
+    varreduras = []
+    for ligado_s in (0.4, 0.8, 1.2):
+        p = Planta()
+        dt, t = 0.02, 0.0
+        while t < 6.0:
+            p.passo(1.0 if t < p.latencia + ligado_s else 0.0, dt)
+            t += dt
+            if t > p.latencia + ligado_s and abs(p.wz) < 1e-6:
+                break
+        varreduras.append(math.degrees(p.yaw))
+    depois_do_corte = [v - varreduras[0] for v in varreduras]
+    espalho = max(varreduras) - min(varreduras)
+    assert espalho < 0.75 * max(varreduras), (
+        f'varreduras {varreduras} — se elas se separarem, o instante do corte '
+        f'voltou a decidir o ângulo ({depois_do_corte})')
 
 
 def test_a_dec_otimista_degrada_e_DELATA_em_vez_de_oscilar():
@@ -138,7 +251,8 @@ def test_a_dec_otimista_degrada_e_DELATA_em_vez_de_oscilar():
     de gastar o orçamento e sair com motivo escrito.
     """
     lei = PivoPorCorte(a_dec=1.5)
-    erro, estado, _ = gira(lei, math.radians(120), Planta(a_real=0.5))
+    erro, estado, _ = gira(lei, math.radians(120),
+                           Planta(a_real=0.5, **ATUADOR_QUE_OBEDECE))
     assert estado == DESISTIU, 'violar a condição não pode terminar em PRONTO'
     assert lei.motivo, 'desistir calado é o BO-3'
 
@@ -146,9 +260,15 @@ def test_a_dec_otimista_degrada_e_DELATA_em_vez_de_oscilar():
 def test_errar_a_dec_para_baixo_custa_pulso_e_nao_sobrepasso():
     """O achado de 27-07 medido aqui: com `a_dec` MUITO conservador ele corta
     cedo e precisa de mais mordidas — mas não passa do alvo. É o lado seguro
-    do erro, e é por isso que o padrão é baixo."""
-    p = Planta(a_real=2.0)
-    lei = PivoPorCorte(a_dec=0.4)          # 5x conservador
+    do erro, e é por isso que o padrão é baixo.
+
+    ⚠️ O lado seguro tem preço e ele é o ORÇAMENTO: contra o atuador que
+    obedece, 120° custam 3 pulsos a 1,7x de conservadorismo, 4 a 2,5x, 6 a
+    3,8x — e a 5x a manobra estoura os `max_pulsos` e sai por DESISTIU. Errar
+    para baixo é de graça em sobrepasso, não em mordidas.
+    """
+    p = Planta(a_real=1.0, **ATUADOR_QUE_OBEDECE)
+    lei = PivoPorCorte(a_dec=0.4)          # 2,5x conservador
     erro, estado, pulsos = gira(lei, math.radians(120), p)
     assert estado == PRONTO and pulsos > 1, 'esperado mais de uma mordida'
     assert math.degrees(p.yaw) <= 120 + math.degrees(lei.tolerancia)

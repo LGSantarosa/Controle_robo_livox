@@ -33,6 +33,16 @@ heading_controller:
     # centímetros e repivotava: 11 pivôs em 75 s e 1 amostra de velocidade
     # linear em 1500. Medido em docs/dados/2026-08-12-sim-meu-mapa/.
     #
-    # 0.79 rad (45°) deixa o robô ARCAR no seguimento normal e guarda o pivô
-    # para a manobra que ele existe para resolver: virar de verdade.
-    limiar_pivo: 0.79
+    # 0.79 rad (45°) foi a tentativa seguinte, e ela FALHOU pelo mesmo motivo:
+    # os pivôs caíram de 11 para 10, e o robô continuou parado. A leitura de
+    # 13-08 mostrou por quê — o problema não era o limiar estar baixo, era a
+    # manobra não fechar em ângulo NENHUM contra esta placa (varredura de
+    # 93–101° depois do corte, contra 25–32° previstos). Os 28 disparos das
+    # quatro corridas tinham erro entre 35° e 81°: nenhum deles era executável.
+    #
+    # 🟢 3.20 rad DESDE 13-08 (decisão 023) — acima de π, ou seja NUNCA
+    # dispara. O racional completo está no default do `heading_controller.py`,
+    # que este arquivo agora só acompanha. Mantido explícito aqui de propósito:
+    # este é o perfil onde o número errado foi medido, e ele merece carregar a
+    # própria correção.
+    limiar_pivo: 3.20

@@ -99,7 +99,21 @@ class PathFollower(Node):
             # sai do lugar. Então a chegada volta a ter duas fases: vai até o
             # ponto reto, e SÓ LÁ acerta o ângulo. É também o que torna o
             # Theta* utilizável: o plano não precisa mais chegar apontado.
-            ('aponta_no_fim', True),
+            #
+            # 🔴 FALSE DESDE 13-08 (decisão 023), e é consequência direta dela:
+            # a fase 2 pedia `v=0` mais um ângulo, e quem entregava isso era o
+            # pivô por corte — que saiu do caminho por não fechar contra a
+            # retenção da placa. A lei contínua assume e NÃO arrasta (medido:
+            # `v` = 0,000 de 2° a 150° com `v_alvo=0`), mas também não gira
+            # abaixo de 90° no perfil do simulador, onde a zona morta crida é
+            # 0,10. Deixar ligado seria pendurar a chegada esperando um ângulo
+            # que a máquina não sabe fechar — parado, em silêncio, que é o BO-3.
+            #
+            # E o requisito nunca foi do seguidor: `comando_de_parada` já diz
+            # que "rumo na chegada não é requisito deste seguidor, e persegui-lo
+            # custa a própria chegada", e o `nav2.yaml` já roda com
+            # `use_final_approach_orientation: false`. Religa junto com o pivô.
+            ('aponta_no_fim', False),
             # Folga sobre a tolerância do pivô (~6°): pedir mais fino que a
             # manobra consegue entregar é laço que não fecha.
             ('tolerancia_rumo_final', 0.15),

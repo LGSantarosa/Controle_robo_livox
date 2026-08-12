@@ -10,7 +10,7 @@
 
 ---
 
-## 🧭 HANDOFF — LEIA ISTO PRIMEIRO (12-08, fim do dia)
+## 🧭 HANDOFF — LEIA ISTO PRIMEIRO (13-08, fim do dia)
 
 > **Para o assistente que chegar frio.** Estado real, sem enfeite. O trabalho do
 > dia está na branch **`slam-meu-mapa`** (não foi para a `main`, e a `main`
@@ -20,10 +20,10 @@
 
 ```
 main            020 (zona morta medida) + corrida_nav/roteiro   [2 commits locais]
-slam-meu-mapa   021 (fatia 2D) + 022 (AMCL) + mapa + casa_scan  [branch de hoje]
+slam-meu-mapa   021 (fatia 2D) + 022 (AMCL) + 023 (pivô fora)   [branch de hoje]
 ```
 
-**369 testes verdes**: `robot_motion` 205 · `robot_base` 70 · `robot_planning` 12
+**388 testes verdes**: `robot_motion` 217 · `robot_base` 70 · `robot_planning` 12
 · `tools` 89. Rodar SEMPRE por pacote (`python3 -m pytest ros2_packages/robot_motion`);
 por arquivo dá `ModuleNotFoundError`, é dívida antiga.
 
@@ -31,50 +31,54 @@ por arquivo dá `ModuleNotFoundError`, é dívida antiga.
 
 | | evidência |
 |---|---|
+| **o seguidor dirige a pilha inteira** | **29-07: alvo pela porta de 0,90 m em 12,3 s, 1,04× a reta** |
+| **e passa no meio dela** | **05-08: 2509 → 0 invasões, folga 0,449 m de 0,45 teórico** |
 | mapa do prédio → mundo do Gazebo | `gz sim` carrega, `walls` vivo |
 | fatia 2D da nuvem (`/scan`) | 360 feixes, 0 fora do mapa |
 | **scan × mapa** | **100% dentro de 0,15 m, mediano 0,050 m** = 1 célula |
 | AMCL contra o mapa | `active`, `map→odom` com correção nula |
 | Nav2 planejando | 285 pontos, 15,3 m até um alvo de 13 m |
 
-### 🔴 O QUE NÃO FUNCIONA — e é UMA coisa só
+> ⚠️ **O handoff de 12-08 dizia que o robô "nunca percorreu o plano, nem no
+> simulador". Era falso**, e as duas linhas de cima são do próprio diário deste
+> repo. A conclusão vinha de uma leitura errada (ver 023): a mediana de erro de
+> rumo "zero" era o trecho MORTO do CSV, depois de o seguidor já ter parado —
+> 847 zeros para 847 amostras congeladas, batendo na unidade.
 
-**O robô não percorre o plano.** Nunca percorreu — nem no simulador, nem no
-robô. As decisões 008/014/015 mediram **planejamento** (`plano.py` planeja sem
-mover) e **percepção** (`percepcao.py`); o elo "o robô segue o plano" estava
-suposto, e o `corrida_nav.py` (12-08) foi o primeiro instrumento a olhar.
+### 🔴 O QUE ESTAVA QUEBRADO — e o culpado tem nome (decisão 023)
 
+**O pivô por corte girava o robô no lugar para sempre.** Nas quatro corridas de
+12-08: 1321° de giro para 0,20 m de deslocamento, 28 disparos com erro entre 35°
+e 81°, e **93–101° de varredura depois do corte** contra 25–32° previstos.
+
+A placa entrega **um único módulo de giro** (2,204 rad/s para qualquer pedido de
+0,10 a 1,0) e depois do corte **segura a saída cheia por 0,52 s** — o robô ainda
+acelera. A sobra real não depende de quando se corta, então o critério de corte
+não é alavanca, e **nenhum `a_dec` salva** (varrido de 0,60 a 0,05).
+
+➡️ **O pivô saiu do caminho do seguidor.** Quem responde por rumo é a lei
+contínua da 005, que contra a MESMA placa assenta em 0,5–0,6° de 20° a 180°,
+andando 97–99% do tempo. Arco é RAZÃO e a placa preserva razão; pivô é MÓDULO e
+é justamente o que ela destrói.
+
+**Quando quebrou**: `9f00854` (a porta funcionando) é **ancestral** de `6aa347a`
+(a retenção da placa entrando no simulador, 05-08). A aceitação daquela mesma
+leva já dizia *"o pivô NÃO passou"* — e ninguém ligou isso à navegação, porque
+entre 05-08 e 12-08 a corrente não voltou a rodar ponta a ponta.
+
+### 🎯 A PRÓXIMA TAREFA — uma corrida no Gazebo, e ela tem previsão escrita
+
+```bash
+ros2 launch robot_motion pilha.launch.py sim:=true
+python3 tools/banco/corrida_nav.py --alvo 2.0 7.2 --csv /tmp/pos-023.csv
 ```
-                              raw_v não-nulo    dist ao alvo
-pista + TF fixa                 1 / 1500        2,20 -> 2,34 m
-pista + AMCL                    0 / 1500        2,20 -> 2,30 m
-pista + limiar_pivo 45°        14 / 1800        2,20 -> 2,24 m
-```
 
-**Não é** o Nav2 (planeja), **não é** o AMCL (o controle com TF fixa falha
-igual), **não é** o mapa (falha na pista também), **não é** o pivô (subir o
-limiar de 15° para 45° levou os pivôs de 11 para 2 e o robô continuou parado).
+**Previsão falsificável (023)**: `raw_v` não-nulo em **mais de 80%** das
+amostras, e a distância ao alvo caindo de forma monótona.
 
-### 🎯 A PRÓXIMA TAREFA — 10 minutos, sem robô e sem Gazebo
-
-🔵 **O erro de rumo é ZERO e ele ainda não pede velocidade** (mediana 0°). Com o
-robô apontado certo, quem decide a velocidade é o **seguidor**:
-
-```python
-# path_follower.py, no passo():
-raio = curvatura_adiante(self.plano, i0, janela=la)
-v = velocidade_de_seguimento(dist, raio, v_max, a_lin, wz_max)
-```
-
-**Suspeita**: o plano do Theta* vem com ponto a cada 5 cm e ziguezague de grade,
-então `curvatura_adiante` devolve raio minúsculo e `velocidade_de_seguimento`
-corta a velocidade para perto de zero.
-
-**Como provar sem nada ligado**: as duas são funções PURAS em
-`lei_de_seguimento.py`. Pegue o plano real (o CSV de
-`docs/dados/2026-08-12-sim-meu-mapa/` tem as corridas; `plano.py --csv` grava o
-caminho ponto a ponto), jogue nas duas e veja o número sair. Se `v ≈ 0`, o
-conserto é ali.
+Se voltar a girar no lugar, a causa **não é** o pivô — ele não pode mais
+disparar. A suspeita seguinte é o plano do Theta* saltando entre
+replanejamentos, e o `rumo_alvo` já está gravado no CSV para arbitrar isso.
 
 ### 🔧 Armadilhas que morderam HOJE (não repita)
 

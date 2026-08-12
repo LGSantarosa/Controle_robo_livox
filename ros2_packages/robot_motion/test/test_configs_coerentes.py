@@ -10,6 +10,7 @@ Não é zelo de estilo: é o defeito mais caro que este projeto teve, e ele não
 sintoma. Um número copiado que envelhece sozinho não quebra nada visivelmente;
 ele só faz a bancada medir uma máquina que não existe.
 """
+import math
 import os
 import re
 
@@ -904,3 +905,70 @@ def test_o_spawn_do_simulador_e_a_pose_do_amcl_sao_O_MESMO_argumento():
         assert "'y': LaunchConfiguration('pose_y')" in trecho
         return
     raise AssertionError('a pilha não inclui o sim.launch.py')
+
+
+# ---------------------------------------------------------------------------
+# O PIVÔ FORA DO CAMINHO — decisão 023 (13-08)
+#
+# O `limiar_pivo` é o único portão entre o seguidor e a manobra bang-bang. Ele
+# já valeu 15° e 45°, e as duas vezes o robô ficou girando no lugar sem sair.
+# O que estes testes travam não é o número: é a AMARRA entre o número e o
+# mecanismo. Enquanto a manobra não fechar contra a placa que retém, o portão
+# tem de estar fechado — e no dia em que alguém consertar o mecanismo, é o
+# teste do `lei_de_pivo` que abre, não este que se apaga.
+# ---------------------------------------------------------------------------
+
+MOVIMENTACAO_SIM = os.path.join(RAIZ, 'ros2_packages', 'robot_motion',
+                                'config', 'movimentacao_sim.yaml')
+CONTROLADOR = os.path.join(RAIZ, 'ros2_packages', 'robot_motion',
+                           'robot_motion', 'heading_controller.py')
+
+
+def _default_do_no(caminho, nome):
+    """O default de um parâmetro declarado, lido por AST do arquivo do nó."""
+    import ast
+
+    with open(caminho) as f:
+        arvore = ast.parse(f.read())
+    for no in ast.walk(arvore):
+        if not isinstance(no, ast.Tuple) or len(no.elts) != 2:
+            continue
+        chave, val = no.elts
+        if (isinstance(chave, ast.Constant) and chave.value == nome
+                and isinstance(val, ast.Constant)):
+            return val.value
+    raise AssertionError(f'`{nome}` não é parâmetro declarado em {caminho}')
+
+
+@pytest.mark.parametrize('onde', ['no', 'sim'])
+def test_o_portao_do_pivo_esta_fechado_enquanto_a_manobra_nao_fecha(onde):
+    """`limiar_pivo` inalcançável nos DOIS lugares que o declaram.
+
+    Acima de π nenhum erro de rumo alcança o limiar, e a manobra não dispara.
+    Os dois arquivos precisam concordar: foi divergência entre um YAML e o
+    default de um nó que segurou este defeito por uma semana (o perfil do
+    simulador dizia 45° enquanto o nó dizia 15°, e as corridas mediram os dois
+    sem que ninguém somasse as duas leituras).
+    """
+    limiar = (_default_do_no(CONTROLADOR, 'limiar_pivo') if onde == 'no'
+              else valor(MOVIMENTACAO_SIM, 'limiar_pivo'))
+    assert limiar > math.pi, (
+        f'limiar_pivo={limiar} em `{onde}` é alcançável — o pivô por corte '
+        'volta ao caminho do seguidor. Contra a placa que retém ele varre '
+        '93–101° depois do corte (medido, n=5) e não fecha em ângulo nenhum: '
+        'o robô gira no lugar e não sai. Ver decisão 023 e '
+        '`test_a_manobra_NAO_FECHA_contra_a_retencao_da_placa`.')
+
+
+def test_a_chegada_nao_espera_um_angulo_que_a_maquina_nao_fecha():
+    """`aponta_no_fim` acompanha o pivô — ligá-lo sozinho pendura a chegada.
+
+    A fase 2 pede `v=0` mais um ângulo. Sem o pivô quem atende é a lei
+    contínua, e ela não arrasta (medido: `v`=0,000 de 2° a 150°) mas também
+    não gira abaixo de 90° no perfil do simulador. Esperar ali é ficar parado
+    em silêncio à espera de uma manobra que não vem — o BO-3 exato.
+    """
+    from test_configs_coerentes import _default_do_seguidor
+    assert _default_do_seguidor('aponta_no_fim') is False, (
+        'aponta_no_fim=True com o pivô fora do caminho pendura o seguidor na '
+        'chegada. Os dois religam juntos — ver decisão 023.')
