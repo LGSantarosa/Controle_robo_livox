@@ -5534,7 +5534,7 @@ a distância ao alvo caindo de forma monótona.
 
 ## 🔙 2026-08-12 (5ª leva) — O robô anda de novo, e o reflexo aparece pela primeira vez
 
-Primeira sessão com Gazebo desde 12-08 de manhã. **390 testes verdes** (eram
+Primeira sessão com Gazebo desde 12-08 de manhã. **391 testes verdes** (eram
 388). Decisão **024**.
 
 ### A 023 passou na máquina

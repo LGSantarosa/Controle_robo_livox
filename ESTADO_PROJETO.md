@@ -23,7 +23,7 @@ main            020 (zona morta medida) + corrida_nav/roteiro   [2 commits locai
 slam-meu-mapa   021 (fatia 2D) + 022 (AMCL) + 023 (pivô fora)   [branch de hoje]
 ```
 
-**388 testes verdes**: `robot_motion` 217 · `robot_base` 70 · `robot_planning` 12
+**391 testes verdes**: `robot_motion` 220 · `robot_base` 70 · `robot_planning` 12
 · `tools` 89. Rodar SEMPRE por pacote (`python3 -m pytest ros2_packages/robot_motion`);
 por arquivo dá `ModuleNotFoundError`, é dívida antiga.
 
