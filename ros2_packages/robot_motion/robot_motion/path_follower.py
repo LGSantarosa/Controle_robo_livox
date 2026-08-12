@@ -81,7 +81,13 @@ class PathFollower(Node):
             # se defende sozinha — mas sem ele não dá para saber se o raio de
             # chegada pedido é possível. TEM QUE BATER com o que a movimentação
             # calcula: zona_morta + wz_max·bitola/2 + margem.
-            ('v_piso', 0.335),
+            #
+            # 0,0178 + 1,0·0,270/2 + 0,05 = 0,203, com a zona morta MEDIDA
+            # (decisão 020). Era 0,335, que vinha do chute de 0,15 — e o "tem
+            # que bater" acima era só comentário: os dois arquivos andaram
+            # separados por doze dias porque nada conferia. Agora confere
+            # (`test_o_piso_do_seguidor_sai_da_movimentacao`).
+            ('v_piso', 0.203),
             ('raio_chegada', 0.25),
             # --- chegada em DUAS FASES (05-08) ---
             # A decisão 006 tirou o rumo de chegada com esta razão: "girar

@@ -1,12 +1,73 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-08-11**.
+> Versionado na `main`. Atualizado em **2026-08-12**.
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+---
+
+## 🎯 12-08 — O PERFIL DO ROBÔ REAL ERA ANTERIOR À BANCADA (dev)
+
+Decisão **020**, segunda leva de navegação. **337 testes verdes** (eram 333),
+quatro novos verificados por mutação.
+
+🔴 **`config/movimentacao.yaml` — o perfil que roda em TODA navegação no robô —
+abria com "NENHUM DESTES NÚMEROS FOI MEDIDO NESTE ROBÔ AINDA"**, doze dias
+depois de 07-31 ter medido. A `bitola` daquela leva foi propagada (por causa do
+defeito de 29-07); a zona morta ficou para trás com um chute **8× maior**.
+
+```
+                        chute (0,15)      medido 07-31 (0,0178)
+wz para pivotar          1,48 rad/s          0,50 rad/s     (teto 1,00)
+piso de linear           0,335 m/s           0,203 m/s
+raio de chegada mínimo   0,187 m             0,069 m
+```
+
+🔴 **Isso não ficava parado no arquivo — ABRIA AS CURVAS.** O driver escala as
+duas rodas **juntas** (`k = deadband_speed/mx`), o que preserva a **razão** entre
+elas e destrói o módulo: **`cmd_vel` escolhe o RAIO, e a velocidade quem escolhe
+é a placa**. A lei da zona morta "escapava" da banda acelerando — e acelerar
+muda a razão:
+
+```
+pedido (v · wz)   R pedido    com 0,15            com 0,0178
+(0,10 · 0,30)      0,333 m    (0,240·0,30) 0,802   (0,108·0,30) 0,361
+```
+
+A primeira linha é a corrida de 07-31: o robô entregou **0,333 m** de raio para
+esse pedido. A lei mandava **0,802 m** para ele — **2,4× mais aberto**. Em porta
+e corredor é a diferença entre passar e raspar.
+
+✅ **O "pivô indisponível" era fantasma**, e tinha escapado do código para a
+documentação: estava na lista da próxima ida ao robô como defeito de máquina
+(item 4). A máquina gira 147° com `wz=0,30` desde 07-31.
+
+🔧 **O acoplamento que ninguém travava**: `path_follower.py` tinha `v_piso:
+0.335` copiado à mão sob o comentário *"TEM QUE BATER com o que a movimentação
+calcula"* — e nada conferia. Foi por essa fresta que os dois arquivos andaram
+separados. Agora há teste lendo os dois arquivos.
+
+⚠️ **A zona morta de 0,0178 SUPÕE `deadband_enable=true`.** Desligada — como o
+banco precisa fazer para caracterizar — a zona morta real (0,25–0,50 m/s) volta
+e o piso fica perigosamente baixo. O par está travado em teste: quem desligar a
+compensação derruba a suíte.
+
+⚠️ **O que isto NÃO resolve**: a velocidade segue não-comandável. Toda a lei de
+velocidade do seguidor (frear na curva, frear perto do objetivo) é **inerte** —
+o robô percorre qualquer arco a ~0,30 m/s (medido ontem: 0,305 · 0,292 · 0,298
+com `cmd_v=0,25`) e chega no ponto nessa velocidade. Dívida aberta.
+
+⏳ **Não foi ao robô.** Confirmação barata no pré-voo: a subida do
+`heading_controller` tem de dizer `pivô DISPONÍVEL acima de 0,13 rad/s`.
+
+🔵 **`a_dec` fica em 0,3 de propósito**, contra os ~3,05 rad/s² medidos — mexer
+na frenagem de rumo mexe no S que acabou de assentar em 11-08, e isso merece
+leva própria com corrida de controle. Agora está anotado no arquivo como escolha,
+não como esquecimento.
 
 ---
 
@@ -696,7 +757,7 @@ Dois dos três bloqueios de hoje são de dev:
 | 1 | **teste C item 1** (homem-morto) | único teste cuja falha é *pior que não ter a função*. Agora com gravador: `tools/banco/homem_morto.py` mede os três intervalos em CSV | `PLANO_TESTE_ROBO.md` §1 |
 | 2 | **teste D** (reflexo) | **bloqueado até o TF existir.** O plano está errado ao listá-lo como executável sem `map` | `PLANO_TESTE_ROBO.md` §1 |
 | 3 | **desempate do preditor** | empatou em 06-08; precisa de **corredor longo** — a sala não deu. Sustentada × assenta só aparece em corrida longa | `PLANO_SINTONIA_RUMO.md` §4 |
-| 4 | **`heading_controller`: pivô indisponível** | ele recusa girar parado (pediria 1,48 rad/s, teto 1,00), mas a máquina **faz** 69,7° com `liga 0,30`. Quem recusa é o teto, não o robô | `movimentacao.yaml` |
+| 4 | ~~**`heading_controller`: pivô indisponível**~~ ✅ **NÃO ERA DEFEITO — resolvido no dev (12-08)** | a recusa era aritmética de um chute: `zona_morta` estava em 0,15 (nunca medido) contra os **0,0178 medidos em 07-31**. Com o número certo o pivô pede 0,50 rad/s contra teto de 1,00 e existe com folga. A máquina sempre pivotou; o YAML é que proibia. Não consome bancada | decisão **020** |
 | 5 | **vídeo da traseira** | segue barato; deixou de ser urgente (o S era do laço) | BO-4 |
 
 ⚠️ **O NUC CAI JUNTO COM O ROBÔ.** Parecia ter alimentação separada; não tem.

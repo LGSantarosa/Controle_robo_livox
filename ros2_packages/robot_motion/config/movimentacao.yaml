@@ -1,9 +1,12 @@
 # Parâmetros da movimentação do robô 2 — TODOS em SI, TODOS num lugar só.
 #
-# ⚠️ NENHUM DESTES NÚMEROS FOI MEDIDO NESTE ROBÔ AINDA.
-# São chutes conservadores de propósito, para o robô errar devagar em vez de
-# errar rápido. O protocolo que os substitui está em `tools/banco/README.md`,
-# e o pendente está registrado como BO-3 no `ESTADO_PROJETO.md`.
+# ⚠️ ESTE É O PERFIL DO ROBÔ REAL: é o que a `pilha.launch.py` carrega quando
+# `sim:=false`, ou seja, o que roda em toda navegação de verdade. O perfil do
+# simulador é o `movimentacao_sim.yaml`, e ele é OUTRO de propósito.
+#
+# Procedência, por linha: `bitola` e `zona_morta` estão MEDIDAS no robô
+# (`docs/MODELO_ROBO2.md`); `a_dec` segue sendo escolha conservadora e não a
+# medida — está marcado abaixo, onde mora.
 #
 # Racional de cada um: `docs/decisoes/005-lei-de-frenagem-de-rumo.md`.
 
@@ -18,6 +21,12 @@ heading_controller:
     #   valor aqui: 0,3 — abaixo da estimativa, de propósito.
     #   Medido: errar pra baixo custa 0,3 s a mais e zero sobrepasso;
     #           errar pra cima traz o S de volta.
+    #
+    #   ⚠️ NÃO é a medida: 07-31 mediu ~3,05 rad/s² no robô (faixa 2,08–3,67,
+    #   n=4), 10x este valor. Fica o conservador DE PROPÓSITO por enquanto —
+    #   subir a frenagem mexe direto no S que só assentou em 11-08, e isso
+    #   merece leva própria, com corrida de controle. Não é esquecimento;
+    #   é a diferença entre o que a máquina faz e o que pedimos dela.
     a_dec: 0.3
 
     # Tetos. Iguais aos do diff_drive_controller — limite num lugar só.
@@ -25,19 +34,32 @@ heading_controller:
     v_max: 0.5
 
     # Zona morta da RODA [m/s]: abaixo disso a placa ignora o comando.
-    #   medir com: ensaios `zona_morta_linear` e `zona_morta_giro`
-    #   valor aqui alto de propósito: gera um piso generoso, e piso generoso
-    #   é o que impede o robô de ficar plantado (BO-3). Medido no simulador:
-    #   0,10 passa raspando, 0,15 trava o robô por 22 s.
-    zona_morta: 0.15
+    #
+    #   MEDIDO NO ROBÔ 2026-07-31 (decisão 020): 0,0178 de frente, 0,0148 de ré
+    #   — fica o maior dos dois, que cobre os dois sentidos. Era 0.15, um chute
+    #   conservador de antes da bancada, e o erro de 8x NÃO ficava parado aqui:
+    #   proibia o pivô por aritmética (exigia 1,48 rad/s contra teto de 1,00,
+    #   e a máquina gira 147° com wz=0,30) e ABRIA AS CURVAS — o pedido
+    #   (v=0,10 · wz=0,30), que o robô entregou em raio 0,333 m, saía desta lei
+    #   como 0,802 m. Acelerar para escapar da banda muda a razão entre as
+    #   rodas, e a razão é o raio.
+    #
+    #   🔴 ESTE NÚMERO SUPÕE `deadband_enable=true` no `robo2.urdf.xacro`.
+    #   Com a compensação ligada o limiar real é o `mx > 1.0` do driver
+    #   (1 RPM · roda_raio 0,080 = 0,0084 m/s) e a roda de dentro é escalada
+    #   junto com a de fora. DESLIGADA — como o banco precisa fazer para
+    #   caracterizar — a zona morta de verdade (0,25–0,50 m/s) volta e este
+    #   valor fica perigosamente baixo. Há teste travando o par.
+    zona_morta: 0.0178
 
     # Bitola [m] — distância entre as rodas motrizes.
     #   MEDIDA COM TRENA 2026-07-29: por fora das rodas 315 mm, por dentro
     #   225 mm → (315+225)/2 = 270 mm. Era 0.32, herdada e nunca medida.
     #   Entra na conversão de comando em rad/s de roda: errar aqui erra tudo.
-    #   ⚠️ Bitola MENOR exige MAIS wz para pivotar: com zona_morta 0.15 e
-    #   margem 0.05 o pivô passa a exigir 1,48 rad/s contra teto de 1,0 —
-    #   pior que os 1,25 de antes. A ré da decisão 007 segue necessária.
+    #   ⚠️ Bitola MENOR exige MAIS wz para pivotar. Com a zona morta MEDIDA
+    #   (0,0178) o pivô pede 0,50 rad/s contra teto de 1,0 e existe com folga;
+    #   com o chute de 0,15 que estava aqui até 12-08 ele pedia 1,48 e era
+    #   declarado impossível. Ver decisão 020.
     bitola: 0.270
 
     margem_piso: 0.05        # folga acima da zona morta [m/s]

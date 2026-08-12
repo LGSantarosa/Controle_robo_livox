@@ -587,3 +587,132 @@ def test_o_default_RESOLVE_para_o_seguro_quando_sim_e_false(arg, no_robo, no_sim
         f'com sim:=false (robô real) o default de `{arg}` tem de ser {no_robo!r}')
     assert _resolve_default(arg, 'true') == no_sim, (
         f'com sim:=true o default de `{arg}` tem de ser {no_sim!r}')
+
+
+# ---------------------------------------------------------------------------
+# A ZONA MORTA MEDIDA, E O QUE ELA SEGURA (decisão 020)
+#
+# `movimentacao.yaml` passou doze dias dizendo "NENHUM DESTES NÚMEROS FOI
+# MEDIDO NESTE ROBÔ AINDA" depois de 07-31 ter medido. O chute que ficou (0,15
+# contra 0,0178 reais) não ficava parado no arquivo: proibia o pivô por
+# aritmética e ABRIA AS CURVAS, porque a saída da lei é acelerar — e acelerar
+# muda a razão entre as rodas, que neste atuador é a única coisa obedecida.
+#
+# Os quatro testes abaixo travam as pontas que deixaram isso passar.
+# ---------------------------------------------------------------------------
+
+MOVIMENTACAO = os.path.join(RAIZ, 'ros2_packages', 'robot_motion', 'config',
+                            'movimentacao.yaml')
+SEGUIDOR = os.path.join(RAIZ, 'ros2_packages', 'robot_motion', 'robot_motion',
+                        'path_follower.py')
+URDF = os.path.join(RAIZ, 'ros2_packages', 'robot_base', 'description',
+                    'robo2.urdf.xacro')
+
+
+def _perfil_do_robo():
+    """Os números do robô real, LIDOS do arquivo que o robô carrega."""
+    return {c: valor(MOVIMENTACAO, c)
+            for c in ('zona_morta', 'bitola', 'margem_piso', 'wz_max')}
+
+
+def _default_do_seguidor(nome):
+    """O default de um parâmetro do `path_follower`, lido por AST.
+
+    Lê o ARQUIVO em vez de importar e instanciar o nó (que exigiria rclpy) e em
+    vez de repetir o número aqui. A lição é a da 019: teste que reconstrói o
+    alvo não testa o alvo.
+    """
+    import ast
+
+    with open(SEGUIDOR) as f:
+        arvore = ast.parse(f.read())
+    for no in ast.walk(arvore):
+        if not isinstance(no, ast.Tuple) or len(no.elts) != 2:
+            continue
+        chave, val = no.elts
+        if (isinstance(chave, ast.Constant) and chave.value == nome
+                and isinstance(val, ast.Constant)):
+            return val.value
+    raise AssertionError(f'`{nome}` não é parâmetro declarado do seguidor')
+
+
+def test_o_piso_do_seguidor_sai_da_movimentacao():
+    """O `v_piso` do seguidor é a fórmula da movimentação, não um número solto.
+
+    O comentário no `path_follower.py` já mandava "TEM QUE BATER com o que a
+    movimentação calcula" — e era só comentário. Os dois arquivos andaram
+    separados por doze dias (0,335 contra os 0,203 da conta) porque nada
+    conferia. O `v_piso` governa o raio de chegada mínimo: divergir aqui é o
+    robô aceitando um raio que a máquina não fecha, e orbitando o ponto.
+    """
+    p = _perfil_do_robo()
+    esperado = p['zona_morta'] + p['wz_max'] * p['bitola'] / 2.0 + p['margem_piso']
+    v_piso = _default_do_seguidor('v_piso')
+    assert abs(v_piso - esperado) < 5e-4, (
+        f'v_piso={v_piso} no seguidor, mas a movimentação calcula '
+        f'{esperado:.4f} (zona_morta {p["zona_morta"]} + wz_max·bitola/2 + '
+        f'margem {p["margem_piso"]}). Um dos dois arquivos envelheceu.')
+
+
+def test_o_pivo_existe_com_os_numeros_do_robo():
+    """A máquina pivota — o YAML não pode dizer que não.
+
+    Medido em 07-31: `wz=±0,30` por 1 s deu +147,7° e −150,0° de giro total. Com
+    `zona_morta=0,15` a lei exigia 1,48 rad/s contra teto de 1,00 e declarava o
+    pivô IMPOSSÍVEL na subida do nó — proibição que chegou a virar item de
+    bancada no ESTADO_PROJETO, trabalho agendado para um defeito inexistente.
+    """
+    from robot_motion.lei_de_rumo import pivo_disponivel, wz_minimo_parado
+    p = _perfil_do_robo()
+    assert pivo_disponivel(p['zona_morta'], p['bitola'], p['margem_piso'],
+                           p['wz_max']), (
+        'com estes números o nó declara "pivô INDISPONÍVEL" na subida e a '
+        'saída de pivô da lei fica inalcançável — contra uma máquina que gira '
+        '147° com wz=0,30')
+    assert wz_minimo_parado(p['zona_morta'], p['bitola']) < p['wz_max']
+
+
+def test_a_curva_pedida_e_a_curva_ENTREGUE():
+    """O par medido em 07-31 tem de sair da lei com o raio que a máquina fez.
+
+    `v=0,10 · wz=0,30` foi ao chão e entregou raio 0,333 m contra 0,333
+    comandado: este atuador obedece ao RAIO (a compensação do driver escala as
+    duas rodas juntas, preservando a razão entre elas e destruindo o módulo).
+
+    Com `zona_morta=0,15` a lei interceptava esse pedido e mandava 0,802 m para
+    a máquina — 2,4x mais aberto. Em porta e corredor, é a diferença entre
+    passar e raspar.
+    """
+    from robot_motion.lei_de_rumo import ajusta_para_zona_morta
+    p = _perfil_do_robo()
+    v, wz = ajusta_para_zona_morta(0.10, 0.30, p['zona_morta'], p['bitola'],
+                                   p['margem_piso'], v_teto=0.5)
+    pedido, entregue = 0.10 / 0.30, v / wz
+    assert entregue < 1.10 * pedido, (
+        f'a lei abre a curva: pedido {pedido:.3f} m, entregue {entregue:.3f} m '
+        f'({entregue / pedido:.2f}x). Acelerar para escapar da banda muda a '
+        'razão entre as rodas, e a razão é o raio.')
+
+
+def test_a_zona_morta_supoe_a_compensacao_do_driver_LIGADA():
+    """O par `zona_morta` × `deadband_enable` é um acoplamento entre arquivos.
+
+    0,0178 m/s só vale porque o driver escala as rodas até a maior vencer o
+    limiar do firmware — o limiar que sobra é o `mx > 1.0` dele (1 RPM ·
+    roda_raio 0,080 = 0,0084 m/s). Com `deadband_enable=false`, que é o que o
+    banco precisa fazer para caracterizar o atuador, a zona morta de verdade
+    (0,25–0,50 m/s, MODELO_ROBO2 §2) volta e este piso fica perigosamente
+    baixo: o robô não sai do lugar e o sintoma é o BO-3 clássico.
+
+    Quem desligar a compensação derruba este teste, e é essa a intenção.
+    """
+    with open(URDF) as f:
+        texto_urdf = f.read()
+    real = texto_urdf.split('<xacro:unless value="$(arg sim)">')[-1]
+    m = re.search(r'<param name="deadband_enable">\s*(\w+)\s*</param>', real)
+    assert m, 'o bloco de hardware do robô real não declara `deadband_enable`'
+    assert m.group(1) == 'true', (
+        'a compensação do driver está DESLIGADA no robô real, e '
+        f'`zona_morta={valor(MOVIMENTACAO, "zona_morta")}` no '
+        'movimentacao.yaml supõe ela ligada. Sem ela a zona morta real é '
+        '0,25–0,50 m/s (MODELO_ROBO2 §2) e o piso tem de subir junto.')

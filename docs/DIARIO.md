@@ -5078,3 +5078,142 @@ consumidores concordavam entre si e nenhum perguntava quem publicava.
 no pré-voo: `ros2 launch robot_base base.launch.py` sozinho tem de deixar a TF
 `odom → base_link` de pé, e `ros2 launch robot_motion pilha.launch.py` sem
 argumento nenhum tem de subir **sem** `map_server`.
+
+## 2026-08-12 — O perfil do robô real era anterior à bancada que o mediu
+
+Sessão de dev, robô desligado, segunda leva de navegação. Decisão **020**.
+**337 testes verdes** (eram 333), quatro novos verificados por mutação.
+
+### Como isto apareceu
+
+Não foi procurando. Abri a leva de navegação para escolher o próximo degrau
+depois da 019 e fui ler a pilha inteira antes de propor — `pilha.launch.py`,
+`path_follower.py`, `heading_controller.py`, as leis e os YAML. O
+`config/movimentacao.yaml` abria assim:
+
+```
+# ⚠️ NENHUM DESTES NÚMEROS FOI MEDIDO NESTE ROBÔ AINDA.
+zona_morta: 0.15
+```
+
+E o `docs/MODELO_ROBO2.md` mediu essa zona morta em **07-31**: 0,0178 m/s de
+frente, 0,0148 de ré. O arquivo passou doze dias declarando não medido o que já
+estava medido. A `bitola` da mesma leva foi propagada — por causa do defeito de
+29-07, que doeu — e as outras duas ficaram para trás em silêncio.
+
+⚠️ **`movimentacao.yaml` não é citado em nenhum documento do repo.** Nem decisão,
+nem diário, nem roteiro. Um arquivo que ninguém referencia é um arquivo que
+ninguém revisita.
+
+### O que o número errado custava — e a parte que eu não esperava
+
+A conta óbvia: com 0,15 o pivô exigiria 1,48 rad/s contra teto de 1,00, e o nó
+anunciava `pivô INDISPONÍVEL` em toda subida. Isso já é ruim, mas é visível.
+
+A parte cara é a segunda, e ela precisou do fonte do driver para fechar:
+
+```cpp
+double mx = fmax(|set_speed[0]|, |set_speed[1]|);
+if (deadband_enable && mx > 1.0 && mx < deadband_speed) {
+    double k = deadband_speed / mx;   set_speed[0] *= k;  set_speed[1] *= k;
+}
+```
+
+Escalar as **duas juntas** preserva a razão entre as rodas e destrói o módulo.
+Como a razão é o que define o raio do arco: **`cmd_vel` escolhe o RAIO; a
+velocidade quem escolhe é a placa.** As três corridas cruas de ontem confirmam
+com `cmd_v = 0,250`: 0,305 · 0,292 · 0,298 m/s realizados.
+
+Então a "saída" da lei da zona morta — acelerar para tirar a roda de dentro da
+banda — **não acelera nada** (o patamar manda) e **muda a razão**, que é a única
+grandeza obedecida. Passando pares pela lei do próprio repo:
+
+```
+pedido (v · wz)   R pedido    com 0,15            com 0,0178
+(0,10 · 0,30)      0,333 m    (0,240·0,30) 0,802   (0,108·0,30) 0,361
+(0,15 · 0,50)      0,300 m    (0,268·0,50) 0,535   (0,150·0,50) 0,300
+```
+
+A primeira linha é uma corrida de 07-31 que foi ao chão: o robô entregou raio
+0,333 m para o pedido de 0,333. A lei mandava 0,802 m para ele.
+
+### O erro de leitura que o dono corrigiu, e ele foi meu
+
+Escrevi a primeira explicação enterrada em conta e ela deu a entender que **o
+robô não pivota**. O dono me parou: *"Ele tem sim pivô, aonde que essas
+informações estão?? pq ta errado. nós mesmos já fizemos inúmeros testes dele
+fazendo pivô. De verdade eu não entendi nada do que vc escreveu aí em cima."*
+
+Ele estava certo nas duas coisas. A máquina pivota — e eu nunca duvidei disso,
+era exatamente o meu argumento: **o software é que achava que ela não pivota**.
+Mas escrevi de um jeito que só se entende relendo três vezes, e num assunto onde
+ele tem a experiência de campo e eu tenho só o repo. Refeito em três blocos
+curtos (onde está a informação errada · o que ela diz · por que isso vira
+"indisponível"), a conversa andou em uma mensagem.
+
+➡️ **Lição, e ela é de método, não de estilo**: quando a conclusão contraria o
+que o dono viu com os próprios olhos, a explicação tem de começar concordando com
+o que ele viu. Eu comecei pela aritmética e a aritmética parecia estar discutindo
+com a máquina.
+
+E a resposta dele à correção fecha o diagnóstico melhor do que eu: *"achei que
+isso já tinha sido feito."* Era exatamente esse o defeito — todo mundo achava.
+
+### A fresta que deixou os arquivos andarem separados
+
+`path_follower.py` declarava `v_piso: 0.335` com o comentário *"TEM QUE BATER com
+o que a movimentação calcula: zona_morta + wz_max·bitola/2 + margem"*. A conta
+estava certa e o comentário também. **Só que era comentário.** Nenhum teste
+conferia, e os dois arquivos envelheceram juntos sem sintoma.
+
+Os quatro testes novos, e três deles fecham buracos e não funcionalidade:
+
+1. o `v_piso` do seguidor é LIDO do `path_follower.py` (por AST) e conferido
+   contra a fórmula com os números LIDOS do `movimentacao.yaml`;
+2. o pivô existe com o perfil do robô;
+3. o par de 07-31 sai da lei com o raio que a máquina mediu;
+4. `deadband_enable` está `true` no `robo2.urdf.xacro` — o acoplamento. Se
+   alguém desligar a compensação, a zona morta real (0,25–0,50) volta e o piso
+   de 0,0178 fica perigoso. O teste cai de propósito.
+
+Mutação nos dois sentidos (voltar `zona_morta` para 0,15; desligar
+`deadband_enable`) derruba exatamente os testes esperados: 3 e 1.
+
+🔧 **O teste que previu a própria mudança.** O
+`test_a_taxa_minima_implicita_tem_folga_contra_o_piso_de_linear` dizia, escrito
+em 05-08: *"Se a zona morta medida na bancada derrubar muito o piso, este par de
+números volta à mesa."* Voltou — a folga do gatilho de "emperrado" caiu de 10×
+para 6,1×. Ainda passa. Tirei o literal `0.15 + 1.0*0.270/2 + 0.05` de lá e o
+piso passou a ser lido do arquivo do robô: copiado, ele mentiria na próxima vez
+em vez de derrubar o teste.
+
+### O que fica aberto, e não deve ser lido como resolvido
+
+🔵 **A velocidade continua não sendo comandável.** Toda a lei de velocidade do
+seguidor (`velocidade_de_seguimento`: frear na curva, frear perto do objetivo) é
+**inerte neste robô** — ele percorre qualquer arco a ~0,30 m/s e chega no ponto
+nessa velocidade. Nada nesta leva mexeu nisso.
+
+🔵 **O modelo certo do limiar é uma RAZÃO, não um valor absoluto.** Com a
+compensação ligada, a roda de dentro cai no limiar do firmware quando
+`interna/externa` fica pequeno demais — condição de raio, não de velocidade. Em
+07-31 o pedido `(0,10 · 0,30)` tinha razão comandada 0,42 e o encoder leu 0,22
+numa das corridas: a roda de dentro ficou aquém. É lei nova, não parâmetro; fica
+como a próxima pergunta desta trilha.
+
+🔵 **`a_dec: 0.3` contra ~3,05 medidos.** Mesmo arquivo, mesma origem, outra
+pergunta — mexer na frenagem de rumo mexe no S que só assentou em 11-08. Fica
+como escolha anotada no arquivo, não como esquecimento, e vai para leva própria
+com corrida de controle.
+
+⏳ **Nada foi ao robô.** A confirmação cabe no pré-voo e não precisa de corrida:
+a subida do `heading_controller` tem de dizer `pivô DISPONÍVEL acima de
+0,13 rad/s` em vez do `INDISPONÍVEL` de hoje.
+
+🔧 **Dívida de ferramenta vista de novo (anterior a esta leva)**: `test_lei_de_rumo`,
+`test_lei_de_seguimento`, `test_navegacao_ponto` e agora os testes novos só
+importam `robot_motion.*` quando a suíte roda **por pacote** — rodar um arquivo
+sozinho dá `ModuleNotFoundError`. É sorte de ordem de coleta, não robustez. Não
+consertei nesta leva de propósito (é plumbing e a mudança do dia é de uma linha),
+mas fica registrado: o protocolo é `python3 -m pytest ros2_packages/robot_motion`,
+nunca por arquivo.

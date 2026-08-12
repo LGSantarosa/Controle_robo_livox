@@ -252,12 +252,33 @@ def test_a_taxa_minima_implicita_tem_folga_contra_o_piso_de_linear():
 
     Se a zona morta medida na bancada derrubar muito o piso, este par de
     números volta à mesa: a folga é o que sustenta o gatilho.
+
+    ⚠️ E ela voltou, em 12-08 (decisão 020): a zona morta medida (0,0178 contra
+    o chute de 0,15) derrubou o piso de 0,335 para 0,203, e a folga caiu de 10x
+    para 6,1x. Ainda passa. Por isso o piso é LIDO do arquivo do robô e não
+    copiado para cá — copiado, ele passaria a mentir na próxima vez em vez de
+    derrubar o teste.
     """
+    import os
+    import re
+
+    yaml_robo = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        'config', 'movimentacao.yaml')
+    with open(yaml_robo) as f:
+        conf = {m.group(1): float(m.group(2))
+                for m in (re.match(r'^\s*(\w+):\s*([-\d.]+)\s*$',
+                                   linha.split('#')[0])
+                          for linha in f) if m}
+
     taxa_minima = 0.05 / 1.5
-    v_piso_pessimista = 0.15 + 1.0 * 0.270 / 2 + 0.05
-    assert taxa_minima < v_piso_pessimista / 5.0, (
+    v_piso = (conf['zona_morta'] + conf['wz_max'] * conf['bitola'] / 2.0
+              + conf['margem_piso'])
+    assert taxa_minima < v_piso / 5.0, (
         f'taxa mínima {taxa_minima:.3f} m/s perto demais do piso '
-        f'{v_piso_pessimista:.3f} m/s — o gatilho vira falso positivo')
+        f'{v_piso:.3f} m/s — o gatilho vira falso positivo. O piso caiu porque '
+        'a zona morta do robô caiu; `re_avanco_min`/`re_parado_s` precisam '
+        'acompanhar (lei_de_seguimento / path_follower).')
 
 
 def test_o_relogio_zera_quando_o_robo_volta_a_andar():
