@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <sdf version="1.8">
-  <world name="andar3">
+  <world name="meu_mapa">
     <physics name="1ms" type="ignored"><max_step_size>0.001</max_step_size><real_time_factor>1.0</real_time_factor></physics>
     <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
     <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
@@ -24,8 +24,8 @@
     <model name="walls">
       <static>true</static>
       <link name="link">
-        <collision name="col"><geometry><mesh><uri>andar3.obj</uri></mesh></geometry></collision>
-        <visual name="vis"><geometry><mesh><uri>andar3.obj</uri></mesh></geometry>
+        <collision name="col"><geometry><mesh><uri>meu_mapa.obj</uri></mesh></geometry></collision>
+        <visual name="vis"><geometry><mesh><uri>meu_mapa.obj</uri></mesh></geometry>
           <material><ambient>0.6 0.55 0.5 1</ambient><diffuse>0.6 0.55 0.5 1</diffuse></material>
         </visual>
       </link>

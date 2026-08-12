@@ -55,7 +55,7 @@ publica `map→odom` de fato. É o que destrava mapa grande (corredor, andar), o
 a janela rolante de 20 m da decisão 015 não alcança.
 
     ros2 launch robot_motion pilha.launch.py \
-        mapa:=maps/andar3/andar3.yaml localizacao:=amcl \
+        mapa:=maps/meu_mapa/meu_mapa.yaml localizacao:=amcl \
         pose_x:=0.0 pose_y:=0.0 pose_yaw:=0.0
 
 🔴 **O AMCL e o `tf_map_odom` NUNCA sobem juntos** — publicam a mesma TF, e

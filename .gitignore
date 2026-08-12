@@ -20,12 +20,12 @@ maps/*
 # Editar a planta no script e RODAR DE NOVO — os arquivos abaixo são saída.
 !maps/pista_obstaculos.pgm
 !maps/pista_obstaculos.yaml
-# ...e menos o mapa do andar 3, pelo MESMO motivo: ele é insumo da localização
+# ...e menos o mapa do prédio (`meu_mapa`), pelo MESMO motivo: ele é insumo da localização
 # (map_server + AMCL) nos dois lados, e o deploy deste projeto é
 # `git reset --hard`, nunca scp de arquivo solto. Mapa que não vem no clone é
 # pilha que não sobe no robô.
-!maps/andar3/
-!maps/andar3/*
+!maps/meu_mapa/
+!maps/meu_mapa/*
 
 # Colcon workspace (build artifacts deste repo)
 build/

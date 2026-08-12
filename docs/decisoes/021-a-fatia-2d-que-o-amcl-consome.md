@@ -1,6 +1,6 @@
 # 021 — A fatia 2D que a localização contra mapa consome
 
-**Data**: 2026-08-12 (dev, robô desligado) · **Branch**: `slam-mapa-andar3`
+**Data**: 2026-08-12 (dev, robô desligado) · **Branch**: `slam-meu-mapa`
 **Status**: implementada, não vista no simulador nem no robô
 **Toca**: `robot_base/config/scan_2d.yaml`, `launch/scan_2d.launch.py`,
 `localizacao.launch.py`, `sim.launch.py`
@@ -103,7 +103,7 @@ a mesma forma de teste ruim** (017, 019, e agora aqui): teste que reconstrói ou
 tangencia o alvo não testa o alvo.
 
 ⏳ **Nada rodou ainda** — nem no simulador. O que o Gazebo responde a seguir, e
-é o que mais dá erro: o `/scan` casa com o mapa do andar 3? O que ele **não**
+é o que mais dá erro: o `/scan` casa com o `meu_mapa`? O que ele **não**
 responde é convergência do AMCL contra odometria que deriva, porque lá a pose é
 verdadeira.
 

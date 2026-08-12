@@ -1,6 +1,6 @@
 # 022 — O AMCL substitui a TF fixa, e os dois nunca convivem
 
-**Data**: 2026-08-12 (dev, robô desligado) · **Branch**: `slam-mapa-andar3`
+**Data**: 2026-08-12 (dev, robô desligado) · **Branch**: `slam-meu-mapa`
 **Status**: implementada, **não rodou em lugar nenhum** — nem no simulador
 **Toca**: `pilha.launch.py`, `config/localizacao_amcl.yaml`
 **Vem de**: decisão 021 (a fatia 2D), e fecha o par com ela
@@ -108,7 +108,7 @@ ele responde:
 
 | pergunta | o Gazebo responde? |
 |---|---|
-| o `/scan` casa com o mapa do andar 3? | 🟢 sim — e é o que mais dá erro |
+| o `/scan` casa com o `meu_mapa`? | 🟢 sim — e é o que mais dá erro |
 | a pilha sobe com `map_server` + AMCL sem brigar? | 🟢 sim |
 | o AMCL converge com odometria que **deriva**? | 🔴 **não** |
 
