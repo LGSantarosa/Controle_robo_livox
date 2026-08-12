@@ -114,6 +114,43 @@ distância, de costas até acabar o espaço. `re_parado_s` (1,5 s) era menor que
 própria manobra (1,6–2,8 s). Agora 4,0 s, mais `re_max_seguidas=2`, que não
 depende de sintonia.
 
+### 🎯 A PRÓXIMA TAREFA — o critério é do dono, e ele é falsificável
+
+> **O reflexo só pode disparar por SURPRESA** — uma pessoa, um obstáculo móvel.
+> O que é parado e está no mapa tem de ser desviado ANTES, pela navegação.
+> Reflexo disparando contra obstáculo mapeado é falha de navegação, por
+> definição.
+
+A ré da 025 é **band-aid** e fica sabendo disso: ela é a rede para a surpresa,
+não o conserto de entrar torto. E o culpado já está medido — **é o seguidor,
+não o planner**:
+
+```
+porta: parede em x=4,0 · vão de y=2,05 a 2,95 · CENTRO 2,50 · corpo 0,63 m
+
+o PLANO do Theta*      cruza em y=2,483   (−0,017 m do centro)   sobra +0,118 m/lado
+o CAMINHO REALIZADO    cruza em y=2,401   (−0,099 m do centro)   sobra +0,036 m/lado
+```
+
+**O plano está praticamente perfeito** (1,7 cm do centro de um vão de 90 cm). O
+seguidor perde **8 cm** e come **2/3 da margem** — sobram 3,6 cm por lado, e é
+por isso que o reflexo dispara contra uma parede que está no mapa.
+
+➡️ O alvo da próxima leva é o **erro de trajeto (cross-track) do seguidor**, e
+ele é geometria, não sintonia de rumo. Hipóteses na ordem em que eu atacaria:
+
+1. **A lei é só de RUMO.** `rumo_para(x, y, carrot)` mira a cenoura e corrige
+   desvio lateral só de forma implícita, com atraso. Pure pursuit tem desvio
+   permanente conhecido em curva, e a entrada da porta é logo depois de uma.
+2. **Sem pivô (023) ele arca para dentro** em vez de se esquadrejar. Em 05-08
+   ele passou *"perfeitamente no meio"* — e tinha o pivô.
+3. **`lookahead` 0,37 m** foi escolhido em 05-08 contra um seguidor que
+   pivotava. Mira curta com arco puro pode ser outra coisa.
+
+**A régua já existe**: `folga.py` mede contra o MAPA (o sensor tem 2 m de zona
+cega e diria "livre" onde o robô raspa), e o `corrida_nav.py` já grava quando o
+reflexo agiu. Corrida que dispara o reflexo contra obstáculo mapeado reprova.
+
 ### ⚠️ Duas dívidas abertas nesta sessão
 
 - **Ele entra torto na porta**: 0,16 m fora do centro de um vão de 0,90 m com
