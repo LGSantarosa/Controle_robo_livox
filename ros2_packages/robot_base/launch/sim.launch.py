@@ -194,6 +194,17 @@ def generate_launch_description():
         event_handler=OnProcessExit(target_action=spawn, on_exit=[joint_state_broadcaster])
     )
 
+    # A fatia 2D da nuvem, para a localização contra mapa (o AMCL é 2D). É o
+    # MESMO launch e o MESMO YAML do robô real — a fatia é geometria da
+    # máquina, e a única forma de o simulador provar algo sobre a localização
+    # é ele enxergar a mesma coisa. Ver decisão 021.
+    scan_2d = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(os.path.join(
+            get_package_share_directory('robot_base'),
+            'launch', 'scan_2d.launch.py')),
+        launch_arguments={'use_sim_time': 'true'}.items(),
+    )
+
     return LaunchDescription(args + [
         gazebo_com_gui,
         gazebo_headless,
@@ -203,4 +214,5 @@ def generate_launch_description():
         spawn,
         apos_spawn,
         ordem,
+        scan_2d,
     ])

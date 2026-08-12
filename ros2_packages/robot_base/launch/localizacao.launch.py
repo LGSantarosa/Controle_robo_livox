@@ -125,4 +125,14 @@ def generate_launch_description():
         # células letais enquanto o sensor entregava 9,96 Hz. Ver decisão 017.
         Node(package='robot_base', executable='nuvem_pontos',
              name='nuvem_pontos', output='both'),
+        # E a fatia 2D dessa mesma nuvem, que é o que a localização contra
+        # MAPA consome (o AMCL é 2D). Mora em launch próprio porque o
+        # simulador sobe exatamente o mesmo nó com exatamente os mesmos
+        # números — a fatia é geometria da máquina, e geometria que diverge
+        # entre bancada e robô é o defeito de 29-07. Ver decisão 021.
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(os.path.join(
+                _share('robot_base'), 'launch', 'scan_2d.launch.py')),
+            launch_arguments={'use_sim_time': 'false'}.items(),
+        ),
     ])

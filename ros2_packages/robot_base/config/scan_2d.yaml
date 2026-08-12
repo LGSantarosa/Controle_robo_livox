@@ -1,0 +1,63 @@
+# A fatia 2D que a localização contra mapa consome — decisão 021.
+#
+# O AMCL é 2D: ele casa um `LaserScan` contra um mapa de ocupação. O nosso
+# sensor é 3D, então alguém tem de escolher QUAL fatia do mundo vira "parede".
+# Esse alguém são os dois números abaixo, e errar neles não dá erro: dá AMCL
+# divergindo sem explicação.
+#
+# Todas as alturas são MEDIDAS DO CHÃO, porque `target_frame` é o `base_link` e
+# a origem dele está no chão (`robo2.urdf.xacro`: quem toca o chão são as rodas,
+# e a junta delas fica `roda_raio` ACIMA do base_link).
+#
+# A geometria que manda aqui, toda medida:
+#
+#   Livox a 0,42 m do chão (trena, 05-08), campo de visão de −7° a +52°
+#   -> a menor altura vista a `d` metros é  0,42 − 0,123·d
+#   -> o chão só entra no campo a  0,42/tan(7°) = 3,4 m
+#   raio do robô 0,32 m (nav2.yaml)
+
+scan_2d:
+  ros__parameters:
+
+    # A fatia é medida a partir do base_link, que está no chão.
+    target_frame: base_link
+    transform_tolerance: 0.10
+
+    # ── OS DOIS NÚMEROS QUE DECIDEM TUDO ─────────────────────────────────
+    #
+    # `min_height` 0,15: acima do chão. A partir de 3,4 m o raio de −7° começa
+    # a bater no piso, e piso lido como obstáculo põe uma parede circular em
+    # volta do robô — o mapa não tem essa parede, e o AMCL não fecha.
+    #
+    # `max_height` 1,00: abaixo do teto e da mobília alta. O raio de +52°
+    # alcança 1,00 m já a 0,45 m de distância, então sem este corte quase tudo
+    # perto vira "parede". O mapa é uma planta: teto não está nele.
+    min_height: 0.15
+    max_height: 1.00
+
+    # 360°, em passos de 1°. Com ~11 mil pontos por quadro sobram ~30 por
+    # setor, que é folga suficiente para o mínimo de cada setor ser estável —
+    # e mais fino que isso só multiplica raio vazio (o Mid-360 é de varredura
+    # NÃO repetitiva: setor sem ponto neste quadro é normal, não é falha).
+    angle_min: -3.141592653589793
+    angle_max: 3.141592653589793
+    angle_increment: 0.017453292519943295
+
+    scan_time: 0.10          # 10 Hz, a taxa da nuvem
+
+    # `range_min` 0,35 > raio do robô (0,32): abaixo disso o que aparece é a
+    # PRÓPRIA caixa do robô, que fica a 0,23 m de altura — dentro da fatia. Sem
+    # este corte o robô se enxerga como parede colada e o AMCL trava.
+    range_min: 0.35
+    # O mapa tem 23,5 × 67,2 m; ler mais longe que ele não ajuda a casar, e
+    # traz retorno de fora da planta (porta aberta, janela) que o mapa não tem.
+    range_max: 20.0
+
+    # Setor sem retorno vira `inf` e não some: para o AMCL, "vi longe" e "não
+    # olhei" são coisas diferentes, e ele trata `inf` como leitura de alcance
+    # máximo em vez de descartar o feixe.
+    use_inf: true
+    inf_epsilon: 1.0
+
+    concurrency_level: 1
+    queue_size: 5
