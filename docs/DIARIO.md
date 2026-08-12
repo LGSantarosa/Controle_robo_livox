@@ -5937,3 +5937,75 @@ estimador do ff, que deixou a previsão separadora sem teste possível.
 
 **75 testes verdes no `robot_base`** (eram 70), os cinco novos verificados por
 mutação nas duas direções.
+
+## 🧭 2026-08-12 (10ª leva) — O S do Nav2 não é do planejador, e a conta fecha em 18°
+
+Robô ligado, três corridas do passo 5 e um teste de planejamento **sem mover**.
+Dados em `docs/dados/2026-08-12-robo-nav2/`. Bateria 40,81 V, placa 23,7 °C.
+
+🟢 **A 027 passou por intervenção.** Mesmo código, o dono arrancou a peça que
+havia em volta do sensor: **0 pontos no polígono em 35 quadros e 0 disparos**,
+contra 0–2 pontos e 928 disparos antes. `collision_monitor` `active` e nuvem a
+10,2 Hz nos dois lados — não é pilha morta dando zero.
+
+```
+                          vetos do reflexo   yaw     desvio lateral
+antes (com a peça)          26  (16,7%)     62,8°       0,168 m
+depois (peça fora + 027)     2  ( 1,3%)     38,4°       0,103 m
+```
+
+**O reflexo era 39% do S.** O resto não é dele.
+
+🔵 **E não é do laço de rumo: a REFERÊNCIA é que oscila.**
+
+```
+                          referência (rumo_alvo)   medido (yaw)
+olhar 0,30 + ff velho             38,8°               38,4°
+olhar 0,30 + ff ontem             30,6°               32,9°
+olhar 0,60 + ff ontem             38,1°               42,6°
+```
+
+As amplitudes são a MESMA coisa: o compensador obedece com precisão. Por isso o
+S "voltou" com o Nav2 e não existia em 11-08 — lá a referência era uma reta fixa
+(`ensaio.py`, wz=0) e ele deu 6–10°. **O S mudou de dono.**
+
+🔵 **HIPÓTESE DO DONO TESTADA E RETIRADA: não é o planejador.** Com o robô
+parado, `plano.py` pediu caminho pelo `compute_path_to_pose`:
+
+```
+alvo 3,0   63 pontos, 3,10 m para 3,10 m de reta   1,00x
+alvo 2,5   40 pontos, 1,95 / 1,95                  1,00x
+alvo 1,0   16 pontos, 0,83 / 0,82                  1,01x
+alvo 4,0   VAZIO — limite da janela de 20 m / parede
+```
+
+**Todo plano sai reto.** O S nasce entre o plano e o robô.
+
+🔴 **A CONTA QUE FECHA, e ela é geométrica**: o seguidor mira 0,30 m à frente e
+o robô fica com ~0,10 m de desvio lateral. `atan(0,10/0,30) = 18°` — que é
+exatamente a amplitude de referência medida (±19°). Desvio lateral pequeno vira
+ordem de virada enorme; a placa entrega mais giro do que foi pedido (023: ela
+escala o comando inteiro por `k = 100/mx`); o robô passa da linha e a ordem
+inverte. **Ciclo que se alimenta.**
+
+⚠️ **E é por isso que mirar mais longe PIOROU** (previsão falsificada, `lookahead
+0,30 → 0,60`): com 0,60 m o desvio lateral já era 0,18 m, e
+`atan(0,18/0,60) = 17°` — o mesmo ângulo. **O ciclo se reajusta**, o knob não é
+alavanca. O `lookahead_piso` virou argumento de launch nesta leva e fica no
+default 0,30.
+
+⚠️ **Ressalva de método**: n=1 por condição, e este robô já mostrou dispersão
+grande entre corridas idênticas (06-08: faixa contra faixa, nunca n=1 contra
+n=1). Nada aqui autoriza ranquear 30,6° contra 38,1° como diferença real — o
+que autoriza conclusão é a IGUALDADE entre referência e yaw, que apareceu nas
+três, e o plano reto medido com o robô parado.
+
+⏳ **A próxima hipótese, ainda não testada**: a autoridade de giro. `wz_max` do
+`heading_controller` está em 1,0 rad/s e a placa transforma qualquer pedido em
+~2,2 rad/s efetivos. Previsão: `wz_max:=0.5` tem de derrubar a amplitude do yaw
+abaixo de 30°. Se não derrubar, parar de girar knob e instrumentar a geometria
+do seguidor (o ângulo que ele pede contra o desvio lateral, ponto a ponto).
+
+🔧 **Dívida nova**: `corrida_nav.py` não encerra ao entrar no raio de chegada —
+gastou 51 s de robô parado em corrida de 8 s, e isso derruba a fração de
+`raw_v` do critério para 77,6% quando medida na fase certa dá 92–94%.
