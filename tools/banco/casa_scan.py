@@ -164,9 +164,20 @@ def main():
                            lambda m: dados.setdefault('scan', m),
                            qos_profile_sensor_data)
     if a.pose == 'amcl':
+        # ⚠️ TRANSIENT_LOCAL, e não o QoS padrão. O AMCL só publica `/amcl_pose`
+        # quando o filtro ATUALIZA (a cada `update_min_d` de deslocamento) —
+        # com o robô parado, que é como esta régua é usada, nunca vem
+        # mensagem nova e o instrumento morre em "faltou a pose" reclamando de
+        # uma pilha que está perfeita. Com durabilidade transitória ele recebe
+        # a última publicada.
+        from rclpy.qos import (DurabilityPolicy, HistoryPolicy, QoSProfile,
+                               ReliabilityPolicy)
+        qos_ultima = QoSProfile(depth=1, history=HistoryPolicy.KEEP_LAST,
+                                reliability=ReliabilityPolicy.RELIABLE,
+                                durability=DurabilityPolicy.TRANSIENT_LOCAL)
         no.create_subscription(PoseWithCovarianceStamped, '/amcl_pose',
                                lambda m: dados.__setitem__('pose', m.pose.pose),
-                               10)
+                               qos_ultima)
     else:
         no.create_subscription(Odometry, '/Odometry',
                                lambda m: dados.__setitem__('pose', m.pose.pose),
