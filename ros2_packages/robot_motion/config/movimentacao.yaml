@@ -27,7 +27,14 @@ heading_controller:
     #   subir a frenagem mexe direto no S que só assentou em 11-08, e isso
     #   merece leva própria, com corrida de controle. Não é esquecimento;
     #   é a diferença entre o que a máquina faz e o que pedimos dela.
-    a_dec: 0.3
+    a_dec: 0.1        # 12-08 no robô: era 0.3 e o rumo oscilava 38° seguindo o
+                      # Nav2. O seguidor APONTA para um ponto a 0,30 m
+                      # (`rumo_para`, sem termo de erro lateral), então 0,10 m
+                      # fora da linha viram 18° de ordem — e a lei respondia
+                      # com 0,43 rad/s dentro de uma malha com 0,94 s de tempo
+                      # morto. Mesmo remédio de 06-08: baixar o GANHO, não o
+                      # teto (o teto a placa ignora; em arco ela preserva a
+                      # razão). Com 0,1 os mesmos 18° pedem 0,25 rad/s.
 
     # Tetos. Iguais aos do diff_drive_controller — limite num lugar só.
     wz_max: 1.0
