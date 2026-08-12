@@ -5217,3 +5217,77 @@ sozinho dá `ModuleNotFoundError`. É sorte de ordem de coleta, não robustez. N
 consertei nesta leva de propósito (é plumbing e a mudança do dia é de uma linha),
 mas fica registrado: o protocolo é `python3 -m pytest ros2_packages/robot_motion`,
 nunca por arquivo.
+
+### 12-08 (2ª leva) — o instrumento que faltava para o robô andar sozinho
+
+O dono perguntou quanto falta para começar os testes no robô, e lembrou das
+camadas de segurança. Fui levantar, e a resposta é curta: **falta pouco, e o
+pouco que falta não é o Nav2.**
+
+Está de pé no robô (visto na máquina, não no Gazebo): base com a TF fechada
+sozinha desde a 019, quatro servidores do Nav2 ativos, percepção marcando
+(138 e 504 células letais), robô andando reto, pré-voo 20/20.
+
+Nunca aconteceu: **o robô receber um objetivo e ir**. Cada elo da corrente foi
+visto de pé separado; a corrente inteira, com o robô andando, não.
+
+E as camadas de segurança, no placar honesto: o `twist_mux` está provado sem
+robô; o reflexo está configurado e desde a 017 consome a nuvem certa, mas
+**nunca foi visto parando o robô**; e o homem-morto **não publicou nada** em
+06-08 — 44 s, zero amostras. Metade dele já foi consertada em 11-08 (o
+`bin/robot-key` morria no `set -u` antes de o teleop existir) e o nó ganhou três
+contadores no `rosout` que separam "não lê a tecla" de "lê e não publica" de
+"publica e ninguém escuta". Diagnóstico de cinco minutos de bancada.
+
+🔴 **O que faltava mesmo era instrumento.** Nada no repo manda um objetivo para
+o robô real e grava a corrida — o `corrida_gazebo.py` sobe o Gazebo e não serve.
+Sem isso os experimentos de navegação virariam "o dono olha e relata", que é
+justamente o que este projeto não faz.
+
+**`tools/banco/corrida_nav.py`** (ROS) + **`tools/banco/leitura_nav.py`** (puro,
+com teste) — a mesma separação do `nuvem_pontos.py`/`nuvem.py`. Grava a corrente
+inteira a 20 Hz e julga:
+
+```
+/plan                     planejou? replanejou quantas vezes?
+/auto_vel_raw             o que o seguidor PEDIU
+/auto_vel                 o que o REFLEXO deixou passar
+/compensador_rumo/cmd_vel o que o MUX entregou
+/key_vel                  o humano meteu a mão? -> corrida MISTA
+/Odometry                 a pose aguentou 10 Hz ANDANDO?
+```
+
+⚠️ **As duas pontas do reflexo são gravadas porque parar por reflexo e parar por
+ter chegado se parecem de fora.** Só `raw` não-nulo com `saída` nula separa as
+duas — e essa é a única evidência de que o freio agiu. Tem teste garantindo que
+robô parado por ter chegado **não** conta como freada.
+
+🛡️ Manda o objetivo pela **ação** `navigate_to_pose` e não por `/goal_pose`, só
+para poder **cancelar** ao sair: instrumento morto com objetivo de pé deixa o
+robô tentando sozinho. O cancelamento não é freio — quem freia é o teclado.
+
+**Sete testes novos** (77 em `tools/`, eram 70), três verificados por mutação: o
+reflexo deixa de exigir que a autonomia tenha pedido; o caminho passa a somar o
+salto do LIO; o pior intervalo de pose vira o melhor. Os três derrubam o teste
+esperado.
+
+🔵 **A pergunta do CPU virou linha medida em vez de bloqueio.** Em 11-08 o
+`nuvem_pontos` foi morto durante as corridas (91% de um core convertendo 11 mil
+pontos em Python) e a taxa do `/Odometry` foi conferida com o robô **parado**. O
+dono decidiu que na navegação ele fica vivo — então o instrumento mede o pior
+intervalo de pose **durante a corrida**, e é isso que responde. Se engasgar, o
+driver do Livox sabe publicar `PointCloud2` em C++ (`xfer_format = 0`), o que
+apagaria a ponte Python; fica arquivado como saída, não como trabalho agendado.
+
+📋 **`docs/ROTEIRO_NAVEGACAO_NO_ROBO.md`** — a sessão inteira, em ordem de risco
+crescente: homem-morto → ff do dia → objetivo em espaço livre → objetivo com
+caixa. **O robô só anda sozinho depois que o freio de mão estiver provado.** O
+roteiro traz também a confirmação de uma linha da 020 (`grep -i "pivô"` no log
+da pilha tem de dizer `DISPONÍVEL acima de 0,13 rad/s`) e o resgate dos 8 CSV de
+11-08 que ainda estão no NUC, antes de qualquer `git clean`.
+
+🔧 **Escrevi o comando errado na primeira versão do roteiro** — mandei o
+`medir.py` rodar as corridas, e ele é LEITOR de CSV; quem anda é o `ensaio.py`.
+Peguei conferindo cada comando contra o `--help` real antes de fechar. Roteiro
+com comando errado queima bancada com a bateria correndo, e é o tipo de erro que
+só aparece na hora em que custa caro.

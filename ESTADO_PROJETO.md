@@ -10,6 +10,47 @@
 
 ---
 
+## 🚦 12-08 (2ª leva) — O ROBÔ ESTÁ PRONTO PARA ANDAR SOZINHO (dev)
+
+**344 testes verdes** (eram 337), sete novos, três verificados por mutação.
+
+🟢 **O que já está de pé no robô**: TF fechada sozinha (019), quatro servidores
+do Nav2 ativos, percepção marcando, robô andando reto, pré-voo 20/20.
+
+🔴 **O que nunca aconteceu: o robô receber um objetivo e ir.** A corrente
+inteira, com o robô andando, nunca rodou — só no Gazebo, que é otimista.
+
+🔴 **As camadas de segurança, no placar honesto:**
+
+```
+twist_mux (humano fura a autonomia)   provado sem robô
+reflexo (collision_monitor)           configurado, NUNCA visto parando o robô
+homem-morto (teclado)                 em 06-08 não publicou NADA em /key_vel
+```
+
+O `bin/robot-key` já foi consertado (11-08) e o teleop ganhou três contadores no
+`rosout` que separam "não lê a tecla" de "lê e não publica" de "publica e
+ninguém escuta". É diagnóstico de cinco minutos de bancada.
+
+🧰 **O instrumento que faltava**: `tools/banco/corrida_nav.py` (ROS) +
+`leitura_nav.py` (puro, testado). Manda um objetivo pela **ação** (para poder
+cancelar ao sair) e grava a corrente inteira a 20 Hz. ⚠️ Grava as **duas
+pontas** do reflexo (`/auto_vel_raw` × `/auto_vel`) porque parar por reflexo e
+parar por ter chegado se parecem de fora — e delata corrida em que o humano
+meteu a mão, que não prova autonomia.
+
+📋 **`docs/ROTEIRO_NAVEGACAO_NO_ROBO.md`** — a sessão em ordem de risco
+crescente: homem-morto → ff do dia → objetivo livre → objetivo com caixa. O robô
+só anda sozinho depois do freio de mão provado.
+
+🔵 **A pergunta do CPU do `nuvem_pontos` virou linha medida**, não bloqueio: o
+dono decidiu que ele fica vivo na navegação, e o instrumento mede o pior
+intervalo de `/Odometry` **durante a corrida** (em 11-08 a conferência foi com o
+robô parado). Se engasgar, a saída arquivada é o driver publicar `PointCloud2`
+em C++ (`xfer_format = 0`), apagando a ponte Python.
+
+---
+
 ## 🎯 12-08 — O PERFIL DO ROBÔ REAL ERA ANTERIOR À BANCADA (dev)
 
 Decisão **020**, segunda leva de navegação. **337 testes verdes** (eram 333),

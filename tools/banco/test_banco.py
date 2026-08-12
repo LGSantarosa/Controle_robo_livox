@@ -1053,3 +1053,92 @@ def test_o_pre_voo_exige_hardware_so_quando_nao_ha_simulador():
     assert cp.UNICOS['fastlio_mapping'][1] is True
     assert cp.UNICOS['livox_ros_driver2_node'][1] is True
     assert cp.UNICOS['ros2 launch robot_motion'][1] is False
+
+
+# ---------------------------------------------------------------------------
+# A LEITURA DE UMA CORRIDA DE NAVEGAÇÃO (`leitura_nav.py`)
+#
+# O instrumento nasceu para a primeira sessão em que o robô anda SOZINHO. O que
+# ele julga não pode depender de robô: parar por reflexo e parar por ter chegado
+# se parecem de fora, e uma corrida "salva" no teclado se parece com autonomia.
+# ---------------------------------------------------------------------------
+
+leitura_nav = _carrega('leitura_nav')
+
+
+def _amostra(t, x=0.0, y=0.0, raw=0.0, saida=0.0, key=0.0, plano=10):
+    return {'t': t, 'x': x, 'y': y, 'yaw': 0.0, 'dist': 0.0,
+            'plano_n': plano, 'raw_v': raw, 'raw_wz': 0.0,
+            'saida_v': saida, 'saida_wz': 0.0, 'mux_v': saida, 'mux_wz': 0.0,
+            'key_v': key}
+
+
+def test_o_reflexo_agindo_aparece_como_pedido_sem_saida():
+    """A autonomia pede e nada sai: é o reflexo, e é a única evidência dele."""
+    linhas = ([_amostra(t / 10, raw=0.25, saida=0.25) for t in range(10)]
+              + [_amostra(1.0 + t / 10, raw=0.25, saida=0.0) for t in range(20)]
+              + [_amostra(3.0 + t / 10, raw=0.25, saida=0.25) for t in range(5)])
+    freadas = leitura_nav.freadas_do_reflexo(linhas)
+    assert len(freadas) == 1, 'uma freada contínua não pode virar várias'
+    inicio, duracao = freadas[0]
+    assert abs(inicio - 1.0) < 0.05
+    assert abs(duracao - 1.9) < 0.15
+
+
+def test_robo_parado_por_ter_chegado_NAO_conta_como_freada():
+    """Chegou: o seguidor para de pedir. Pedido nulo com saída nula é chegada,
+    não reflexo — confundir os dois faria toda corrida bem-sucedida parecer
+    uma quase-colisão."""
+    linhas = [_amostra(t / 10, raw=0.0, saida=0.0) for t in range(30)]
+    assert leitura_nav.freadas_do_reflexo(linhas) == []
+
+
+def test_corrida_com_a_mao_do_humano_e_delatada():
+    """O humano tem prioridade de propósito, e tirar o robô da parede é uso
+    legítimo. Mas corrida com empurrãozinho NÃO prova autonomia, e isso não
+    pode passar despercebido."""
+    linhas = ([_amostra(t / 10) for t in range(10)]
+              + [_amostra(1.0 + t / 10, key=0.25) for t in range(6)])
+    assert leitura_nav.humano_interveio(linhas) == 6
+    m = leitura_nav.metricas(linhas, (0.0, 0.0), 0.25)
+    assert any('MISTA' in l for l in leitura_nav.veredito(m, 0.25))
+
+
+def test_salto_do_LIO_nao_vira_caminho_andado():
+    """O LIO relocaliza e pula. Somar o salto infla a tortuosidade e faz uma
+    corrida reta parecer errante."""
+    linhas = [_amostra(0.0, x=0.0), _amostra(0.05, x=0.1),
+              _amostra(0.10, x=9.0),          # salto de 8,9 m: não é caminho
+              _amostra(0.15, x=9.1)]
+    assert abs(leitura_nav.caminho_andado(linhas) - 0.2) < 1e-6
+
+
+def test_a_taxa_da_pose_e_medida_no_PIOR_intervalo_e_nao_so_na_media():
+    """Engasgo do LIO é evento raro e curto — a média o esconde.
+
+    É a pergunta do `nuvem_pontos`: em 11-08 ele foi morto durante as corridas
+    por comer 91% de um core, e a conferência de taxa foi com o robô PARADO.
+    """
+    ts = [i * 0.1 for i in range(50)]
+    ts += [ts[-1] + 0.9]                      # um engasgo de 0,9 s
+    mediana, pior = leitura_nav.intervalos_de_pose(ts)
+    assert abs(mediana - 0.1) < 1e-6
+    assert abs(pior - 0.9) < 1e-6
+    m = leitura_nav.metricas([_amostra(0.0)], (0.0, 0.0), 0.25, ts)
+    assert any('ENGASGOU' in l for l in leitura_nav.veredito(m, 0.25))
+
+
+def test_replanejar_sem_sair_do_lugar_aparece_na_contagem():
+    """Plano novo a cada ciclo com o robô parado é a assinatura do robô preso —
+    o modo de falha que a decisão 014 mediu: 'travamento educado'."""
+    linhas = [_amostra(t / 10, plano=10 + t) for t in range(10)]
+    assert leitura_nav.replanejamentos(linhas) == 10
+
+
+def test_chegou_e_a_distancia_final_contra_o_raio_do_seguidor():
+    linhas = [_amostra(0.0, x=0.0), _amostra(1.0, x=1.9)]
+    m = leitura_nav.metricas(linhas, (2.0, 0.0), 0.25)
+    assert m['chegou'] and abs(m['dist_final'] - 0.1) < 1e-6
+    m = leitura_nav.metricas([_amostra(0.0, x=0.0), _amostra(1.0, x=1.5)],
+                             (2.0, 0.0), 0.25)
+    assert not m['chegou']
