@@ -271,8 +271,11 @@ def generate_launch_description():
             'localizacao', default_value='fixa',
             description='"fixa" (map→odom identidade, provisório) ou "amcl" '
                         '(localiza contra o mapa; exige mapa)'),
-        DeclareLaunchArgument('pose_x', default_value='0.0'),
-        DeclareLaunchArgument('pose_y', default_value='0.0'),
+        # Defaults = o ponto livre da pista simulada, que é onde o robô
+        # nascia antes destes argumentos existirem. No robô real com mapa,
+        # PASSE os três: o default aqui é da pista, não do prédio.
+        DeclareLaunchArgument('pose_x', default_value='2.0'),
+        DeclareLaunchArgument('pose_y', default_value='5.0'),
         DeclareLaunchArgument(
             'pose_yaw', default_value='0.0',
             description='pose inicial do AMCL [m, m, rad]. Vem por parâmetro '
@@ -346,10 +349,20 @@ def generate_launch_description():
                 get_package_share_directory('robot_base'),
                 'launch', 'sim.launch.py')),
             condition=IfCondition(sim),
-            # Nasce num ponto LIVRE da pista: a origem cai dentro da parede do
+            # Nasce num ponto LIVRE: a origem da pista cai dentro da parede do
             # perímetro, que começa em 0.
+            #
+            # 🔴 O SPAWN E A POSE INICIAL DO AMCL SÃO O MESMO ARGUMENTO, e isso
+            # é trava e não conveniência: com dois números separados alguém
+            # nasce o robô num lugar e diz ao AMCL que ele está em outro. O
+            # filtro então "corrige" uma diferença que não existe no mundo,
+            # converge para a pose errada, e o sintoma é mapa e nuvem
+            # desalinhados — que se parece exatamente com fatia 2D mal
+            # ajustada. Dois defeitos com o mesmo rosto é o que faz perder o
+            # dia. Há teste.
             launch_arguments={'mundo': LaunchConfiguration('mundo'),
-                              'x': '2.0', 'y': '5.0',
+                              'x': LaunchConfiguration('pose_x'),
+                              'y': LaunchConfiguration('pose_y'),
                               'planta': LaunchConfiguration('planta'),
                               'placa': placa,
                               'gui': LaunchConfiguration('gui')}.items(),

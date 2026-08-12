@@ -1221,3 +1221,96 @@ def test_a_parede_do_mundo_cai_onde_o_mapa_diz():
     ys = sorted({float(v[1]) for v in vertices})
     assert xs == [-28.672, -28.622], f'x fora do origin do mapa: {xs}'
     assert ys == [-15.476, -15.426], f'y fora do origin do mapa: {ys}'
+
+
+# ---------------------------------------------------------------------------
+# A RÉGUA DO CASAMENTO SCAN × MAPA (`casa_scan.py`)
+#
+# Localização contra mapa falha de duas formas com o MESMO rosto: fatia 2D
+# errada ou pose errada. Esta régua separa as duas — e uma régua torta faria
+# exatamente o oposto, culpando a fatia por um erro de conversão dela mesma.
+# ---------------------------------------------------------------------------
+
+casa_scan = _carrega('casa_scan')
+
+_META = {'resolution': 0.05, 'origin': [-12.1, -57.3, 0.0]}
+
+
+def test_o_feixe_bate_onde_a_trigonometria_manda():
+    """Rumo do robô entra na conta: feixe "à frente" é à frente DELE."""
+    x, y = casa_scan.ponto_do_feixe(1.0, 2.0, 0.0, 0.0, 3.0)
+    assert abs(x - 4.0) < 1e-9 and abs(y - 2.0) < 1e-9
+    # mesmo feixe, robô girado 90°: sai para +y
+    x, y = casa_scan.ponto_do_feixe(1.0, 2.0, math.pi / 2, 0.0, 3.0)
+    assert abs(x - 1.0) < 1e-9 and abs(y - 5.0) < 1e-9
+    # feixe a 90° do robô, robô girado 90°: aponta para −x
+    x, y = casa_scan.ponto_do_feixe(0.0, 0.0, math.pi / 2, math.pi / 2, 2.0)
+    assert abs(x + 2.0) < 1e-9 and abs(y) < 1e-9
+
+
+def test_a_linha_ZERO_do_PGM_e_o_MAIOR_y_do_mundo():
+    """A inversão vertical, que é o erro que espelha o mapa inteiro.
+
+    O `map2world.py` extruda a parede com `oy + (h-1-linha)*res`. Se esta régua
+    usasse a convenção contrária, o casamento viraria ruído — e a culpa cairia
+    na fatia 2D, que é inocente. Aqui trava-se que as duas concordam.
+    """
+    h = 100
+    # canto inferior esquerdo do mundo = ÚLTIMA linha do PGM
+    col, lin = casa_scan.celula(_META, h, -12.1, -57.3)
+    assert (col, lin) == (0, h - 1)
+    # subindo 1 m no mundo, sobe 20 células NO SENTIDO DE DIMINUIR a linha
+    col, lin = casa_scan.celula(_META, h, -12.1, -56.3)
+    assert (col, lin) == (0, h - 1 - 20)
+
+
+def test_a_regua_do_scan_usa_a_MESMA_convencao_do_conversor_de_mundo():
+    """Ler o mapa duas vezes, de dois jeitos, é a divergência silenciosa que
+    este repo já pagou (a bitola de 29-07). O ponto que o conversor transforma
+    em parede tem de ser o ponto que a régua chama de parede."""
+    meta = {'resolution': 0.05, 'origin': [-12.1, -57.3, 0.0]}
+    h, res = 100, 0.05
+    oy = meta['origin'][1]
+    for linha in (0, 37, 99):
+        # y do CENTRO da célula, como o conversor a extruda
+        y = oy + (h - 1 - linha) * res
+        _, de_volta = casa_scan.celula(meta, h, meta['origin'][0], y)
+        assert de_volta == linha, f'linha {linha} não fecha o ciclo'
+
+
+def _grid(w, h, ocupadas):
+    g = [[False] * w for _ in range(h)]
+    for c, l in ocupadas:
+        g[l][c] = True
+    return g
+
+
+def test_acha_a_parede_mais_proxima_e_respeita_o_teto():
+    w = h = 40
+    # parede na célula (20, 20) -> centro do mundo correspondente
+    grid = _grid(w, h, [(20, 20)])
+    x = _META['origin'][0] + 20 * 0.05
+    y = _META['origin'][1] + (h - 1 - 20) * 0.05
+    assert casa_scan.distancia_ate_parede(_META, w, h, grid, x, y) == 0.0
+    # 3 células ao lado = 0,15 m
+    d = casa_scan.distancia_ate_parede(_META, w, h, grid, x + 0.15, y)
+    assert abs(d - 0.15) < 1e-9
+    # fora do teto: devolve None em vez de um número grande e mentiroso
+    assert casa_scan.distancia_ate_parede(
+        _META, w, h, grid, x + 0.45, y, teto=0.20) is None
+
+
+def test_feixe_sem_parede_nenhuma_e_DELATADO_e_nao_diluido():
+    """Feixe que não acha parede é a informação mais valiosa do relatório: é
+    ele que aponta móvel, vidro, porta aberta ou gente — o que existe no mundo
+    e não está na planta. Sumir com ele faria o resumo parecer melhor."""
+    linhas = casa_scan.resumo([0.02, 0.04, None, None], fora_do_mapa=0)
+    juntas = '\n'.join(linhas)
+    assert '2 feixes (50.0%) sem parede' in juntas
+    assert '50.0%' in juntas
+
+
+def test_o_resumo_conta_sobre_TODOS_os_feixes_e_nao_so_os_que_casaram():
+    """Percentual sobre os que casaram esconderia metade da falha."""
+    linhas = casa_scan.resumo([0.02, None], fora_do_mapa=0)
+    assert any('0.05 m de parede da planta:  50.0%' in l for l in linhas)

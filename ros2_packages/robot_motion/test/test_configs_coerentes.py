@@ -878,3 +878,29 @@ def test_a_combinacao_sem_sentido_morre_na_SUBIDA(mapa, loc, vale):
     else:
         with pytest.raises(RuntimeError):
             ambiente['_recusa_combinacao_sem_sentido'](ctx)
+
+
+def test_o_spawn_do_simulador_e_a_pose_do_amcl_sao_O_MESMO_argumento():
+    """Nascer o robô num lugar e dizer ao AMCL que ele está em outro.
+
+    Com dois números separados, o filtro "corrige" uma diferença que não existe
+    no mundo e converge para a pose errada. O sintoma — mapa e nuvem
+    desalinhados — é IDÊNTICO ao de uma fatia 2D mal ajustada (decisão 021).
+    Dois defeitos com o mesmo rosto é o que faz perder o dia.
+    """
+    import ast
+    arvore, texto = _launch_ast()
+    for no in ast.walk(arvore):
+        if not (isinstance(no, ast.Call)
+                and getattr(no.func, 'id', None) == 'IncludeLaunchDescription'):
+            continue
+        trecho = ast.get_source_segment(texto, no) or ''
+        if 'sim.launch.py' not in trecho:
+            continue
+        assert "'x': LaunchConfiguration('pose_x')" in trecho, (
+            'o spawn do simulador não sai de `pose_x` — nascer o robô num '
+            'lugar e informar outro ao AMCL dá pose convergindo errado, com '
+            'cara de fatia 2D mal ajustada')
+        assert "'y': LaunchConfiguration('pose_y')" in trecho
+        return
+    raise AssertionError('a pilha não inclui o sim.launch.py')
