@@ -162,6 +162,21 @@ def generate_launch_description():
          'curv_medido_em': ParameterValue(LaunchConfiguration('curv_medido_em'),
                                           value_type=str)},
     ]
+    # ⚠️ Mesmo cuidado do `curv_frente` acima: o nó declara `lookahead_piso`
+    # como double, e argumento de launch chega como TEXTO. Cru, o seguidor cai
+    # na subida com "parameter type mismatch" — e sem seguidor a pilha sobe
+    # inteira sem ninguém dirigindo.
+    #
+    # Por que este knob virou argumento (12-08, no robô): com o Nav2 dirigindo,
+    # a REFERÊNCIA de rumo é que oscila — `rumo_alvo` variou 30,6° e o `yaw`
+    # seguiu com 32,9°, ou seja, o laço de rumo obedece e quem serpenteia é o
+    # plano (replanejado 8x em 8 s). Mirar a 0,30 m andando a ~0,42 m/s é olhar
+    # 0,7 s à frente dentro de uma malha com 0,94 s de tempo morto: o seguidor
+    # persegue rabisco de plano que ele não tem tempo de responder.
+    olhar = [
+        {'lookahead_piso': ParameterValue(
+            LaunchConfiguration('lookahead_piso'), value_type=float)},
+    ]
     mapa = LaunchConfiguration('mapa')
     rviz = LaunchConfiguration('rviz')
     placa = LaunchConfiguration('placa')
@@ -335,6 +350,15 @@ def generate_launch_description():
         #
         # Os defaults são os do nó, então quem não passa nada não muda nada —
         # e sobe com o log gritando que o ff é herdado.
+        # 12-08, no robô: a referência de rumo é que oscila com o Nav2
+        # dirigindo. Olhar longe alisa o plano tremido; olhar perto persegue
+        # cada rabisco dele. O default é o do nó — quem não passa nada não
+        # muda nada.
+        DeclareLaunchArgument(
+            'lookahead_piso', default_value='0.30',
+            description='[m] distância mínima que o seguidor mira à frente. '
+                        'Subir alisa a referência de rumo e corta curva '
+                        'fechada por dentro'),
         DeclareLaunchArgument(
             'curv_frente', default_value='-0.817',
             description='curvatura crua indo para a FRENTE [1/m], medida hoje '
@@ -505,7 +529,7 @@ def generate_launch_description():
              condition=UnlessCondition(sim)),
         Node(package='robot_motion', executable='path_follower',
              name='path_follower', output='both',
-             parameters=[{'use_sim_time': sim}],
+             parameters=[*olhar, {'use_sim_time': sim}],
              remappings=[('/path_follower/rumo_alvo',
                           '/heading_controller/rumo_alvo'),
                          ('/path_follower/velocidade_alvo',
