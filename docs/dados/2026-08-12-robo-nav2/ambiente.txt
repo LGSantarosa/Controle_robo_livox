@@ -1,0 +1,32 @@
+Sessão no robô — 2026-08-12 (noite)
+====================================
+
+commit         308ad68 (branch slam-meu-mapa)
+piso           cerâmica da sala
+bateria        41,13 V no início   (fim: não lido — sessão parou para conserto)
+placa          20,8 °C no início — robô FRIO (testemunha nova: /hoverboard/temperature)
+calibração     wheel_separation = 0.2700   wheel_radius = 0.0800  (--checar, vivo)
+pilha          pilha.launch.py sim:=false mapa:=nenhum  (perfil sem mapa, decisão 015/019)
+ff             HERDADO — não foi medido hoje; esta sessão era de navegação, não de rumo
+
+arquivos
+--------
+12-08-prevoo.csv          pré-voo, 20/20 (o ❌ é o falso positivo do ssh contando
+                          como segunda pilha)
+12-08-homem-morto-a.csv   teleop; [A]=0,008 s [B]=0,000 [C]=0,091
+                          ⚠️ [A] é o zero de saída do teleop ao MORRER, não a
+                          temporização de 0,4 s — o homem-morto não foi exercitado
+                          ⚠️ [C] é régua de mentira: odom de roda com open_loop:true
+                          vem do COMANDO, não do encoder
+12-08-nav-livre.csv       passo 5, alvo (2,0 · 0,0) sem mapa. CHEGOU a 0,054 m em ~8 s
+                          reflexo vetou 26 de 156 comandos (17%), 11 rajadas
+                          teto de 60 s: 51 s de robô parado no alvo entraram no CSV
+
+medidas avulsas desta sessão (sem CSV próprio)
+----------------------------------------------
+/scan real          9,998 Hz   pior intervalo 0,135 s   (limiar da ré: 0,800 s)
+vão traseiro        0,858 m    mediana de 58 quadros, espalho 0,831–0,867
+                               confirmado pela trena do dono
+pontos do próprio robô dentro do PolygonStop, robô PARADO:
+                    0 a 2 por quadro, em x≈+0,04  y≈+0,09  z≈0,42–0,47 (base_link)
+                    raio horizontal 0,10 m do sensor; min_points é 2

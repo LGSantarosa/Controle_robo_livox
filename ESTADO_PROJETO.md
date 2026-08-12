@@ -10,12 +10,80 @@
 
 ---
 
+## 🎯 12-08 (NOITE, NO ROBÔ) — O NAV2 DIRIGIU E CHEGOU; O REFLEXO DISPARA CONTRA O PRÓPRIO ROBÔ
+
+> Sessão no robô real com o trabalho das decisões 020–026. Commit `308ad68`,
+> bateria 41,13 V, placa a 20,8 °C. Dados em `docs/dados/2026-08-12-robo-nav2/`,
+> entrada 12-08 (8ª leva) do diário.
+
+🟢 **A PRIMEIRA NAVEGAÇÃO AUTÔNOMA DESTE ROBÔ NO CHÃO REAL.** Alvo (2,0 · 0,0)
+sem mapa: **chegou a 0,054 m em ~8 s**, replanejando 7 vezes. A cadeia inteira
+funcionou fora do simulador, e **a previsão da 023 passou**: o `rosout` disse
+`pivô por corte FORA DO CAMINHO` e o robô **andou** em vez de girar no lugar.
+
+```
+chegada     0,054 m (raio 0,25)      tortuosidade  1,92 (3,77 m para 1,96)
+raw_v       77,6% -> ~97% até a chegada          pose  10,0 Hz, pior 0,118 s
+```
+
+⚠️ O 77,6% só fica abaixo do critério porque o instrumento não encerra na
+chegada: 51 dos 60 s foram robô parado no alvo. **Dívida do `corrida_nav.py`.**
+
+🔴 **O S DE RUMO É REAL, E É DE NARIZ**: yaw +19,5° → −26,0° → +36,6°
+(amplitude 63°, envoltória crescendo) com **desvio lateral de só 0,17 m**. O
+dono viu a olho. Foi por bambear o nariz e não o corpo que ele chegou.
+
+🔴 **E A CAUSA MAIS PROVÁVEL ESTÁ MEDIDA: o reflexo enxerga o próprio robô.**
+Vetou **26 dos 156 comandos (17%)** em 11 rajadas, cada uma zerando o comando
+por ~0,1 s dentro de uma malha com 0,94 s de tempo morto. **Com o robô parado
+ele continua disparando** — 928 vezes no log:
+
+```
+0 a 2 pontos por quadro, sempre no MESMO lugar:
+  x ≈ +0,04   y ≈ +0,09   z ≈ 0,42–0,47 m      raio 0,10 m do sensor
+  min_points: 2  ->  dispara com exatamente 2
+```
+
+10 cm ao lado do Mid-360 e na altura dele: **peça do próprio robô**. Mesma
+família da 017 (lá o ponto `(0,0,0)` era o robô, e tratou-se UM ponto só).
+
+➡️ **A MELHORIA QUE VAMOS TENTAR** (é o próximo passo, decidido pelo dono): o
+`nuvem_pontos` passa a descartar pontos dentro de um **raio** do sensor
+(~0,15 m), não só a origem exata. Descartada a alternativa de subir
+`min_points` 2 → 6: esconde o sintoma e cega o reflexo para obstáculo pequeno
+de verdade. **Reflexo que dispara sempre é reflexo que não quer dizer nada** —
+e o critério do dono no passo 7 é que ele só dispare por surpresa.
+
+🟢 **De graça nesta ida**: `/scan` real a **9,998 Hz** (pior intervalo 0,135 s,
+contra o limiar 0,8 s da ré — pergunta 2 respondida, e melhor que o simulador);
+vão traseiro **0,858 m** batendo com a trena; a **019 valeu no robô** (o
+`tf_odom` subiu sozinho com `livox_frame`); a **018 segue de pé** (`odom` em
+z = −0,060); pré-voo **20/20**.
+
+⏳ **O que ficou aberto**: a caixa encostada atrás (o vão tem de dar 0,00,
+inclusive na quina) e o homem-morto de verdade — o `[A] = 0,008 s` medido foi o
+zero de saída do teleop ao morrer, não a temporização de 0,4 s. E o
+`homem_morto.py` mede `[C]` com régua de mentira: lê a odometria de roda, que
+está **`open_loop: true`** e vem do comando, não do encoder.
+
+---
+
 ## 🤖 SE VOCÊ É O ASSISTENTE E O DONO ESTÁ INDO AO ROBÔ
 
 > **Leia `docs/ROTEIRO_NAV2_NO_ROBO.md` e conduza por ele.** Está em ordem de
 > risco crescente, com comando exato, critério de aceitação e o que fazer
-> quando falhar. O passo 0 é puxar os 8 CSV de 11-08 do NUC **antes** do
-> deploy — o `git reset --hard` os apaga.
+> quando falhar. ✅ O passo 0 (puxar os 8 CSV de 11-08 do NUC) **está feito** —
+> eles estão em `docs/dados/2026-08-11-estimador/`, commitados.
+>
+> ⚠️ **Dois consertos que o roteiro precisa**, achados rodando: o passo 3 manda
+> rodar o `prova_mux.py` com a pilha de pé, e isso **dirige o robô** (~4,5 s de
+> comando, ~3 m no chão); e a confirmação `grep limiar_pivo` procura no lugar
+> errado (só o perfil do simulador declara o parâmetro — no robô quem responde
+> é o default do nó, e quem prova é o `rosout`).
+>
+> ⚠️ **Feche o `robot-key` antes de qualquer corrida autônoma**: teleop vivo
+> publica zero a 20 Hz em prioridade 90 e trava a autonomia, com cara de "o
+> Nav2 não dirige".
 >
 > Os dois passos que não podem ser pulados: o **freio de mão** (passo 3) e o
 > **canal que fura o reflexo** (passo 4). O passo 4 é novo e é o mais

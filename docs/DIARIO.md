@@ -5783,3 +5783,126 @@ Não era: era sujeita de ambiente minha. Custou uma corrida.
 `comm` e havia 4 `static_transform_publisher` órfãos). **Duas vezes no mesmo
 dia o ambiente sujo produziu diagnóstico falso.** A varredura tem de casar com
 a linha de comando inteira, e a limpeza tem de ser verificada, não presumida.
+
+## 🎯 2026-08-12 (8ª leva) — O NAV2 DIRIGIU O ROBÔ REAL E CHEGOU, e o reflexo dispara contra o próprio robô
+
+**Sessão no robô**, primeira ida à máquina com o trabalho das decisões 020–026.
+Bateria 41,13 V no começo, placa a **20,8 °C** (robô frio). Commit `308ad68`.
+Dados em `docs/dados/2026-08-12-robo-nav2/`.
+
+### 🟢 O RESULTADO: a primeira navegação autônoma deste robô no chão real
+
+Passo 5 do `docs/ROTEIRO_NAV2_NO_ROBO.md`, alvo (2,0 · 0,0) sem mapa:
+
+```
+chegada        0,054 m do alvo, em ~8 s          (raio de aceitação 0,25 m)
+caminho        3,77 m para 1,96 m de reta        tortuosidade 1,92
+replanejou     7x
+raw_v          77,6% da fase andando não-nulo    (critério: > 80%)
+pose           10,0 Hz, pior intervalo 0,118 s
+```
+
+A cadeia inteira funcionou pela primeira vez fora do simulador: `bt_navigator`
+→ `planner_server` → `path_follower` → `heading_controller` →
+`collision_monitor` → `twist_mux` → `compensador_rumo` → placa. **A previsão da
+decisão 023 (pivô fora do caminho) passou no robô real**: o `rosout` anunciou
+`pivô por corte FORA DO CAMINHO (limiar_pivo=3.20 rad)` e o robô **andou** em
+vez de girar no lugar — era exatamente o modo de falha de 12-08 de manhã.
+
+⚠️ **O 77,6% fica ABAIXO do critério por artefato de medida**: o robô chegou em
+8 s e o instrumento só encerrou no teto de 60 s, então 51 s de robô parado
+entraram na conta. Medido até a chegada, dá ~97%. **Dívida do `corrida_nav.py`:
+encerrar quando entra no raio.** O critério em si passou.
+
+### 🔴 O S DE RUMO É REAL — e é de nariz, não de trajeto
+
+O dono viu a olho ("fez um S bizarro aqui") e o CSV confirma:
+
+```
+yaw       +19,5°  ->  −26,0°  ->  +36,6°     amplitude 63°, envoltória crescendo
+desvio lateral    máximo 0,17 m em 2 m percorridos
+```
+
+**Ele bambeia o nariz muito e o corpo pouco** — foi por isso que chegou apesar
+do S. Meio-período ~3,2 s, mais longo que os 2,2–2,4 s do S de 05-08/06-08.
+
+### 🔴 A CAUSA MAIS PROVÁVEL, E ELA ESTÁ MEDIDA: o reflexo enxerga o próprio robô
+
+Durante a corrida o `collision_monitor` **vetou 26 dos 156 comandos (17%)**, em
+11 rajadas. Cada veto zera o comando por ~0,1 s **dentro de uma malha que já
+tem 0,94 s de tempo morto** — é injeção de perturbação no laço que produz o S.
+
+E ele não precisa de corrida para disparar: **com o robô parado, no meio da
+sala, continua disparando** (928 `Robot to stop due to PolygonStop polygon` no
+log da sessão, o último 0,4 s antes de eu medir). Contando os pontos da nuvem
+que caem dentro do polígono de parada, com o robô imóvel:
+
+```
+0 a 2 pontos por quadro, sempre no MESMO lugar:
+   x ≈ +0,04 m   y ≈ +0,09 m   z ≈ 0,42–0,47 m (frame base_link)
+   raio horizontal 0,10 m do sensor        min_points: 2 -> dispara com 2
+```
+
+10 cm ao lado do Mid-360 e na altura dele: **é peça do próprio robô** (suporte,
+cabo ou parafuso junto ao sensor). Como oscila entre 1 e 2 pontos, o reflexo
+liga e desliga sozinho o tempo todo.
+
+➡️ **É a mesma família do defeito que a decisão 017 já tinha pego** — lá o
+ponto `(0,0,0)` do Mid-360 era o próprio robô e foi descartado. Tratou-se UM
+ponto; sobrou o vizinho. **A melhoria que vamos tentar**: o `nuvem_pontos`
+descarta pontos dentro de um RAIO do sensor (~0,15 m), não só a origem exata.
+A alternativa barata (subir `min_points` de 2 para 6) foi descartada pelo dono
+e por mim: esconde o sintoma e cega o reflexo para obstáculo pequeno de verdade.
+
+⚠️ **Um reflexo que dispara sempre é um reflexo que não quer dizer nada**, e o
+critério que o dono cobra no passo 7 é justamente "o reflexo só dispara por
+surpresa". Rodar o teste da parede com isto ligado gastaria bateria medindo
+ruído — por isso a sessão parou aqui para consertar.
+
+### O que mais ficou provado nesta ida
+
+- **A decisão 019 valeu no robô real**: a `localizacao.launch.py` subiu o
+  `tf_odom` com `frame_da_pose:=livox_frame` sozinha (`primeira TF publicada
+  (pose vinha de 'livox_frame', composta com o URDF)`), sem ninguém matar e
+  subir na mão como em 08-10 e 11-08. E a 018 segue de pé: `odom` em
+  **z = −0,060 m** contra os −0,477 de 10-08;
+- **pré-voo 20/20** (o único ❌ é o falso positivo conhecido: a própria linha de
+  comando do `ssh` contendo `robot_motion` conta como segunda pilha);
+- **`/scan` real: 9,998 Hz, pior intervalo 0,135 s** — muito abaixo do limiar
+  `re_scan_velho_s = 0,8 s`. **Pergunta 2 da sessão respondida**: a ré
+  não-cega tem medida fresca de sobra e não vai se recusar a recuar. O real é
+  melhor que o simulado (7,7 Hz, máx 0,513 s);
+- **vão traseiro contra a trena: 0,858 m** (mediana de 58 quadros, espalho
+  0,831–0,867), confirmado pelo dono. ⚠️ **A segunda metade do passo 4b ficou
+  sem fazer**: a caixa encostada atrás, que tem de dar 0,00, inclusive na
+  quina. É o modo de falha que importa, e segue em aberto;
+- **o freio de mão obedece**: o robô andou pelo teclado e parou. ⚠️ Mas o
+  homem-morto **não foi exercitado**: o `[A] = 0,008 s` medido foi o zero que o
+  teleop publica ao MORRER (o dono fechou o `robot-key`), não a temporização de
+  0,4 s da tecla solta.
+
+### 🔧 Armadilhas e dívidas desta sessão
+
+- 🔴 **O `homem_morto.py` mede `[C]` com régua de mentira**: ele lê
+  `/hoverboard_base_controller/odom`, e o controlador está com
+  **`open_loop: true`** — essa odometria é calculada do COMANDO, não do
+  encoder. Ela zera junto com o comando por construção, e a retenção de 0,52 s
+  da placa fica invisível (mediu 0,091 s). O robô TEM realimentação de verdade
+  em `/hoverboard/left_wheel/velocity`. Conserto pequeno, não feito ainda;
+- 🔴 **O passo 3 do roteiro, como está escrito, dirige o robô**: ele manda
+  rodar o `prova_mux.py` com a pilha de pé, e o script publica de verdade em
+  `/key_vel` (0,90) e `/auto_vel` (0,10) por ~4,5 s. Com o mux real no meio,
+  isso desce até a placa — no chão, ~3 m de corrida. Pulado nesta sessão;
+- ⚠️ **Teleop vivo TRAVA a autonomia**: o `robot-key` publica zero a 20 Hz em
+  prioridade 90, então enquanto ele estiver aberto o Nav2 não move o robô, com
+  cara de "a navegação não dirige". Fechar antes de qualquer corrida autônoma;
+- ⚠️ **A confirmação barata do roteiro (`grep limiar_pivo`) procura no lugar
+  errado**: só o `movimentacao_sim.yaml` declara o parâmetro. No robô real quem
+  responde é o default do nó (3,20) — que é o caso seguro, regra da 019. Quem
+  prova é o `rosout`, não o `grep`;
+- ⚠️ **O `twist_mux.yaml` se contradiz**: o cabeçalho ainda diz que a entrada
+  `unstuck_vel` "não existe AINDA", e ela está declarada 40 linhas abaixo
+  (prioridade 30, decisão 025);
+- ⚠️ **Assimetria de roda grande na arrancada do teleop**: encoders acusaram
+  esquerda 3,23 rad contra direita 6,65 rad. É muito mais que o arco conhecido
+  (raio 1,22 m). Não investigado — anotado para a próxima leva.
