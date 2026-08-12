@@ -10,6 +10,95 @@
 
 ---
 
+## 🧭 HANDOFF — LEIA ISTO PRIMEIRO (12-08, fim do dia)
+
+> **Para o assistente que chegar frio.** Estado real, sem enfeite. O trabalho do
+> dia está na branch **`slam-meu-mapa`** (não foi para a `main`, e a `main`
+> também tem 2 commits não empurrados).
+
+### Onde está cada coisa
+
+```
+main            020 (zona morta medida) + corrida_nav/roteiro   [2 commits locais]
+slam-meu-mapa   021 (fatia 2D) + 022 (AMCL) + mapa + casa_scan  [branch de hoje]
+```
+
+**369 testes verdes**: `robot_motion` 205 · `robot_base` 70 · `robot_planning` 12
+· `tools` 89. Rodar SEMPRE por pacote (`python3 -m pytest ros2_packages/robot_motion`);
+por arquivo dá `ModuleNotFoundError`, é dívida antiga.
+
+### 🟢 O que FUNCIONA e está medido
+
+| | evidência |
+|---|---|
+| mapa do prédio → mundo do Gazebo | `gz sim` carrega, `walls` vivo |
+| fatia 2D da nuvem (`/scan`) | 360 feixes, 0 fora do mapa |
+| **scan × mapa** | **100% dentro de 0,15 m, mediano 0,050 m** = 1 célula |
+| AMCL contra o mapa | `active`, `map→odom` com correção nula |
+| Nav2 planejando | 285 pontos, 15,3 m até um alvo de 13 m |
+
+### 🔴 O QUE NÃO FUNCIONA — e é UMA coisa só
+
+**O robô não percorre o plano.** Nunca percorreu — nem no simulador, nem no
+robô. As decisões 008/014/015 mediram **planejamento** (`plano.py` planeja sem
+mover) e **percepção** (`percepcao.py`); o elo "o robô segue o plano" estava
+suposto, e o `corrida_nav.py` (12-08) foi o primeiro instrumento a olhar.
+
+```
+                              raw_v não-nulo    dist ao alvo
+pista + TF fixa                 1 / 1500        2,20 -> 2,34 m
+pista + AMCL                    0 / 1500        2,20 -> 2,30 m
+pista + limiar_pivo 45°        14 / 1800        2,20 -> 2,24 m
+```
+
+**Não é** o Nav2 (planeja), **não é** o AMCL (o controle com TF fixa falha
+igual), **não é** o mapa (falha na pista também), **não é** o pivô (subir o
+limiar de 15° para 45° levou os pivôs de 11 para 2 e o robô continuou parado).
+
+### 🎯 A PRÓXIMA TAREFA — 10 minutos, sem robô e sem Gazebo
+
+🔵 **O erro de rumo é ZERO e ele ainda não pede velocidade** (mediana 0°). Com o
+robô apontado certo, quem decide a velocidade é o **seguidor**:
+
+```python
+# path_follower.py, no passo():
+raio = curvatura_adiante(self.plano, i0, janela=la)
+v = velocidade_de_seguimento(dist, raio, v_max, a_lin, wz_max)
+```
+
+**Suspeita**: o plano do Theta* vem com ponto a cada 5 cm e ziguezague de grade,
+então `curvatura_adiante` devolve raio minúsculo e `velocidade_de_seguimento`
+corta a velocidade para perto de zero.
+
+**Como provar sem nada ligado**: as duas são funções PURAS em
+`lei_de_seguimento.py`. Pegue o plano real (o CSV de
+`docs/dados/2026-08-12-sim-meu-mapa/` tem as corridas; `plano.py --csv` grava o
+caminho ponto a ponto), jogue nas duas e veja o número sair. Se `v ≈ 0`, o
+conserto é ali.
+
+### 🔧 Armadilhas que morderam HOJE (não repita)
+
+- 🔴 **`ros2 param set` NÃO chega nos nossos nós.** `heading_controller` e
+  `path_follower` copiam os parâmetros num dicionário na subida e nunca releem.
+  Mudar de verdade = editar o YAML + `colcon build` + subir de novo. (Parâmetro
+  de costmap do Nav2 esse sim muda ao vivo.)
+- 🔴 **Duas pilhas simultâneas** dão `Detected jump back in time` (dois `/clock`)
+  e um robô que parece andar sozinho. Matar por `ps`, nunca por `pgrep -c`.
+- ⚠️ **O mundo do `meu_mapa` fica visualmente feio** e isso NÃO é defeito da
+  conversão: 87% do mapa é área nunca escaneada, então o mundo tem só os
+  fragmentos de parede que o SLAM viu. Para navegar serve; para olhar, use a
+  pista.
+- ⚠️ **Planejar no `meu_mapa` é marginal**: mediana de folga das células livres
+  0,35 m contra `robot_radius` 0,32. Com `inflation_radius` 0,50 → 0 de 8 pontos
+  de partida planejam; com 0,20 → 4 de 8. Decisão em aberto.
+
+### ⚠️ Pendência que não pode ser esquecida
+
+Os **8 CSV de 2,5 m de 11-08 ainda estão no NUC** — puxar ANTES de qualquer
+deploy (`git clean -fd` lá os apaga).
+
+---
+
 ## 🚦 12-08 (2ª leva) — O ROBÔ ESTÁ PRONTO PARA ANDAR SOZINHO (dev)
 
 **344 testes verdes** (eram 337), sete novos, três verificados por mutação.

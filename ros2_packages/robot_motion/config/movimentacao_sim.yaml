@@ -23,3 +23,16 @@ heading_controller:
     taxa: 20.0
     timeout_alvo: 1.0
     plantao_s: 0.5
+
+    # Erro de rumo acima do qual ele PARA para virar no eixo, em vez de arcar.
+    #
+    # 🔴 12-08: era 0.26 (~15°), o default do nó, e isso TRAVAVA a navegação. A
+    # cenoura do seguidor fica a 0,37 m à frente, e com mira tão curta um erro
+    # de 15° é o estado NORMAL de quem segue um plano — não a exceção. O robô
+    # entrava em pivô, ficava com v=0 por ~15 s, fechava, andava alguns
+    # centímetros e repivotava: 11 pivôs em 75 s e 1 amostra de velocidade
+    # linear em 1500. Medido em docs/dados/2026-08-12-sim-meu-mapa/.
+    #
+    # 0.79 rad (45°) deixa o robô ARCAR no seguimento normal e guarda o pivô
+    # para a manobra que ele existe para resolver: virar de verdade.
+    limiar_pivo: 0.79

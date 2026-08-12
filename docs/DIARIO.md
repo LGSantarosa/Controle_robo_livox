@@ -5382,3 +5382,39 @@ que o próprio ESTADO documenta desde 07-08. `ps`, sempre.
 🔧 **E o instrumento ganhou o que faltava**: `corrida_nav.py` agora grava
 `rumo_alvo` e `erro_rumo`. Sem eles, "robô apontado para o lado errado" tinha
 duas explicações e nenhuma prova — foi exatamente o que me travou por uma hora.
+
+### 12-08 (4ª leva) — o culpado é o SEGUIDOR, e o pivô era inocente
+
+Com o dono na frente, subi o Gazebo e ele viu o robô girar de um lado para o
+outro. Duas coisas saíram disso, e a primeira é de método:
+
+🔧 **`ros2 param set` não chega nos nossos nós.** Ajustei `limiar_pivo` ao vivo,
+anunciei o ajuste, e não mudou nada — `heading_controller` copia os parâmetros
+para `self.par` na subida e nunca mais os relê. O robô continuou com 15°. Já
+estava listado como armadilha no roteiro e caí nela na frente do dono. Vale para
+`path_follower` também; parâmetro de costmap do Nav2 esse sim muda ao vivo.
+
+➡️ **E o custo real disso**: chamei o dono para ver uma correção que nunca tinha
+sido aplicada. Teste ao vivo só depois de confirmar, por leitura do parâmetro,
+que o que eu mudei está de pé.
+
+🔵 **O pivô era inocente.** Com `limiar_pivo` de fato em 0,79 rad (YAML +
+rebuild), os pivôs caíram de **11 para 2** numa corrida de 90 s — e o robô
+continuou parado: `raw_v` não-nulo em **14 de 1800** amostras.
+
+🎯 **E o número que aponta o culpado**: o erro de rumo tem **mediana 0°**. Com o
+robô apontado certo e sem pivô em curso, quem decide a velocidade é o SEGUIDOR:
+
+```python
+raio = curvatura_adiante(self.plano, i0, janela=la)
+v    = velocidade_de_seguimento(dist, raio, v_max, a_lin, wz_max)
+```
+
+**Suspeita para a próxima leva**: o plano do Theta* vem com ponto a cada 5 cm e
+ziguezague de grade, `curvatura_adiante` devolve raio minúsculo e a velocidade é
+cortada para perto de zero. As duas são funções PURAS — se prova sem Gazebo e
+sem robô, alimentando-as com o plano real.
+
+⚠️ **O que isto reclassifica**: "o Nav2 está funcionando" é verdade e sempre foi
+— ele planeja. O que nunca funcionou é o nosso seguidor percorrer o que ele
+planeja, e isso não era regressão de hoje: nunca tinha sido olhado.
