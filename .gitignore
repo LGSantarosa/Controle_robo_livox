@@ -26,6 +26,11 @@ maps/*
 # pilha que não sobe no robô.
 !maps/meu_mapa/
 !maps/meu_mapa/*
+# ...e menos os mapas do ANDAR 3 (12-08), pelo mesmíssimo motivo. São os que o
+# roteiro do robô carrega no `map_server`, e a régua que escolheu entre eles
+# está em `maps/andar3/README.md`.
+!maps/andar3/
+!maps/andar3/*
 
 # Colcon workspace (build artifacts deste repo)
 build/

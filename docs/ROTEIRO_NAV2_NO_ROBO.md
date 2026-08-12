@@ -192,11 +192,18 @@ build não pegou o `limiar_pivo` novo (volte ao passo 1).
 ### 🔴 A decisão que precisa ser tomada AQUI, e ela tem número
 
 ```
-mediana de folga das células livres do meu_mapa   0,35 m
-robot_radius configurado                          0,32 m
-inflation_radius 0,50 (produção)  ->  0 de 8 pontos de partida PLANEJAM
-inflation_radius 0,20             ->  4 de 8
+                          folga p10   corpo não cabe
+scan_andar3_ajustado        0,400 m        7,5%
+robot_radius configurado    0,32 m
+
+e o que 12-08 mediu no meu_mapa, com a inflação da produção:
+inflation_radius 0,50  ->  0 de 8 pontos de partida PLANEJAM
+inflation_radius 0,20  ->  4 de 8
 ```
+
+⚠️ O andar 3 é mais folgado que o `meu_mapa`, então talvez a inflação de 0,50
+passe. **Mas ninguém mediu isso**, e 7,5% das células livres seguem apertadas
+demais para o corpo. Trate como incerto e meça.
 
 A `inflation_radius: 0,50` foi escolhida em 05-08 **para a porta de 0,90 m da
 pista simulada** — é ela que centra o robô no vão. **No corredor real ela
@@ -219,8 +226,20 @@ comparam, e essa é a decisão que a próxima leva de dev tem de fechar.
 
 ```bash
 ros2 launch robot_motion pilha.launch.py sim:=false \
-        mapa:=$PWD/maps/meu_mapa/meu_mapa.yaml localizacao:=amcl \
+        mapa:=$PWD/maps/andar3/scan_andar3_ajustado.yaml localizacao:=amcl \
         pose_x:=<x> pose_y:=<y> pose_yaw:=<yaw>
+```
+
+**O mapa é o do andar 3 do estágio**, copiado em 12-08 e escolhido por medida
+(`maps/andar3/README.md`): `scan_andar3_ajustado` tem folga p10 de 0,400 m
+contra 0,212 m do `scan_andar3` cru, e 7,5% de célula livre onde o corpo não
+cabe contra 13,3%.
+
+Se a sala do teste não estiver dentro dele (ele cobre 73,4 × 20,0 m com origem
+em `[-28,672 · -15,476]`), o outro recorte está ao lado e é só trocar o
+argumento:
+```bash
+        mapa:=$PWD/maps/andar3/mapa_3_andar.yaml
 ```
 
 ⚠️ **`pose_x/pose_y/pose_yaw` é onde o robô ESTÁ de verdade** no frame do mapa.
@@ -231,7 +250,7 @@ porque agora existe AMCL escutando.
 Confira antes de mandar objetivo:
 ```bash
 python3 tools/banco/casa_scan.py \
-        --mapa $PWD/maps/meu_mapa/meu_mapa.yaml \
+        --mapa $PWD/maps/andar3/scan_andar3_ajustado.yaml \
         --pose amcl --csv ~/dados/12-08-scan-mapa.csv
 ```
 

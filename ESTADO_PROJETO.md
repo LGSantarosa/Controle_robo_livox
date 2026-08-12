@@ -10,6 +10,21 @@
 
 ---
 
+## 🤖 SE VOCÊ É O ASSISTENTE E O DONO ESTÁ INDO AO ROBÔ
+
+> **Leia `docs/ROTEIRO_NAV2_NO_ROBO.md` e conduza por ele.** Está em ordem de
+> risco crescente, com comando exato, critério de aceitação e o que fazer
+> quando falhar. O passo 0 é puxar os 8 CSV de 11-08 do NUC **antes** do
+> deploy — o `git reset --hard` os apaga.
+>
+> Os dois passos que não podem ser pulados: o **freio de mão** (passo 3) e o
+> **canal que fura o reflexo** (passo 4). O passo 4 é novo e é o mais
+> importante da sessão: hoje entrou um caminho que dirige o robô por fora do
+> `collision_monitor`, e a medida que o torna seguro nunca viu o `/scan` real.
+>
+> Mapa da sessão: `maps/andar3/scan_andar3_ajustado.yaml` (do estágio,
+> escolhido por medida — ver `maps/andar3/README.md`).
+
 ## 🧭 HANDOFF — LEIA ISTO PRIMEIRO (12-08, fim do dia)
 
 > **Para o assistente que chegar frio.** Estado real, sem enfeite. O trabalho do
