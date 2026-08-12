@@ -1,4 +1,83 @@
-# Roteiro — Nav2 no robô, sessão de 12-08 (tarde/noite)
+# Roteiro — Nav2 no robô
+
+## 🚦 COMEÇA AQUI — estado em 12-08 fim da noite (leia antes de tudo)
+
+> **O robô ANDA RETO com o Nav2.** Os passos 0 a 5 deste roteiro estão
+> cumpridos; o que falta é o passo 6 (mapa + AMCL) e o 7 (perto de parede).
+> A sessão de 12-08 tem quatro entradas no diário (8ª a 12ª leva) e as decisões
+> **027** (raio cego) e o ajuste de `a_dec`.
+
+### A configuração que funciona, e que o robô tem de subir
+
+```bash
+# terminal 1 — base
+ros2 launch robot_base base.launch.py
+
+# terminal 2 — pilha (o a_dec 0.1 já está no movimentacao.yaml)
+ros2 launch robot_motion pilha.launch.py sim:=false mapa:=nenhum \
+    curv_frente:=-0.9145 curv_medido_em:=2026-08-11
+```
+
+```
+                            referência   yaw      |y| máx   chegada
+a_dec 0,3 (como estava)        30,6°     32,9°    0,106 m   0,087 m
+a_dec 0,1  corrida a           14,7°     10,0°    0,067 m   0,037 m
+a_dec 0,1  corrida c           22,4°      6,5°    0,119 m   0,099 m
+```
+
+### 🔴 REGRA NOVA E INEGOCIÁVEL: limpar o costmap antes de CADA corrida
+
+```bash
+ros2 service call /global_costmap/clear_entirely_global_costmap \
+    nav2_msgs/srv/ClearEntireCostmap
+```
+
+**O fantasma é o próprio dono.** Ele pega o robô na mão para devolver ao ponto
+de partida; o Mid-360 enxerga 360° e marca o corpo dele; a marcação global é
+**permanente** (decisão 015). Ele senta longe e a silhueta fica. Custou uma
+corrida com 147° de excursão que parecia o robô "se perdendo". Provado sem
+mover o robô: mesmo plano, 1,13× antes de limpar e 1,00× depois.
+⚠️ É remendo de bancada. O conserto de engenharia (esquecimento no costmap
+global) é decisão própria e não foi feita.
+
+### O que a sessão de 12-08 provou, em uma linha cada
+
+- **peça em volta do sensor arrancada** → reflexo passou de 928 disparos para
+  0 com o robô parado (decisão 027 entrou como defesa para o próximo parafuso);
+- **`a_dec` 0,3 → 0,1** → o yaw caiu de 33° para 6,5–10°, e a REFERÊNCIA caiu
+  junto: o ciclo era desvio lateral → ordem grande → passa da linha;
+- **não é o planejador** (hipótese do dono, testada e retirada): com o robô
+  parado todo plano sai 1,00× reto;
+- **não é a mira** (hipótese minha, falsificada): `lookahead` 0,30 → 0,60
+  PIOROU; o ciclo se reajusta em torno do novo braço;
+- **`/scan` real 9,998 Hz** e **vão traseiro 0,858 m** batendo com a trena.
+
+### ➡️ PRÓXIMO PASSO: passo 6 (mapa do andar 3 + AMCL)
+
+É o que destrava alvo longe — sem mapa o costmap global é janela de 20 m, e foi
+por isso que o plano para 4 m deu **VAZIO**. Antes de mandar objetivo:
+
+```bash
+ros2 launch robot_motion pilha.launch.py sim:=false \
+    mapa:=$PWD/maps/andar3/scan_andar3_ajustado.yaml localizacao:=amcl \
+    pose_x:=<x> pose_y:=<y> pose_yaw:=<yaw> \
+    curv_frente:=-0.9145 curv_medido_em:=2026-08-11
+python3 tools/banco/casa_scan.py --mapa <o mesmo yaml> --pose amcl --csv ~/dados/scan-mapa.csv
+```
+
+⚠️ **`pose_x/y/yaw` é onde o robô ESTÁ de verdade** — o NUC não tem tela, então
+não existe "2D Pose Estimate". **PERGUNTE AO DONO** onde ele está no mapa.
+Depois do mapa vem o **serviço web para mandar pontos** (`controle_web/`), que
+o dono pediu na sequência.
+
+### Como conduzir (o dono cortou por isso hoje)
+
+**Uma corrida por vez, e o "pode" é POR CORRIDA.** Entre uma e outra ele entra
+no campo de visão do sensor para recolocar o robô — daí a regra de limpar o
+costmap depois disso. Nunca emendar corridas com um "pode" antigo.
+
+---
+
 
 > Ordem de risco CRESCENTE. Cada passo tem comando exato, o que esperar, e o
 > que fazer se der errado. **O dono só roda; os números voltam por CSV.**
