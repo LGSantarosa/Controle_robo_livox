@@ -908,7 +908,7 @@ def test_o_spawn_do_simulador_e_a_pose_do_amcl_sao_O_MESMO_argumento():
 
 
 # ---------------------------------------------------------------------------
-# O PIVÔ FORA DO CAMINHO — decisão 023 (13-08)
+# O PIVÔ FORA DO CAMINHO — decisão 023 (12-08, 4ª leva)
 #
 # O `limiar_pivo` é o único portão entre o seguidor e a manobra bang-bang. Ele
 # já valeu 15° e 45°, e as duas vezes o robô ficou girando no lugar sem sair.
@@ -972,3 +972,119 @@ def test_a_chegada_nao_espera_um_angulo_que_a_maquina_nao_fecha():
     assert _default_do_seguidor('aponta_no_fim') is False, (
         'aponta_no_fim=True com o pivô fora do caminho pendura o seguidor na '
         'chegada. Os dois religam juntos — ver decisão 023.')
+
+
+# ---------------------------------------------------------------------------
+# A RECUPERAÇÃO ALCANÇÁVEL — decisão 024 (12-08, 4ª leva)
+#
+# O seguidor sempre teve uma recuperação (a ré da 009) e ela era inalcançável
+# por CONSTRUÇÃO: a guarda de plano velho dava `return` antes da checagem de
+# progresso, e o plano vence justamente quando o robô trava. Defeito de ORDEM,
+# não de lógica — nenhum teste de valor pegaria. Estes leem a ordem.
+# ---------------------------------------------------------------------------
+
+def _passo_do_seguidor():
+    """O corpo do `passo()` do seguidor, como AST."""
+    import ast
+
+    with open(SEGUIDOR) as f:
+        arvore = ast.parse(f.read())
+    for no in ast.walk(arvore):
+        if isinstance(no, ast.FunctionDef) and no.name == 'passo':
+            return no
+    raise AssertionError('o seguidor não tem `passo()`')
+
+
+def _linha_de(no_passo, agulha, arg=None):
+    """Primeira linha em que `agulha(arg, ...)` é chamado dentro do `passo()`.
+
+    ⚠️ `arg` não é luxo: `para()` é chamado três vezes no `passo()`, e a
+    primeira é a da CHEGADA, lá no topo. Um teste de ordem que casasse com
+    qualquer `para()` compararia contra a linha errada e passaria sempre — que
+    é o defeito da 019 (teste que não testa o alvo) de novo.
+    """
+    import ast
+
+    achadas = []
+    for no in ast.walk(no_passo):
+        if not isinstance(no, ast.Call):
+            continue
+        nome = getattr(no.func, 'attr', getattr(no.func, 'id', None))
+        if nome != agulha:
+            continue
+        if arg is not None:
+            if not no.args or not isinstance(no.args[0], ast.Constant):
+                continue
+            if arg not in str(no.args[0].value):
+                continue
+        achadas.append(no.lineno)
+    if not achadas:
+        alvo = agulha if arg is None else f'{agulha}({arg!r})'
+        raise AssertionError(f'`{alvo}` não é chamado dentro do `passo()`')
+    return min(achadas)
+
+
+def _linha_do_despacho_da_re(no_passo):
+    """Linha do `if self.estado == 're':` — o DESPACHO da máquina de estados.
+
+    ⚠️ Não vale procurar por `passo_de_re`: ele é chamado em DOIS lugares (o
+    despacho e o resgate dentro do ramo de plano velho), e casar com o
+    primeiro deles fez a primeira versão deste teste sobreviver à mutação que
+    ele existe para pegar. Testar a chamada errada é não testar.
+    """
+    import ast
+
+    for no in ast.walk(no_passo):
+        if not isinstance(no, ast.If):
+            continue
+        t = no.test
+        if (isinstance(t, ast.Compare) and isinstance(t.ops[0], ast.Eq)
+                and isinstance(t.comparators[0], ast.Constant)
+                and t.comparators[0].value == 're'
+                and getattr(t.left, 'attr', None) == 'estado'):
+            return no.lineno
+    raise AssertionError("o `passo()` não despacha o estado 're'")
+
+
+def test_a_re_em_curso_sobrevive_ao_plano_velho():
+    """Uma ré começada tem de continuar mesmo com o plano vencido.
+
+    Ninguém replaneja para um robô emperrado, então o plano vence JUSTAMENTE
+    enquanto ele recua. Com a guarda antes, ela abortava a manobra no primeiro
+    ciclo — a recuperação durava 50 ms.
+    """
+    p = _passo_do_seguidor()
+    assert _linha_do_despacho_da_re(p) < _linha_de(p, 'para', 'plano velho'), (
+        "a guarda de plano velho vem antes do despacho de `estado == 're'` — "
+        'uma ré em curso morre no primeiro ciclo dela. Ver decisão 024.')
+
+
+def test_o_emperramento_e_avaliado_ANTES_de_desistir_por_plano_velho():
+    """A checagem de progresso tem de alcançar o caso do plano vencido.
+
+    Era aqui que a ré ficava inalcançável: `para('plano velho')` retornava
+    antes de `progresso.atualiza`, e o robô parava para sempre. Medido na 4ª
+    leva de 12-08: 87 s de CSV com a pose imóvel na mesma casa decimal, a
+    2,49 m do objetivo.
+    """
+    p = _passo_do_seguidor()
+    assert _linha_de(p, 'atualiza') < _linha_de(p, 'para', 'plano velho'), (
+        'nenhuma checagem de progresso acontece antes de `para()` — a única '
+        'recuperação do seguidor volta a ser inalcançável por construção. '
+        'Ver decisão 024.')
+
+
+def test_a_re_tem_teto_sem_plano_novo():
+    """Recuar não ressuscita objetivo abortado — então a ré tem de parar.
+
+    Sem teto, o robô atravessa a sala de ré em passos de 0,30 m, e isso PARECE
+    recuperação. O teto existe para que o log diga a verdade: quem desistiu foi
+    o objetivo, lá no `bt_navigator`.
+    """
+    teto = _default_do_seguidor('re_max_sem_plano')
+    assert isinstance(teto, int) and 1 <= teto <= 3, (
+        f're_max_sem_plano={teto} — sem teto pequeno a ré vira passeio de '
+        'costas com cara de recuperação. Ver decisão 024.')
+    assert _default_do_seguidor('re_habilitada') is True, (
+        'a ré é a única recuperação que este robô tem desde que o pivô saiu '
+        'do caminho (023). Desligá-la deixa o seguidor sem saída.')

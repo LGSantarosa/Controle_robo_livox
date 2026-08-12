@@ -5419,7 +5419,7 @@ sem robô, alimentando-as com o plano real.
 — ele planeja. O que nunca funcionou é o nosso seguidor percorrer o que ele
 planeja, e isso não era regressão de hoje: nunca tinha sido olhado.
 
-## 🔄 2026-08-13 — O pivô era o culpado, e a régua de 12-08 media o robô desligado
+## 🔄 2026-08-12 (4ª leva) — O pivô era o culpado, e a régua media o robô desligado
 
 Sessão de dev, sem robô e sem Gazebo. Tudo aqui saiu de releitura dos CSV de
 12-08 e de aritmética. Decisão **023**. **388 testes verdes** (eram 376), doze
@@ -5531,3 +5531,96 @@ negativo isolado não viaja sozinho até o lugar onde ele importa.
 ⚠️ **Nada disto foi ao Gazebo nem ao robô.** A previsão que a próxima corrida
 testa está na 023 e é uma só: `raw_v` não-nulo em mais de 80% das amostras, com
 a distância ao alvo caindo de forma monótona.
+
+## 🔙 2026-08-12 (5ª leva) — O robô anda de novo, e o reflexo aparece pela primeira vez
+
+Primeira sessão com Gazebo desde 12-08 de manhã. **390 testes verdes** (eram
+388). Decisão **024**.
+
+### A 023 passou na máquina
+
+Alvo (2,0 · 7,2), o mesmo das corridas travadas:
+
+```
+                   12-08 (manhã)        agora
+raw_v não-nulo      1 / 1500           176 / 191   (92,1%)
+distância           2,20 -> 2,34 m     2,20 -> 0,07 m
+giro total          1321°              141°
+chegou              nunca              9,5 s
+```
+
+A previsão da 023 pedia >80% de `raw_v` não-nulo e distância monótona: saiu
+92,1% e o pior recuo contra o melhor já visto foi 0,038 m. **Passou nas duas
+pontas**, e a tortuosidade ficou em 1,09.
+
+### E aí a porta, que é onde a coisa fica interessante
+
+Alvo (6,0 · 1,5), atravessando o vão de 0,90 m. Ele andou 3,31 m e parou:
+
+```
+[collision_monitor]: Robot to stop due to PolygonStop polygon
+```
+
+🟢 **Primeira vez que o reflexo é visto parando o robô.** O `ESTADO` o listava
+como *"configurado, NUNCA visto parando o robô"* — três sessões de robô e duas
+de simulador com ele de pé e nunca uma evidência. O canto do polígono alcançava
+(4,07 · 1,97) contra uma ombreira que vai até 2,05. Palavra do dono: *"parou
+antes de bater, ótimo (...) ele não bateu, que é o principal"*.
+
+### O travamento, e o defeito de ORDEM que ele revelou
+
+Parado ali, o planner recusou (`Start occupied`), o `bt_navigator` abortou, o
+plano venceu e o seguidor parou para sempre — 87 s de pose imóvel.
+
+O seguidor **sempre teve** recuperação (a ré da 009). Ela era inalcançável por
+construção: a guarda de plano velho dava `return` antes da checagem de
+progresso, e o plano vence justamente quando o robô trava.
+
+➡️ **Lição de método**: nenhum teste de valor pegaria isso — todos os números
+estavam certos. É defeito de **ordem de linhas**, e a única régua possível é
+ler a ordem. Os testes desta leva leem por AST.
+
+⚠️ **E o primeiro deles nasceu errado, do mesmo jeito que o da 019.** Ele
+procurava a chamada `passo_de_re` e comparava com `para()` — mas `passo_de_re`
+é chamado em DOIS lugares e `para()` em três, e o teste comparava o par errado.
+**Sobreviveu à mutação que existia para pegar.** A versão final procura o nó
+`If` do despacho `estado == 're'` e o `para('plano velho')` pelo argumento.
+Terceira vez que este projeto escreve "teste que casa com a coisa errada não
+testa" — e a terceira vez que só a mutação avisou.
+
+### O elo seguinte, e ele já está medido
+
+A ré religada disparou e **não moveu o robô**: `fim da ré: recuou 0.00 m em
+8.0 s`, três vezes. O CSV dá o número redondo:
+
+```
+amostras com ré pedida (raw_v < 0)     831
+...que passaram pelo reflexo             0      (100% vetadas)
+```
+
+**O `PolygonStop` é cego para direção.** Polígono estático de −0,28 a +0,49 m
+com `action_type: stop`: ponto lá dentro zera QUALQUER comando. O mesmo reflexo
+que salvou o robô de bater é o que o impede de se afastar.
+
+Fica anotado como próximo elo, e ele é do **reflexo**, não do seguidor. Não
+mexi hoje: o freio de mão é a peça que menos merece conserto no chute, e o
+comportamento de parar diante do obstáculo é para preservar inteiro.
+
+### Duas dívidas que a sessão abriu, sem conserto
+
+- **Ele entrou torto na porta** — 0,16 m fora do centro de um vão de 0,90 m com
+  um corpo de 0,63 m (13 cm por lado). Em 05-08 passou *"perfeitamente no
+  meio"* e **tinha o pivô** para se esquadrejar. É custo da 023, e o dono já
+  decidiu: leva separada, com o `folga.py` de régua.
+- **`pior intervalo de /Odometry 0,336 s` com o robô andando** — o instrumento
+  delatou. Pode ser carga da minha máquina (Gazebo + RViz + tudo junto) e não
+  o robô; não vale conclusão sem repetir.
+
+### Armadilha de ambiente, e ela quase contaminou a medida
+
+Antes da primeira corrida declarei "ambiente limpo" com um `ps` filtrado por
+`comm` — e havia **4 `static_transform_publisher` órfãos** de 11:50 a 12:44,
+exatamente a janela das corridas da manhã. As corridas de 12-08 rodaram com até
+quatro `map→odom` concorrentes. Não muda o diagnóstico do pivô (que se mede em
+yaw e comando), mas **muda a régua**: a varredura de processo tem de casar com
+a linha de comando inteira, não com o nome curto.

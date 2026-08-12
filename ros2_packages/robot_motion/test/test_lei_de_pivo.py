@@ -26,8 +26,8 @@ class Planta:
     entrega um patamar de ~2,2 rad/s; depois do corte segue empurrando e então
     desacelera. `a_real` é o que a lei NÃO conhece.
 
-    🔴 **O QUE ESTA PLANTA ERRAVA ATÉ 13-08, e era o mesmo ponto cego que o
-    Gazebo teve em 06-08**: depois do corte ela CONGELAVA o `wz` por 0,2 s e
+    🔴 **O QUE ESTA PLANTA ERRAVA ATÉ A 4ª LEVA DE 12-08, e era o mesmo ponto
+    cego que o Gazebo teve em 06-08**: depois do corte ela CONGELAVA o `wz` por 0,2 s e
     só então desacelerava. A placa não faz isso. O `placa_simulada` segura a
     **saída cheia** (o patamar) decaindo em rampa por `atraso_desliga`, e a
     docstring dele diz o que isso significa com todas as letras: *"entre o
@@ -121,7 +121,7 @@ def test_a_sobra_e_a_lei_da_005_invertida():
 
 # ------------------------------------------------- fechar a manobra
 #
-# ⚠️ LEIA ANTES DE MEXER (13-08). Os testes desta seção rodam contra
+# ⚠️ LEIA ANTES DE MEXER (12-08, 4ª leva). Os testes desta seção rodam contra
 # `Planta(atraso_desliga=0.0)` — um atuador que PARA quando mandam parar. Não é
 # o robô e não é o simulador: é a máquina que a lei SUPÕE, e é contra ela que
 # faz sentido julgar a aritmética do corte.

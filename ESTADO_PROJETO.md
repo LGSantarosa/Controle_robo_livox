@@ -10,7 +10,7 @@
 
 ---
 
-## 🧭 HANDOFF — LEIA ISTO PRIMEIRO (13-08, fim do dia)
+## 🧭 HANDOFF — LEIA ISTO PRIMEIRO (12-08, fim do dia)
 
 > **Para o assistente que chegar frio.** Estado real, sem enfeite. O trabalho do
 > dia está na branch **`slam-meu-mapa`** (não foi para a `main`, e a `main`
@@ -66,40 +66,57 @@ andando 97–99% do tempo. Arco é RAZÃO e a placa preserva razão; pivô é M�
 leva já dizia *"o pivô NÃO passou"* — e ninguém ligou isso à navegação, porque
 entre 05-08 e 12-08 a corrente não voltou a rodar ponta a ponta.
 
-### 🎯 A PRÓXIMA TAREFA — uma corrida no Gazebo, e ela tem previsão escrita
+### 🟢 E A CORRIDA ACONTECEU — a 023 passou na máquina
 
-```bash
-ros2 launch robot_motion pilha.launch.py sim:=true
-python3 tools/banco/corrida_nav.py --alvo 2.0 7.2 --csv /tmp/pos-023.csv
+```
+alvo (2,0 · 7,2)          12-08 manhã        depois da 023
+raw_v não-nulo             1 / 1500         176 / 191  (92,1%)
+distância                  2,20 -> 2,34 m   2,20 -> 0,07 m
+giro total                 1321°            141°
+chegou                     nunca            9,5 s
 ```
 
-**Previsão falsificável (023)**: `raw_v` não-nulo em **mais de 80%** das
-amostras, e a distância ao alvo caindo de forma monótona.
+Previsão da 023 (>80% de `raw_v`, distância monótona): **passou nas duas
+pontas**, pior recuo 0,038 m, tortuosidade 1,09.
 
-Se voltar a girar no lugar, a causa **não é** o pivô — ele não pode mais
-disparar. A suspeita seguinte é o plano do Theta* saltando entre
-replanejamentos, e o `rumo_alvo` já está gravado no CSV para arbitrar isso.
+### 🛡️ E O REFLEXO APARECEU PELA PRIMEIRA VEZ
 
-### 🔧 Armadilhas que morderam HOJE (não repita)
+Alvo (6,0 · 1,5), pela porta de 0,90 m: `Robot to stop due to PolygonStop
+polygon`. O `ESTADO` listava o `collision_monitor` como *"configurado, NUNCA
+visto parando o robô"* — agora está medido, e **ele não bateu**.
 
-- 🔴 **`ros2 param set` NÃO chega nos nossos nós.** `heading_controller` e
-  `path_follower` copiam os parâmetros num dicionário na subida e nunca releem.
-  Mudar de verdade = editar o YAML + `colcon build` + subir de novo. (Parâmetro
-  de costmap do Nav2 esse sim muda ao vivo.)
-- 🔴 **Duas pilhas simultâneas** dão `Detected jump back in time` (dois `/clock`)
-  e um robô que parece andar sozinho. Matar por `ps`, nunca por `pgrep -c`.
-- ⚠️ **O mundo do `meu_mapa` fica visualmente feio** e isso NÃO é defeito da
-  conversão: 87% do mapa é área nunca escaneada, então o mundo tem só os
-  fragmentos de parede que o SLAM viu. Para navegar serve; para olhar, use a
-  pista.
-- ⚠️ **Planejar no `meu_mapa` é marginal**: mediana de folga das células livres
-  0,35 m contra `robot_radius` 0,32. Com `inflation_radius` 0,50 → 0 de 8 pontos
-  de partida planejam; com 0,20 → 4 de 8. Decisão em aberto.
+### 🔴 O QUE FALTA — o robô para diante do obstáculo e não sai de lá
 
-### ⚠️ Pendência que não pode ser esquecida
+```
+1. reflexo para o robô a 0,34 m da ombreira      (correto, e é o principal)
+2. planner: Start occupied -> bt_navigator aborta
+3. plano vence -> seguidor pede RÉ               (a 024, funcionando)
+4. reflexo VETA a ré:  831 / 831 amostras zeradas
+```
 
-Os **8 CSV de 2,5 m de 11-08 ainda estão no NUC** — puxar ANTES de qualquer
-deploy (`git clean -fd` lá os apaga).
+A 024 tornou a recuperação alcançável (era defeito de ORDEM: a guarda de plano
+velho dava `return` antes da checagem de progresso). Mas o `PolygonStop` é
+**cego para direção** — polígono estático de −0,28 a +0,49 m, `action_type:
+stop`: ponto lá dentro zera QUALQUER comando, inclusive o que afasta.
+
+### 🎯 A PRÓXIMA TAREFA — decisão 025, o recuo que fura o bloqueio
+
+O dono apontou a estratégia e ela está descrita no `unstuck_supervisor.py`:
+canal de twist_mux **acima da autonomia e abaixo do humano**, que entra depois
+do reflexo e portanto o fura; e a ré **com olho no vão** — `vao_traseiro`
+medido em METROS num corredor retangular da largura do robô sobre o `/scan`,
+nunca por setor angular (isso já causou uma batida).
+
+`orcamento_de_re(vao_traseiro=...)` já existe e já aceita o parâmetro; o
+`path_follower` chama com `None`. A fatia 2D da 021 fornece o `/scan`.
+
+### ⚠️ Duas dívidas abertas nesta sessão
+
+- **Ele entra torto na porta**: 0,16 m fora do centro de um vão de 0,90 m com
+  corpo de 0,63 m. Custo da 023 (sem pivô ele arca para dentro). Leva própria,
+  com o `folga.py` de régua — já decidido pelo dono.
+- **`pior intervalo de /Odometry 0,336 s`** com o robô andando. Pode ser carga
+  da máquina de dev; não vale conclusão sem repetir.
 
 ---
 

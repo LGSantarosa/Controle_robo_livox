@@ -89,8 +89,8 @@ class HeadingController(Node):
             # manobra disparar sem parar e o robô nunca andaria. 15° dá folga
             # de 2,5x sobre a tolerância.
             #
-            # 🔴 3,20 rad DESDE 13-08 (decisão 023), era 0,26 (~15°). Acima de
-            # π: nenhum erro de rumo alcança, e o pivô por corte NÃO DISPARA.
+            # 🔴 3,20 rad DESDE a 4ª leva de 12-08 (decisão 023), era 0,26
+            # (~15°). Acima de π: nenhum erro de rumo alcança, e o pivô por corte NÃO DISPARA.
             # Não é sintonia — é a manobra saindo do caminho, porque contra
             # esta placa ela não fecha em ângulo NENHUM. A placa segura a saída
             # cheia por `atraso_desliga` (0,52 s, medido no robô em 04-08), o
@@ -292,7 +292,7 @@ class HeadingController(Node):
         # (`lei_de_pivo.py`). Uma vez começada ela vai até o fim — trocar de
         # modo no meio deixaria o robô girando sem ninguém responsável pelo
         # corte, e a sobra é de ~113°.
-        # 🔴 13-08 (decisão 023): O CASO `parado` SAIU DAQUI, e com ele o
+        # 🔴 4ª leva de 12-08 (decisão 023): O CASO `parado` SAIU DAQUI, e com ele o
         # último caminho que ainda entrava na manobra bang-bang.
         #
         # Ele existia porque, com `v=0` pedido, arcar não existe e o erro

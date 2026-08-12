@@ -100,7 +100,7 @@ class PathFollower(Node):
             # ponto reto, e SÓ LÁ acerta o ângulo. É também o que torna o
             # Theta* utilizável: o plano não precisa mais chegar apontado.
             #
-            # 🔴 FALSE DESDE 13-08 (decisão 023), e é consequência direta dela:
+            # 🔴 FALSE DESDE a 4ª leva de 12-08 (decisão 023), consequência direta:
             # a fase 2 pedia `v=0` mais um ângulo, e quem entregava isso era o
             # pivô por corte — que saiu do caminho por não fechar contra a
             # retenção da placa. A lei contínua assume e NÃO arrasta (medido:
@@ -135,8 +135,31 @@ class PathFollower(Node):
             #
             # Fica no código, com orçamento e voz, para o caso que só ela
             # resolve: geometria fechada de verdade (nariz contra a parede,
-            # sem espaço para girar). Ligar com `re_habilitada:=true`.
-            ('re_habilitada', False),
+            # sem espaço para girar).
+            #
+            # 🔴 TRUE DESDE a 4ª leva de 12-08 (decisão 024) — e é exatamente
+            # esse caso que apareceu. Das duas objeções acima, uma morreu e a
+            # outra não se aplica:
+            #
+            # · "ela atropelava o pivô" — não há mais pivô para atropelar
+            #   (023, algumas horas antes desta linha);
+            # · "recuar reto não muda RUMO" — continua verdade, e continua
+            #   sendo motivo para não usar a ré como conserto de rumo. Aqui o
+            #   emprego é OUTRO: tirar o robô de uma CÉLULA que o planner
+            #   recusa (`Start occupied`). Isso é posição, não rumo, e recuar
+            #   reto muda posição. A distinção é o que sustenta esta linha.
+            #
+            # O reflexo cobre a traseira: o polígono do `collision_monitor` vai
+            # de +0,49 a −0,28 m em x, e o Mid-360 é 360°. Recuar não é cego
+            # contra obstáculo — é cego contra buraco, e disso nenhum sensor
+            # nosso protege.
+            ('re_habilitada', True),
+            # Quantas rés cabem sem que um plano novo chegue. UMA, e o teto é
+            # o ponto: recuar tira o robô da célula que o planner recusa, mas
+            # não ressuscita um objetivo abortado. Sem teto, o robô atravessa
+            # a sala de ré em passos de 0,30 m — movimento que parece
+            # recuperação e não é.
+            ('re_max_sem_plano', 1),
             ('re_parado_s', 1.5),
             ('re_avanco_min', 0.05),
             ('re_orcamento_cego', 0.30),
@@ -163,6 +186,9 @@ class PathFollower(Node):
                                            self.par['re_avanco_min'])
         self.re_desde = None
         self.re_origem = None
+        # Quantas rés já foram gastas SEM que um plano novo chegasse. Zera no
+        # `cb_plano`: plano novo é a prova de que a recuperação serviu.
+        self.res_sem_plano = 0
         self.rumo_objetivo = None
 
         self.linhas = []
@@ -223,6 +249,10 @@ class PathFollower(Node):
         # alvo de +45,0° e último ponto do plano com +45,0°.
         self.rumo_objetivo = yaw_de(msg.poses[-1].pose.orientation)
         self.t_plano = self.agora()
+        # Plano novo = a recuperação funcionou. O orçamento de ré volta ao
+        # cheio; sem isto, um travamento no começo da missão deixaria o robô
+        # sem recuperação pelo resto dela.
+        self.res_sem_plano = 0
         if self.estado == 'ocioso':
             self.estado = 'seguindo'
             self.progresso.reinicia()
@@ -262,13 +292,49 @@ class PathFollower(Node):
             self.para('chegou')
             return
 
-        if (self.t_plano is not None
-                and t - self.t_plano > self.par['timeout_plano']):
-            self.para('plano velho')
-            return
-
+        # 🔴 A RÉ EM CURSO VEM ANTES DA GUARDA DE PLANO VELHO (4ª leva de
+        # 12-08), e a ordem não é estilo: o plano vence JUSTAMENTE enquanto o
+        # robô recua — ninguém replaneja para um robô emperrado. Com a guarda
+        # antes, ela abortava a manobra no primeiro ciclo dela.
         if self.estado == 're':
             self.passo_de_re(t, x, y, rumo, dist)
+            return
+
+        if (self.t_plano is not None
+                and t - self.t_plano > self.par['timeout_plano']):
+            # ⚠️ PLANO VELHO COM O ROBÔ EMPERRADO NÃO É MOTIVO PARA DESISTIR —
+            # é o SINTOMA que a decisão 009 escolheu como gatilho da ré. Era
+            # aqui que a única recuperação do seguidor ficava inalcançável por
+            # construção: este `return` vinha antes da checagem de progresso lá
+            # embaixo, e o plano vence exatamente quando o robô trava.
+            #
+            # Medido na 4ª leva de 12-08, alvo (6,0 · 1,5) pela porta de
+            # 0,90 m: o reflexo parou o robô a 0,34 m da ombreira, o planner
+            # recusou com `Start occupied`, o `bt_navigator` abortou o objetivo
+            # e o seguidor parou PARA SEMPRE a 2,49 m do alvo — 87 s de CSV
+            # com a pose imóvel na mesma casa decimal.
+            if self.progresso.atualiza(t, dist):
+                if self.res_sem_plano < self.par['re_max_sem_plano']:
+                    self.entra_na_re(t, x, y, dist)
+                    if self.estado == 're':
+                        self.res_sem_plano += 1
+                        self.passo_de_re(t, x, y, rumo, dist)
+                        return
+                else:
+                    # ⚠️ E AQUI A RÉ PARA DE INSISTIR, DE PROPÓSITO. Recuar
+                    # tira o robô da célula que o planner recusa, mas NÃO traz
+                    # plano de volta: quem desistiu foi o objetivo, lá no
+                    # `bt_navigator`. Sem este teto o robô atravessaria a sala
+                    # de ré, 0,30 m por vez, para sempre — movimento que
+                    # parece recuperação e não é.
+                    self.get_logger().error(
+                        f'recuei {self.res_sem_plano}x e nenhum plano novo '
+                        f'chegou em {t - self.t_plano:.0f} s. Quem abortou foi '
+                        'o OBJETIVO (bt_navigator), não o seguidor — sair do '
+                        'lugar não traz plano de volta, e o objetivo precisa '
+                        'ser mandado de novo.',
+                        throttle_duration_sec=10.0)
+            self.para('plano velho')
             return
 
         # --- seguindo ---

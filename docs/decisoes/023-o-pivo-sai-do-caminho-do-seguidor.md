@@ -1,6 +1,6 @@
 # 023 — O pivô sai do caminho do seguidor: a placa não entrega módulo
 
-**Data**: 2026-08-13 (dev, robô desligado, sem Gazebo)
+**Data**: 2026-08-12 (4ª leva; dev, robô desligado)
 **Status**: aceita e implementada
 **Toca**: `heading_controller.py`, `path_follower.py`,
 `config/movimentacao_sim.yaml`, `test/test_lei_de_pivo.py`,
