@@ -98,6 +98,16 @@ def main():
                     TwistStamped, topico,
                     lambda m, c=campo: self.cb_cmd(c, m), qos)
 
+            # O RUMO PEDIDO, que é o que separa "o seguidor mandou errado" de
+            # "o robô não obedeceu". Sem ele, um robô apontando para o lado
+            # errado tem duas explicações e nenhuma evidência — foi o que
+            # faltou na primeira corrida no mapa do prédio (12-08).
+            from std_msgs.msg import Float64
+            self.rumo_alvo = None
+            self.create_subscription(
+                Float64, '/heading_controller/rumo_alvo',
+                lambda m: setattr(self, 'rumo_alvo', m.data), qos)
+
             self.cliente = ActionClient(self, NavigateToPose, 'navigate_to_pose')
             self.objetivo = None
             self.create_timer(1.0 / 20.0, self.passo)
@@ -150,6 +160,15 @@ def main():
                 'dist': round(leitura_nav.distancia(
                     p.position.x, p.position.y, self.alvo), 4),
                 'plano_n': self.plano_n,
+                # rumo pedido e o erro que o controlador de rumo enxerga: sem
+                # isto, robô apontado para o lado errado tem duas explicações
+                # (seguidor mandou errado × robô não obedeceu) e nenhuma prova.
+                'rumo_alvo': ('' if self.rumo_alvo is None
+                              else round(self.rumo_alvo, 4)),
+                'erro_rumo': ('' if self.rumo_alvo is None else round(
+                    math.atan2(math.sin(self.rumo_alvo - yaw_de(p.orientation)),
+                               math.cos(self.rumo_alvo - yaw_de(p.orientation))),
+                    4)),
                 'raw_v': round(self.cmd['raw'][0], 4),
                 'raw_wz': round(self.cmd['raw'][1], 4),
                 'saida_v': round(self.cmd['saida'][0], 4),

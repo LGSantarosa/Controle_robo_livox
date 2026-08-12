@@ -5291,3 +5291,94 @@ da pilha tem de dizer `DISPONÍVEL acima de 0,13 rad/s`) e o resgate dos 8 CSV d
 Peguei conferindo cada comando contra o `--help` real antes de fechar. Roteiro
 com comando errado queima bancada com a bateria correndo, e é o tipo de erro que
 só aparece na hora em que custa caro.
+
+### 12-08 (3ª leva) — a localização fecha, e a NAVEGAÇÃO nunca andou
+
+Sessão de dev sozinho, a pedido do dono ("ataca o pivô agora"). O que era para
+ser um conserto de pivô virou um diagnóstico de fundo, e o resultado honesto é:
+**não entreguei o robô andando.**
+
+#### O que PASSOU, e é o achado bom do dia
+
+A localização contra mapa fecha ponta a ponta, no mapa do prédio, no Gazebo:
+
+```
+scan × mapa   360 feixes válidos, 0 fora do mapa
+              100% dentro de 0,15 m, erro mediano 0,050 m — UMA célula
+              o mesmo número com --pose odom e --pose amcl
+AMCL          active, map→odom com correção nula (a pose simulada é verdadeira)
+```
+
+Isso valida o `origin` e a inversão vertical do conversor de mundo, os cortes da
+fatia 2D (021) e o alinhamento dos frames. Erro em qualquer um deles seria de
+metros, não de uma célula.
+
+#### O que NÃO passou, e a caçada até achar
+
+Objetivo de 13 m no mapa do prédio: o robô andou 0,59 m em 128 s. Quatro
+hipóteses caíram, cada uma com evidência, e vale registrar porque cada queda
+economiza a próxima sessão:
+
+1. 🔴 **"a corrente de comando quebrou"** — caiu: `mux_wz` recebeu o comando. A
+   corrente entrega;
+2. 🔴 **"o progress checker do Nav2 abortou"** — caiu: `movement_time_allowance`
+   já está em 30 s, e o comentário no `nav2.yaml` já antecipava esse risco;
+3. 🔴 **"o alvo não é alcançável"** — caiu: componente conexa de 161 m² contém
+   os dois pontos, e o `plano.py` planejou 285 pontos até lá;
+4. 🔴 **"o Livox está marcando obstáculo fantasma no costmap global"** — caiu:
+   `percepcao.py` deu **0 células letais onde o mapa diz livre**.
+
+O log deu a causa PRÓXIMA numa linha: `GridBased plugin failed to plan ...
+"Could not generate path"`. O planejador falhou ao REPLANEJAR, o
+`ComputePathToPose` abortou, a `PipelineSequence` caiu, o `FollowPath` foi
+halted e o BT abortou em 9,7 s. O congelamento de 118 s que eu gravei depois era
+cadáver.
+
+⚠️ E o planejamento neste mapa é **marginal**: planejar de `(0,18 · −0,68)`
+funciona e de `(0,10 · −0,75)` não — 15 cm ao lado, ambos com 1,5 m de folga. A
+mediana de folga das células livres é **0,35 m** contra um `robot_radius` de
+**0,32**: o corredor mapeado é pouco mais largo que o robô. Com
+`inflation_radius` 0,50 → 0/8 pontos de partida planejam; com 0,20 → 4/8.
+
+#### A causa de FUNDO, que só apareceu voltando para a pista
+
+Rodei o mesmo objetivo na **pista** — o mundo onde tudo já foi aprovado — com
+AMCL e, como controle, com a TF fixa. Os dois falharam:
+
+```
+                    raw_v não-nulo    andou      dist ao alvo
+pista + amcl         0 / 1500        0,11 m     2,20 -> 2,30 m
+pista + TF fixa      1 / 1500        0,20 m     2,20 -> 2,34 m
+```
+
+🔴 **O seguidor praticamente NUNCA pede velocidade linear** — 1 amostra em 1500.
+Não é o AMCL (o controle falha igual), não é o mapa, não é o Nav2.
+
+O `rosout` mostra o ciclo: `PIVÔ: +46° de erro — parando para virar no eixo`,
+depois `sem progresso`, e `pivô fechado` **15 s depois**. Onze mensagens de pivô
+numa corrida de 75 s. O robô entra em pivô, fica lá com `v = 0`, fecha, anda
+alguns centímetros, o erro de rumo passa dos 15° de novo (`limiar_pivo` 0,26
+rad) e ele repivota. Com a cenoura a 0,37 m, erro acima de 15° é o estado
+NORMAL, não a exceção.
+
+➡️ **A hipótese para a próxima leva**: `lookahead` curto (0,37 m) e
+`limiar_pivo` baixo (15°) se realimentam — o seguidor pede rumo que só o pivô
+entrega, e o pivô proíbe avançar. É reproduzível na planta de brinquedo, **sem
+Gazebo e sem robô**, e é lá que tem de ser reproduzida antes de qualquer
+conserto.
+
+#### O que isto muda no entendimento do projeto
+
+⚠️ **A navegação ponto a ponto nunca foi vista andando — nem no simulador.** O
+que as decisões 008/014/015 mediram foi **planejamento** (`plano.py` planeja sem
+mover) e **percepção** (`percepcao.py`). O elo "o robô percorre o plano" estava
+suposto, e o `corrida_nav.py` (12-08) é o primeiro instrumento que olha para ele.
+
+🔧 **Erro meu de bancada, de novo**: subi duas pilhas simultâneas na primeira
+tentativa e passei um tempo interpretando `Detected jump back in time` e um robô
+que "andava sozinho" — eram dois Gazebos disputando o `/clock`. É a armadilha
+que o próprio ESTADO documenta desde 07-08. `ps`, sempre.
+
+🔧 **E o instrumento ganhou o que faltava**: `corrida_nav.py` agora grava
+`rumo_alvo` e `erro_rumo`. Sem eles, "robô apontado para o lado errado" tinha
+duas explicações e nenhuma prova — foi exatamente o que me travou por uma hora.
