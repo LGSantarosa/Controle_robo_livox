@@ -310,5 +310,5 @@ E o `ambiente.txt` da praxe: piso, **bateria no início e no fim**, commit
 1. O pivô saiu do caminho no robô real, e ele anda? (passo 5)
 2. O `/scan` real é rápido o bastante para a ré não-cega? (passo 4a)
 3. O medidor de vão traseiro bate com a trena, inclusive na quina? (passo 4b)
-4. Dá para planejar no `meu_mapa`, e com qual inflação? (passo 6)
+4. Dá para planejar no `scan_andar3_ajustado`, e com qual inflação? (passo 6)
 5. O robô não bate? (passo 7)
