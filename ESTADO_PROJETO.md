@@ -192,6 +192,73 @@ real ela **proíbe planejar**. Decisão em aberto, e o roteiro
 - **`pior intervalo de /Odometry 0,336 s`** com o robô andando. Pode ser carga
   da máquina de dev; não vale conclusão sem repetir.
 
+
+### O que o dono está otimizando, e o que ele já decidiu
+
+**O critério, nas palavras dele (12-08):** *"o reflexo só deve parar em
+momentos que sejam surpresas, uma pessoa, um obstáculo móvel; o que é parado
+deve ser desviado previamente pela navegação"*. Reflexo disparando contra
+obstáculo que está no MAPA é falha de navegação, por definição. **Este é o
+critério de aceitação do projeto agora**, e ele é falsificável: `folga.py` mede
+contra o mapa e `corrida_nav.py` registra quando o reflexo agiu.
+
+**A ré da 025 é BAND-AID e ele sabe.** Palavras dele: *"ele dar essa ré em
+específico é um band-aid, pois desde o início ele está indo errado até a porta
+e precisando dar a ré para não bater; a ré ainda fica viva para esses casos"*.
+Não a venda como solução — ela é a rede para a surpresa.
+
+**Decisões já tomadas por ele nesta sessão, não reabra sem motivo:**
+
+- o canal de desencalhe fica em prioridade **30** — acima da autonomia, abaixo
+  do humano (teclado 90, web 50);
+- o reflexo **da frente** continua intocado; só o recuo fura;
+- a recuperação vive **dentro do seguidor**, não em nó novo;
+- a entrada torta na porta é **leva separada, com régua** (`folga.py`), e não
+  se conserta junto com outra coisa.
+
+### Como esta sessão de fato andou (e o que isso ensina)
+
+**Três observações do dono olhando a tela destravaram a sessão inteira**, e
+nenhuma delas estava em CSV nenhum:
+
+```
+"está parado agora, tem que ter uma maneira dele sair daí sozinho"  -> 024
+"ele ativou de novo a ré mesmo estando reto na porta"               -> o teto da 025
+"mandei comandos e ele não fez nada"                                -> era o botão errado do RViz
+```
+
+➡️ **Peça o que ele viu.** O CSV diz o que aconteceu; ele diz o que pareceu, e
+foi o "pareceu" que apontou o mecanismo nas três vezes.
+
+**E a ideia dele de estratégia estava certa duas vezes**: o furo no bloqueio
+(*"o recuo deve ser um furo do bloqueio, ele vê se não tem nada atrás"*) veio
+dele, e é o desenho que funcionou. Quando ele descrever um comportamento,
+traduza para o que a máquina permite em vez de descartar — a ideia de "diminuir
+a velocidade antes da porta" é impossível (a placa escolhe o módulo, decisão
+020), mas o miolo dela — chegar já apontado — virou a 026.
+
+### O estado da máquina de dev quando esta sessão fechou
+
+- branch **`slam-meu-mapa`**, empurrada, 21 commits à frente da `main`;
+- a `main` tem **2 commits locais não empurrados** (anteriores a hoje);
+- **nada foi mesclado na `main`** — a decisão de merge está em aberto;
+- havia uma pilha do Gazebo de pé na máquina de dev; se ainda estiver, derrube
+  antes de qualquer medida (`ps`, matar por PID, nunca `pkill -f`).
+
+### As dívidas abertas, em ordem de valor medido
+
+1. **O erro de trajeto do seguidor** (p50 0,128 m contra 0,118 m de margem num
+   vão de 0,90 m). É o termo dominante. Suspeitas na ordem: a lei é só de rumo
+   e não tem termo de desvio lateral; o `lookahead` de 0,37 m foi escolhido
+   para um seguidor que pivotava; sem pivô ele arca para dentro do vão.
+2. **A inflação no mapa real** — 0,50 é da porta simulada e pode proibir
+   planejar. Passo 6 do roteiro.
+3. **A velocidade não é comandável** (020): a placa escolhe o módulo, então
+   toda a lei de frear na curva é inerte. Reabre o dia que alguém mexer no
+   `deadband_enable`.
+4. **O objetivo abortado não volta sozinho**: quando o `bt_navigator` desiste,
+   ninguém re-manda. Hoje quem manda é o operador.
+
 ---
 
 ## 🚦 12-08 (2ª leva) — O ROBÔ ESTÁ PRONTO PARA ANDAR SOZINHO (dev)

@@ -5685,3 +5685,101 @@ manobra mais a inércia da placa. A mutação pegou.
 ➡️ **Derivação bonita da grandeza errada aprova o defeito.** É a terceira vez
 nesta sessão que só a mutação separou "teste que vale" de "teste que passa", e
 as três foram testes que eu mesmo tinha acabado de escrever.
+
+## 🪄 2026-08-12 (7ª leva) — O plano passa a ser suavizado, e isso não bastou
+
+Decisão **026**. **405 testes verdes** no total (`robot_motion` 238).
+
+### O critério do dono, e ele é o melhor que esta sessão produziu
+
+Depois de ver o robô atravessar a porta usando a ré, o dono nomeou a coisa
+certa: **a ré é band-aid**. E deu o critério:
+
+> *"precisamos fazer agora ele melhorar a navegação para que não vá em direção
+> a paredes e obstáculos, para que ele só pare em momentos que sejam surpresas,
+> uma pessoa, um obstáculo móvel (...) o que é parado deve ser desviado
+> previamente pela navegação"*
+
+Isso é **falsificável e automatizável**, que é o que o torna valioso: reflexo
+disparando contra obstáculo que está no MAPA é falha de navegação por
+definição, e a régua (`folga.py` contra o mapa + o registro de reflexo do
+`corrida_nav.py`) já existe.
+
+### A medida que separa planner de seguidor
+
+```
+porta: parede em x=4,0 · vão de y=2,05 a 2,95 · CENTRO 2,50 · corpo 0,63 m
+
+o PLANO do Theta*      cruza em y=2,483   (−0,017 m do centro)  sobra +0,118 m/lado
+o CAMINHO REALIZADO    cruza em y=2,401   (−0,099 m do centro)  sobra +0,036 m/lado
+```
+
+**O planner não é o culpado.** Ele cruza a 1,7 cm do centro de um vão de 90 cm.
+Quem come dois terços da margem é o seguidor.
+
+Mas o plano também não é **seguível**: reamostrado a 0,20 m ele tem 14 viradas
+acima de 2°, com **23,0° a 0,46 m da porta** — dentro da mira de 0,37 m do
+seguidor, onde a cenoura salta por cima da quina.
+
+### O suavizador, e a bancada que escolheu por medida
+
+Entra o `smoother_server` e, com ele, **a primeira árvore de comportamento
+própria do projeto** — porque nenhuma das doze de fábrica do Jazzy chama
+`SmoothPath`. A árvore preserva a recuperação ZERO de 29-07.
+
+```
+              quina máx (4 corridas)              mediana   folga mín
+cru           45,0 · 23,3 · 30,1 · 36,9            33,5°     0,450
+simples       19,9 · 22,6 · 22,8 · 26,4            22,7°     0,454
+savgol        24,2 · 33,5 · 33,6 · 35,6            33,6°     0,452
+suave         NÃO COMPLETOU nas 4 (error_code 504)
+```
+
+O `ConstrainedSmoother` (`suave`) era o **favorito a priori** — o único que
+olha o costmap — e falhou nas quatro. Eu tinha escrito, antes de rodar, que
+"favorito a priori é o que esse banco existe para derrubar". Derrubou.
+
+### 🔴 E o resultado principal é NEGATIVO
+
+```
+                       antes do suavizador    com SimpleSmoother
+tortuosidade               1,30                   1,31
+rés                        1                      1
+reflexo                    2× em t=12,0 s         2× em t=12,3 s
+erro de trajeto p50        0,174 m                0,128 m
+                p90        0,297 m                0,321 m
+```
+
+Mediana cai 26%, **p90 e máximo pioram**, comportamento igual. O critério do
+dono não foi atingido.
+
+➡️ **A alavanca do lado do Nav2 está quase esgotada.** O plano já cruza a 1,7 cm
+do centro e a quina caiu de 33,5° para 22,7°; o robô segue perdendo 10 a 17 cm.
+O termo dominante é o SEGUIDOR: a lei é só de rumo, sem termo de desvio
+lateral, e o `lookahead` de 0,37 m foi escolhido em 05-08 para um seguidor que
+PIVOTAVA.
+
+### 🔧 A bancada mentiu, e do jeito mais perigoso
+
+A primeira versão não mandava `max_smoothing_duration`. O campo chegou ZERO, o
+servidor abortou com *"Smoothing time exceeded allowed duration of −0.00"* — e
+a bancada imprimiu **os quatro caminhos idênticos** como se fosse medida.
+
+Lida ao pé da letra, aquela tabela dizia *"suavizar não faz diferença"*, e eu
+teria descartado o suavizador inteiro com base em nada. Agora ela **recusa
+resultado que não completou**.
+
+➡️ **Instrumento que devolve número sem ter medido é pior que instrumento
+quebrado**: o quebrado a gente conserta, o mentiroso a gente cita.
+
+### 🔧 E eu travei o Gazebo
+
+Subindo e descendo a pilha muitas vezes, o spawner (`ros_gz_sim create`) ficou
+preso em *"Requesting list of world names"* e a TF `map → base_link` nunca
+fechou — com cara de defeito do `smoother_server`, que tinha acabado de entrar.
+Não era: era sujeita de ambiente minha. Custou uma corrida.
+
+⚠️ Some-se à armadilha da 5ª leva (declarei "ambiente limpo" filtrando `ps` por
+`comm` e havia 4 `static_transform_publisher` órfãos). **Duas vezes no mesmo
+dia o ambiente sujo produziu diagnóstico falso.** A varredura tem de casar com
+a linha de comando inteira, e a limpeza tem de ser verificada, não presumida.
