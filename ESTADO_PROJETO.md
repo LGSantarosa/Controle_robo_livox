@@ -47,12 +47,31 @@ ele continua disparando** — 928 vezes no log:
 10 cm ao lado do Mid-360 e na altura dele: **peça do próprio robô**. Mesma
 família da 017 (lá o ponto `(0,0,0)` era o robô, e tratou-se UM ponto só).
 
-➡️ **A MELHORIA QUE VAMOS TENTAR** (é o próximo passo, decidido pelo dono): o
-`nuvem_pontos` passa a descartar pontos dentro de um **raio** do sensor
-(~0,15 m), não só a origem exata. Descartada a alternativa de subir
-`min_points` 2 → 6: esconde o sintoma e cega o reflexo para obstáculo pequeno
-de verdade. **Reflexo que dispara sempre é reflexo que não quer dizer nada** —
-e o critério do dono no passo 7 é que ele só dispare por surpresa.
+🔧 **O DONO ARRANCOU A PEÇA** (havia uma estrutura em volta do Mid-360), e
+✅ **a decisão 027 já entrou**: o `nuvem_pontos` descarta pontos dentro de um
+**raio do EIXO** do sensor (`raio_cego`, default 0,15 m), não só a origem
+exata. Cilindro e não esfera — o corpo fica abaixo do lidar. Descartada a
+alternativa de subir `min_points` 2 → 6: esconde o sintoma e cega o reflexo
+para obstáculo pequeno de verdade. **Reflexo que dispara sempre é reflexo que
+não quer dizer nada.** É reincidência da 017, que tratou UM ponto sem
+generalizar. 75 testes no `robot_base` (eram 70), verificados por mutação.
+
+⏳ **A PRÓXIMA SESSÃO COMEÇA POR ESTA PREVISÃO, E A ORDEM É O QUE VALE.** A
+peça saiu DEPOIS da medida e ANTES do conserto, o que separa hardware de
+software de graça:
+
+```
+1º  raio_cego:=0.0 (comportamento velho), robô PARADO
+      PolygonStop cala e 0 pontos no polígono -> causa confirmada por intervenção
+      continua disparando  -> a peça não era a culpada; suspeito seguinte é a
+                              faixa de altura (min_height 0,10) pegando o chão
+2º  default 0,15 -> repetir o passo 5: chegada SEM os 17% de vetos
+3º  o S encolheu junto?  sim -> o reflexo era o excitador
+                         não -> o S é do laço de rumo (família de 06-08)
+```
+
+⚠️ **Não misturar os dois numa corrida só** — foi o erro de 11-08 com o
+estimador do ff, que deixou a previsão separadora sem teste possível.
 
 🟢 **De graça nesta ida**: `/scan` real a **9,998 Hz** (pior intervalo 0,135 s,
 contra o limiar 0,8 s da ré — pergunta 2 respondida, e melhor que o simulador);
