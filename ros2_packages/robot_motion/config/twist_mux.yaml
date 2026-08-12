@@ -58,6 +58,28 @@ twist_mux:
       # `cmd_vel_timeout` e as rodas param. Comando velho é comando perigoso —
       # mesma regra do `timeout_alvo` da movimentação e do `timeout_plano` do
       # seguidor.
+      # 🔴 O CANAL QUE FURA O REFLEXO — decisão 025.
+      #
+      # Ele entra no mux DEPOIS do `collision_monitor`, então o reflexo não o
+      # vê e não o veta. Existe por uma medida: na corrida da porta de 12-08 o
+      # reflexo parou o robô diante da ombreira (certo, e é o principal) e
+      # depois vetou 831 de 831 amostras da ré que o tiraria de lá. O
+      # `PolygonStop` é cego para DIREÇÃO: ponto dentro do polígono zera
+      # qualquer comando, inclusive o que se AFASTA.
+      #
+      # ⚠️ 30 é abaixo de `teclado` (90) e de `web` (50) DE PROPÓSITO. Um
+      # desencalhe automático que o operador não consegue interromper é pior
+      # que um robô parado — e este canal, por definição, dirige o robô sem
+      # o freio de mão. Quem manda continua sendo a pessoa.
+      #
+      # ⚠️ E ele NÃO é cego: quem publica aqui é o seguidor, e só depois de
+      # medir o vão traseiro em metros no corredor da largura do robô
+      # (`vao_no_corredor_traseiro`). Sem vão, sem `/scan`, ou `/scan` velho:
+      # não recua. O furo é no bloqueio, não na percepção.
+      desencalhe:
+        topic: unstuck_vel
+        timeout: 0.5
+        priority: 30
       autonomia:
         topic: auto_vel
         timeout: 0.5

@@ -1088,3 +1088,147 @@ def test_a_re_tem_teto_sem_plano_novo():
     assert _default_do_seguidor('re_habilitada') is True, (
         'a ré é a única recuperação que este robô tem desde que o pivô saiu '
         'do caminho (023). Desligá-la deixa o seguidor sem saída.')
+
+
+# ---------------------------------------------------------------------------
+# O FURO NO BLOQUEIO — decisão 025
+#
+# Um canal que passa por fora do reflexo é a coisa mais perigosa que existe
+# nesta pilha. O que estes testes travam é o que o torna aceitável: ele perde
+# para o humano, e quem publica nele mediu o vão antes.
+# ---------------------------------------------------------------------------
+
+def test_o_desencalhe_vence_a_autonomia_e_PERDE_para_o_humano():
+    """A ordem inteira, e cada desigualdade tem motivo próprio.
+
+    Acima da autonomia: senão o comando de desencalhe nunca chega à roda, e o
+    canal não serve para nada. Abaixo do humano: um desencalhe automático que
+    o operador não consegue interromper é pior que um robô parado — e este
+    canal, por definição, dirige o robô SEM o freio de mão.
+    """
+    t = _mux()['topics']
+    assert 'desencalhe' in t, (
+        'sem canal de desencalhe o seguidor pede ré e o reflexo veta — '
+        'medido em 12-08: 831 de 831 amostras zeradas. Ver decisão 025.')
+    d = t['desencalhe']['priority']
+    assert d > t['autonomia']['priority'], (
+        'desencalhe abaixo da autonomia nunca chega à roda')
+    for nome in ('teclado', 'web'):
+        assert t[nome]['priority'] > d, (
+            f'{nome} tem de vencer o desencalhe — quem manda é a pessoa')
+
+
+def test_o_seguidor_publica_no_CANAL_que_o_mux_escuta():
+    """O nome do tópico vive em dois arquivos. Divergir aqui é o furo virar
+    um tópico que ninguém lê: o seguidor "recua", o log diz que recuou, e a
+    roda não vê nada. Falha silenciosa — a classe de defeito mais cara deste
+    projeto (BO-3)."""
+    topico = _mux()['topics']['desencalhe']['topic']
+    with open(SEGUIDOR) as f:
+        fonte = f.read()
+    assert f"'/{topico}'" in fonte, (
+        f'o mux escuta `{topico}` e o seguidor não publica lá')
+
+
+def test_a_re_NAO_recua_sem_medir_o_vao():
+    """O furo é no bloqueio, nunca na percepção.
+
+    `orcamento_de_re` sem `vao_traseiro` devolve o orçamento CEGO, e é ele que
+    a ré usava antes da 025. Com o canal que fura o reflexo, recuar às cegas
+    deixou de ser "aposta curta" e passou a ser recuar sem NENHUMA defesa —
+    nem a do reflexo, que agora está por fora. Este teste exige que o seguidor
+    chame a medida.
+    """
+    with open(SEGUIDOR) as f:
+        fonte = f.read()
+    assert 'vao_no_corredor_traseiro' in fonte, (
+        'o seguidor não mede o vão traseiro — a ré voltou a ser cega, e agora '
+        'ela fura o reflexo. Ver decisão 025.')
+    assert 'vao_traseiro=None' not in fonte, (
+        'ainda há chamada de `orcamento_de_re(vao_traseiro=None)`: é o '
+        'orçamento CEGO, e ele não pode mais sair pelo canal que fura.')
+
+
+def test_o_corredor_da_re_cobre_o_CORPO_e_nao_o_raio():
+    """A largura do corredor tem de cobrir o corpo, não o raio do Nav2.
+
+    O `robot_radius` (0,32) é RAIO e a bitola (0,270) é entre-eixos de roda:
+    usar qualquer um dos dois como largura mediria um corredor mais estreito
+    que o robô, e a quina passaria por fora da medida. É exatamente o modo de
+    falhar do setor angular, com outra roupa.
+    """
+    largura = _default_do_seguidor('re_largura')
+    raio_nav2 = valor(PRODUCAO, 'robot_radius')
+    assert largura > raio_nav2, (
+        f'corredor de {largura} m contra robot_radius {raio_nav2} — a largura '
+        'do corredor não pode ser menor que o diâmetro efetivo do corpo')
+    recuo = _default_do_seguidor('re_recuo_para_choque')
+    assert 0.0 < recuo < largura, f'recuo do para-choque implausível: {recuo}'
+
+
+def test_a_cegueira_do_scan_cabe_DENTRO_da_folga_da_re():
+    """A invariante que torna a janela de `/scan` vencido aceitável.
+
+    Recuando a `v_piso`, uma janela vencida inteira é percorrida às cegas. Ela
+    só é segura porque a `folga` que o orçamento desconta do vão medido é
+    maior que essa distância. Se alguém subir a janela (ou o piso de linear)
+    sem mexer na folga, o robô passa a poder gastar margem que não existe —
+    e o sintoma é uma batida traseira, não um aviso.
+
+    Medido em 12-08: `/scan` a 7,7 Hz, p99 0,317 s, máx 0,513 s.
+    """
+    janela = _default_do_seguidor('re_scan_velho_s')
+    v_piso = _default_do_seguidor('v_piso')
+    folga = _default_do_seguidor('re_folga')
+    cego = janela * v_piso
+    assert cego < folga, (
+        f'{janela} s de janela a {v_piso} m/s dão {cego:.3f} m às cegas, '
+        f'contra folga de {folga} m. A cegueira tem de caber na margem.')
+    assert janela > 0.513, (
+        f'janela de {janela} s abaixo do pior intervalo de /scan MEDIDO '
+        '(0,513 s): a ré abortaria por falso alarme, e o sintoma seria um '
+        'robô que se recusa a se desencalhar.')
+
+
+def test_o_relogio_do_emperramento_e_maior_que_a_PROPRIA_re():
+    """A conta que impede a fuga de 12-08, e ela é de tempo.
+
+    O relógio zera quando o robô bate a marca anterior, e depois de uma ré a
+    marca é a distância PÓS-recuo — então bastaria ganhar `re_avanco_min`. O
+    que consome o tempo não é a distância: é a MANOBRA mais a inércia da
+    placa. O robô ainda derrapa para trás depois do zero (`atraso_desliga`
+    0,52 s), precisa virar, e só então começa a ganhar.
+
+    ⚠️ A primeira versão deste teste derivava `re_orcamento_cego / v_piso`
+    (1,48 s) e por isso APROVAVA 1,5 s — o valor que produziu a fuga. Derivação
+    bonita da grandeza errada aprova o defeito. O número que vale é o MEDIDO:
+    as rés da corrida da porta duraram 1,6 a 2,8 s, e o rearme veio 1,6 s
+    depois de cada fim.
+
+    Medido: 9 rés seguidas levaram o robô de 2,50 m para 5,10 m do objetivo,
+    de costas, até o vão traseiro cair de 3,17 m para 0,31 m.
+    """
+    RE_MAIS_LONGA_MEDIDA_S = 2.8
+    parado_s = _default_do_seguidor('re_parado_s')
+    assert parado_s > RE_MAIS_LONGA_MEDIDA_S, (
+        f're_parado_s={parado_s} s contra manobras de até '
+        f'{RE_MAIS_LONGA_MEDIDA_S} s medidas. A ré rearma antes de o robô ter '
+        'chance física de aproveitar a anterior — é a fuga de 12-08.')
+
+
+def test_a_re_para_de_insistir_quando_nao_esta_resolvendo():
+    """O teto ESTRUTURAL, o que não depende de sintonia.
+
+    Recuo que não aproxima não é recuperação. Sem este teto, qualquer erro de
+    sintonia no relógio volta a produzir um robô andando de costas com cara de
+    quem está se desencalhando — e agora ele faz isso pelo canal que fura o
+    reflexo, o que torna o passeio bem menos engraçado.
+    """
+    teto = _default_do_seguidor('re_max_seguidas')
+    assert isinstance(teto, int) and 1 <= teto <= 4, (
+        f're_max_seguidas={teto} — sem teto pequeno a ré vira fuga.')
+    with open(SEGUIDOR) as f:
+        fonte = f.read()
+    assert 'res_seguidas' in fonte and 'dist_antes_da_re' in fonte, (
+        'o seguidor não contabiliza rés que não melhoraram nada — o teto '
+        'existe no parâmetro e não na lógica.')

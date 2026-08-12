@@ -15,7 +15,9 @@ from robot_motion.lei_de_seguimento import (
     curvatura_adiante,
     indice_mais_proximo,
     lookahead_de,
+    orcamento_de_re,
     rumo_para,
+    vao_no_corredor_traseiro,
     velocidade_de_seguimento,
 )
 
@@ -168,6 +170,7 @@ def test_curvatura_adiante_em_reta_e_infinita():
 from robot_motion.lei_de_seguimento import (          # noqa: E402
     ProgressoDeAvanco,
     orcamento_de_re,
+    vao_no_corredor_traseiro,
     re_esgotada,
 )
 
@@ -385,3 +388,92 @@ def test_parada_zera_o_GIRO_tambem_nao_so_a_linear():
     v, wz = comando_de_parada()
     assert v == 0.0
     assert wz == 0.0, 'girar depois de chegar arrasta o robô para fora do ponto'
+
+
+# ---------------------------------------------------------------------------
+# O VÃO TRASEIRO — decisão 025
+#
+# A ré deixa de ser cega. O que estes testes protegem não é o número: é a
+# FORMA da medida. A versão por setor angular já pôs um robô em cima de um
+# obstáculo atrás, e o modo de falhar dela é passar em teste de caso feliz.
+# ---------------------------------------------------------------------------
+
+A0_GRAUS, INC_GRAUS = -180.0, 1.0
+
+
+def _varredura(pontos, n=360):
+    """Varredura de `n` feixes a 1° com obstáculos em (ÂNGULO°, raio).
+
+    ⚠️ O índice sai do ÂNGULO, não da posição na lista. A primeira versão
+    deste helper indexava direto (`ranges[graus]`) e, com `angulo_min` em
+    −180°, punha em 0° (a FRENTE) o obstáculo que o teste dizia estar em 180°
+    (atrás). Os testes reprovavam a função por um defeito do próprio teste.
+    """
+    ranges = [float('inf')] * n
+    for graus, r in pontos:
+        ranges[int(round((graus - A0_GRAUS) / INC_GRAUS)) % n] = r
+    return ranges, math.radians(A0_GRAUS), math.radians(INC_GRAUS)
+
+
+def test_corredor_vazio_da_vao_infinito():
+    r, a0, inc = _varredura([])
+    assert math.isinf(vao_no_corredor_traseiro(r, a0, inc, 0.50, 0.28))
+
+
+def test_o_que_esta_atras_no_corredor_desconta_o_para_choque():
+    """Obstáculo a 1,00 m do CENTRO, para-choque a 0,28 m: vão de 0,72 m."""
+    r, a0, inc = _varredura([(180, 1.00)])
+    v = vao_no_corredor_traseiro(r, a0, inc, 0.50, 0.28)
+    assert v == pytest.approx(0.72, abs=1e-3)
+
+
+def test_o_que_esta_na_FRENTE_nao_conta_como_vao_traseiro():
+    r, a0, inc = _varredura([(0, 0.40)])
+    assert math.isinf(vao_no_corredor_traseiro(r, a0, inc, 0.50, 0.28))
+
+
+def test_o_que_passa_de_LADO_do_corredor_nao_freia_a_re():
+    """Parede paralela a 2 m de lado, atrás: `|y|` fora da meia-largura.
+
+    Contar isso faria o robô se recusar a recuar em qualquer corredor — a ré
+    ficaria proibida justamente onde ela é possível.
+    """
+    r, a0, inc = _varredura([(135, 3.0), (225, 3.0)])   # ~2,1 m de lado
+    assert math.isinf(vao_no_corredor_traseiro(r, a0, inc, 0.50, 0.28))
+
+
+def test_A_QUINA_QUE_O_SETOR_ANGULAR_PERDIA():
+    """O caso da batida, e a razão de a medida ser retangular.
+
+    Obstáculo a 0,60 m do centro num feixe de 145° — 35° fora dos 180°, ou
+    seja FORA de um cone traseiro de ±30°. Mas `y = 0,60·sin(145°) = 0,34 m`
+    e a meia-largura é 0,35: ele está DENTRO do corredor que o corpo varre.
+
+    Um cone diria "livre" e o robô recuaria em cima dele. O retângulo vê.
+    """
+    r, a0, inc = _varredura([(145, 0.60)])
+    v = vao_no_corredor_traseiro(r, a0, inc, 0.70, 0.28)
+    assert math.isfinite(v), 'a quina sumiu da medida — é a batida de novo'
+    assert v == pytest.approx(0.60 * abs(math.cos(math.radians(145))) - 0.28,
+                              abs=1e-3)
+
+
+def test_encostado_da_ZERO_e_nunca_negativo():
+    """Obstáculo mais perto que o para-choque. Vão negativo somado à folga
+    daria orçamento POSITIVO — permissão para recuar contra a parede."""
+    r, a0, inc = _varredura([(180, 0.10)])
+    v = vao_no_corredor_traseiro(r, a0, inc, 0.50, 0.28)
+    assert v == 0.0
+    assert orcamento_de_re(vao_traseiro=v, folga=0.30) == 0.0
+
+
+def test_feixe_invalido_nao_vira_vao_livre():
+    """`inf`, `nan` e zero são "não mediu", não "está livre". Tratá-los como
+    livre é o BO-3: o robô recua confiando numa leitura que não existiu."""
+    n = 360
+    ranges = [float('nan')] * n
+    ranges[180] = 0.0
+    ranges[181] = float('inf')
+    v = vao_no_corredor_traseiro(ranges, math.radians(-180.0),
+                                 math.radians(1.0), 0.50, 0.28)
+    assert math.isinf(v), 'feixe inválido virou obstáculo ou virou vão medido'

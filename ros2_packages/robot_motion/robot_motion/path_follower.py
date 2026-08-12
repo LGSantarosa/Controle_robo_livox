@@ -27,9 +27,11 @@ import csv
 import math
 
 import rclpy
+from geometry_msgs.msg import TwistStamped
 from nav_msgs.msg import Odometry, Path
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy
+from sensor_msgs.msg import LaserScan
 from std_msgs.msg import Float64
 
 from robot_motion.lei_de_seguimento import (
@@ -44,6 +46,7 @@ from robot_motion.lei_de_seguimento import (
     raio_de_chegada_minimo,
     re_esgotada,
     rumo_para,
+    vao_no_corredor_traseiro,
     velocidade_de_seguimento,
 )
 
@@ -160,10 +163,59 @@ class PathFollower(Node):
             # a sala de ré em passos de 0,30 m — movimento que parece
             # recuperação e não é.
             ('re_max_sem_plano', 1),
-            ('re_parado_s', 1.5),
+            # --- o vão traseiro (decisão 025) ---
+            # Largura do CORREDOR que o corpo varre dando ré [m]. A trena de
+            # 29-07 deu caixa 0,433 × 0,455; 0,50 dá 2 cm de folga por lado
+            # sobre a maior dimensão. NÃO é o `robot_radius` do Nav2 (0,32,
+            # que é raio) nem a bitola (0,270, que é entre-eixos de roda).
+            ('re_largura', 0.50),
+            # Do centro do robô ao para-choque traseiro [m]. Mesma referência
+            # do polígono do reflexo, que vai a −0,28.
+            ('re_recuo_para_choque', 0.28),
+            # `/scan` mais velho que isto = traseira BLOQUEADA, não "livre".
+            # Leitura que não existiu não pode virar permissão para recuar.
+            #
+            # ⚠️ 0,8 s CORRIGIDO POR MEDIDA. Começou em 0,5 e cairia em cima do
+            # pior caso: 245 quadros medidos no simulador deram p50 0,103,
+            # p90 0,207, p99 0,317 e MÁX 0,513 s. Com 0,5 a ré abortaria por
+            # falso alarme, e o sintoma seria um robô que se recusa a se
+            # desencalhar — parecido demais com defeito de lógica.
+            #
+            # E o teto vem de uma conta, não de gosto: recuando a `v_piso`, uma
+            # janela vencida inteira gasta 0,8 × 0,203 = 0,16 m às cegas, e a
+            # `folga` que o orçamento já desconta do vão medido é 0,30 m. A
+            # cegueira cabe DENTRO da margem. Há teste travando este par.
+            ('re_scan_velho_s', 0.8),
+            # Folga entre o vão medido e o que a ré se permite gastar [m].
+            # Explícita (era o default de `orcamento_de_re`) porque é ela que
+            # cobre a janela de `/scan` vencido — e um número que sustenta uma
+            # invariante de segurança não pode viver só num default.
+            ('re_folga', 0.30),
+            # 🔴 4,0 s DESDE a 6ª leva de 12-08, era 1,5 — e 1,5 fabricava uma
+            # FUGA. Medido na corrida da porta: 9 rés seguidas levaram o robô
+            # de 2,50 m para 5,10 m do objetivo, andando de costas em linha
+            # reta até o vão traseiro acabar (3,17 m -> 0,31 m).
+            #
+            # A conta que explica: a própria ré dura 1,6–2,8 s (medido) e
+            # recua 0,30 m. Para zerar o relógio o robô precisa BATER o melhor
+            # de sempre, que ficou 0,30 m atrás — ou seja, ~1 s só para voltar
+            # ao ponto de partida, mais o avanço. Com o relógio em 1,5 s a ré
+            # rearma ANTES de o robô ter tempo físico de aproveitar a
+            # anterior. Realimentação positiva, e o sintoma é um robô que "dá
+            # ré à toa" estando apontado certo.
+            #
+            # 4,0 s é maior que a manobra mais longa medida (2,8 s) mais o
+            # retorno (~1 s), com folga. Há teste travando o par.
+            ('re_parado_s', 4.0),
             ('re_avanco_min', 0.05),
             ('re_orcamento_cego', 0.30),
             ('re_teto_s', 8.0),
+            # Quantas rés SEGUIDAS sem melhorar o melhor. É o teto estrutural
+            # contra a fuga, e ele não depende de sintonia: recuo que não
+            # aproxima o robô do objetivo não é recuperação, e repeti-lo é
+            # andar de costas com cara de recuperação. Zera assim que o robô
+            # bate a melhor distância que tinha antes da ré.
+            ('re_max_seguidas', 2),
             ('taxa', 20.0),
             # Sem plano novo por este tempo, para. Plano velho é plano perigoso
             # — mesma regra do `timeout_alvo` da movimentação.
@@ -178,6 +230,23 @@ class PathFollower(Node):
         self.create_subscription(Odometry, '/Odometry', self.cb_odom, qos)
         self.create_subscription(Path, '/plan', self.cb_plano, qos)
 
+        # 🔴 O CANAL QUE FURA O REFLEXO (decisão 025). Entra no `twist_mux`
+        # DEPOIS do `collision_monitor`, com prioridade 30 — acima da
+        # autonomia (10) e abaixo do humano (teclado 90, web 50).
+        #
+        # Existe porque o `PolygonStop` é cego para DIREÇÃO: medido em 12-08,
+        # 831 de 831 amostras de ré foram vetadas pelo mesmo reflexo que tinha
+        # acabado de salvar o robô de bater na ombreira. O furo é no bloqueio,
+        # NUNCA na percepção: quem publica aqui já mediu o vão de trás.
+        self.pub_desencalhe = self.create_publisher(
+            TwistStamped, '/unstuck_vel', qos)
+        # O `/scan` da decisão 021 é o que torna a ré não-cega. Best effort:
+        # é sensor de alta taxa, e perder quadro é normal — o que não pode é
+        # quadro VELHO passar por medida (ver `vao_traseiro`).
+        self.create_subscription(
+            LaserScan, '/scan', self.cb_scan,
+            QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT))
+
         self.pose = None
         self.plano = []
         self.t_plano = None
@@ -189,6 +258,12 @@ class PathFollower(Node):
         # Quantas rés já foram gastas SEM que um plano novo chegasse. Zera no
         # `cb_plano`: plano novo é a prova de que a recuperação serviu.
         self.res_sem_plano = 0
+        self.scan = None
+        self.t_scan = None
+        # Contabilidade da fuga: quantas rés seguidas não melhoraram nada, e
+        # qual era a melhor distância antes da última delas.
+        self.res_seguidas = 0
+        self.dist_antes_da_re = None
         self.rumo_objetivo = None
 
         self.linhas = []
@@ -225,6 +300,42 @@ class PathFollower(Node):
     # --------------------------------------------------------- callbacks
     def cb_odom(self, msg):
         self.pose = msg
+
+    def cb_scan(self, msg):
+        self.scan = msg
+        self.t_scan = self.agora()
+
+    def vao_traseiro(self):
+        """Vão livre atrás do para-choque [m], ou `None` se não dá para saber.
+
+        `None` é diferente de zero e a diferença é a segurança inteira: zero é
+        "medi e não há espaço", `None` é "não medi". Quem chama trata os dois
+        como proibição de recuar, mas o log precisa dizer qual dos dois foi —
+        robô parado sem motivo escrito é o BO-3.
+        """
+        if self.scan is None or self.t_scan is None:
+            return None
+        if self.agora() - self.t_scan > self.par['re_scan_velho_s']:
+            return None
+        return vao_no_corredor_traseiro(
+            self.scan.ranges, self.scan.angle_min, self.scan.angle_increment,
+            self.par['re_largura'], self.par['re_recuo_para_choque'],
+            alcance_max=self.scan.range_max)
+
+    def publica_desencalhe(self, v):
+        """Ré pelo canal que fura o reflexo. `v` negativo, giro ZERO.
+
+        Reto por decisão (009): andando para trás a boba deixa de ser
+        arrastada e passa a ser empurrada, que é a configuração instável do
+        carrinho de supermercado. Curvar assim é a manobra sobre a qual não
+        existe medida nenhuma neste robô.
+        """
+        m = TwistStamped()
+        m.header.stamp = self.get_clock().now().to_msg()
+        m.header.frame_id = 'base_link'
+        m.twist.linear.x = float(v)
+        m.twist.angular.z = 0.0
+        self.pub_desencalhe.publish(m)
 
     def cb_plano(self, msg):
         novo = [(q.pose.position.x, q.pose.position.y) for q in msg.poses]
@@ -350,6 +461,12 @@ class PathFollower(Node):
         self.publica(rumo_alvo, v)
         self.registra(t, x, y, rumo, rumo_alvo, v, dist, raio)
 
+        # Progresso de verdade apaga a dívida: se o robô chegou mais perto do
+        # que estava antes da última ré, aquela ré cumpriu o papel dela.
+        if self.dist_antes_da_re is not None and dist < self.dist_antes_da_re:
+            self.res_seguidas = 0
+            self.dist_antes_da_re = dist
+
         if self.progresso.atualiza(t, dist):
             self.entra_na_re(t, x, y, dist)
 
@@ -391,32 +508,91 @@ class PathFollower(Node):
                 throttle_duration_sec=5.0)
             self.progresso.reinicia()
             return
-        orcamento = orcamento_de_re(vao_traseiro=None,
-                                    cego=self.par['re_orcamento_cego'])
+        # 🔴 A RÉ DEIXOU DE SER CEGA (decisão 025). O `/scan` da 021 mede o
+        # vão real atrás do para-choque, e ele é quem decide se a manobra
+        # existe. Sem medida, NÃO recua: leitura que não existiu não vira
+        # permissão.
+        # ⚠️ RECUO QUE NÃO APROXIMA NÃO É RECUPERAÇÃO. Se a ré anterior não
+        # levou o robô a bater a distância que ele já tinha antes dela, ela
+        # não serviu — e repetir produz FUGA: medido em 12-08, 9 rés seguidas
+        # levaram o robô de 2,50 m para 5,10 m do objetivo, de costas, até o
+        # vão traseiro acabar. O teto é estrutural: não depende de sintonia,
+        # só de a recuperação ter melhorado alguma coisa.
+        if self.dist_antes_da_re is not None and dist < self.dist_antes_da_re:
+            self.res_seguidas = 0          # a anterior serviu: crédito renovado
+        if self.res_seguidas >= self.par['re_max_seguidas']:
+            self.get_logger().error(
+                f'{self.res_seguidas} rés seguidas e o robô não chegou mais '
+                f'perto que {self.dist_antes_da_re:.2f} m — recuar não está '
+                'resolvendo, e insistir é andar de costas. Parado até o plano '
+                'mudar.', throttle_duration_sec=10.0)
+            return
+
+        vao = self.vao_traseiro()
+        if vao is None:
+            self.get_logger().warn(
+                'emperrado, mas SEM medida do vão traseiro (/scan ausente ou '
+                f'mais velho que {self.par["re_scan_velho_s"]:.1f} s) — não '
+                'recuo às cegas', throttle_duration_sec=5.0)
+            return
+        orcamento = min(orcamento_de_re(vao_traseiro=vao,
+                                        folga=self.par['re_folga'],
+                                        cego=self.par['re_orcamento_cego']),
+                        self.par['re_orcamento_cego'])
         if orcamento <= 0.0:
-            self.get_logger().warn('emperrado e sem vão para recuar — parado')
+            self.get_logger().warn(
+                f'emperrado e sem vão para recuar — atrás há {vao:.2f} m e a '
+                'folga exigida é maior. Parado, e é a coisa certa.',
+                throttle_duration_sec=5.0)
             return
         self.estado = 're'
         self.re_desde = t
         self.re_origem = (x, y)
+        self.res_seguidas += 1
+        if self.dist_antes_da_re is None or dist < self.dist_antes_da_re:
+            self.dist_antes_da_re = dist
         self.get_logger().warn(
-            f'EMPERRADO a {dist:.2f} m do objetivo — ré de até {orcamento:.2f} m '
-            '(CEGA: sem sensor traseiro no modelo)')
+            f'EMPERRADO a {dist:.2f} m do objetivo — ré de até '
+            f'{orcamento:.2f} m (vão medido atrás: {vao:.2f} m)')
 
     def passo_de_re(self, t, x, y, rumo, dist):
         recuado = math.hypot(x - self.re_origem[0], y - self.re_origem[1])
-        orcamento = orcamento_de_re(vao_traseiro=None,
-                                    cego=self.par['re_orcamento_cego'])
+
+        # ⚠️ O VÃO É REMEDIDO A CADA CICLO, e não só na largada da manobra.
+        # Vão que some no MEIO da ré é o caso que o para-choque não perdoa: o
+        # mundo tem gente andando, e uma medida de 8 s atrás não descreve o
+        # que está atrás agora. Some ou não-medível -> PARA, na hora.
+        vao = self.vao_traseiro()
+        if vao is None or vao <= 0.0:
+            self.publica_desencalhe(0.0)
+            self.get_logger().warn(
+                'ré ABORTADA no meio: ' + ('o vão traseiro sumiu'
+                                           if vao is not None
+                                           else 'perdi a medida do /scan'))
+            self.estado = 'seguindo'
+            self.progresso.reinicia()
+            return
+
+        orcamento = min(orcamento_de_re(vao_traseiro=vao,
+                                        folga=self.par['re_folga'],
+                                        cego=self.par['re_orcamento_cego']),
+                        self.par['re_orcamento_cego'])
         if re_esgotada(recuado, orcamento, t - self.re_desde,
                        self.par['re_teto_s']):
+            # Zero EXPLÍCITO no canal: o mux segura o último comando até o
+            # timeout, e sair da manobra sem zerar deixaria 0,5 s de ré órfã.
+            self.publica_desencalhe(0.0)
             self.get_logger().warn(
                 f'fim da ré: recuou {recuado:.2f} m em {t - self.re_desde:.1f} s')
             self.estado = 'seguindo'
             self.progresso.reinicia()
             return
-        # Ré RETA (decisão 009): mantém o rumo e anda para trás. Velocidade
-        # negativa é o que aciona a ré na movimentação — sem tópico novo.
-        self.publica(rumo, -self.par['v_piso'])
+        # 🔴 A ré sai pelo CANAL QUE FURA (025), não pela cadeia normal: na
+        # cadeia normal o reflexo a veta (831/831 medido em 12-08). E a
+        # movimentação recebe ZERO enquanto isso, para não haver duas fontes
+        # disputando a mesma roda.
+        self.publica(rumo, 0.0)
+        self.publica_desencalhe(-self.par['v_piso'])
         self.registra(t, x, y, rumo, rumo, -self.par['v_piso'], dist, float('inf'))
 
     def para(self, motivo):

@@ -182,6 +182,44 @@ class ProgressoDeAvanco:
         return (t - self.desde) > self.parado_s
 
 
+def vao_no_corredor_traseiro(distancias, angulo_min, incremento, largura,
+                             recuo, alcance_max=None):
+    """Vão livre atrás do PARA-CHOQUE, em metros [m].
+
+    Mede no **corredor retangular que o corpo varre dando ré** — largura do
+    robô, para trás — e não num setor angular.
+
+    🔴 A FORMA IMPORTA, E ISSO CUSTOU UMA BATIDA. A versão por setor (um cone
+    de ±30° atrás) é **cega para a quina**: um obstáculo encostado no canto
+    traseiro aparece num feixe cujo ângulo cai FORA do cone, e a checagem diz
+    "livre" enquanto o corpo já vai raspar nele. Um cone só cobre o corpo se
+    for mais largo que o robô a TODA distância, e nenhum ângulo fixo faz isso —
+    perto ele é estreito demais, longe é largo demais e para por causa de
+    parede que não está no caminho.
+
+    O retângulo é a forma certa porque é a forma do robô: o que importa é `|y|`
+    dentro da meia-largura, qualquer que seja o ângulo em que o feixe chegou.
+
+    Convenção: `+x` é a frente do robô, `recuo` é a distância do centro ao
+    para-choque traseiro. Devolve `inf` quando não há nada no corredor, e
+    **0,0** quando já há coisa encostada — nunca negativo, porque orçamento
+    negativo somado com folga viraria permissão.
+    """
+    meia = largura / 2.0
+    vao = RETO
+    for i, r in enumerate(distancias):
+        if r is None or not math.isfinite(r) or r <= 0.0:
+            continue                       # feixe inválido não é vão livre
+        if alcance_max is not None and r > alcance_max:
+            continue                       # além do alcance útil: não conta
+        a = angulo_min + i * incremento
+        x, y = r * math.cos(a), r * math.sin(a)
+        if x >= 0.0 or abs(y) > meia:
+            continue                       # não está no corredor de trás
+        vao = min(vao, max(0.0, -x - recuo))
+    return vao
+
+
 def orcamento_de_re(vao_traseiro=None, folga=0.30, cego=0.30):
     """Quantos metros de ré são permitidos [m].
 
