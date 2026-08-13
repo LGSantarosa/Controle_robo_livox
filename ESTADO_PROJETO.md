@@ -1359,6 +1359,26 @@ materializou** nesta sessão — as duas condições da sintonia são comparáve
   Também sem eletrônica auxiliar: sem relé de luz, LED de marco ou botão.
 - **Computador**: Intel NUC (x86), Ubuntu 24.04 + ROS 2 Jazzy. Interface do
   lidar: `enp2s0` (IP `192.168.1.2`).
+- 🔋 **ENERGIA: SÃO DUAS BATERIAS INDEPENDENTES** (dono, 14-08 — e não é a
+  primeira vez que ele corrige isto):
+
+  ```
+  bateria 1   as RODAS (placa hoverboard)
+  bateria 2   o NUC e o LIVOX, só eles
+  ```
+
+  ⚠️ **Consequência direta para instrumentação**:
+  `/hoverboard/battery_voltage` (o único canal de tensão que existe na pilha)
+  mede **a bateria 1 apenas**. Ele não diz nada sobre a energia da percepção —
+  e é a bateria 2 que governa a hipótese aberta para as corridas ruins de
+  13-08 (Livox subalimentado perde qualidade e o robô se perde). Medir "a
+  bateria" por esse tópico responde à pergunta errada.
+
+  ⚠️ **Duas fontes do repo estão ERRADAS sobre isto e já me induziram ao erro**:
+  o `DIARIO` de 10-08 conclui *"o NUC cai junto com o robô — parecia ter
+  alimentação separada, não tem"* (elas descarregam juntas porque são
+  carregadas juntas, não porque são a mesma); e o `CONEXOES.txt` da raiz é do
+  **robô 1** (Raspberry Pi + LD06 + Arduino MEGA), não descreve esta máquina.
 - **Ambiente**: novo (não é o do robô 1). **Não precisa de mapa** — a
   localização é LIO, sem AMCL (decisão 003).
 - Estado físico: montado, mas **a elétrica está ruim** (07-27: tentativa de

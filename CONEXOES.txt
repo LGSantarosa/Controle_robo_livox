@@ -1,4 +1,22 @@
-CONEXÕES DO ROBÔ — Arduino MEGA 2560 + Raspberry Pi   (fonte: firmware/mega_bridge)
+🔴 ATENÇÃO — ESTE ARQUIVO É DO ROBÔ 1, NÃO DO ROBÔ DESTE REPO.
+   Veio no clone do `Controle_robo_web` e descreve Raspberry Pi + LD06 +
+   Arduino MEGA. O robô 2 é NUC + Livox Mid-360 + placa hoverboard ligada
+   DIRETO no PC por serial, sem Arduino. Não use nada daqui para ele.
+
+   O QUE VALE PARA O ROBÔ 2, e é o que mais se erra (dono, 14-08):
+
+     🔋 DUAS BATERIAS INDEPENDENTES
+        bateria 1 -> as RODAS (placa hoverboard)
+        bateria 2 -> o NUC e o LIVOX, só eles
+
+     `/hoverboard/battery_voltage` mede SÓ a bateria 1. A energia da
+     percepção (NUC + Livox) não tem canal na pilha ROS.
+
+   O resto da descrição do robô 2 está em `ESTADO_PROJETO.md`, seção "O robô".
+
+────────────────────────────────────────────────────────────────────────────
+
+CONEXÕES DO ROBÔ 1 — Arduino MEGA 2560 + Raspberry Pi   (fonte: firmware/mega_bridge)
 
 ARDUINO MEGA
   Serial0 (USB 0/1)      -> Raspberry Pi            230400 baud
