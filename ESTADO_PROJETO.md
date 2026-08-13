@@ -1,12 +1,122 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-08-12**.
+> Versionado na `main`. Atualizado em **2026-08-13**.
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+---
+
+## 🚀 13-08 (NO ROBÔ) — MAPA PRÓPRIO, AMCL TRAVADO, ELE ATRAVESSOU A PORTA PELO WEB
+
+> Sessão inteira com o robô ligado, no andar 3 do estágio. Decisões **028**
+> (mapa próprio) e **029** (inflação). Dados em `~/dados/13-08-*` no NUC;
+> entrada 13-08 do diário. Bateria acabou duas vezes no fim.
+
+🟢 **O PASSO 6 FECHOU, E O PASSO 7 ACONTECEU**: o robô saiu da sala **sozinho,
+pela porta**, contra mapa próprio, localizado por AMCL, com o destino clicado
+numa página web. Palavras do dono: *"FOI LINDO ELE ATRAVESSOU A PORTA E TUDO"*.
+
+🔴 **O mapa do estágio não servia, e a prova é exaustiva.** Varri TODAS as poses
+possíveis da sala contra `scan_andar3_ajustado`:
+
+```
+melhor pose POSSÍVEL       41,4% dos feixes a menos de 0,15 m · mediano 0,300 m
+mapa que o robô desenhou   97,7% · depois 99,7% com AMCL travado · mediano 0,000
+```
+
+Se a melhor pose possível reprova, o problema não é a pose. O `ajustado` é a
+versão **limpa** da planta, e a limpeza que dobrou a folga p10 foi **apagar a
+mobília** — a sala real está cheia de coisa. Decisão 028: o robô desenha o
+próprio mapa (`maps/sala_andar3/`, versionado).
+
+🔴 **A INFLAÇÃO ERA A CULPADA DO PASSEIO** (decisão 029). Mesmo alvo, mesma
+pilha, única mudança:
+
+```
+                   chegou    referência    yaw     v não-nula   caminho/reta
+inflação 0,50      26,1 s      83,8°      103,2°      41,9%        1,45x
+inflação 0,20       8,1 s      23,4°       14,0°      87,1%        1,02x
+12-08, SEM mapa     9,5 s      14,7°       10,0°        —          1,09x
+```
+
+**1,02× é reta**, e com mapa ele ficou igual à corrida sem mapa — e mais rápida.
+A previsão escrita ANTES da corrida (referência caindo para 20–30°) deu 23,4°.
+⚠️ Isto **reclassifica a dívida nº 2**: a inflação de 0,50 não proibia planejar
+(com o robô parado o plano saía 1,00× reto) — ela **entortava** o plano com o
+costmap sendo atualizado durante a marcha.
+
+🟢 **O SERVIÇO WEB ESTÁ NO AR** e o RViz saiu de cena. Nenhum código novo: a
+`controle_web/` do robô 1 já publica em `/web_vel`, o canal de prioridade 50 que
+o `twist_mux` daqui declara. Só faltava operacional:
+
+```
+pip install --user --break-system-packages flask flask-socketio simple-websocket
+ROBOT_MODE=nav2   (default 'teleop' — em teleop o clique-para-ir nem existe)
+WEB_TELEOP=on     (sem isso o web é só visor)
+http://<robô>:5000
+```
+
+🔴 **O `/scan` estava morto desde 12-08 às 20:05** — `scan_2d` levou SIGKILL de
+um `pkill` de limpeza, e o launch não ressuscita. **As corridas de 12-08 à noite
+rodaram sem `/scan`**: a ré da 025 esteve inerte a sessão inteira. Não invalida
+"o robô anda reto", mas a rede de segurança não existia.
+
+🔴 **E EU MATEI O SEGUIDOR.** Para atender *"só não manda ele pra trás"* expus
+`re_max_seguidas` como argumento e passei `0` — teto zero cai numa guarda que
+formata `dist_antes_da_re`, que só existe depois da primeira ré:
+
+```
+TypeError: unsupported format string passed to NoneType.__format__
+sintoma: goal aceito, plano desenhado, robô parado, ninguém culpado no log
+```
+
+O knob certo (`re_habilitada`) **já existia**. Consertado nos dois lados, e a
+launch agora expõe o interruptor certo. ➡️ **Knob novo que exercita caminho de
+código nunca exercitado é mudança grande disfarçada de parâmetro.**
+
+⏳ **A PRÓXIMA TAREFA, e ela é do dono**: *"o ideal era a ré não sair sozinha e
+sim só poder ser ativada quando tiver um destino"*. Hoje o seguidor obedece
+**plano**, não objetivo — foi assim que o `tools/banco/plano.py` (documentado
+como "planeja sem mover o robô") fez o robô dar uma ré do nada. Amarrar a ré a
+objetivo ativo mata a causa.
+
+### 🔧 Como subir tudo (o que funcionou hoje, na ordem)
+
+```bash
+export ROS_DOMAIN_ID=42        # a pilha de 12-08 estava no domínio 0; combinar
+ros2 launch robot_base base.launch.py           # confira /scan ~10 Hz DEPOIS
+ros2 launch robot_motion pilha.launch.py sim:=false \
+    mapa:=$PWD/maps/sala_andar3/sala_andar3.yaml localizacao:=amcl \
+    pose_x:=<x> pose_y:=<y> pose_yaw:=<yaw> \
+    curv_frente:=-0.9145 curv_medido_em:=2026-08-11
+cd controle_web && WEB_TELEOP=on ROBOT_MODE=nav2 python3 app.py
+```
+
+⚠️ **Nunca `pkill -f`**: matou a sessão ssh duas vezes hoje e foi o que matou o
+`scan_2d` ontem. Matar por PID e conferir órfãos.
+⚠️ **`map_saver_cli` estoura o timeout default de 2 s** neste NUC: passe
+`--ros-args -p save_map_timeout:=30.0`. O erro (`Failed to spin map
+subscription`) não parece timeout.
+⚠️ **`slam_toolbox` com `use_lifecycle_manager: False` NÃO se auto-ativa** no
+Jazzy: nasce `unconfigured`, calado, e `/map` nunca aparece. A
+`mapeia.launch.py` já sobe o `lifecycle_manager` que resolve.
+
+### 🧭 Achar a pose inicial sem tela
+
+O NUC não tem tela. O que funcionou foi **busca por força bruta**: transformada
+de distância do mapa, varredura de (x, y, yaw) sobre as células livres com folga
+≥ 0,25 m, nota = fração de feixes a menos de 0,10 m de parede (robusta ao corpo
+do dono dentro da sala). Sai pose com ~99% dos feixes dentro de 0,15 m, e vai
+para o AMCL por `/initialpose`.
+⚠️ **A pose envelhece**: correção calculada de um scan de minutos antes foi
+rejeitada pelo filtro (AMCL assentou 0,26 m ao lado). Capturar, buscar e
+empurrar **sem intervalo**, com o robô parado.
+🔵 Com o mapa desenhado a partir do ponto de partida de sempre, o robô **nasce
+na origem do mapa** e esse problema some — foi o que o dono observou no fim.
 
 ---
 
