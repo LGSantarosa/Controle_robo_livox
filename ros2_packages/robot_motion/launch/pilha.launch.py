@@ -176,6 +176,16 @@ def generate_launch_description():
     olhar = [
         {'lookahead_piso': ParameterValue(
             LaunchConfiguration('lookahead_piso'), value_type=float)},
+        # 🔴 O FREIO DA RÉ, e ele é do DONO (13-08). A ré da 025 dirige por
+        # FORA do reflexo (canal `unstuck_vel`, prioridade 30) — é a única
+        # coisa neste robô que anda sem o freio de mão automático. Quem está na
+        # sala com ele tem de poder dizer "hoje não recua", e até hoje não
+        # tinha como: o nó lê `re_max_seguidas` uma vez, na subida, e não tem
+        # callback de parâmetro — `ros2 param set` não chega lá.
+        #
+        # `0` desliga a ré inteira. O default 2 é o de 12-08 e não muda.
+        {'re_max_seguidas': ParameterValue(
+            LaunchConfiguration('re_max_seguidas'), value_type=int)},
     ]
     mapa = LaunchConfiguration('mapa')
     rviz = LaunchConfiguration('rviz')
@@ -359,6 +369,12 @@ def generate_launch_description():
             description='[m] distância mínima que o seguidor mira à frente. '
                         'Subir alisa a referência de rumo e corta curva '
                         'fechada por dentro'),
+        DeclareLaunchArgument(
+            're_max_seguidas', default_value='2',
+            description='quantas rés de desencalhe seguidas o seguidor pode '
+                        'dar. 0 DESLIGA a ré — o único caminho deste robô que '
+                        'dirige por fora do reflexo (025). Pedido do dono em '
+                        '13-08, com ele dentro da sala'),
         DeclareLaunchArgument(
             'curv_frente', default_value='-0.817',
             description='curvatura crua indo para a FRENTE [1/m], medida hoje '
