@@ -6250,3 +6250,83 @@ ativo** mata a causa; fica para a próxima leva.
 - a régua de folga: o `maps/andar3/README.md` diz p10 0,400 m e 7,5% de "corpo
   não cabe"; recalculado hoje pela definição que o próprio README descreve, dá
   p10 0,100 m e 37,4%. Um dos dois cálculos está errado — dívida de dev.
+
+### 7. O serviço web entrou no ar, e o RViz saiu de cena
+
+Pedido do dono no meio da sessão, depois de esbarrar pela terceira vez no botão
+errado: *"toda hora clico no estimate pose nessa porra, quero logo o meu serviço
+web funcionando"*. A `controle_web/` inteira veio do robô 1 no clone e **não
+precisou de código novo** — ela já publica em `/web_vel`, que é exatamente o
+canal de prioridade 50 que o `twist_mux` deste robô declara.
+
+O que faltava era operacional, e são três coisas que a próxima sessão precisa
+saber:
+
+```
+pip install --user --break-system-packages flask flask-socketio simple-websocket
+ROBOT_MODE=nav2     # default é 'teleop', e em teleop o clique-para-ir nem existe
+WEB_TELEOP=on       # sem isso o nó sobe mas não publica: web vira só visor
+```
+
+Sobe em `http://<robô>:5000`. Câmera (falta `ffmpeg`) e monitor de tensão
+(`wheel_msgs` é a MEGA do robô 1) ficam desligados e não fazem falta.
+
+Veredito do dono: *"o resto ta tudo funcionando, sem precisar mais do rviz"*.
+
+### 8. 🔴 E O SEGUIDOR ESTAVA MORTO — defeito meu, do mesmo dia
+
+Primeiro objetivo pelo web: goal recebido, plano desenhado na tela, **robô
+parado**. Sem mensagem culpando ninguém. O log do seguidor:
+
+```
+TypeError: unsupported format string passed to NoneType.__format__
+  path_follower.py:526, em entra_na_re
+process has died [pid 16332, exit code 1]
+```
+
+**A causa fui eu.** Para atender *"só não manda ele pra trás"* expus
+`re_max_seguidas` como argumento de launch e passei `0`. Com teto zero a guarda
+`res_seguidas >= re_max_seguidas` é verdadeira na PRIMEIRA vez, e a mensagem
+formata `dist_antes_da_re` — que só existe **depois** de uma ré ter acontecido.
+Com a ré desligada, nunca há primeira ré. O nó morre na primeira vez que o robô
+emperra.
+
+E o pior: **o knob certo já existia**. `re_habilitada` (default `True`) tem
+mensagem própria e reinicia o contador de progresso. Eu não procurei antes de
+criar outro. Dois consertos entraram: `re_max_seguidas <= 0` cai no mesmo ramo
+do desligamento explícito, e a mensagem não formata `None` nunca mais.
+
+➡️ **A lição, e ela vale para o artigo**: knob novo que exercita caminho de
+código nunca exercitado é mudança grande disfarçada de parâmetro. O crash não
+estava no meu código — estava esperando desde a 025, num ramo que nenhuma
+configuração alcançava.
+
+### 9. 🟢 ELE ATRAVESSOU A PORTA — com mapa, AMCL e o web mandando
+
+Com o seguidor vivo e a inflação em 0,20, o dono mandou o ponto pelo web:
+
+> *"FOI LINDO ELE ATRAVESSOU A PORTA E TUDO"*
+
+É a primeira vez que este robô sai da sala sozinho, contra mapa próprio,
+localizado por AMCL, com destino clicado numa tela. E logo depois travou do
+outro lado — **porque a ré estava desligada**, exatamente o band-aid que ele
+tinha pedido de manhã. Religada (`re_habilitada` default), ficou para o último
+teste da sessão.
+
+⚠️ A bateria acabou duas vezes no fim da sessão e o NUC caiu junto. Nada se
+perdeu: mapa, decisões e código já estavam no origin.
+
+### O procedimento que subiu tudo, para não redescobrir amanhã
+
+```bash
+export ROS_DOMAIN_ID=42        # a pilha de 12-08 estava no domínio 0; combinar
+ros2 launch robot_base base.launch.py
+ros2 launch robot_motion pilha.launch.py sim:=false \
+    mapa:=$PWD/maps/sala_andar3/sala_andar3.yaml localizacao:=amcl \
+    pose_x:=<x> pose_y:=<y> pose_yaw:=<yaw> \
+    curv_frente:=-0.9145 curv_medido_em:=2026-08-11
+cd controle_web && WEB_TELEOP=on ROBOT_MODE=nav2 python3 app.py
+```
+
+⚠️ **Nunca `pkill -f`** — matou a sessão ssh duas vezes hoje, e foi o que já
+tinha matado o `scan_2d` ontem. Matar por PID, e conferir órfãos.
