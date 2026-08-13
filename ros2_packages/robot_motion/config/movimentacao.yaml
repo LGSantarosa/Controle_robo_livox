@@ -75,3 +75,29 @@ heading_controller:
 
     timeout_alvo: 1.0        # sem alvo/pose novos por este tempo, para [s]
     plantao_s: 0.5           # comando saindo e robô imóvel: grita no log [s]
+
+    # 🔴 PIVÔ RELIGADO EM 14-08, E SÓ PARA ERRO GRANDE (decisão 036).
+    #
+    # Pedido do dono, vendo o robô fazer balão para seguir a linha: *"o pivô
+    # ainda faz falta, ele fica fazendo balão e se fudendo pra seguir a linha...
+    # caso o ângulo da linha comparado com o robô esteja a 80 graus de erro ele
+    # para e faz o pivô e acerta, pro balão poder arrumar"*.
+    #
+    # A decisão 023 tirou o pivô do caminho, e o argumento dela CONTINUA VÁLIDO:
+    # a placa entrega um módulo de giro só (2,204 rad/s, medido) e segura a
+    # saída cheia por 0,52 s depois do corte, varrendo 93–101° — número que NÃO
+    # depende do wz do corte. Os 28 disparos de 12-08 tinham erro entre 35° e
+    # 81°: nenhum era executável com um golpe de ~95°.
+    #
+    # O que muda agora é ONDE ele é usado. A manobra não ficou controlável —
+    # ela continua sendo um quantum grosso de ~95°. Só que para erro de 80°+ o
+    # quantum É a manobra certa, e o resto o arco fecha:
+    #
+    #   erro < 80°   lei contínua (arco), que assenta em 0,5–0,6° (medido 023)
+    #   erro > 80°   UM pulso de pivô, ~95°, e devolve para o arco
+    #
+    # `pivo_max_pulsos: 1` é o que impede a volta do ciclo-limite de 12-08
+    # (±50–60°, período 5,5 s): com 6 pulsos a lei fica caçando o alvo com um
+    # martelo de 95°. Um pulso é "vira grosso e sai da frente".
+    limiar_pivo: 1.40          # rad = 80°, o número que o dono pediu
+    pivo_max_pulsos: 1         # UM golpe grosso, nunca uma perseguição

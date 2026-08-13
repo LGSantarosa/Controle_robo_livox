@@ -224,8 +224,10 @@ def test_a_projecao_usa_o_CORPO_e_nao_uma_caixa_de_frenagem():
     interpretar o número depois."""
     pontos = eval(_cm()['PolygonApproach']['points'])  # noqa: S307
     frente = max(x for x, _ in pontos)
-    assert abs(frente - 0.2165) < 0.03, (
-        f'frente {frente} não é o corpo (0,2165 = meia caixa medida em 29-07)')
+    assert 0.2165 <= frente <= 0.2165 + 0.05, (
+        f'frente {frente} não é o corpo (0,2165, medido em 29-07) mais uma '
+        'margem pequena — projeção com caixa de frenagem conta a distância '
+        'duas vezes')
 
 
 def test_a_caixa_estatica_cobre_ao_menos_o_CORPO():
@@ -1007,24 +1009,45 @@ def _default_do_no(caminho, nome):
     raise AssertionError(f'`{nome}` não é parâmetro declarado em {caminho}')
 
 
-@pytest.mark.parametrize('onde', ['no', 'sim'])
-def test_o_portao_do_pivo_esta_fechado_enquanto_a_manobra_nao_fecha(onde):
-    """`limiar_pivo` inalcançável nos DOIS lugares que o declaram.
+def test_o_default_do_NO_mantem_o_pivo_desligado():
+    """O perfil LIGA o pivô (decisão 036); o default do nó não.
 
-    Acima de π nenhum erro de rumo alcança o limiar, e a manobra não dispara.
-    Os dois arquivos precisam concordar: foi divergência entre um YAML e o
-    default de um nó que segurou este defeito por uma semana (o perfil do
-    simulador dizia 45° enquanto o nó dizia 15°, e as corridas mediram os dois
-    sem que ninguém somasse as duas leituras).
+    Regra da decisão 019: o default é o caso seguro. Quem sobe o
+    `heading_controller` sem perfil — bancada, teste solto — não pode ganhar de
+    brinde uma manobra que só é segura dentro de uma faixa de ângulo.
     """
-    limiar = (_default_do_no(CONTROLADOR, 'limiar_pivo') if onde == 'no'
-              else valor(MOVIMENTACAO_SIM, 'limiar_pivo'))
-    assert limiar > math.pi, (
-        f'limiar_pivo={limiar} em `{onde}` é alcançável — o pivô por corte '
-        'volta ao caminho do seguidor. Contra a placa que retém ele varre '
-        '93–101° depois do corte (medido, n=5) e não fecha em ângulo nenhum: '
-        'o robô gira no lugar e não sai. Ver decisão 023 e '
-        '`test_a_manobra_NAO_FECHA_contra_a_retencao_da_placa`.')
+    assert _default_do_no(CONTROLADOR, 'limiar_pivo') > math.pi
+
+
+@pytest.mark.parametrize('arquivo', [MOVIMENTACAO_SIM, MOVIMENTACAO])
+def test_o_pivo_so_dispara_para_erro_GRANDE(arquivo):
+    """A manobra é um QUANTUM de ~95°, não um controle de ângulo.
+
+    A placa entrega um módulo de giro só (2,204 rad/s medido) e segura a saída
+    cheia por 0,52 s depois do corte: a varredura é de 93–101° e **não depende
+    do wz do corte** (n=5, decisão 023). Foi por isso que os 28 disparos de
+    12-08, com erro entre 35° e 81°, não fecharam nenhum ângulo.
+
+    Um golpe de 95° só é a manobra CERTA quando o erro é da ordem de 95°. Daí a
+    faixa: gatilho entre 70° e 100°. Abaixo disso o quantum passa do alvo e
+    quem responde tem de ser a lei contínua (que assenta em 0,5–0,6°).
+    """
+    limiar = math.degrees(valor(arquivo, 'limiar_pivo'))
+    assert 70.0 <= limiar <= 100.0, (
+        f'limiar_pivo={limiar:.0f}° fora da faixa em que o quantum de ~95° é a '
+        'manobra certa')
+
+
+@pytest.mark.parametrize('arquivo', [MOVIMENTACAO_SIM, MOVIMENTACAO])
+def test_o_pivo_da_UM_golpe_e_devolve(arquivo):
+    """Mais de um pulso ressuscita o ciclo-limite de 12-08.
+
+    Com `max_pulsos` alto a lei fica caçando o alvo com um martelo de 95°: as
+    quatro corridas mediram giro total de 382° a 1321° para deslocamento de
+    0,06 a 0,23 m, oscilando ±50–60° com período de ~5,5 s. Um pulso é "vira
+    grosso e sai da frente"; o resto é do arco.
+    """
+    assert valor(arquivo, 'pivo_max_pulsos') == 1
 
 
 def test_a_chegada_nao_espera_um_angulo_que_a_maquina_nao_fecha():
@@ -1329,20 +1352,35 @@ def test_a_arvore_propria_chama_o_suavizador():
             f'a árvore pede o suavizador `{i}` e o nav2.yaml não o declara')
 
 
-def test_a_arvore_NAO_tem_recuperacao():
-    """A escolha de 29-07, preservada de propósito.
+def test_a_arvore_NUNCA_DESISTE_e_nao_move_roda_para_recuperar():
+    """Duas exigências opostas na mesma árvore (14-08, decisão 035).
 
-    `spin` é PIVÔ, que a 023 tirou do caminho porque a placa não entrega
-    módulo. `backup` é a ré que a 009 tirou do Nav2. E as duas seriam NO-OP:
-    o `cmd_vel` delas sai pelo tópico ignorado, e a árvore acharia que
-    recuperou sem nada ter acontecido. Quem recupera é o seguidor (025).
+    **Nunca desistir** é pedido explícito do dono: *"faça essa PORRA desse robô
+    não desistir dos goals, leia como o robo do Controle_robo_web faz e faça
+    igual"*. A peça que faz isso no robô 1 é UMA — um `RecoveryNode` com muitas
+    repetições envolvendo a navegação inteira. Remendar só um ramo não basta, e
+    isso foi medido: proteger só o `ComputePathToPose` deixou o `FollowPath`
+    matar o objetivo do mesmo jeito.
+
+    **Não mover roda para recuperar** continua valendo: `Spin` é pivô (a placa
+    não entrega módulo, 023), `BackUp` é a ré que a 009 tirou do Nav2, e `Wait`
+    exige o `behavior_server`, que esta pilha não sobe. Os três seriam no-op —
+    o `cmd_vel` deles sai pelo tópico ignorado e a árvore acharia que recuperou
+    sem nada ter acontecido (BO-3).
     """
-    r = _arvore()
-    for proibido in ('Spin', 'BackUp', 'Wait', 'DriveOnHeading',
-                     'ClearEntireCostmap'):
-        assert not list(r.iter(proibido)), (
-            f'`{proibido}` voltou para a árvore — ver 29-07 e a decisão 023')
-
+    xml = open(ARVORE).read()
+    corpo = xml[xml.index('<root'):]
+    assert 'RecoveryNode' in corpo and 'number_of_retries="1000"' in corpo, (
+        'sem RecoveryNode de muitas repetições em volta de tudo, um tropeço '
+        'do planejador ou do controlador mata a missão')
+    for proibido in ('<Spin', '<BackUp', '<Wait'):
+        assert proibido not in corpo, (
+            f'{proibido} é no-op nesta cadeia — a árvore acharia que recuperou '
+            'sem nada ter acontecido')
+    assert 'ClearEntireCostmap' in corpo, (
+        'a recuperação que FUNCIONA aqui é limpar costmap: três corridas de '
+        '14-08 morreram com "start or goal pose are occupied" por marca ao '
+        'vivo do Livox, e limpar resolve sem mover o robô')
 
 def test_o_suavizador_esta_na_lista_do_lifecycle():
     """Servidor que sobe fora da lista nunca é ativado; servidor na lista que

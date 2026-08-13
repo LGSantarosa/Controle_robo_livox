@@ -1,0 +1,70 @@
+Sessão 2026-08-14 (2ª leva) — FREIO DE GIRO POR CONTRA-PULSO (Gazebo)
+=====================================================================
+
+Pergunta   esta máquina não tem freio: zerar o comando não para nada, a placa
+           segura a saída cheia e o robô varre depois do corte. Torque
+           CONTRÁRIO consegue matar essa inércia? Quanto?
+
+Dono       "ele chega no 90, mas chega rápido, aí solta o motor, mas a inércia
+           joga ele mais 90 graus até parar de verdade... se o freio for feito
+           ele não precisa dar essa ré que hoje ele dá pra passar a porta"
+
+Ensaio     tools/banco/freio_de_giro.py (novo)
+           1. wz=+1,0 por 0,6 s   2. wz=-1,0 por T   3. wz=0 e mede a sobra
+           Publica em /key_vel (prioridade 90 no mux).
+Onde       Gazebo, mapa sala_andar3, robô em (6,23 · 3,92), folga 0,85 m.
+
+RESULTADO (Gazebo)
+------------------
+  contra-pulso T   giro total   SOBRA depois do último comando
+      0,00 s         40,0°          40,0°
+      0,05           27,5           26,8
+      0,10           29,8           29,4
+      0,15           26,8           24,8
+      0,20           27,0           24,8
+      0,30           25,4           19,8
+      0,40           21,2           13,9
+
+Reduz de 40° para 14°, monotônico, e NÃO ZERA na faixa varrida.
+
+⚠️ 1ª LEVA INVÁLIDA: publiquei em /cmd_vel_bruto com a pilha de pé e o
+`compensador_rumo` publica lá continuamente — os dois se intercalaram. Sinal
+no dado: "giro fase 1" saiu 0,1°, número impossível. Refeito por /key_vel.
+
+O QUE OS DADOS DO ROBÔ REAL DIZEM (docs/dados/2026-08-06-pivo/)
+---------------------------------------------------------------
+O dono lembrou que isto já foi medido na máquina de verdade. É a leva
+`degrau_giro --wz 0.6 --liga {0.10, 0.30}`:
+
+               giro    sobra    pico wz    t_parar
+  liga0.10-a    3,3°    3,2°     0,12       0,76 s
+  liga0.10-b    2,2°    2,5°     0,11       0,86 s
+  liga0.10-c   29,7°   29,3°     0,89       1,38 s
+  liga0.30-a   69,7°   67,7°     1,49       1,94 s
+  liga0.30-b   67,6°   67,2°     1,52       2,16 s
+  liga0.30-c   59,2°   55,7°     1,44       1,86 s
+
+Três leituras que MUDAM O DESENHO DO FREIO:
+
+1. quase tudo é SOBRA — pulso de 0,30 s dá 59-70° de giro, dos quais 56-68°
+   com o comando já em zero. A fase comandada contribui ~3°;
+2. o pico de wz chega a 1,5 rad/s para 0,6 comandado (2,5x), e chega DEPOIS
+   do corte;
+3. ele leva ~1,9 s para parar.
+
+CONCLUSÃO DO ENSAIO
+-------------------
+Contra-pulso de duração fixa aplicado logo após o corte está no MOMENTO
+ERRADO: ali o robô mal começou a girar, o pico de inércia vem 1 a 2 s depois.
+Por isso reduz um terço e não zera.
+
+O freio certo é de MALHA FECHADA sobre o `wz` medido:
+
+    enquanto |wz medido| > limiar:  comanda giro CONTRÁRIO
+    ao cruzar o limiar:             comanda zero
+
+O `heading_controller` já tem `self.wz_real`. O único número a ajustar é
+QUANDO SOLTAR o contra-torque: tarde demais e ele inverte o giro (a retenção
+vale para o contra-pulso também), cedo demais e sobra inércia.
+
+NÃO IMPLEMENTADO — a sessão virou para o salto de pose do AMCL.

@@ -86,7 +86,11 @@ collision_monitor:
       # O CORPO medido com trena em 29-07 (0,433 × 0,455), e não uma caixa de
       # frenagem: quem cria a distância de frenagem aqui é o TEMPO, não o
       # tamanho. Projetar o corpo é o que torna a conta interpretável.
-      points: "[[0.2165, 0.2275], [0.2165, -0.2275], [-0.2165, -0.2275], [-0.2165, 0.2275]]"
+      # 🔴 CORPO + 3 cm EM TODA A VOLTA (14-08, 2ª leva). Era o corpo cru, e o
+      # corpo cru não protege a QUINA: a meia-diagonal vale 0,314 m contra
+      # 0,2275 de meia-largura, então girando perto de parede a quina sai da
+      # região vigiada. Foi assim que ele bateu, com o dono olhando.
+      points: "[[0.2465, 0.2575], [0.2465, -0.2575], [-0.2465, -0.2575], [-0.2465, 0.2575]]"
       action_type: "approach"
       # ⚠️ AQUI MORA A OBJEÇÃO ANTIGA A ESTE MODO, e ela continua verdadeira: o
       # `approach` projeta pela velocidade COMANDADA, e neste robô o comando não
@@ -160,7 +164,30 @@ collision_monitor:
       # o planejador considera passável (`robot_radius` 0,30 desde a 032),
       # senão o Nav2 planeja um vão que o reflexo veta e o robô trava parado.
       # Traseira: meia caixa + folga, porque a ré existe.
-      points: "[[0.30, 0.26], [0.30, -0.26], [-0.28, -0.26], [-0.28, 0.26]]"
+      # 🔴 DISTÂNCIA MÍNIMA EM TODOS OS LADOS (14-08, 2ª leva). Pedido do dono
+      # depois da batida: *"essa segurança é pra TODOS os lados, uns mais que os
+      # outros, como a frente e as quinas da frente, mas todos os lados devem
+      # parar o robô quando chega a uma distância mínima"*.
+      #
+      # A caixa anterior (frente 0,30 · lateral 0,26) tinha DOIS furos:
+      #
+      #   lateral 0,26 < 0,2275 + margem   -> parede de raspão passava
+      #   e a QUINA do corpo chega a 0,314 -> girando, ela saía da caixa
+      #
+      # Agora a caixa é o CORPO MEDIDO + margem, lado a lado:
+      #
+      #   frente     0,2165 + 0,133 = 0,35   (mais, como ele pediu; o resto da
+      #                                       frenagem é do PolygonApproach)
+      #   lateral    0,2275 + 0,050 = 0,2775
+      #   traseira   0,2165 + 0,050 = 0,2665 (a ré existe e olha para trás)
+      #
+      # Quina da frente: hipotenusa 0,447 m — é o ponto mais protegido, que é o
+      # que ele pediu explicitamente.
+      #
+      # ⚠️ E o `robot_radius` do planejador subiu junto (0,26 -> 0,28), senão
+      # volta o impasse: reflexo exigindo mais folga do que o planejador
+      # garante = robô parado entre os dois.
+      points: "[[0.35, 0.2775], [0.35, -0.2775], [-0.2665, -0.2775], [-0.2665, 0.2775]]"
       action_type: "stop"
       # 2 pontos, não 1: ponto solto é ruído. O Mid-360 entrega 20 000 pontos
       # por quadro, então exigir 2 não atrasa nada real.
