@@ -29,6 +29,7 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 from std_msgs.msg import Float64
 
+from robot_motion.lei_de_freio import FreioDeGiro
 from robot_motion.lei_de_pivo import DESISTIU, PRONTO, PivoPorCorte
 from robot_motion.lei_de_rumo import (
     comando,
@@ -118,6 +119,22 @@ class HeadingController(Node):
             ('pivo_tolerancia', 0.105),     # rad (~6°), o piso medido é ~4°
             ('pivo_max_pulsos', 6),
             ('pivo_teto_tempo', 20.0),
+            # --- freio de giro por contra-torque (14-08, decisão 037) ---
+            #
+            # Esta máquina não tem freio: zerar o comando não para nada, a placa
+            # segura a saída cheia por 0,52 s. Medido em 14-08 no Gazebo, com o
+            # perfil batendo com o robô real de 06-08:
+            #
+            #   comando de 0,6 s -> 3,5° na fase comandada e 60,3° de SOBRA
+            #   o pico de wz (1,1 rad/s) chega 0,65 s DEPOIS do corte
+            #
+            # Com contra-torque soltando em 0,9–1,1 rad/s o giro total cai de
+            # 63,8° para 14–28°. Abaixo de 0,6 ele solta tarde e INVERTE — a
+            # retenção vale para o contra-comando também.
+            ('freio_ligado', True),
+            ('freio_solta_em', 1.0),      # rad/s, a faixa medida é 0,9 a 1,1
+            ('freio_pico_min', 0.6),      # "a inércia já apareceu"
+            ('freio_teto_s', 1.5),
         ])
         self.par = {x.name: x.value for x in p}
 
@@ -136,6 +153,13 @@ class HeadingController(Node):
         self.wz_real = 0.0
         self.pivo = None        # manobra em curso, quando houver
         self.t_passo = None
+        # O freio de giro (037). `None` quando desligado — assim o caminho de
+        # código nem existe, em vez de existir com um `if` que ninguém lê.
+        self.freio = (FreioDeGiro(wz_comando=self.par['wz_max'],
+                                  solta_em=self.par['freio_solta_em'],
+                                  pico_min=self.par['freio_pico_min'],
+                                  teto_s=self.par['freio_teto_s'])
+                      if self.par['freio_ligado'] else None)
         self.rumo_alvo = None
         self.t_alvo = None
         self.v_alvo = self.par['v_max']
@@ -336,6 +360,10 @@ class HeadingController(Node):
                 self.publica(0.0, wz)     # linear ZERO: é giro no eixo
                 self.plantao(agora, 0.0, wz)
                 return
+        # O mesmo `dt` limitado que o pivô usa, e pelo mesmo motivo: ciclo
+        # suspenso não pode entrar de uma vez nos cronômetros do freio.
+        dt_ciclo = (0.0 if self.t_passo is None
+                    else min(agora - self.t_passo, 5.0 / self.par['taxa']))
         self.t_passo = agora
 
         # Quanto o MOVIMENTO está fora do rumo pedido. É ele que decide se
@@ -354,6 +382,22 @@ class HeadingController(Node):
             tolerancia=self.par['tolerancia_rumo'],
             erro_do_movimento=erro_mov,
         )
+        # 🔴 O FREIO ENTRA AQUI, NA ÚLTIMA LINHA ANTES DE PUBLICAR (decisão
+        # 037), e a posição é o desenho: ele não decide para onde virar nem
+        # quando parar de girar — isso é da lei de rumo, que já rodou. Ele só
+        # responde "a lei parou de pedir giro e o robô ainda está girando: o
+        # que mando agora?".
+        #
+        # ⚠️ `v` NÃO é tocado. O freio é de GIRO; quem responde por linear é a
+        # zona morta, e misturar os dois aqui seria comandar arco no lugar de
+        # frenagem.
+        if self.freio is not None:
+            wz_freio = self.freio.passo(wz, self.wz_real, dt_ciclo)
+            if wz_freio != wz:
+                self.get_logger().info(
+                    f'FREIO: giro a {self.wz_real:+.2f} rad/s com a lei calada '
+                    f'— contra-torque {wz_freio:+.2f}', throttle_duration_sec=2.0)
+            wz = wz_freio
         self.publica(v, wz)
         self.plantao(agora, v, wz)
 
