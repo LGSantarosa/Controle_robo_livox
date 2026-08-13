@@ -287,7 +287,15 @@ global_costmap:
         # 0,40 fica ACIMA do inscrito e ABAIXO dos 0,45 que em 29-07 travaram
         # o robô DENTRO da porta de 0,90 m ("Start occupied" no
         # replanejamento, porque o vão inteiro ficava inflado).
-        inflation_radius: 0.50
+        # 🔴 13-08, NA SALA REAL: 0,50 -> 0,20. A sala do andar 3 tem 6,5 x 4,4 m
+        # e mobília; medido no mapa que o próprio robô desenhou hoje, 35,4% das
+        # células livres estão a menos do `robot_radius` (0,32 m) de alguma
+        # coisa. Com 0,50 quase toda a sala fica cara, e o efeito não é recusar
+        # plano — é plano TORTO: na corrida de hoje a referência de rumo
+        # passeou 83,8° (contra 14,7° em 12-08 sem mapa), o robô ficou parado
+        # 58% do tempo e andou 4,51 m para 2,46 m de reta. A inflação de 0,50
+        # foi escolhida em 05-08 para a porta de 0,90 m da pista SIMULADA.
+        inflation_radius: 0.20
         # ⚠️ `cost_scaling_factor` baixo é o que CENTRA o robô no vão, e sem
         # ele a inflação maior não adianta nada. O padrão do Nav2 (10) faz o
         # custo despencar logo depois do inscrito: dentro da porta a paisagem
@@ -432,7 +440,15 @@ local_costmap:
         # 0,40 fica ACIMA do inscrito e ABAIXO dos 0,45 que em 29-07 travaram
         # o robô DENTRO da porta de 0,90 m ("Start occupied" no
         # replanejamento, porque o vão inteiro ficava inflado).
-        inflation_radius: 0.50
+        # 🔴 13-08, NA SALA REAL: 0,50 -> 0,20. A sala do andar 3 tem 6,5 x 4,4 m
+        # e mobília; medido no mapa que o próprio robô desenhou hoje, 35,4% das
+        # células livres estão a menos do `robot_radius` (0,32 m) de alguma
+        # coisa. Com 0,50 quase toda a sala fica cara, e o efeito não é recusar
+        # plano — é plano TORTO: na corrida de hoje a referência de rumo
+        # passeou 83,8° (contra 14,7° em 12-08 sem mapa), o robô ficou parado
+        # 58% do tempo e andou 4,51 m para 2,46 m de reta. A inflação de 0,50
+        # foi escolhida em 05-08 para a porta de 0,90 m da pista SIMULADA.
+        inflation_radius: 0.20
         # ⚠️ `cost_scaling_factor` baixo é o que CENTRA o robô no vão, e sem
         # ele a inflação maior não adianta nada. O padrão do Nav2 (10) faz o
         # custo despencar logo depois do inscrito: dentro da porta a paisagem
