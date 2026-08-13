@@ -49,6 +49,7 @@ import sys
 import time
 
 import rclpy
+from rclpy.parameter import Parameter
 from geometry_msgs.msg import TwistStamped
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
@@ -65,8 +66,15 @@ def wrap(a):
 
 
 class Bancada(Node):
-    def __init__(self, topico):
-        super().__init__('freio_de_giro')
+    def __init__(self, topico, sim):
+        # 🔴 `use_sim_time` NÃO É DETALHE (14-08). Nó de bancada carimbando
+        # relógio de PAREDE num mundo em tempo de SIMULAÇÃO tem o comando
+        # descartado por velho, e o robô simplesmente não se mexe. Foram QUATRO
+        # varreduras inválidas por isto — uma delas eu cheguei a publicar como
+        # resultado. O sintoma é traiçoeiro: não dá erro, dá zero.
+        super().__init__('freio_de_giro',
+                         parameter_overrides=[Parameter(
+                             'use_sim_time', Parameter.Type.BOOL, bool(sim))])
         q = QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE)
         self.pub = self.create_publisher(TwistStamped, topico, q)
         self.create_subscription(Odometry, '/Odometry', self.cb, q)
@@ -75,14 +83,29 @@ class Bancada(Node):
         # Yaw ACUMULADO: sem isto um giro de 200° some no wrap de ±180°.
         self.acumulado = 0.0
         self._ultimo = None
+        # wz MEDIDO, derivado da pose. Nunca do campo `twist`: o do publicador
+        # do Gazebo é ruidoso e o `ensaio.py` já registrou isso.
+        self.wz_medido = 0.0
+        self._t_ultimo = None
 
     def cb(self, msg):
         y = yaw_de(msg.pose.pose.orientation)
+        agora = self.agora()
         if self._ultimo is not None:
-            self.acumulado += wrap(y - self._ultimo)
+            d = wrap(y - self._ultimo)
+            self.acumulado += d
+            if self._t_ultimo is not None:
+                dt = agora - self._t_ultimo
+                if dt > 1e-4:
+                    # filtro de 1a ordem: a derivada da pose é degrau a degrau
+                    self.wz_medido = 0.7 * self.wz_medido + 0.3 * (d / dt)
         self._ultimo = y
+        self._t_ultimo = agora
         self.yaw = y
         self.pos = (msg.pose.pose.position.x, msg.pose.pose.position.y)
+
+    def agora(self):
+        return self.get_clock().now().nanoseconds * 1e-9
 
     def manda(self, wz):
         m = TwistStamped()
@@ -93,23 +116,63 @@ class Bancada(Node):
 
     def gira(self, wz, dur, taxa=20.0):
         """Mantém o comando por `dur` segundos, publicando a `taxa` Hz."""
-        t0 = time.time()
-        while time.time() - t0 < dur:
+        t0 = self.agora()
+        while self.agora() - t0 < dur:
             self.manda(wz)
-            rclpy.spin_once(self, timeout_sec=0.01)
-            time.sleep(1.0 / taxa)
+            rclpy.spin_once(self, timeout_sec=0.02)
 
     def espera(self, dur):
-        t0 = time.time()
-        while time.time() - t0 < dur:
+        t0 = self.agora()
+        while self.agora() - t0 < dur:
             self.manda(0.0)
-            rclpy.spin_once(self, timeout_sec=0.01)
-            time.sleep(0.05)
+            rclpy.spin_once(self, timeout_sec=0.02)
+
+
+    def freia(self, wz_cmd, limiar, teto=3.0):
+        """FREIO DE MALHA FECHADA: contra-torque enquanto |wz| for alto.
+
+        Comanda o giro CONTRÁRIO ao sentido medido e solta quando `|wz_medido|`
+        cai abaixo de `limiar`. Soltar em zero seria tarde demais — a placa
+        segura o contra-comando por `atraso_desliga` (0,52 s) depois de soltar,
+        e o robô inverteria o giro. `limiar` é exatamente esse "quanto antes".
+
+        Devolve (tempo de freio, wz no instante de soltar).
+        """
+        # ⚠️ SÓ SOLTA DEPOIS DO PICO. O `wz` sobe DEPOIS do corte (medido no
+        # robô real em 06-08: pico 2,5x o comandado, `t_parar` 1,9 s), então um
+        # laço que solta no primeiro `|wz| <= limiar` solta na SUBIDA e não freia
+        # nada — foi o que a 1ª varredura de malha fechada fez, com `freou por
+        # 0,00 s` em toda linha. `PICO_MIN` é o "a inércia já apareceu".
+        PICO_MIN = 0.6   # o pico medido no Gazebo é ~1,1 rad/s (perfil de 14-08)
+        t0 = self.agora()
+        maior = 0.0
+        sentido = 0.0
+        while self.agora() - t0 < teto:
+            wz = self.wz_medido
+            if abs(wz) > maior:
+                maior = abs(wz)
+            if sentido == 0.0 and abs(wz) > 0.2:
+                sentido = math.copysign(1.0, wz)
+            # ⚠️ COMPONENTE NO SENTIDO ORIGINAL, não o módulo. Testar `|wz|`
+            # nunca solta: depois que o freio inverte o giro, o módulo volta a
+            # subir e o laço segura o contra-torque até o teto — foi o que a 2ª
+            # varredura fez, com −300° de giro total. Com o sinal, `limiar`
+            # significa "ainda girando para o lado de origem a esta taxa".
+            if maior >= PICO_MIN and wz * sentido <= limiar:
+                break
+            # o contra-torque segue o sentido do PICO, não o do instante: perto
+            # do zero o sinal medido oscila e o freio ficaria batendo palma
+            alvo = sentido if sentido != 0.0 else math.copysign(1.0, wz or 1.0)
+            self.manda(-alvo * wz_cmd)
+            rclpy.spin_once(self, timeout_sec=0.02)
+        return self.agora() - t0, self.wz_medido
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--csv', required=True)
+    ap.add_argument('--sim', action='store_true',
+                    help='usa o relógio da simulação (OBRIGATÓRIO no Gazebo)')
     ap.add_argument('--topico', default='/key_vel',
                     help='canal do ensaio. `/key_vel` (prioridade 90 no mux, o '
                          'do teclado) é o certo com a pilha DE PÉ: publicar em '
@@ -123,12 +186,16 @@ def main():
     ap.add_argument('--contra', nargs='*', type=float,
                     default=[0.0, 0.05, 0.10, 0.15, 0.20, 0.30, 0.40],
                     help='[s] durações de contra-pulso a varrer')
-    ap.add_argument('--assenta', type=float, default=2.5,
+    ap.add_argument('--assenta', type=float, default=3.0,
                     help='[s] espera depois do último comando')
+    ap.add_argument('--malha-fechada', nargs='*', type=float, default=None,
+                    help='[rad/s] varre LIMIARES de soltar o contra-torque, em '
+                         'vez de durações fixas. É o freio de verdade: '
+                         'contra-torque enquanto |wz medido| passar do limiar')
     a = ap.parse_args()
 
     rclpy.init()
-    n = Bancada(a.topico)
+    n = Bancada(a.topico, a.sim)
     t0 = time.time()
     while n.yaw is None and time.time() - t0 < 15:
         rclpy.spin_once(n, timeout_sec=0.1)
@@ -138,6 +205,40 @@ def main():
         sys.exit(2)
 
     linhas = []
+    g = math.degrees
+
+    if a.malha_fechada is not None:
+        print(f'{"limiar":>8} {"giro total":>11} {"freou por":>10} '
+              f'{"wz ao soltar":>13} {"SOBRA":>8}')
+        for lim in a.malha_fechada:
+            n.espera(1.5)
+            ini = n.acumulado
+            n.gira(a.wz, a.t_giro)
+            # espera a inércia APARECER: o pico vem depois do corte (medido no
+            # robô real em 06-08, t_parar de 1,9 s e pico 2,5x o comandado)
+            dur, wz_solta = n.freia(a.wz, lim)
+            antes = n.acumulado
+            n.espera(a.assenta)
+            total = n.acumulado - ini
+            sobra = n.acumulado - antes
+            print(f'{lim:8.2f} {g(total):11.1f} {dur:10.2f} '
+                  f'{wz_solta:13.2f} {g(sobra):8.1f}')
+            linhas.append({'limiar': lim, 'giro_total_deg': round(g(total), 2),
+                           'freou_s': round(dur, 3),
+                           'wz_ao_soltar': round(wz_solta, 3),
+                           'sobra_deg': round(g(sobra), 2),
+                           'x': round(n.pos[0], 3), 'y': round(n.pos[1], 3)})
+        with open(a.csv, 'w', newline='') as f:
+            w = csv.DictWriter(f, fieldnames=list(linhas[0].keys()))
+            w.writeheader()
+            w.writerows(linhas)
+        print(f'\n-> {a.csv}')
+        z = min(linhas, key=lambda r: abs(r['sobra_deg']))
+        print(f"\nmenor sobra: {z['sobra_deg']:+.1f}° soltando em "
+              f"{z['limiar']:.2f} rad/s")
+        rclpy.shutdown()
+        return
+
     print(f'{"T contra":>9} {"giro fase 1":>12} {"giro total":>11} '
           f'{"SOBRA":>8}   (graus)')
     for T in a.contra:
@@ -151,7 +252,6 @@ def main():
         n.espera(a.assenta)
         total = n.acumulado - ini
         sobra = n.acumulado - antes_de_soltar
-        g = math.degrees
         print(f'{T:9.2f} {g(fase1):12.1f} {g(total):11.1f} {g(sobra):8.1f}')
         linhas.append({'t_contra': T, 'giro_fase1_deg': round(g(fase1), 2),
                        'giro_total_deg': round(g(total), 2),

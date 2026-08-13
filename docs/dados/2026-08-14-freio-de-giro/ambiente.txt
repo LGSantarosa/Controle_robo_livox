@@ -68,3 +68,73 @@ QUANDO SOLTAR o contra-torque: tarde demais e ele inverte o giro (a retenção
 vale para o contra-pulso também), cedo demais e sobra inércia.
 
 NÃO IMPLEMENTADO — a sessão virou para o salto de pose do AMCL.
+
+
+═══════════════════════════════════════════════════════════════════════
+2ª LEVA — O FREIO DE MALHA FECHADA, E AS QUATRO MEDIDAS INVÁLIDAS ANTES
+═══════════════════════════════════════════════════════════════════════
+
+🔴 QUATRO VARREDURAS INVÁLIDAS, e cada uma por um motivo diferente. Está
+   registrado porque o sintoma de todas era o mesmo — número plausível — e
+   duas delas eu cheguei a mostrar ao dono como resultado.
+
+  1. `/cmd_vel_bruto` com a pilha inteira no ar: o `compensador_rumo` publica
+     no mesmo tópico e se intercala. Não é determinístico — 3 s de comando
+     davam 195°, 0,6 s davam zero;
+  2. `/key_vel`: canal MORTO nesta pilha. 3 s de wz=1,0 -> 0,0° de giro;
+  3. laço de freio soltando no primeiro `|wz| <= limiar`: solta na SUBIDA,
+     antes de a inércia existir (`freou por 0,00 s` em toda linha);
+  4. laço testando `|wz|` em vez do componente no sentido de origem: depois de
+     inverter, o módulo volta a subir e o freio nunca solta (-300° de giro).
+
+  E a raiz de 1 e 2 era a mesma, descoberta por último: **o nó de bancada
+  carimbava relógio de PAREDE num mundo em tempo de SIMULAÇÃO**. Comando
+  descartado por velho, robô parado, nenhum erro na tela. É o mesmo defeito
+  que derrubou o collision_monitor de manhã, agora do lado do instrumento.
+  Conserto: `--sim` liga `use_sim_time` e todo o tempo vem do relógio do ROS.
+
+PERFIL DO GIRO (bancada correta, comando 0,6 s e depois zero)
+--------------------------------------------------------------
+    t-corte    wz         acumulado
+     -0,09    +0,26          1,9°
+     +0,17    +0,64          8,8°
+     +0,65    +1,12         34,4°     <- PICO, 0,65 s DEPOIS do corte
+     +0,91    +0,94         49,8°
+     +1,17    +0,48         59,9°
+     +1,41    +0,12         63,7°
+     +1,67     0,00         63,8°     <- parou
+
+    fase comandada 3,5° | sobra 60,3° | TOTAL 63,8°
+
+🟢 E ISTO BATE COM O ROBÔ REAL (06-08, liga 0,30): fase comandada ~3°, sobra
+   56–68°, total 59–70°, parada em 1,86–2,16 s. O simulador reproduz a
+   assinatura da máquina — é o que autoriza calibrar o freio aqui.
+
+O FREIO: contra-torque enquanto o giro no sentido de origem passar do limiar
+-----------------------------------------------------------------------------
+  limiar   giro total   freou por   sobra
+   1,10      27,3°       0,17 s     +17,0°
+   1,00      27,7        0,22       +16,7
+   0,90      13,8        0,28        +3,5
+   0,90      27,0        0,18       +16,7      <- repetição: espalho real
+   0,80      27,8        0,22       +16,7
+   0,60     -50,7        1,22       -45,6      <- solta tarde: INVERTE
+   0,40     -60,0        1,40       -65,1
+   0,25     -43,8        1,20       -45,6
+
+VEREDITO
+--------
+Sem freio: 63,8°.  Com freio soltando em 0,9–1,1 rad/s: 14 a 28°.
+**Corta o giro de 2,3 a 4,6 vezes, e nunca inverte nessa faixa.**
+
+Abaixo de 0,6 o freio segura tempo demais e o robô gira para o outro lado —
+é a retenção de 0,52 s valendo também para o contra-comando, como previsto.
+
+⚠️ O ESPALHO É REAL: duas corridas no mesmo limiar 0,90 deram 13,8° e 27,0°.
+Mesma assinatura bimodal que o robô real mostrou em 06-08 com pulso curto
+(2,2–3,3° contra 29,7°), e a causa lá foi a quantização do laço de 10 Hz.
+Não sintonizar mais fino sem n maior — o número honesto hoje é "solta entre
+0,9 e 1,1 e o giro cai para um terço".
+
+NÃO IMPLEMENTADO NA CADEIA: isto é bancada. O `heading_controller` ainda corta
+e reza. Próximo passo é levar a lei para lá, atrás do mesmo `self.wz_real`.
