@@ -6330,3 +6330,79 @@ cd controle_web && WEB_TELEOP=on ROBOT_MODE=nav2 python3 app.py
 
 ⚠️ **Nunca `pkill -f`** — matou a sessão ssh duas vezes hoje, e foi o que já
 tinha matado o `scan_2d` ontem. Matar por PID, e conferir órfãos.
+
+### 10. A PORTA, TRÊS VEZES — e a terceira ele bateu
+
+O último bloco da sessão foi o dono mandando pontos pelo web, com o robô
+atravessando a porta da sala. Três tentativas, e elas contam uma história em
+ordem decrescente de qualidade:
+
+```
+1ª  atravessou LIMPO, fazendo o que o planejador mandava   "FOI LINDO"
+2ª  foi DE CARA na porta, emperrou, a ré rodou 8 s e não saiu do lugar,
+    o planner recusou ("start é obstáculo") e ele BATEU
+3ª  foi de cara na porta de novo, mas fez uma curva forte para a esquerda
+    no fim e passou
+```
+
+⚠️ **As duas últimas têm ressalva de bateria, e é do dono**: *"isso
+provavelmente é bateria, então não dá para levar essas duas últimas em
+consideração total; amanhã vou carregar ele antes"*. A bateria acabou logo
+depois e o NUC caiu junto — duas vezes. **Não foi lida em volt nenhuma vez na
+sessão**, o que é a mesma falta de 10-08.
+
+O que o log da 2ª tentativa registrou:
+
+```
+planner   GridBased failed to plan: "Either of the start or goal pose are an
+          obstacle"      -> ele JÁ estava colado na porta ao pedir plano
+reflexo   PolygonStop 4x em 9 s
+seguidor  emperrado e sem vão para recuar — atrás há 0.00 m
+seguidor  EMPERRADO a 7,09 m do objetivo — ré de até 0,30 m (vão atrás: 1,02 m)
+seguidor  fim da ré: recuou 0,01 m em 8,0 s        <- 8 s de ré para 1 cm
+```
+
+🔴 **ACHADO NOVO: a ré foi acionada e foi INEFICAZ.** Ela mediu 1,02 m livres
+atrás, comandou recuo, bateu no teto de 8 s e o robô andou **1 cm**. As duas
+hipóteses, e nenhuma está testada: (a) o comando de ré está abaixo da zona
+morta da placa — o mesmo `deadband` da decisão 020, que decide o MÓDULO e não
+obedece pedido pequeno; (b) o robô estava fisicamente encravado na quina da
+porta. ⚠️ Com bateria baixa as duas ficam contaminadas: placa com pouca tensão
+é exatamente o que faz comando virar nada. **Repetir com o robô carregado é o
+primeiro item de amanhã.**
+
+### 11. 🔴 O CRITÉRIO ENDURECEU: ELE NÃO PODE BATER
+
+Palavras do dono, fechando a sessão: *"o pior foi ele bater, ele não pode bater
+de jeito nenhum"*.
+
+Isto **endurece** o critério de 12-08 (o reflexo só deve disparar por surpresa;
+o que é parado e está no mapa tem de ser desviado antes). O de 12-08 media
+disparo do reflexo; este mede contato. **Colisão reprova a corrida inteira**,
+qualquer que seja a explicação — bateria, mapa, sintonia.
+
+E o mecanismo por trás dela já tem nome e é dívida velha: **ele entra torto na
+porta**. O dono descreveu exatamente isso, e a evolução dentro da sessão é a
+pista boa: *"na primeira tentativa foi perfeitamente, fez o que o planner
+mandava, depois começou a errar o caminho do planner"*. É o **erro de trajeto do
+seguidor** (dívida nº 1 do ESTADO: p50 0,128 m contra 0,118 m de margem num vão
+de 0,90 m) — o plano está certo e quem sai dele é o seguidor.
+
+### O saldo do dia, em uma linha
+
+Saímos de **nada provado do Nav2 com mapa neste robô** para **o robô
+atravessando uma porta sozinho**, com mapa que ele mesmo desenhou, localizado
+por AMCL, com destino clicado numa página web — e voltando quase por ela. O que
+falta é ele não bater.
+
+### Amanhã, na ordem
+
+1. **Carregar a bateria ANTES**, e ler a tensão no início e no fim (dívida de
+   10-08 que voltou hoje);
+2. repetir a porta com o robô cheio: a 1ª tentativa de hoje diz que ele
+   consegue; as duas seguintes podem ter sido tensão;
+3. se a ré de 8 s para 1 cm se repetir com bateria cheia, é a zona morta da
+   placa (020) e não a geometria — e aí a ré precisa de comando acima do piso;
+4. amarrar a ré a **objetivo ativo** (pedido do dono), matando a ré-do-nada que
+   o `plano.py` provocou;
+5. o erro de trajeto do seguidor, que é quem entorta a entrada na porta.
