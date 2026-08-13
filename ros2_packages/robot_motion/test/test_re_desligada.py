@@ -53,6 +53,7 @@ class SeguidorFalso:
             're_scan_velho_s': 0.8,
             're_folga': 0.30,
             're_orcamento_cego': 0.30,
+            're_exige_objetivo': True,
         }
         base.update(par)
         self.par = base
@@ -61,9 +62,16 @@ class SeguidorFalso:
         self.res_seguidas = 0
         self.dist_antes_da_re = None
         self.vao_pedido = 0
+        # Os testes de desligamento existiam antes da guarda de objetivo, e o
+        # que eles travam é OUTRO ramo: nasce com objetivo vivo para seguirem
+        # medindo o que sempre mediram.
+        self.objetivo_vivo = True
 
     def get_logger(self):
         return self.logger
+
+    def tem_objetivo(self):
+        return self.objetivo_vivo
 
     def vao_traseiro(self):
         # Se o código chegar aqui, a ré NÃO foi barrada — é o que os testes de
@@ -131,3 +139,105 @@ def test_qualquer_teto_nao_positivo_desliga_a_re(teto):
     PathFollower.entra_na_re(seg, t=1.0, x=0.0, y=0.0, dist=2.0)
 
     assert seg.vao_pedido == 0
+
+
+# --------------------------------- a ré sem objetivo vivo (14-08, decisão 031)
+#
+# O defeito, nas palavras do dono: *"ontem ela ativava do nada sem nada estar
+# acontecendo, e pior, aconteceu no gazebo também"*. Mecanismo: o `/plan` fica
+# RETIDO depois que o objetivo morre, o robô parado passa `re_parado_s` sem
+# avançar, e o gatilho de emperramento dispara com ninguém tendo pedido nada.
+
+
+def test_sem_objetivo_vivo_a_re_nao_acontece():
+    """A guarda nova: plano retido + robô parado NÃO é motivo para recuar."""
+    seg = SeguidorFalso()
+    seg.objetivo_vivo = False
+
+    PathFollower.entra_na_re(seg, t=1.0, x=0.0, y=0.0, dist=2.0)
+
+    assert seg.vao_pedido == 0, 'sem objetivo a ré não pode nem medir o vão'
+    assert seg.logger.avisos, 'recusar em silêncio é o que esconde o defeito'
+    assert 'objetivo' in seg.logger.avisos[0].lower()
+    assert seg.progresso.reiniciado == 1, (
+        'sem reiniciar o progresso a guarda dispara em todo ciclo e o log '
+        'vira enxurrada a 20 Hz')
+
+
+def test_com_objetivo_vivo_a_re_segue_o_caminho_normal():
+    """O contrapeso: a guarda não pode matar a ré legítima.
+
+    Com objetivo vivo, `entra_na_re` tem de chegar até a MEDIDA DO VÃO — que é
+    a primeira coisa concreta que ela faz depois das guardas.
+    """
+    seg = SeguidorFalso()
+    seg.objetivo_vivo = True
+
+    PathFollower.entra_na_re(seg, t=1.0, x=0.0, y=0.0, dist=2.0)
+
+    assert seg.vao_pedido == 1, 'a ré com objetivo vivo tem de medir o vão'
+
+
+def test_o_knob_permite_a_re_sem_objetivo_para_bancada():
+    """`re_exige_objetivo: False` devolve o comportamento antigo.
+
+    Existe para a bancada, onde o seguidor é dirigido por `/plan` cru e não há
+    ação do Nav2 nenhuma. Não é o default — o default é o caso seguro (019).
+    """
+    seg = SeguidorFalso(re_exige_objetivo=False)
+    seg.objetivo_vivo = False
+
+    PathFollower.entra_na_re(seg, t=1.0, x=0.0, y=0.0, dist=2.0)
+
+    assert seg.vao_pedido == 1
+
+
+class SeguidorEmRe:
+    """O mínimo que `passo_de_re` toca para terminar uma manobra."""
+
+    def __init__(self):
+        self.par = {'re_folga': 0.30, 're_orcamento_cego': 0.30,
+                    're_teto_s': 8.0, 'v_piso': 0.203}
+        self.logger = LoggerFalso()
+        self.progresso = ProgressoFalso()
+        self.estado = 're'
+        self.re_desde = 0.0
+        self.re_origem = (0.0, 0.0)
+        self.desencalhe = []
+        self.publicado = []
+
+    def get_logger(self):
+        return self.logger
+
+    def vao_traseiro(self):
+        return 1.0
+
+    def publica_desencalhe(self, v):
+        self.desencalhe.append(v)
+
+    def publica(self, rumo, v):
+        self.publicado.append((rumo, v))
+
+    def registra(self, *a, **k):
+        pass
+
+
+def test_terminada_a_re_o_seguidor_VOLTA_A_SEGUIR():
+    """A outra metade do requisito do dono: *"é pra desencalhar E ir até um
+    ponto"*.
+
+    Desencalhar e ficar parado ali não é recuperação — é o robô de costas no
+    meio da sala. Terminado o recuo, o estado tem de voltar a `seguindo`, que
+    é o que faz o próximo ciclo pegar o plano e retomar o caminho ao objetivo.
+    """
+    seg = SeguidorEmRe()
+
+    # recuou 0,30 m (o orçamento cego inteiro) -> manobra esgotada
+    PathFollower.passo_de_re(seg, t=2.0, x=-0.30, y=0.0, rumo=0.0, dist=2.3)
+
+    assert seg.estado == 'seguindo', (
+        'ré que termina e não devolve o seguidor ao plano deixa o robô parado '
+        'de costas — desencalhou e não foi a lugar nenhum')
+    assert seg.desencalhe[-1] == 0.0, (
+        'sair da manobra sem zerar o canal deixa ré órfã até o timeout do mux')
+    assert seg.progresso.reiniciado == 1

@@ -27,6 +27,7 @@ import csv
 import math
 
 import rclpy
+from action_msgs.msg import GoalStatusArray
 from geometry_msgs.msg import TwistStamped
 from nav_msgs.msg import Odometry, Path
 from rclpy.node import Node
@@ -216,6 +217,21 @@ class PathFollower(Node):
             # andar de costas com cara de recuperação. Zera assim que o robô
             # bate a melhor distância que tinha antes da ré.
             ('re_max_seguidas', 2),
+            # 🔴 RÉ SÓ COM OBJETIVO VIVO (14-08, decisão 031). Requisito do
+            # dono, com as palavras dele: *"a ré é para desencalhar, mas quando
+            # ele ENCALHA por conta de um erro, é pra desencalhar E IR ATÉ UM
+            # PONTO"*. Recuo sem objetivo não é recuperação de nada — não há
+            # para onde voltar depois, e o robô só anda de costas.
+            #
+            # Default `True` pela regra da decisão 019 (o default é o caso
+            # seguro): entre "recuar sem ninguém ter pedido" e "não recuar", o
+            # perigoso é o primeiro — foi ele que apareceu no robô e no Gazebo.
+            #
+            # ⚠️ Consequência que é FEATURE, não efeito colateral: dirigindo o
+            # seguidor por `/plan` cru (o `tools/banco/plano.py`, sem ação do
+            # Nav2) a ré fica INERTE. Foi assim que ela fez o robô recuar do
+            # nada na bancada, e o dono nomeou isso como defeito.
+            ('re_exige_objetivo', True),
             ('taxa', 20.0),
             # Sem plano novo por este tempo, para. Plano velho é plano perigoso
             # — mesma regra do `timeout_alvo` da movimentação.
@@ -229,6 +245,25 @@ class PathFollower(Node):
         self.pub_vel = self.create_publisher(Float64, '~/velocidade_alvo', qos)
         self.create_subscription(Odometry, '/Odometry', self.cb_odom, qos)
         self.create_subscription(Path, '/plan', self.cb_plano, qos)
+
+        # 🔴 QUEM DIZ QUE EXISTE OBJETIVO VIVO — e sem isto a ré recua sozinha.
+        #
+        # Defeito medido em 13-08 (robô) e reproduzido em 14-08 no Gazebo: o
+        # `/plan` fica RETIDO. Terminado o objetivo — cancelado, abortado, ou o
+        # dono simplesmente parou de clicar — `self.plano` continua cheio, o
+        # robô parado passa `re_parado_s` sem avançar, o plano vence, e o
+        # gatilho de emperramento chama a ré. O robô anda de costas sem que
+        # nada esteja acontecendo. Palavras do dono: *"ontem ela ativava do
+        # nada sem nada estar acontecendo, e pior, aconteceu no gazebo também"*.
+        #
+        # Os dois tópicos, e não só o primeiro, porque a árvore atende às duas
+        # ações; `unstuck_supervisor` e `freeze_capture` já leem este mesmo par.
+        self._objetivo = {}
+        for topico in ('navigate_to_pose/_action/status',
+                       'navigate_through_poses/_action/status'):
+            self.create_subscription(
+                GoalStatusArray, topico,
+                lambda msg, t=topico: self.cb_status(msg, t), qos)
 
         # 🔴 O CANAL QUE FURA O REFLEXO (decisão 025). Entra no `twist_mux`
         # DEPOIS do `collision_monitor`, com prioridade 30 — acima da
@@ -336,6 +371,28 @@ class PathFollower(Node):
         m.twist.linear.x = float(v)
         m.twist.angular.z = 0.0
         self.pub_desencalhe.publish(m)
+
+    # Os três status ATIVOS do `action_msgs/GoalStatus`: 1 ACCEPTED,
+    # 2 EXECUTING, 3 CANCELING. Mesma tripla que o `unstuck_supervisor` e o
+    # `freeze_capture` já usam — se um dia mudar, muda nos três.
+    ATIVOS = {1, 2, 3}
+
+    def cb_status(self, msg, topico):
+        self._objetivo[topico] = any(s.status in self.ATIVOS
+                                     for s in msg.status_list)
+
+    def tem_objetivo(self):
+        """Existe objetivo de navegação vivo AGORA?
+
+        Sem timeout de propósito: o `GoalStatusArray` é publicado a cada
+        transição e o último estado vale até a próxima. Terminado o objetivo
+        ele vira 4/5/6 (SUCCEEDED/CANCELED/ABORTED) e esta função passa a
+        responder False sozinha — não há estado velho para expirar.
+
+        Ninguém publicou nada ainda = **não há objetivo**. É o caso do
+        seguidor dirigido por `/plan` cru, e é onde a ré tinha de ficar quieta.
+        """
+        return any(self._objetivo.values())
 
     def cb_plano(self, msg):
         novo = [(q.pose.position.x, q.pose.position.y) for q in msg.poses]
@@ -497,6 +554,24 @@ class PathFollower(Node):
         return True
 
     def entra_na_re(self, t, x, y, dist):
+        # 🔴 PRIMEIRA GUARDA: SEM OBJETIVO VIVO NÃO SE RECUA (decisão 031).
+        #
+        # Vem antes de tudo porque é a pergunta mais fundamental: as outras
+        # guardas decidem SE ESTA ré cabe; esta decide se recuar faz sentido
+        # ALGUM. O `/plan` fica retido depois que o objetivo morre, então sem
+        # este cheque o robô parado recua sozinho 4 s depois de qualquer
+        # objetivo terminar — o defeito de 13-08 no robô, repetido no Gazebo.
+        #
+        # `progresso.reinicia()` junto: sem ele o gatilho fica verdadeiro em
+        # todo ciclo e o log vira enxurrada de 20 Hz.
+        if self.par['re_exige_objetivo'] and not self.tem_objetivo():
+            self.get_logger().warn(
+                f'sem progresso a {dist:.2f} m do fim do plano, mas NÃO HÁ '
+                'objetivo de navegação vivo — não recuo. Recuar sem objetivo '
+                'não é desencalhe: não há para onde voltar depois. Mande o '
+                'ponto de novo.', throttle_duration_sec=5.0)
+            self.progresso.reinicia()
+            return
         # ⚠️ `re_max_seguidas <= 0` entra AQUI, junto com o desligamento
         # explícito, e isso é conserto de 13-08: teto zero caía na guarda lá
         # embaixo, que formata `dist_antes_da_re` — e esse valor só existe

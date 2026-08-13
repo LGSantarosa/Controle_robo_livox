@@ -191,6 +191,8 @@ def generate_launch_description():
             LaunchConfiguration('re_habilitada'), value_type=bool)},
         {'re_max_seguidas': ParameterValue(
             LaunchConfiguration('re_max_seguidas'), value_type=int)},
+        {'re_exige_objetivo': ParameterValue(
+            LaunchConfiguration('re_exige_objetivo'), value_type=bool)},
     ]
     mapa = LaunchConfiguration('mapa')
     rviz = LaunchConfiguration('rviz')
@@ -386,6 +388,14 @@ def generate_launch_description():
                         'dar. 0 DESLIGA a ré — o único caminho deste robô que '
                         'dirige por fora do reflexo (025). Pedido do dono em '
                         '13-08, com ele dentro da sala'),
+        DeclareLaunchArgument(
+            're_exige_objetivo', default_value='true',
+            description='true = a ré só acontece com objetivo de navegação '
+                        'VIVO (decisão 031). Com o plano retido e o objetivo '
+                        'morto, o robô parado recuava sozinho — visto no robô '
+                        'em 13-08 e reproduzido no Gazebo em 14-08. Passe '
+                        'false só na bancada, onde o seguidor é dirigido por '
+                        '/plan cru e não existe ação do Nav2'),
         DeclareLaunchArgument(
             'curv_frente', default_value='-0.817',
             description='curvatura crua indo para a FRENTE [1/m], medida hoje '
