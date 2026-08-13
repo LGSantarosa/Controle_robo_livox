@@ -54,9 +54,16 @@ def texto(caminho, chave):
 # travar DENTRO da porta de 0,90 m — o replanejamento falha com "Start occupied"
 # quando o vão inteiro está inflado. Divergir aqui é a decisão; divergir nos de
 # baixo é o defeito da bitola.
+# ⚠️ `robot_radius` SAIU desta lista em 14-08 (decisão 032), e a saída é a
+# própria descoberta: na produção ele DEIXOU de ser "geometria da máquina" e
+# virou modelagem. O Theta* não conhece contorno — bloqueia célula com custo
+# > 252 — então o raio do robô entra no plano só via
+# `min(inflation_radius, raio inscrito)`, e o valor tem de servir a três donos
+# ao mesmo tempo: o corpo, o reflexo e a porta. A bancada continua com o
+# circunscrito medido, que é o que ela quer comparar.
+# O que substitui a igualdade é `test_o_raio_do_planejador_fica_na_faixa_util`.
 @pytest.mark.parametrize('chave', [
     'minimum_turning_radius',   # o argumento da decisão 008; refém da zona morta
-    'robot_radius',             # footprint: geometria da máquina, não política
 ])
 def test_geometria_igual_na_bancada_e_na_producao(chave):
     p, b = valor(PRODUCAO, chave), valor(BANCADA, chave)
@@ -168,57 +175,81 @@ def test_o_reflexo_filtra_a_autonomia_e_nao_o_humano():
     assert 'auto_vel_raw' not in mux_topicos, 'o mux não pode pegar o cru'
 
 
-def test_so_existe_acao_de_PARAR():
-    """Desacelerar não é ação que este atuador saiba executar: a compensação
-    entrega um patamar de ~0,30 m/s e não há velocidade entre 0 e isso. O robô
-    1 tem um polígono de `limit`; copiar aquilo aqui seria configurar uma ação
-    que a máquina não tem."""
-    cm = _cm()
-    for nome in cm['polygons']:
-        assert cm[nome]['action_type'] == 'stop', f'{nome} não é stop'
+def test_o_reflexo_tem_as_DUAS_camadas(): 
+    """Uma trava de contato e uma projeção que acompanha o arco (decisão 033).
 
-
-def test_o_poligono_cobre_a_distancia_de_parada_MEDIDA():
-    """A frente do polígono não é gosto: é meia caixa + o quanto o robô anda
-    depois do corte, com os números de 31-07/01-08/04-08.
-
-        0,298 × 0,5 (a placa empurra)  +  0,298²/(2·0,373)  +  0,433/2
+    Com um polígono estático só, o reflexo é cego para direção — e como a 023
+    tirou o pivô, toda curva deste robô é arco. Medido no Gazebo em 14-08: das
+    amostras vetadas, |wz| mediano 0,51 rad/s contra 0,25 das que passaram, com
+    folga parecida. Ele era vetado JUSTAMENTE quando girava.
     """
-    frente_min = 0.298 * 0.5 + 0.298 ** 2 / (2 * 0.373) + 0.433 / 2
-    pontos = eval(_cm()['PolygonStop']['points'])  # noqa: S307 (lista literal)
-    assert max(x for x, _ in pontos) >= frente_min - 0.01, \
-        f'o polígono tem de chegar a {frente_min:.3f} m à frente'
+    cm = _cm()
+    assert set(cm['polygons']) == {'PolygonStop', 'PolygonApproach'}
+    assert cm['PolygonStop']['action_type'] == 'stop'
+    assert cm['PolygonApproach']['action_type'] == 'approach', (
+        'sem `approach` o reflexo volta a ser cego para direção e veta a '
+        'própria manobra de contorno')
 
 
-def test_o_poligono_tem_MARGEM_de_frenagem_e_nao_so_a_conta():
-    """Cobrir a distância de parada EXATAMENTE é fator de segurança 1,02: em
-    13-08 a frente valia 0,49 e sobravam 5,5 mm, o robô parava colado na parede
-    e o critério do dono é que ele não pode bater. Exige 5 cm de folga sobre a
-    conta medida (decisão 030)."""
+def test_a_projecao_cobre_a_parada_NO_COMANDO_TIPICO():
+    """`approach` projeta pela velocidade COMANDADA, e neste robô o comando não
+    diz a velocidade (pede 0,50, anda 0,298 — decisão 020: o comando escolhe o
+    RAIO, a placa escolhe o módulo). Então o tempo é uma CALIBRAÇÃO, e ela é
+    feita no comando típico de cruzeiro.
+
+        parada medida + margem   0,268 + 0,085 = 0,353 m
+        comando típico medido    0,47 m/s
+        tempo                    0,353 / 0,47 = 0,75 s
+
+    ⚠️ Pelo pior caso daria 1,74 s, e foi tentado: em 14-08 a projeção de 1,8 s
+    valia 0,85 m no comando típico e VETOU uma curva que o robô fazia — 30 s
+    parado numa quina. Projeção longa demais tem o mesmo defeito da caixa
+    estática de 0,57: proíbe a manobra de contorno de um robô que só faz arco.
+    """
     parada = 0.298 * 0.5 + 0.298 ** 2 / (2 * 0.373)
-    pontos = eval(_cm()['PolygonStop']['points'])  # noqa: S307 (lista literal)
-    gatilho = max(x for x, _ in pontos) - 0.433 / 2
-    assert gatilho - parada >= 0.05, \
-        f'só {gatilho - parada:.3f} m de margem sobre a parada de {parada:.3f} m'
+    V_TIPICO = 0.47
+    t = _cm()['PolygonApproach']['time_before_collision']
+    projecao = t * V_TIPICO
+    assert projecao >= parada, (
+        f'projeção de {projecao:.3f} m no comando típico não cobre a parada de '
+        f'{parada:.3f} m')
+    assert projecao <= parada + 0.15, (
+        f'projeção de {projecao:.3f} m é longa demais: ela passa a vetar a '
+        'curva do próprio robô (medido em 14-08 com 1,8 s)')
 
 
-def test_o_bico_nao_pode_estreitar_a_porta():
-    """O bico existe para frear contra parede DE FRENTE. Quem raspa no batente
-    é a quina, e se o bico passar a ser o ponto mais largo o reflexo começa a
-    disparar dentro do vão de 0,90 m — que é o modo de travar descrito na 030.
-    Entrando torto de θ, a largura varrida é `x·senθ + y·cosθ`."""
-    import math
-    pontos = eval(_cm()['PolygonStop']['points'])  # noqa: S307 (lista literal)
+def test_a_projecao_usa_o_CORPO_e_nao_uma_caixa_de_frenagem():
+    """No `approach` quem cria distância é o TEMPO. Se o polígono já for uma
+    caixa de frenagem, a conta é feita duas vezes e ninguém consegue
+    interpretar o número depois."""
+    pontos = eval(_cm()['PolygonApproach']['points'])  # noqa: S307
     frente = max(x for x, _ in pontos)
-    quina = max((x, y) for x, y in pontos if x < frente and y > 0)
-    bico = max((x, y) for x, y in pontos if x == frente and y > 0)
-    for graus in range(0, 38, 2):
-        t = math.radians(graus)
-        largo_bico = bico[0] * math.sin(t) + bico[1] * math.cos(t)
-        largo_quina = quina[0] * math.sin(t) + quina[1] * math.cos(t)
-        assert largo_bico <= largo_quina, (
-            f'a {graus}° o bico ({largo_bico:.3f}) passa a quina '
-            f'({largo_quina:.3f}) e estreita a porta')
+    assert abs(frente - 0.2165) < 0.03, (
+        f'frente {frente} não é o corpo (0,2165 = meia caixa medida em 29-07)')
+
+
+def test_a_caixa_estatica_cobre_ao_menos_o_CORPO():
+    """Ela encolheu de 0,57 para 0,30 quando a frenagem passou para a projeção,
+    mas não pode encolher para dentro do robô: aí o reflexo não veria nem o que
+    já está encostando no para-choque."""
+    pontos = eval(_cm()['PolygonStop']['points'])  # noqa: S307
+    frente = max(x for x, _ in pontos)
+    assert frente >= 0.433 / 2, f'frente {frente} está DENTRO do corpo'
+    assert frente <= 0.40, (
+        f'frente {frente} grande demais: caixa reta larga com robô que só faz '
+        'arco veta a própria curva (o impasse de 14-08)')
+
+
+def test_a_lateral_do_reflexo_cabe_no_que_o_PLANEJADOR_permite():
+    """Se o reflexo exigir mais folga lateral que o planejador, o Nav2 traça
+    por um vão que o reflexo veta e o robô fica parado entre os dois — foi o
+    que o dono previu e o que aconteceu em 14-08."""
+    import yaml
+    lateral = max(abs(y) for _, y in eval(_cm()['PolygonStop']['points']))  # noqa: S307
+    raio = yaml.safe_load(open(PRODUCAO))['global_costmap']['global_costmap'][
+        'ros__parameters']['robot_radius']
+    assert lateral <= raio, (
+        f'reflexo pede {lateral} de lado e o planejador só garante {raio}')
 
 
 # 🔴 O TÓPICO QUE A PERCEPÇÃO CONSOME, e ele NÃO é o do driver (decisão 017).
@@ -1334,3 +1365,44 @@ def test_a_launch_usa_a_arvore_PROPRIA_e_nao_a_de_fabrica():
         launch = f.read()
     assert 'replanejamento_com_suavizacao.xml' in launch
     assert 'navigate_w_replanning_time.xml' not in launch.split('bt_xml =')[1][:400]
+
+
+@pytest.mark.parametrize('qual', ['local_costmap', 'global_costmap'])
+def test_o_raio_do_planejador_fica_na_faixa_util(qual):
+    """O raio que o Theta* obedece tem de caber entre o reflexo e o corpo.
+
+    Os dois lados foram medidos com o robô travado, em 14-08:
+
+        < 0,26   o planejador manda por onde o polígono do reflexo VETA, e o
+                 robô fica entre os dois — foi o impasse que o dono previu:
+                 *"um fala que passa e o outro não deixa"*;
+        > 0,314  (o circunscrito da caixa) o Theta* proíbe 15,1% das células
+                 livres da sala, inclusive aquela onde o robô está, e devolve
+                 `Could not generate path`.
+    """
+    import yaml
+    d = yaml.safe_load(open(PRODUCAO))[qual][qual]['ros__parameters']
+    raio = d['robot_radius']
+    assert 0.26 <= raio <= 0.314, (
+        f'{qual}: raio {raio} fora da faixa útil [0,26 ; 0,314]')
+
+
+@pytest.mark.parametrize('qual', ['local_costmap', 'global_costmap'])
+def test_a_inflacao_TEM_de_passar_do_raio_senao_nao_HA_gradiente(qual):
+    """Inflação <= raio deixa a paisagem de custo BINÁRIA, e é isso que faz o
+    robô colar na parede.
+
+    A `inflation_layer` marca 253 (proibido) tudo dentro do inscrito e gradua
+    só o que está entre o inscrito e `inflation_radius`. Se a inflação não
+    passar do raio, essa faixa é VAZIA: célula perto é proibida, célula longe é
+    de graça, e nada no meio. O Theta*, que minimiza distância, raspa a borda
+    do proibido — o dono viu na tela: *"tá querendo colar nos obstáculos e
+    paredes ao invés de ir pelo meio"*.
+    """
+    import yaml
+    d = yaml.safe_load(open(PRODUCAO))[qual][qual]['ros__parameters']
+    raio = d['robot_radius']
+    inflacao = d['inflation_layer']['inflation_radius']
+    assert inflacao > raio + 0.05, (
+        f'{qual}: inflação {inflacao} não abre faixa graduada sobre o raio '
+        f'{raio} — sem gradiente o caminho cola na parede')

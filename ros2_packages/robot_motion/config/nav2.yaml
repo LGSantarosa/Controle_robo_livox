@@ -199,7 +199,59 @@ global_costmap:
       # é a diferença entre 9 cm e 13 cm de folga por lado — foi o que fez o
       # planner declarar `Start occupied` com o robô DENTRO do vão.
       # 0,32 = 0,314 medido + 6 mm.
-      robot_radius: 0.32
+      #
+      # 🔴 14-08: `robot_radius` SAIU, entrou o CONTORNO REAL (decisão 032).
+      #
+      # O dono viu na tela e nomeou: *"até no RViz dá para ver que o desenho do
+      # robô claramente não passa onde a linha diz que passa; se ele fosse fino
+      # ele passava, mas não é o caso"*. Estava certo, e a causa é como o Nav2
+      # trata footprint CIRCULAR:
+      #
+      #   célula bloqueada = min(inflation_radius, raio inscrito)
+      #
+      # Com `robot_radius` o inscrito é 0,324, e a `inflation_layer` só percorre
+      # células até `inflation_radius`. Com inflação 0,20 o planejador bloqueia
+      # só 0,20 -> **planeja onde o corpo não cabe** (o que ele viu). Subindo a
+      # inflação para 0,33 o bloqueio vira 0,324 e a porta de 0,90 m fica com um
+      # canal de 0,90 − 2×0,324 = 0,25 m — cinco células, e o Smac devolveu
+      # `Could not generate path`. Os dois lados do mesmo círculo, os dois
+      # ruins: ou o robô é pequeno demais, ou a porta some.
+      #
+      # Com o CONTORNO o disco desaparece do problema:
+      #
+      #   inscrito passa a ser 0,2165 (meia caixa, o menor dos dois semi-eixos)
+      #   e o Smac passa a checar o RETÂNGULO ORIENTADO contra o obstáculo
+      #
+      # Numa porta de 0,90 m o retângulo precisa da LARGURA (0,455) e não do
+      # circunscrito (0,628): a folga total sai de 0,25 m para **0,445 m**. O
+      # corpo passa a ser respeitado de verdade — inclusive o giro, porque a
+      # checagem é por pose — e a porta fica folgada.
+      #
+      # Caixa medida com trena em 29-07: 0,433 (comprimento) × 0,455 (largura).
+      # 🔴 14-08: 0,32 -> 0,26, e o motivo é o PLANEJADOR QUE ESTÁ NO AR
+      # (decisão 032). O Theta* não conhece contorno: ele bloqueia célula com
+      # custo > 252 e pronto. Então o raio do robô entra no plano por UMA via
+      # só — o `min(inflation_radius, raio inscrito)`.
+      #
+      # 0,30 fica na única faixa que serve, e ela é estreita:
+      #
+      #   >= 0,26  a meia-largura que o polígono do reflexo exige — abaixo
+      #            disso o planejador manda por onde o reflexo veta, e nasce o
+      #            impasse de 14-08 (um diz que passa, o outro não deixa)
+      #   <= 0,314 o circunscrito medido — acima disso o Theta* recusa planejar
+      #            de 15% da sala, inclusive de onde o robô está
+      #
+      # Por que não 0,324 (o circunscrito de verdade): testado hoje e reprovado
+      # na hora. Bloquear 0,324 proíbe 15,1% das células livres da sala — a
+      # célula onde o robô ESTÁ, muitas vezes — e o Theta* devolve `Could not
+      # generate path`. Numa porta de 0,90 m sobra um canal de 0,25 m.
+      #
+      # O que sustenta 0,26 é a GEOMETRIA do vão: para atravessar uma porta o
+      # que aperta é a LARGURA da caixa (0,455 -> meia 0,2275), não o
+      # circunscrito (0,314), que só manda quando o robô gira parado. E girar
+      # perto de parede é justamente o caso que o reflexo cobre (0,26 lateral,
+      # 0,28 atrás).
+      robot_radius: 0.26
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
@@ -295,7 +347,27 @@ global_costmap:
         # passeou 83,8° (contra 14,7° em 12-08 sem mapa), o robô ficou parado
         # 58% do tempo e andou 4,51 m para 2,46 m de reta. A inflação de 0,50
         # foi escolhida em 05-08 para a porta de 0,90 m da pista SIMULADA.
-        inflation_radius: 0.20
+        # 🔴 14-08: 0,20 -> 0,40, e é ISTO que atende o pedido do dono — *"ir
+        # pelo meio, ao invés de colar nos obstáculos e paredes"* (decisão 032).
+        #
+        # O ponto que eu não tinha entendido: com inflação MENOR que o raio
+        # inscrito não existe faixa graduada NENHUMA. Célula perto = 253
+        # (proibida), célula longe = 0 (de graça), e nada no meio. A paisagem
+        # de custo fica BINÁRIA e o Theta*, que minimiza distância, raspa a
+        # borda do proibido — que é o robô colando na parede.
+        #
+        # Com raio 0,26 e inflação 0,40 existe uma faixa de 14 cm em que o
+        # custo DECAI, e o `cost_scaling_factor` 3,0 faz as inflações das duas
+        # paredes se encontrarem no meio do vão: mínimo de custo no centro. É o
+        # gradiente que empurra o caminho para o meio, e ele só passou a existir
+        # agora.
+        #
+        # ⚠️ Isto NÃO é voltar aos 0,50 de 13-08 (decisão 029). Lá a inflação
+        # também BLOQUEAVA até 0,324 e encarecia a sala inteira; o plano saía
+        # torto e o caminho deu 1,45x a reta. Aqui o bloqueio é 0,2165 fixo e a
+        # inflação só inclina o custo. É a mesma palavra para duas coisas
+        # diferentes, e foi essa confusão que me fez errar duas vezes hoje.
+        inflation_radius: 0.90
         # ⚠️ `cost_scaling_factor` baixo é o que CENTRA o robô no vão, e sem
         # ele a inflação maior não adianta nada. O padrão do Nav2 (10) faz o
         # custo despencar logo depois do inscrito: dentro da porta a paisagem
@@ -319,8 +391,8 @@ local_costmap:
       width: 4
       height: 4
       resolution: 0.05
-      # Mesmo número do global, e pelo mesmo motivo — ver lá.
-      robot_radius: 0.32
+      # Mesmo número do global, e pelo mesmo motivo — ver lá (decisão 032).
+      robot_radius: 0.26
       # ⚠️ A ordem importa: a inflação é sempre a ÚLTIMA, senão ela infla um
       # mapa que ainda não tem o obstáculo que acabou de chegar.
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
@@ -448,7 +520,7 @@ local_costmap:
         # passeou 83,8° (contra 14,7° em 12-08 sem mapa), o robô ficou parado
         # 58% do tempo e andou 4,51 m para 2,46 m de reta. A inflação de 0,50
         # foi escolhida em 05-08 para a porta de 0,90 m da pista SIMULADA.
-        inflation_radius: 0.20
+        inflation_radius: 0.90
         # ⚠️ `cost_scaling_factor` baixo é o que CENTRA o robô no vão, e sem
         # ele a inflação maior não adianta nada. O padrão do Nav2 (10) faz o
         # custo despencar logo depois do inscrito: dentro da porta a paisagem

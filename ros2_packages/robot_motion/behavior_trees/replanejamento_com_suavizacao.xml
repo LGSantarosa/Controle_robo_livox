@@ -50,7 +50,35 @@
       <PlannerSelector selected_planner="{selected_planner}" default_planner="GridBased" topic_name="planner_selector"/>
       <RateController hz="1.0">
         <Sequence name="PlanejaESuaviza">
-          <ComputePathToPose goal="{goal}" path="{path}" planner_id="{selected_planner}" error_code_id="{compute_path_error_code}"/>
+          <!-- 🔴 FALHA DE UM REPLANEJAMENTO NÃO PODE MATAR A MISSÃO (14-08,
+               decisão 034). Medido no Gazebo, três corridas seguidas com o
+               objetivo do dono: o robô andava limpo por 18 s e morria sempre no
+               mesmo ponto, com
+
+                 GridBased failed to plan from (4.39, 1.63):
+                 "Either of the start or goal pose are occupied"
+
+               Ele entra numa quina com 0,30 m de folga, as marcas AO VIVO do
+               Livox fecham a célula em que ele está, o planejamento falha por
+               um ciclo — e a árvore inteira abortava. `Goal failed`, seguidor
+               parado para sempre a 2,4 m do alvo.
+
+               Com `AlwaysSuccess` de reserva o ciclo sobrevive: `{path}` fica
+               com o último plano válido e o próximo tique (1 Hz) tenta de novo.
+
+               ⚠️ E ISTO É O QUE TORNA A RÉ ALCANÇÁVEL. A ré do seguidor exige
+               objetivo VIVO desde a decisão 031 — se a árvore aborta no mesmo
+               instante em que o robô encalha, a recuperação nunca chega a
+               existir. Objetivo vivo + emperramento é justamente a condição
+               que ela espera.
+
+               Não vira loop infinito: o seguidor para sozinho com plano velho
+               de 2 s, e o `progress_checker` do `FollowPath` derruba o
+               objetivo depois de 30 s sem avanço. -->
+          <RecoveryNode number_of_retries="1" name="PlanejaSePuder">
+            <ComputePathToPose goal="{goal}" path="{path}" planner_id="{selected_planner}" error_code_id="{compute_path_error_code}"/>
+            <AlwaysSuccess/>
+          </RecoveryNode>
           <!-- Falha do suavizador NÃO derruba o ciclo: o RecoveryNode devolve
                sucesso deixando `{path}` como o planner o entregou. -->
           <RecoveryNode number_of_retries="1" name="SuavizaSePuder">

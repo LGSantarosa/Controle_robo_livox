@@ -56,66 +56,111 @@ collision_monitor:
     # (medido 31-07, confirmado 04-08). Pedir 0,10 vira "anda a 0,30" ou "não
     # anda". Desacelerar não é uma ação que este atuador saiba executar — a
     # única que ele sabe é PARAR.
-    polygons: ["PolygonStop"]
+    # 🔴 DOIS POLÍGONOS DESDE 14-08 (decisão 033), e a razão é MEDIDA.
+    #
+    # Com um polígono estático só, o reflexo é CEGO PARA DIREÇÃO: ele pergunta
+    # "tem coisa na caixa à minha frente?" sem olhar para onde o robô vai. E
+    # como a decisão 023 tirou o pivô, **toda curva deste robô é arco** — o
+    # nariz varre para o lado enquanto o corpo contorna. Resultado, medido no
+    # Gazebo com o objetivo do dono (6,24 · 3,51):
+    #
+    #     amostras CORTADAS      n=549   |wz| mediano 0,51 rad/s   folga 0,45 m
+    #     amostras que passaram  n=853   |wz| mediano 0,25 rad/s   folga 0,55 m
+    #
+    # Ele é vetado JUSTAMENTE quando gira — o dobro de `wz` das que passam, com
+    # folga parecida. O seguidor não tem culpa: o erro de trajeto dele nessa
+    # mesma corrida foi p50 de 8 mm e p90 de 6 cm, ou seja, ele estava em cima
+    # do plano. Quem proíbe a manobra de contorno é o reflexo.
+    #
+    # O conserto é dar DIREÇÃO ao reflexo, mantendo uma trava dura de contato:
+    #
+    #   PolygonApproach  projeta o CORPO pela velocidade comandada (v, wz), e
+    #                    portanto ACOMPANHA O ARCO — parede da qual o robô está
+    #                    virando para longe deixa de ser motivo de parada
+    #   PolygonStop      caixa estática pequena, a trava de "vou encostar
+    #                    agora", que vale mesmo com comando estranho ou nulo
+    polygons: ["PolygonApproach", "PolygonStop"]
+
+    PolygonApproach:
+      type: "polygon"
+      # O CORPO medido com trena em 29-07 (0,433 × 0,455), e não uma caixa de
+      # frenagem: quem cria a distância de frenagem aqui é o TEMPO, não o
+      # tamanho. Projetar o corpo é o que torna a conta interpretável.
+      points: "[[0.2165, 0.2275], [0.2165, -0.2275], [-0.2165, -0.2275], [-0.2165, 0.2275]]"
+      action_type: "approach"
+      # ⚠️ AQUI MORA A OBJEÇÃO ANTIGA A ESTE MODO, e ela continua verdadeira: o
+      # `approach` projeta pela velocidade COMANDADA, e neste robô o comando não
+      # diz a velocidade (pede 0,50, anda 0,298 — a placa escolhe o módulo).
+      #
+      # O que mudou é que agora dá para escolher o tempo pelo PIOR CASO em vez
+      # de fingir que o comando é a verdade. O menor comando que a cadeia
+      # entrega é o piso da movimentação, `v_piso = 0,203 m/s`. Para a projeção
+      # cobrir a distância de parada real mesmo nesse pior caso:
+      #
+      #   distância de parada + margem   0,268 + 0,085 = 0,353 m
+      #   tempo necessário no pior caso  0,353 / 0,203 = 1,74 s
+      #
+      # ⚠️ 1,8 s foi tentado primeiro (14-08) e REPROVOU na medida, por excesso:
+      # no comando típico (0,47 m/s) a projeção vale 0,85 m, 2,4x a distância de
+      # parada real, e o robô ficou 30 s parado numa quina que ele atravessaria
+      # — vetado por uma colisão prevista a quase um metro. Errar para mais não
+      # é grátis: com um robô que só faz arco, projeção longa demais veta a
+      # própria curva, que é a lição da caixa estática de 0,57.
+      #
+      # 0,75 s calibra a projeção pela distância de parada no comando TÍPICO:
+      #
+      #   0,47 m/s x 0,75 s = 0,35 m ~= parada medida + margem (0,353 m)
+      #
+      # ⚠️ E abaixo de ~0,47 de comando a projeção fica curta, porque a placa
+      # entrega 0,298 m/s independentemente do que se pede (decisão 020: o
+      # comando escolhe o RAIO, a placa escolhe o módulo). Quem cobre esse
+      # buraco hoje é o `PolygonStop` estático, e ele cobre pouco — 8,3 cm.
+      # É dívida ABERTA e está registrada na decisão 033: o conserto certo é
+      # normalizar o comando para o patamar real antes do reflexo (preservando
+      # a razão v/wz, que é o que a placa obedece), e aí a projeção passa a ser
+      # constante em metros. Não foi feito hoje por ser nó novo na cadeia que
+      # dirige.
+      time_before_collision: 0.75
+      simulation_time_step: 0.05
+      min_points: 2
+      visualize: True
+      polygon_pub_topic: "polygon_approach"
+      enabled: True
 
     PolygonStop:
       type: "polygon"
-      # ⚠️ `stop` estático, e NÃO o `approach` do robô 1. O `approach` projeta
-      # o footprint pela velocidade COMANDADA, e neste robô o comando não diz
-      # a velocidade: o seguidor pede 0,50 e o robô anda 0,30 (medido em
-      # 05-08, dentro da pilha). O `approach` projetaria 1,7x longe demais e
-      # pararia cedo — erra para o lado seguro, mas erra, e com um número que
-      # ninguém consegue interpretar depois.
+      # ⚠️ A caixa estática CONTINUA existindo, mas mudou de papel: ela deixou
+      # de ser a frenagem (isso é do `PolygonApproach` agora) e virou a trava de
+      # CONTATO IMINENTE — a que vale quando o comando é zero, quando a
+      # projeção não se aplica, ou quando alguma coisa apareceu colada.
       #
-      # Como a velocidade é sempre a mesma, a caixa estática é HONESTA e o
-      # tamanho dela é uma conta fechada:
+      # 🔴 O BICO DE 0,57 SAIU (era o de 13 h atrás, decisão 030) e a frente
+      # voltou para 0,30. Isto NÃO é afrouxar: a frenagem mudou de dono.
       #
-      #   coasting (a placa empurra 0,5 s após o corte)  0,298 × 0,5 = 0,149 m
-      #   frenagem (a_lin medido 0,373 m/s²)          0,298²/(2·0,373) = 0,119 m
-      #   distância de parada                                          0,268 m
-      #   + meia caixa (0,433/2)                                       0,216 m
-      #                                                        frente  0,485 m
+      #   antes   uma caixa só, 0,57 à frente, cobrindo coast + freio + corpo
+      #   agora   o `PolygonApproach` cobre coast + freio (e acompanha o arco);
+      #           esta caixa cobre só o CONTATO IMINENTE
       #
-      # 🔴 E ERA ESSA A CONTA QUE FAZIA ELE PARAR COLADO (13-08, decisão 030).
-      # A conta acima dimensiona para parar ENCOSTANDO: com a frente em 0,49 o
-      # gatilho fica a 0,49 − 0,2165 = 0,2735 m do para-choque, contra 0,2680 m
-      # de parada. Fator de segurança **1,02 — cinco milímetros e meio**. Foi o
-      # que o dono viu no chão ("ele para muito próximo das paredes"), e
-      # qualquer coisa que alongue o coast (bateria fraca mudando o patamar,
-      # piso, carga) transforma isso em contato. Critério de 13-08: ele NÃO
-      # pode bater.
+      # Por que a frente estática tinha de encolher: 0,57 m de caixa reta com
+      # um robô que só faz curva por arco veta a própria manobra de contorno —
+      # 549 amostras cortadas no Gazebo, todas com o robô girando. Manter os
+      # 0,57 seria manter o robô preso para sempre entre "o plano manda" e "o
+      # reflexo não deixa", que é o impasse que o dono descreveu na tela.
       #
-      # A correção é um BICO, e não uma caixa maior, porque os dois casos usam
-      # partes diferentes do polígono:
+      #   frente 0,30  ->  gatilho a 0,30 − 0,2165 = 0,0835 m do para-choque
       #
-      #   parede de frente  ->  quem chega primeiro é o NARIZ (centro da frente)
-      #   batente da porta  ->  quem raspa é a QUINA (a lateral do polígono)
-      #
-      # Esticar só o nariz compra frenagem contra a parede e não custa NADA na
-      # porta. Largura varrida no vão de 0,90 m entrando torto de um ângulo θ
-      # (meia-porta = 0,450), que é o que decide se o reflexo dispara no vão:
-      #
-      #       θ     quina (0,49 · senθ + 0,26 · cosθ)     bico  veredito
-      #      0°               0,260                      0,200  quina manda
-      #     10°               0,341                      0,296  quina manda
-      #     15°               0,378                      0,341  quina manda
-      #     20°               0,412                      0,383  quina manda
-      #
-      # O bico só passa a ser o ponto mais largo quando `y_bico > 0,26 −
-      # 0,08·tanθ`, ou seja **acima de 37° de erro de rumo** — ângulo em que a
-      # passagem já falhou por outro motivo. Por isso `y_bico = 0,20`.
-      #
-      #   frente do bico  0,57  ->  gatilho 0,3535 m do para-choque
-      #   margem de frenagem     0,3535 − 0,2680 = 0,0855 m   (era 0,0055)
+      # 8,3 cm é pouco para FREAR — e é para ser: quem freia é a projeção. Esta
+      # é a última linha, a que responde por "apareceu coisa colada e o comando
+      # não previa".
       #
       # Lateral: meia largura da caixa (0,2275) + 3 cm. NÃO mais que isso — no
       # robô 1 o lateral a ±0,45 prendia o robô a 30% da velocidade em todo
       # corredor (29 desacelerações num log de campo) e tiveram de encolher.
       # ⚠️ E aqui a lateral tem um segundo dono: ela TEM de caber dentro do que
-      # o planejador considera passável, senão o Nav2 planeja um vão que o
-      # reflexo veta e o robô trava parado. Ver o BO da inflação na decisão 030.
+      # o planejador considera passável (`robot_radius` 0,30 desde a 032),
+      # senão o Nav2 planeja um vão que o reflexo veta e o robô trava parado.
       # Traseira: meia caixa + folga, porque a ré existe.
-      points: "[[0.57, 0.20], [0.57, -0.20], [0.49, -0.26], [-0.28, -0.26], [-0.28, 0.26], [0.49, 0.26]]"
+      points: "[[0.30, 0.26], [0.30, -0.26], [-0.28, -0.26], [-0.28, 0.26]]"
       action_type: "stop"
       # 2 pontos, não 1: ponto solto é ruído. O Mid-360 entrega 20 000 pontos
       # por quadro, então exigir 2 não atrasa nada real.
