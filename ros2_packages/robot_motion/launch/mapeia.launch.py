@@ -117,12 +117,22 @@ def generate_launch_description():
                 'minimum_travel_distance': 0.15,
                 'minimum_travel_heading': 0.10,
                 'scan_buffer_size': 20,
-                # 🔴 False de propósito: com True o nó nasce `unconfigured` e
-                # fica esperando um lifecycle_manager que esta launch não sobe
-                # — sintoma é `/map` que nunca aparece, sem erro nenhum.
-                'use_lifecycle_manager': False,
+                # 🔴 O `slam_toolbox` do Jazzy é lifecycle node SEMPRE, e
+                # `use_lifecycle_manager: False` NÃO o faz se auto-ativar:
+                # medido hoje, ele nasce `unconfigured` e fica lá, calado —
+                # sem erro, sem aviso, e o sintoma é `/map` que nunca aparece.
+                # Quem transiciona é o manager abaixo.
+                'use_lifecycle_manager': True,
             }],
         ),
+
+        # ⚠️ Lista de UM nó de propósito. Servidor da lista que não responde
+        # derruba o bringup inteiro (foi assim que o `collision_monitor` levou
+        # a pilha junto em 06-08) — aqui só o SLAM está exposto a isso.
+        Node(package='nav2_lifecycle_manager', executable='lifecycle_manager',
+             name='lifecycle_manager_mapeia', output='both',
+             parameters=[{'autostart': True, 'use_sim_time': False,
+                          'node_names': ['slam_toolbox']}]),
 
         # ------------------------------------------- a cadeia do humano
         # Árbitro de comando. Aqui só o teclado (prioridade 90) e a web (50)
