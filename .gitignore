@@ -31,6 +31,12 @@ maps/*
 # está em `maps/andar3/README.md`.
 !maps/andar3/
 !maps/andar3/*
+# ...e menos o mapa que o PRÓPRIO ROBÔ desenhou da sala do andar 3 (13-08,
+# decisão 028). Este é o que a pilha carrega hoje: contra o mesmo scan ele dá
+# 99,7% dos feixes dentro de 0,15 m, contra 41,4% do mapa limpo do estágio —
+# porque a sala tem mobília e a "limpeza" daquele mapa foi apagá-la.
+!maps/sala_andar3/
+!maps/sala_andar3/*
 
 # Colcon workspace (build artifacts deste repo)
 build/
