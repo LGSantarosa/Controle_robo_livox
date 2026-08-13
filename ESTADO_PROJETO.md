@@ -20,6 +20,42 @@
 pela porta**, contra mapa próprio, localizado por AMCL, com o destino clicado
 numa página web. Palavras do dono: *"FOI LINDO ELE ATRAVESSOU A PORTA E TUDO"*.
 
+## 🗂️ A FILA DE DESEJOS DO DONO — nesta ordem, e a ordem é dele
+
+> Fixada em 14-08. Nada da fila entra antes de o item 1 estar fechado; os dois
+> seguintes são melhorias, não consertos, e o dono sabe disso.
+
+```
+1. NAVEGAÇÃO BOA        ele atravessa a porta sem bater, repetidamente
+                        <- é o único item que bloqueia os outros
+
+2. LOCALIZAÇÃO 3D       casar NUVEM 3D contra MAPA 3D (.pcd) em vez da fatia
+                        2D contra grade; a grade 2D FICA, porque o Nav2
+                        planeja em 2D e é ela que o dono clica
+
+3. MAPA 3D NA WEB       ver a nuvem 3D no navegador, como no RViz, com o robô
+                        se movendo dentro dela
+```
+
+**Por que 2 faz sentido** (concordado em 14-08, e o argumento bom não é "o
+sensor foi caro"): casamento 2D em corredor reto é **degenerado** — as paredes
+laterais fixam a posição transversal e o rumo, e não fixam nada ao longo do
+eixo; batente, quina e teto fixam. O próximo passo do roteiro é sair da sala.
+Some-se a isso que a fatia usa 0,15–1,00 m de um sensor que varre −7° a +52°, e
+que o AMCL casa com `max_beams: 60` de uma nuvem de 20 000 pontos por quadro.
+
+**O 3 é barato porque o mapa é estático**: nuvem sub-amostrada convertida uma
+vez (`.pcd` → binário compacto), servida como arquivo, desenhada com Three.js
+no navegador; ao vivo trafega só a **pose**, que a página já recebe hoje. Não
+precisa de rosbridge nem de streaming de nuvem. O cuidado é o tamanho: o
+FAST-LIO grava com `interval: -1` (todos os quadros num arquivo só), então o
+`.pcd` cru pode ter centenas de MB e **tem de ser sub-amostrado por voxel antes
+de chegar ao navegador**.
+
+⚠️ O `.pcd` para os itens 2 e 3 provavelmente **já existe no NUC**: o
+`mid360.yaml` do FAST-LIO está com `pcd_save_en: true`. Toda sessão que
+desligou limpo deixou um. Conferir junto com os logs de 13-08.
+
 ## 🔴 O CRITÉRIO DE ACEITAÇÃO ENDURECEU (13-08): ELE NÃO PODE BATER
 
 > *"o pior foi ele bater, ele não pode bater de jeito nenhum"* — o dono,
