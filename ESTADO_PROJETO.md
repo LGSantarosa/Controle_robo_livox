@@ -20,6 +20,66 @@
 pela porta**, contra mapa próprio, localizado por AMCL, com o destino clicado
 numa página web. Palavras do dono: *"FOI LINDO ELE ATRAVESSOU A PORTA E TUDO"*.
 
+## 🟢 14-08 (DEV + GAZEBO) — ELE ATRAVESSA, TRÊS VEZES, SEM ENCOSTAR EM NADA
+
+> Dia inteiro sem robô (carregando). Decisões **030 a 034**. Dados em
+> `docs/dados/2026-08-14-sim-porta/`. Entrada 14-08 do diário — leia, ela é
+> feita dos meus erros e eles têm valor de método.
+
+O objetivo que o dono mandou e que travava, **(6,24 · 3,51)**, agora fecha:
+
+```
+                            chegou   tempo    cam/reta   reflexo   folga min
+como estava de manhã          não      —        1,60x      18%       0,35 m
+corridas 1 · 2 · 3            SIM   40,4/40,0/39,7 s ~1,40x  12%     0,35 m
+regressão, alvo curto 13-08   SIM     7,0 s     1,00x       0%       0,70 m
+```
+
+**Folga mínima 0,35 m** contra 0,2275 de meia-largura do corpo: ele não encostou
+em nada nas três — é o critério de 13-08, e ele está cumprido no simulador.
+
+### As três decisões, e elas só funcionam JUNTAS
+
+| | o que era | o que é |
+|---|---|---|
+| **032** planejador | raio 0,32 · inflação 0,20 | raio **0,26** · inflação **0,90** |
+| **033** reflexo | uma caixa reta de 0,57 m | projeção que acompanha o arco + caixa pequena |
+| **034** árvore | falha do planner mata a missão | falha de um ciclo é tolerada |
+
+🔴 **O achado que explica o "colar na parede"**: o planejador é o **Theta\***
+(o Smac está aposentado desde 05-08) e ele **não tem footprint** — bloqueia
+célula com custo > 252. Com `inflation_radius <= raio inscrito` **não existe
+faixa graduada**: célula perto é 253, longe é 0, nada no meio. A paisagem de
+custo é binária e o caminho raspa a borda do proibido. "Ir pelo meio" nunca foi
+uma preferência que existisse.
+
+🔴 **O achado que explica o travar-e-dar-ré**: a caixa estática de 0,57 m é cega
+para direção, e como a 023 tirou o pivô **toda curva deste robô é arco**. Das
+amostras vetadas pelo reflexo, `|wz|` mediano **0,51 rad/s** contra 0,25 das que
+passaram, com folga parecida — ele proibia a própria manobra de contorno. O
+seguidor não tinha culpa: erro de trajeto p50 de **8 mm**.
+
+### ⚠️ O que continua ABERTO, em ordem de valor
+
+1. **Nada disso foi ao robô.** É tudo simulador. A porta real de 13-08 continua
+   sendo a pergunta, e ela começa por carregar as **duas** baterias e ler tensão;
+2. **o `unstuck_supervisor` não entrou** — o pedido do dono (girar para o lado
+   livre e devolver ao Nav2). Deixou de ser urgente porque o robô parou de
+   encalhar. O desenho está pronto: usar o quantum de ~95° do pivô como manobra
+   GROSSA de desencalhe, nunca como controle de rumo;
+3. **o pivô segue desligado** (023, `limiar_pivo` 3,20 rad): toda curva é arco,
+   e é por isso que o caminho dá 1,40× a reta no trecho do meio;
+4. **a projeção do reflexo fica curta abaixo de ~0,47 m/s de comando**, porque a
+   placa entrega 0,298 independentemente do pedido. Conserto certo: normalizar o
+   comando para o patamar real antes do reflexo, preservando `v/wz`. Dívida
+   escrita na 033.
+
+### 🔧 Ferramenta nova
+
+`tools/banco/corrida_com_plano.py` — grava a corrida COM o `/plan` e calcula
+erro de trajeto e folga por amostra. Foi ele que matou a hipótese errada (eu
+acusava o seguidor) e apontou o reflexo.
+
 ## 🗂️ A FILA DE DESEJOS DO DONO — nesta ordem, e a ordem é dele
 
 > Fixada em 14-08. Nada da fila entra antes de o item 1 estar fechado; os dois

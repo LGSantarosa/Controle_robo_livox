@@ -4,6 +4,127 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-08-14 — O DIA EM QUE EU ERREI TRÊS VEZES E O ROBÔ ATRAVESSOU (dev + Gazebo)
+
+> Sessão inteira sem robô: ele passou o dia carregando. Tudo no simulador, com
+> o mapa que ele mesmo desenhou em 13-08. Decisões **030 a 034**. Dados em
+> `docs/dados/2026-08-14-sim-sala-andar3/` e `.../2026-08-14-sim-porta/`.
+
+### O que o dono pediu, e o que saiu
+
+Ele começou querendo três coisas: parar mais longe das paredes, ir mais devagar,
+e entender como o robô se localiza. Terminou o dia com o robô atravessando no
+Gazebo o objetivo que travava — três vezes seguidas, sem encostar em nada.
+
+**O caminho até lá foi feito de erros meus, e eles são o conteúdo desta entrada.**
+
+### Erro nº 1 — a margem de frenagem que eu comprei na dimensão errada
+
+O dono: *"ele para muito próximo das paredes e objetos"*. Estava certo, e a
+conta provava: o polígono de parada tinha **5,5 mm** de margem sobre a distância
+de parada medida — fator de segurança 1,02. Fiz um bico (decisão 030), esticando
+só o nariz de 0,49 para 0,57 para não estreitar a porta.
+
+**Treze horas depois, a 033 desfez isso.** A conta da margem estava certa; o
+modelo é que estava errado. Numa caixa reta, "margem de frenagem" e "proibição
+de curva" são a MESMA dimensão — comprar uma custa a outra, sempre. O bico
+comprou 8 cm de margem e pagou vetando manobras de contorno.
+
+### Erro nº 2 — a inflação, duas vezes, em sentidos opostos
+
+O dono previu o impasse antes de ele acontecer: *"se o nav2 achar que passa e o
+colision falar que não, ele vai ficar preso"*. Aconteceu exatamente assim.
+
+Subi a inflação de 0,20 para 0,33 para o planejador respeitar o corpo. **Matou a
+porta**: bloquear 0,324 proíbe 15,1% das células livres da sala, inclusive
+aquela onde o robô está, e o Theta* devolve `Could not generate path`. O dono
+viu na hora: *"mandei um goal e nada acontece"*.
+
+Revertido. E aí ele deu o diagnóstico que eu não tinha: *"até no RViz dá para
+ver que o desenho do robô claramente não passa onde a linha diz que passa"*.
+
+A causa real só apareceu lendo o `theta_star.hpp`: **o planejador é o Theta\***
+(o Smac está aposentado desde 05-08) e ele **não tem footprint nenhum** —
+bloqueia célula com custo > 252 e pronto. Daí sai a coisa que eu não tinha
+entendido o dia inteiro:
+
+> Com `inflation_radius <= raio inscrito` **não existe faixa graduada**. Célula
+> perto é 253, célula longe é 0, e nada no meio. A paisagem de custo é BINÁRIA,
+> e um planejador que minimiza distância raspa a borda do proibido.
+
+*"Ir pelo meio"* não era uma preferência que o robô tinha e perdeu — ela nunca
+existiu. Decisão 032: raio 0,26 (a faixa útil entre o reflexo e o corpo) e
+inflação **0,90**, que é o que cria o gradiente.
+
+### Erro nº 3 — a projeção do reflexo, longa demais pelo mesmo motivo do bico
+
+Com o reflexo já direcional (`approach`), escolhi `time_before_collision` pelo
+PIOR comando: 1,8 s. No comando típico isso projeta 0,85 m — 2,4× a distância de
+parada — e o robô ficou 30 s parado numa quina que atravessaria. **Repeti o
+defeito do bico com outro parâmetro.** 0,75 s, calibrado pelo comando típico,
+passou.
+
+### O que o dono acertou, e vale registrar
+
+- **a ré disparando do nada**: *"ontem ela ativava do nada sem nada estar
+  acontecendo, e pior, aconteceu no gazebo também"*. Mecanismo: o `/plan` fica
+  RETIDO, então 4 s depois de qualquer objetivo morrer o robô parado exibe o
+  sintoma de emperramento e recua. Decisão 031;
+- **o impasse planejador × reflexo**, previsto de véspera;
+- **o balão em vez de curva fechada**: o pivô está desligado por parâmetro desde
+  a 023 (`limiar_pivo` 3,20 rad, acima de π — nenhum ângulo dispara), e a lei
+  contínua só sabe fazer arco;
+- **duas baterias**, não uma. Eu vinha errando isso com base em duas fontes
+  erradas do próprio repo (o `DIARIO` de 10-08 e o `CONEXOES.txt`, que é do
+  robô 1 inteiro). Corrigido nos dois lugares.
+
+### O que ficou medido
+
+Alvo (6,24 · 3,51), o que ele mandou e que falhava:
+
+```
+                            chegou   tempo    cam/reta   reflexo   folga min
+como estava de manhã          não      —        1,60x      18%       0,35 m
+corridas 1, 2 e 3             SIM   40,4/40,0/39,7 s  ~1,40x  12%    0,35 m
+regressão, alvo curto 13-08   SIM     7,0 s     1,00x       0%       0,70 m
+```
+
+Folga mínima 0,35 m contra 0,2275 de meia-largura do corpo: **não encostou em
+nada**, que é o critério do dono desde 13-08.
+
+### O instrumento que resolveu o dia
+
+`tools/banco/corrida_com_plano.py`, escrito hoje: grava a corrida COM o `/plan`
+e calcula, por amostra, o erro de trajeto e a folga até a parede. Foi ele que
+matou minha hipótese favorita — eu acusava o seguidor de cortar quina, e ele
+mostrou **erro de trajeto p50 de 8 mm, p90 de 6 cm**. O seguidor estava em cima
+do plano; quem travava era o reflexo.
+
+⚠️ Lição de método, e ela é geral: passei o dia trocando parâmetro antes de
+medir o mecanismo. As três decisões boas do dia (032, 033, 034) saíram todas
+DEPOIS de existir um número que separava as hipóteses.
+
+### Armadilhas de operação, de novo
+
+- **Gazebos órfãos.** Três instâncias sobreviveram a launches que falharam, e
+  como todas publicam os mesmos tópicos, o `/clock` vinha de uma e a nuvem de
+  outra: **314 s de diferença**. O `collision_monitor` recusou a fonte,
+  corretamente, e a corrida inteira virou lixo. Com uma instância só: 0,132 s.
+  Minha primeira hipótese (sensor simulado pesado demais) estava errada;
+- **limpeza incompleta** deixou um `robot_state_publisher` vivo, e os
+  controladores do launch seguinte não ativaram (`Switch controller timed out`).
+  Sintoma para o dono: "mando o goal e nada acontece";
+- launch com `nohup` sem `setsid` morre junto com o timeout da ferramenta.
+
+### O que NÃO foi feito
+
+O `unstuck_supervisor` com giro para o lado livre — o pedido do dono, portado do
+robô 1 — **não entrou**. Deixou de ser urgente quando o robô parou de encalhar,
+e ele exige um pivô que a placa não sabe fazer com precisão (a manobra é
+quantizada em ~95°). O pedido continua de pé e agora tem um desenho: usar o
+quantum como manobra grossa de desencalhe, não como controle de rumo.
+
+
 ## 2026-07-14 — Nascimento do repo
 
 - Definido o caráter do projeto: PIBIT, artigo ao final, ritmo devagar,
