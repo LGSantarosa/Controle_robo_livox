@@ -76,11 +76,46 @@ collision_monitor:
       #   + meia caixa (0,433/2)                                       0,216 m
       #                                                        frente  0,485 m
       #
+      # 🔴 E ERA ESSA A CONTA QUE FAZIA ELE PARAR COLADO (13-08, decisão 030).
+      # A conta acima dimensiona para parar ENCOSTANDO: com a frente em 0,49 o
+      # gatilho fica a 0,49 − 0,2165 = 0,2735 m do para-choque, contra 0,2680 m
+      # de parada. Fator de segurança **1,02 — cinco milímetros e meio**. Foi o
+      # que o dono viu no chão ("ele para muito próximo das paredes"), e
+      # qualquer coisa que alongue o coast (bateria fraca mudando o patamar,
+      # piso, carga) transforma isso em contato. Critério de 13-08: ele NÃO
+      # pode bater.
+      #
+      # A correção é um BICO, e não uma caixa maior, porque os dois casos usam
+      # partes diferentes do polígono:
+      #
+      #   parede de frente  ->  quem chega primeiro é o NARIZ (centro da frente)
+      #   batente da porta  ->  quem raspa é a QUINA (a lateral do polígono)
+      #
+      # Esticar só o nariz compra frenagem contra a parede e não custa NADA na
+      # porta. Largura varrida no vão de 0,90 m entrando torto de um ângulo θ
+      # (meia-porta = 0,450), que é o que decide se o reflexo dispara no vão:
+      #
+      #       θ     quina (0,49 · senθ + 0,26 · cosθ)     bico  veredito
+      #      0°               0,260                      0,200  quina manda
+      #     10°               0,341                      0,296  quina manda
+      #     15°               0,378                      0,341  quina manda
+      #     20°               0,412                      0,383  quina manda
+      #
+      # O bico só passa a ser o ponto mais largo quando `y_bico > 0,26 −
+      # 0,08·tanθ`, ou seja **acima de 37° de erro de rumo** — ângulo em que a
+      # passagem já falhou por outro motivo. Por isso `y_bico = 0,20`.
+      #
+      #   frente do bico  0,57  ->  gatilho 0,3535 m do para-choque
+      #   margem de frenagem     0,3535 − 0,2680 = 0,0855 m   (era 0,0055)
+      #
       # Lateral: meia largura da caixa (0,2275) + 3 cm. NÃO mais que isso — no
       # robô 1 o lateral a ±0,45 prendia o robô a 30% da velocidade em todo
       # corredor (29 desacelerações num log de campo) e tiveram de encolher.
+      # ⚠️ E aqui a lateral tem um segundo dono: ela TEM de caber dentro do que
+      # o planejador considera passável, senão o Nav2 planeja um vão que o
+      # reflexo veta e o robô trava parado. Ver o BO da inflação na decisão 030.
       # Traseira: meia caixa + folga, porque a ré existe.
-      points: "[[0.49, 0.26], [0.49, -0.26], [-0.28, -0.26], [-0.28, 0.26]]"
+      points: "[[0.57, 0.20], [0.57, -0.20], [0.49, -0.26], [-0.28, -0.26], [-0.28, 0.26], [0.49, 0.26]]"
       action_type: "stop"
       # 2 pontos, não 1: ponto solto é ruído. O Mid-360 entrega 20 000 pontos
       # por quadro, então exigir 2 não atrasa nada real.

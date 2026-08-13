@@ -190,6 +190,37 @@ def test_o_poligono_cobre_a_distancia_de_parada_MEDIDA():
         f'o polígono tem de chegar a {frente_min:.3f} m à frente'
 
 
+def test_o_poligono_tem_MARGEM_de_frenagem_e_nao_so_a_conta():
+    """Cobrir a distância de parada EXATAMENTE é fator de segurança 1,02: em
+    13-08 a frente valia 0,49 e sobravam 5,5 mm, o robô parava colado na parede
+    e o critério do dono é que ele não pode bater. Exige 5 cm de folga sobre a
+    conta medida (decisão 030)."""
+    parada = 0.298 * 0.5 + 0.298 ** 2 / (2 * 0.373)
+    pontos = eval(_cm()['PolygonStop']['points'])  # noqa: S307 (lista literal)
+    gatilho = max(x for x, _ in pontos) - 0.433 / 2
+    assert gatilho - parada >= 0.05, \
+        f'só {gatilho - parada:.3f} m de margem sobre a parada de {parada:.3f} m'
+
+
+def test_o_bico_nao_pode_estreitar_a_porta():
+    """O bico existe para frear contra parede DE FRENTE. Quem raspa no batente
+    é a quina, e se o bico passar a ser o ponto mais largo o reflexo começa a
+    disparar dentro do vão de 0,90 m — que é o modo de travar descrito na 030.
+    Entrando torto de θ, a largura varrida é `x·senθ + y·cosθ`."""
+    import math
+    pontos = eval(_cm()['PolygonStop']['points'])  # noqa: S307 (lista literal)
+    frente = max(x for x, _ in pontos)
+    quina = max((x, y) for x, y in pontos if x < frente and y > 0)
+    bico = max((x, y) for x, y in pontos if x == frente and y > 0)
+    for graus in range(0, 38, 2):
+        t = math.radians(graus)
+        largo_bico = bico[0] * math.sin(t) + bico[1] * math.cos(t)
+        largo_quina = quina[0] * math.sin(t) + quina[1] * math.cos(t)
+        assert largo_bico <= largo_quina, (
+            f'a {graus}° o bico ({largo_bico:.3f}) passa a quina '
+            f'({largo_quina:.3f}) e estreita a porta')
+
+
 # 🔴 O TÓPICO QUE A PERCEPÇÃO CONSOME, e ele NÃO é o do driver (decisão 017).
 #
 # Medido no robô em 10-08: `/livox/lidar` sai do driver como
