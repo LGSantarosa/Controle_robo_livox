@@ -4,6 +4,118 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-08-14 (2ª leva) — A BATIDA QUE EU CAUSEI, O FREIO QUE FALTA, E A POSE QUE SALTA
+
+> Dev + Gazebo, com o dono na tela o tempo todo. Decisões **035** e **036**.
+> A sessão parou no meio: ele ficou sem tokens. O ponto de retomada está no
+> topo do `ESTADO_PROJETO.md`.
+
+### O robô bateu, e a culpa é de uma decisão minha da mesma tarde
+
+Na 033 eu encolhi a caixa do reflexo (frente 0,57 → 0,30) para destravar a
+curva, e passei a frenagem para a projeção. Funcionou para o que eu queria e
+abriu um buraco que **eu mesmo tinha escrito como dívida na própria decisão**:
+
+```
+meia-largura do corpo    0,2275 m
+lateral protegida        0,2600 m   <- ok andando reto
+MEIA-DIAGONAL do corpo   0,3140 m   <- a quina, fora da caixa
+```
+
+Andando reto a quina nunca aparece. **Girando, ela sai.** E girar perto de
+parede foi exatamente o que eu destravei. Troquei segurança por mobilidade sem
+dizer o preço, e o preço veio com o dono olhando.
+
+⚠️ A lição não é "faltou um número". É que **dívida anotada não é dívida
+coberta** — eu segui com o furo documentado como se documentar bastasse.
+
+Conserto (036): a caixa passa a ser o corpo medido + margem **lado a lado**,
+frente 0,35 · lateral 0,2775 · traseira 0,2665, quina da frente a 0,447. E o
+raio do planejador subiu junto (0,26 → 0,28), senão volta o impasse de um exigir
+mais folga do que o outro garante. 🟢 Verificado na tela: **parou em vez de
+bater**, no mesmo lugar.
+
+### "Não desista dos goals" — duas tentativas erradas antes da certa
+
+Pedido dele: *"faça essa PORRA desse robô não desistir dos goals, leia como o
+robo do Controle_robo_web faz e faça igual"*. As duas primeiras foram remendo de
+galho e estão registradas na 035 porque as duas parecem razoáveis:
+
+1. `RecoveryNode(1)` só no `ComputePathToPose` — o planejador falha em RAJADA e
+   duas falhas seguidas matavam a árvore igual;
+2. `ForceSuccess` no planejamento + `RetryUntilSuccessful` no `FollowPath` — o
+   decorador quebrou o halt do cliente de ação (`Failed to get result for
+   follow_path in node halt!`). **A tentativa de nunca desistir fez desistir
+   mais cedo.**
+
+A peça certa é estrutural e estava no robô 1 o tempo todo: um `RecoveryNode`
+com 1000 repetições envolvendo a **navegação inteira**, mais limpeza de costmap
+como recuperação. `Spin`, `BackUp` e `Wait` ficam de fora — os três seriam no-op
+nesta cadeia, e árvore que acha que recuperou sem nada ter acontecido é o BO-3.
+
+### O pivô voltou, e o quantum virou ferramenta
+
+Ele: *"o pivô ainda faz falta, ele fica fazendo balão... caso o ângulo esteja a
+80 graus de erro ele para e faz o pivô e acerta, pro balão poder arrumar"*.
+
+O argumento da 023 continua de pé — a placa entrega um módulo de giro só e a
+manobra é um **quantum grosso**, não um controle de ângulo. O que mudou é onde
+ela é usada: para erro de 80°+ o quantum É a manobra certa. `limiar_pivo` 3,20 →
+1,40 rad, `pivo_max_pulsos` 6 → 1. Medido: **−149° fechados com 3,4° de
+resíduo**, num golpe, e zero disparos na rota boa.
+
+### O freio: a ideia dele, medida, e o desenho mudou por causa dos dados DELE
+
+Ele descreveu a física certa: *"ele chega no 90, mas chega rápido, aí solta o
+motor, mas a inércia joga ele mais 90 graus"*. Esta máquina **não tem freio** —
+zerar comando não para nada. A única forma de tirar energia é torque contrário.
+
+Bancada nova (`tools/banco/freio_de_giro.py`), varredura no Gazebo:
+
+```
+contra-pulso   sobra
+   0,00 s      40,0°
+   0,15 s      24,8°
+   0,30 s      19,8°
+   0,40 s      13,9°    <- melhora sempre, e NÃO zera
+```
+
+E aí ele lembrou que **isso já estava medido na máquina de verdade**
+(`docs/dados/2026-08-06-pivo/`), o que resolveu o enigma:
+
+```
+             giro    sobra    pico wz    t_parar
+liga0.30-a   69,7°   67,7°     1,49      1,94 s
+liga0.30-b   67,6°   67,2°     1,52      2,16 s
+```
+
+**Quase tudo é sobra** (56–68° de 59–70°), o pico de `wz` chega a 2,5× o
+comandado, e ele leva ~1,9 s para parar. Ou seja: o pico de inércia vem **1 a 2
+segundos depois do corte**. Meu contra-pulso estava sendo aplicado no instante
+em que o robô mal começara a girar — freio no momento errado. Por isso reduz um
+terço e não zera.
+
+➡️ O freio certo é **malha fechada sobre o `wz` medido**: contra-torque enquanto
+`|wz|` for alto, zero ao cruzar o limiar. O `heading_controller` já tem
+`self.wz_real`. Projetado, **não implementado**.
+
+### Onde a sessão parou
+
+O dono viu a pose **saltar no mapa** — *"ele tá enlouquecendo no mapa"* — e
+lembrou do conserto do robô 1: a pose só deve andar quando as rodas andam, e na
+proporção delas; o casamento do lidar corrige erro pequeno, não teleporta. É o
+item nº 1 da próxima sessão, e a primeira coisa a fazer é **medir quem salta**
+(AMCL, FAST-LIO ou nada), porque hoje a odometria de roda não entra na pose de
+jeito nenhum.
+
+### Regras de trabalho que ele fixou hoje
+
+- **o Gazebo só sobe com ele olhando** — de manhã eu rodei uma dezena de
+  corridas sozinho enquanto ele almoçava, e o que ele enxergou na tela em cinco
+  minutos (o balão, o 180° no lugar do 90°, o robô colando na parede) nenhum CSV
+  meu tinha capturado;
+- **RViz não; o serviço web**, que é como ele dirige no robô.
+
 ## 2026-08-14 — O DIA EM QUE EU ERREI TRÊS VEZES E O ROBÔ ATRAVESSOU (dev + Gazebo)
 
 > Sessão inteira sem robô: ele passou o dia carregando. Tudo no simulador, com

@@ -20,6 +20,71 @@
 pela porta**, contra mapa próprio, localizado por AMCL, com o destino clicado
 numa página web. Palavras do dono: *"FOI LINDO ELE ATRAVESSOU A PORTA E TUDO"*.
 
+## 🚩 COMEÇA AQUI — 14-08 (2ª leva) parou no meio, e a ordem já está escrita
+
+> Sessão de dev + Gazebo, com o dono na tela. Decisões **035** e **036**.
+> Nada disso foi ao robô real. O dono ficou sem tokens no meio; esta seção é o
+> ponto de retomada.
+
+### 🔴 O QUE ELE QUER FAZER ASSIM QUE VOLTAR, na ordem dele
+
+**1. O SALTO DE POSE NO MAPA — é o item que interrompeu tudo.**
+
+Palavras dele: *"ele tá enlouquecendo no mapa aqui, isso aconteceu com o robô 1
+uma vez, resolvemos falando que a posição do robô tem que confiar nas rodas ao
+ponto de não poder dar esses saltos absurdos no mapa por conta do lidar querer
+casar com outro ponto do mapa... o robô só mexe no mapa quando as rodas mexem,
+sempre fazendo sentido com a quantidade mexida também, aí passa pra odometria do
+lidar ajustar os pequenos erros só"*.
+
+O requisito, na forma dele:
+
+```
+a pose no mapa SÓ anda quando as rodas andam, e na PROPORÇÃO do que elas andaram
+o casamento do lidar entra para corrigir erro PEQUENO, não para teleportar
+```
+
+⚠️ Ele mesmo desconfia que aqui a causa é outra que a do robô 1 — anotar como
+hipótese, não como diagnóstico. **Medir antes**: gravar `/Odometry` (FAST-LIO),
+a TF `map→odom` do AMCL e a odometria de roda juntas, e ver QUEM salta. Os
+suspeitos são três e o instrumento separa os três:
+
+- o AMCL casando a fatia 2D com o lugar errado do mapa (o mais provável, e é
+  onde a fila de desejos já quer 3D — ver a fila abaixo);
+- o FAST-LIO perdendo referência;
+- a odometria de roda, que hoje **não entra na pose de jeito nenhum**.
+
+**2. Repetir o ensaio de giro na sala, mais controlado** (pedido explícito),
+depois de a pose parar de saltar — giro medido contra pose que salta não vale.
+
+**3. O freio de malha fechada** (projetado em `docs/dados/2026-08-14-freio-de-giro/`,
+não implementado).
+
+### O que ficou PRONTO nesta leva
+
+| | estado |
+|---|---|
+| **reflexo protege todos os lados** (036) | 🟢 verificado na tela: parou em vez de bater |
+| **pivô acima de 80°, um pulso** (036) | 🟢 fechou −149° com 3,4° de resíduo |
+| **árvore que não desiste** (035) | 🟡 sobe e ativa; **corrida completa não medida** |
+| **freio de giro** | 🔵 medido e projetado, **não implementado** |
+
+### 🔴 A batida, e ela é minha
+
+Com o dono olhando, o robô **bateu**. Causa: na 033 eu encolhi a caixa do
+reflexo e a meia-diagonal do corpo (0,314) ficou fora da lateral protegida
+(0,26) — andando reto não aparece, girando a quina sai da caixa. E foi girar
+perto de parede que eu destravei na mesma decisão. Consertado na 036, verificado
+na tela. **A dívida estava escrita na própria 033 e eu segui assim mesmo** —
+dívida anotada não é dívida coberta.
+
+### Regras de trabalho novas (dele, 14-08)
+
+- **o Gazebo só sobe com ele olhando** — nada de rodar corridas em lote sozinho;
+- **RViz não; o serviço web** (`controle_web`, `:5000`, `WEB_TELEOP=on
+  ROBOT_MODE=nav2`). Nesta máquina de dev o Flask vive num venv com
+  `--system-site-packages` (o ROS precisa aparecer lá dentro).
+
 ## 🟢 14-08 (DEV + GAZEBO) — ELE ATRAVESSA, TRÊS VEZES, SEM ENCOSTAR EM NADA
 
 > Dia inteiro sem robô (carregando). Decisões **030 a 034**. Dados em
