@@ -183,7 +183,12 @@ def generate_launch_description():
         # tinha como: o nó lê `re_max_seguidas` uma vez, na subida, e não tem
         # callback de parâmetro — `ros2 param set` não chega lá.
         #
-        # `0` desliga a ré inteira. O default 2 é o de 12-08 e não muda.
+        # `re_habilitada:=false` é o knob PRÓPRIO para isso — ele já existia no
+        # nó, com mensagem própria e reinício do contador de progresso. Em
+        # 13-08 eu usei `re_max_seguidas:=0` por não o ter procurado, e o teto
+        # zero matava o seguidor (ver o conserto no `path_follower.entra_na_re`).
+        {'re_habilitada': ParameterValue(
+            LaunchConfiguration('re_habilitada'), value_type=bool)},
         {'re_max_seguidas': ParameterValue(
             LaunchConfiguration('re_max_seguidas'), value_type=int)},
     ]
@@ -369,6 +374,12 @@ def generate_launch_description():
             description='[m] distância mínima que o seguidor mira à frente. '
                         'Subir alisa a referência de rumo e corta curva '
                         'fechada por dentro'),
+        DeclareLaunchArgument(
+            're_habilitada', default_value='true',
+            description='false DESLIGA a ré de desencalhe (025), o único '
+                        'caminho deste robô que dirige por fora do reflexo. '
+                        'Este é o knob certo; o `re_max_seguidas` abaixo é '
+                        'teto, não interruptor'),
         DeclareLaunchArgument(
             're_max_seguidas', default_value='2',
             description='quantas rés de desencalhe seguidas o seguidor pode '

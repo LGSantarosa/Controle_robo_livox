@@ -497,7 +497,15 @@ class PathFollower(Node):
         return True
 
     def entra_na_re(self, t, x, y, dist):
-        if not self.par['re_habilitada']:
+        # ⚠️ `re_max_seguidas <= 0` entra AQUI, junto com o desligamento
+        # explícito, e isso é conserto de 13-08: teto zero caía na guarda lá
+        # embaixo, que formata `dist_antes_da_re` — e esse valor só existe
+        # DEPOIS da primeira ré. Com teto zero não há primeira ré, então o nó
+        # morria com `TypeError: unsupported format string passed to
+        # NoneType.__format__` na primeira vez que o robô emperrasse. Nó morto
+        # não dirige: o sintoma no robô foi objetivo aceito, plano desenhado e
+        # robô parado, sem nenhuma mensagem culpando ninguém.
+        if not self.par['re_habilitada'] or self.par['re_max_seguidas'] <= 0:
             # Quem conserta rumo agora é o pivô, lá na movimentação. Falar uma
             # vez a cada 5 s é o suficiente: se o robô ficar de fato emperrado
             # com a ré desligada, isto é a pista.
@@ -521,9 +529,14 @@ class PathFollower(Node):
         if self.dist_antes_da_re is not None and dist < self.dist_antes_da_re:
             self.res_seguidas = 0          # a anterior serviu: crédito renovado
         if self.res_seguidas >= self.par['re_max_seguidas']:
+            # `dist_antes_da_re` não pode ser None aqui (só se chega com
+            # `res_seguidas >= 1`, e quem incrementa também grava a distância),
+            # mas formatar None mata o nó — e nó morto não dirige. Cinto.
+            antes = ('?' if self.dist_antes_da_re is None
+                     else f'{self.dist_antes_da_re:.2f}')
             self.get_logger().error(
                 f'{self.res_seguidas} rés seguidas e o robô não chegou mais '
-                f'perto que {self.dist_antes_da_re:.2f} m — recuar não está '
+                f'perto que {antes} m — recuar não está '
                 'resolvendo, e insistir é andar de costas. Parado até o plano '
                 'mudar.', throttle_duration_sec=10.0)
             return
