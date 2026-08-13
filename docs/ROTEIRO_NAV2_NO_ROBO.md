@@ -1,9 +1,86 @@
 # Roteiro — Nav2 no robô
 
-## 🚦 COMEÇA AQUI — estado em 12-08 fim da noite (leia antes de tudo)
+## 🚦 COMEÇA AQUI — estado em 13-08 fim da noite
 
-> **O robô ANDA RETO com o Nav2.** Os passos 0 a 5 deste roteiro estão
-> cumpridos; o que falta é o passo 6 (mapa + AMCL) e o 7 (perto de parede).
+> **Os passos 0 a 6 estão CUMPRIDOS.** O robô tem mapa próprio, localiza por
+> AMCL, anda reto (1,02× da reta) e **atravessou a porta sozinho** com destino
+> clicado no serviço web. O passo 7 aconteceu três vezes e **na segunda ele
+> bateu** — é lá que a sessão de amanhã começa.
+
+### 🔴 O CRITÉRIO QUE MANDA AGORA, e ele é o mais duro do projeto
+
+> *"o pior foi ele bater, ele não pode bater de jeito nenhum"* (dono, 13-08).
+
+**Colisão reprova a corrida inteira**, com qualquer explicação. O critério
+anterior media disparo do reflexo; este mede contato.
+
+### A configuração que funciona hoje
+
+```bash
+export ROS_DOMAIN_ID=42        # a pilha de 12-08 estava no 0; combinar sempre
+
+# terminal 1 — base (confira /scan ~10 Hz DEPOIS que subir)
+ros2 launch robot_base base.launch.py
+
+# terminal 2 — pilha COM MAPA PRÓPRIO e AMCL
+ros2 launch robot_motion pilha.launch.py sim:=false \
+    mapa:=$PWD/maps/sala_andar3/sala_andar3.yaml localizacao:=amcl \
+    pose_x:=<x> pose_y:=<y> pose_yaw:=<yaw> \
+    curv_frente:=-0.9145 curv_medido_em:=2026-08-11
+
+# terminal 3 — o serviço web (é por onde o dono manda os pontos agora)
+cd controle_web && WEB_TELEOP=on ROBOT_MODE=nav2 python3 app.py   # :5000
+```
+
+🔵 **A pose inicial deixou de ser problema**: o mapa foi desenhado a partir do
+ponto onde o dono sempre deixa o robô, então ele **nasce na origem do mapa**.
+Se ainda assim ficar torta, a receita está no `ESTADO_PROJETO.md` (busca por
+força bruta contra a transformada de distância, depois `/initialpose`).
+
+### 📋 A ORDEM DE AMANHÃ (14-08), decidida com o dono
+
+1. **CARREGAR A BATERIA ANTES e LER A TENSÃO** no início e no fim. Em 13-08 ela
+   acabou duas vezes, derrubou o NUC junto, e não foi lida nenhuma vez.
+2. **Repetir a porta com o robô cheio.** As duas tentativas ruins de 13-08 têm
+   ressalva de bateria do próprio dono; a primeira, limpa, atravessou fazendo o
+   que o planejador mandava. É isto que separa defeito de navegação de robô com
+   fome.
+3. Se a **ré de 8 s para 1 cm** se repetir carregado, é zona morta da placa
+   (020), não geometria.
+4. Amarrar a **ré a objetivo ativo** (o seguidor obedece *plano*, e foi assim
+   que o `plano.py` fez o robô recuar do nada).
+5. O **erro de trajeto do seguidor**, que é quem entorta a entrada na porta.
+
+### O que 13-08 provou, em uma linha cada
+
+- **mapa limpo do estágio não serve para sala mobiliada**: a melhor pose
+  POSSÍVEL dava 41,4% dos feixes dentro de 0,15 m; o mapa próprio dá 99,7%
+  (decisão 028);
+- **a inflação de 0,50 não recusava plano, ela ENTORTAVA o plano**: 0,20 levou a
+  referência de rumo de 83,8° para 23,4° e o caminho de 1,45× para 1,02×
+  (decisão 029);
+- **o `/scan` esteve morto desde 12-08 às 20:05** (SIGKILL de um `pkill`), e com
+  ele a ré esteve inerte a noite toda;
+- **knob novo que abre caminho de código nunca exercitado é mudança grande**: o
+  `re_max_seguidas:=0` que eu criei matou o seguidor, e o interruptor certo
+  (`re_habilitada`) já existia.
+
+### ⚠️ As armadilhas que custaram tempo em 13-08
+
+- **NUNCA `pkill -f`** — matou a sessão ssh duas vezes e foi o que matou o
+  `scan_2d`. Matar por PID e conferir órfãos.
+- `map_saver_cli` estoura o timeout default de 2 s: `-p save_map_timeout:=30.0`.
+- `slam_toolbox` com `use_lifecycle_manager: False` **não** se auto-ativa no
+  Jazzy: nasce `unconfigured`, calado, e `/map` nunca aparece.
+- O `tools/banco/plano.py` diz "planeja sem mover o robô" — **com a pilha de pé
+  ele move**, porque o seguidor obedece plano.
+
+---
+
+## 🚦 O estado em 12-08 fim da noite (histórico)
+
+> **(HISTÓRICO — superado pela seção de 13-08 acima.)** O robô ANDA RETO com o
+> Nav2. Os passos 0 a 5 estavam cumpridos; o 6 e o 7 fecharam em 13-08.
 > A sessão de 12-08 tem quatro entradas no diário (8ª a 12ª leva) e as decisões
 > **027** (raio cego) e o ajuste de `a_dec`.
 
