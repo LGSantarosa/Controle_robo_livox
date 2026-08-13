@@ -20,6 +20,80 @@
 pela porta**, contra mapa próprio, localizado por AMCL, com o destino clicado
 numa página web. Palavras do dono: *"FOI LINDO ELE ATRAVESSOU A PORTA E TUDO"*.
 
+## 🧭 ESTADO REAL EM 14-08, FIM DO DIA — leia isto antes de qualquer coisa
+
+> Três levas de trabalho, decisões **030 a 037**. **Nada foi ao robô.** O dia
+> terminou com o robô batendo no simulador e o dono encerrando a sessão.
+
+### 🔴 O que está QUEBRADO, e é onde recomeça
+
+**1. O robô bate, e o freio que existe é do eixo errado.**
+
+O freio de GIRO foi medido e implementado (037): corta o giro de 63,8° para
+14–28°. Mas a colisão que encerrou o dia foi **LINEAR** — o robô ganha
+velocidade e entra na parede — e nessa corrida o freio marcou **zero atuações**.
+
+```
+freio de giro      🟢 medido, implementado, ligado
+freio LINEAR       🔴 NÃO EXISTE — e é o que estava batendo
+```
+
+A física é a mesma nos dois eixos: a placa segura a saída cheia 0,52 s depois do
+corte, então zerar o comando não freia nem giro nem linha. O mecanismo do
+conserto é idêntico ao do giro — contra-torque, a mesma bancada
+(`tools/banco/freio_de_giro.py`), a mesma forma de medir.
+
+⚠️ E isto reenquadra o dia inteiro: quase tudo que mexi no polígono do reflexo
+em 14-08 era **compensar com geometria a falta de freio**. Aumentar a caixa
+comprava segurança e vetava manobra; diminuir destravava manobra e expunha a
+quina. **Geometria não para inércia.**
+
+**2. A premissa não verificada, apontada pelo dono:**
+
+> *"não faz sentido ele piorar no Gazebo, fazer na vida real o que no Gazebo ele
+> não faz"*
+
+O robô **atravessou a porta no prédio** em 13-08. Quando a mesma configuração
+falhou no simulador, eu tratei como defeito a consertar em vez de estranhar o
+simulador. **Tudo que foi sintonizado depois disso está apoiado nessa premissa,
+e ela não foi verificada.** Qualquer retomada devia começar por aí.
+
+**3. O salto de pose no mapa**, visto pelo dono e ainda não medido. O requisito,
+nas palavras dele: a pose só anda quando as rodas andam e na proporção delas; o
+casamento do lidar corrige erro pequeno, não teleporta. Hoje a odometria de roda
+**não entra na pose de jeito nenhum**.
+
+### 🟢 O que ficou de pé, e é real
+
+| | evidência |
+|---|---|
+| **freio de giro** (037) | 63,8° → 14–28° na bancada; perfil bate com o robô real de 06-08 |
+| **reflexo em todos os lados** (036) | parou em vez de bater, na tela, depois da 1ª batida |
+| **pivô acima de 80°, um pulso** (036) | fechou −149° com 3,4° de resíduo |
+| **árvore que não desiste** (035) | estrutura do robô 1; corrida completa **não medida** |
+| **planejador com gradiente** (032) | 3 corridas atravessaram, folga mínima 0,35 m |
+| **ré só com objetivo vivo** (031) | 4 testes por mutação |
+| **fidelidade do simulador no GIRO** | 3,5°/60,3°/1,5 s contra 3°/56–68°/1,9–2,2 s do robô |
+
+**Testes**: 267 em `robot_motion`, 75 `robot_base`, 12 `robot_planning`, 89
+`tools`. Ferramentas novas: `tools/banco/freio_de_giro.py` e
+`tools/banco/corrida_com_plano.py`.
+
+### O que eu erraria de novo se ninguém anotasse
+
+1. **instrumento errado dá número plausível** — quatro varreduras inválidas no
+   freio, duas delas mostradas ao dono como resultado. Raiz das duas primeiras:
+   nó de bancada carimbando relógio de PAREDE num mundo em tempo de SIMULAÇÃO.
+   Comando descartado por velho, robô parado, **nenhum erro na tela**;
+2. **medir o mecanismo antes de trocar parâmetro** — o freio só saiu do lugar
+   quando gravei o PERFIL do `wz` (pico 0,65 s depois do corte) em vez de
+   continuar varrendo limiar;
+3. **dívida anotada não é dívida coberta** — a quina desprotegida estava escrita
+   na própria decisão 033 e eu segui assim mesmo. O robô bateu por ela;
+4. **limpeza incompleta derruba a sessão seguinte** — três vezes no mesmo dia,
+   a última com quatro `robot_state_publisher` órfãos impedindo o Gazebo de
+   subir. Sintoma para o dono: "mando o ponto e nada acontece".
+
 ## 🚩 COMEÇA AQUI — 14-08 (2ª leva) parou no meio, e a ordem já está escrita
 
 > Sessão de dev + Gazebo, com o dono na tela. Decisões **035** e **036**.

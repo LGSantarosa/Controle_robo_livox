@@ -4,6 +4,72 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-08-14 (3ª leva) — O FREIO QUE FOI MEDIDO, E O EIXO ERRADO
+
+> Dev + Gazebo, com o dono na tela. Decisão **037**. A sessão terminou com o
+> robô batendo pela segunda vez no dia e o dono encerrando o trabalho.
+
+### O que foi entregue
+
+**O freio de giro por contra-torque existe e está medido.** A máquina não tem
+freio — zerar o comando não para nada, a placa segura a saída cheia por 0,52 s.
+Medido: comando de 0,6 s dá 3,5° na fase comandada e **60,3° de sobra**, com o
+pico de `wz` chegando 0,65 s DEPOIS do corte.
+
+Com contra-torque soltando entre 0,9 e 1,1 rad/s, o giro total cai de **63,8°
+para 14–28°**. A lei está em `lei_de_freio.py` (pura, 10 testes) e ligada no
+`heading_controller`.
+
+🟢 **E o simulador provou fidelidade nisso**: fase comandada ~3°, sobra 56–68°,
+parada em 1,9–2,2 s no robô real de 06-08, contra 3,5° / 60,3° / 1,5 s no
+Gazebo. Foi o dono que lembrou que esses dados existiam, e foram eles que
+salvaram a análise.
+
+### 🔴 E o que isso NÃO resolveu
+
+Na primeira corrida de navegação com o freio no ar, o robô **bateu**, e o
+contador `FREIO:` marcou **zero atuações**.
+
+O motivo é simples e é meu: **o freio é de GIRO e a colisão foi LINEAR.** O robô
+ganhou velocidade e entrou na parede ao lado do vão. O dono tinha descrito esse
+caso ANTES, com estas palavras — *"se ele ganha velocidade indo reto e tenta
+fazer um balão pra passar pela porta, se ele não diminuir essa velocidade ele
+vai de cara na porta"* — e eu fui medir e implementar o outro eixo.
+
+**O freio linear não existe.** É o mesmo mecanismo, a mesma bancada, a mesma
+forma de medir.
+
+### O que este dia ensina, e vai para o artigo
+
+1. **Geometria não para inércia.** Boa parte do que mexi no polígono do reflexo
+   ao longo de 14-08 era tentativa de compensar, com tamanho de caixa, a falta
+   de um freio. Cada aumento comprava segurança e vetava manobra; cada
+   diminuição destravava manobra e deixava a quina exposta. O eixo certo do
+   problema era o atuador, não a geometria.
+2. **Instrumento errado produz número plausível.** Foram QUATRO varreduras
+   inválidas antes de o freio ficar de pé, e duas delas eu mostrei ao dono como
+   resultado. A raiz das duas primeiras: o nó de bancada carimbava relógio de
+   PAREDE num mundo em tempo de SIMULAÇÃO — comando descartado por velho, robô
+   parado, **nenhum erro na tela**. É o mesmo defeito que derrubou o
+   `collision_monitor` de manhã, agora do lado do instrumento.
+3. **Medir o mecanismo antes de trocar parâmetro.** O que destravou o freio foi
+   gravar o PERFIL do `wz` em vez de continuar varrendo limiar: o pico chega
+   0,65 s depois do corte, e eu vinha freando no vazio.
+4. **A pergunta que eu devia ter feito primeiro**, e que o dono fez por mim:
+   *"não faz sentido ele piorar no Gazebo, fazer na vida real o que no Gazebo ele
+   não faz"*. O robô atravessou a porta no prédio em 13-08. Quando a mesma
+   configuração falhou no simulador logo cedo, eu tratei como defeito a
+   consertar em vez de estranhar o simulador. Tudo que foi sintonizado depois
+   disso está apoiado nessa premissa não verificada.
+
+### Armadilha de operação, de novo e pela terceira vez no dia
+
+Limpeza incompleta: **quatro `robot_state_publisher` órfãos** vivos impediram o
+Gazebo de subir, e o `bt_navigator` ficou inativo. O sintoma para o dono é
+sempre o mesmo — "mando o ponto e nada acontece". Matar por nome não basta
+quando há launches empilhadas; é preciso conferir o resultado, e eu conferi
+tarde.
+
 ## 2026-08-14 (2ª leva) — A BATIDA QUE EU CAUSEI, O FREIO QUE FALTA, E A POSE QUE SALTA
 
 > Dev + Gazebo, com o dono na tela o tempo todo. Decisões **035** e **036**.
