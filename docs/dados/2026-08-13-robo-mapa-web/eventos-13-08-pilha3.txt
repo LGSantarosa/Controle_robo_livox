@@ -1,0 +1,28 @@
+[planner_server-2] [INFO] [1786583004.809719091] [global_costmap.global_costmap]: Using plugin "obstacle_layer"
+[planner_server-2] [INFO] [1786583004.822214842] [global_costmap.global_costmap]: Initialized plugin "obstacle_layer"
+[controller_server-4] [INFO] [1786583004.967232461] [local_costmap.local_costmap]: Using plugin "obstacle_layer"
+[controller_server-4] [INFO] [1786583004.990133713] [local_costmap.local_costmap]: Initialized plugin "obstacle_layer"
+[collision_monitor-9] [INFO] [1786583005.244771728] [collision_monitor]: [PolygonStop]: Creating Polygon
+[collision_monitor-9] [INFO] [1786583023.827882476] [collision_monitor]: [PolygonStop]: Destroying Polygon
+[planner_server-2] [INFO] [1786583025.019930868] [global_costmap.global_costmap]: Using plugin "obstacle_layer"
+[planner_server-2] [INFO] [1786583025.022992457] [global_costmap.global_costmap]: Initialized plugin "obstacle_layer"
+[controller_server-4] [INFO] [1786583025.075110200] [local_costmap.local_costmap]: Using plugin "obstacle_layer"
+[controller_server-4] [INFO] [1786583025.079081382] [local_costmap.local_costmap]: Initialized plugin "obstacle_layer"
+[collision_monitor-9] [INFO] [1786583025.151373884] [collision_monitor]: [PolygonStop]: Creating Polygon
+[collision_monitor-9] [INFO] [1786583139.088009163] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[path_follower-12] [WARN] [1786583145.960189646] [path_follower]: EMPERRADO a 3.33 m do objetivo — ré de até 0.30 m (vão medido atrás: 2.16 m)
+[path_follower-12] [WARN] [1786583147.310484350] [path_follower]: fim da ré: recuou 0.31 m em 1.3 s
+[collision_monitor-9] [INFO] [1786583150.385105169] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[path_follower-12] [WARN] [1786583155.160149602] [path_follower]: emperrado e sem vão para recuar — atrás há 0.11 m e a folga exigida é maior. Parado, e é a coisa certa.
+[planner_server-2] [WARN] [1786583158.828606467] [planner_server]: GridBased plugin failed to plan from (4.03, 0.83) to (6.04, 3.86): "Either of the start or goal pose are an obstacle! "
+[bt_navigator-5] [ERROR] [1786583158.869281217] [bt_navigator]: Goal failed
+[collision_monitor-9] [INFO] [1786583159.092935193] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1786583164.301229466] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1786583167.981691980] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1786583168.488160185] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[path_follower-12] [WARN] [1786583169.410170150] [path_follower]: emperrado e sem vão para recuar — atrás há 0.00 m e a folga exigida é maior. Parado, e é a coisa certa.
+[path_follower-12] [WARN] [1786583172.310191387] [path_follower]: EMPERRADO a 7.09 m do objetivo — ré de até 0.30 m (vão medido atrás: 1.02 m)
+[path_follower-12] [WARN] [1786583176.610218581] [path_follower]: EMPERRADO a 7.09 m do objetivo — ré de até 0.30 m (vão medido atrás: 1.00 m)
+[path_follower-12] [WARN] [1786583184.610596278] [path_follower]: fim da ré: recuou 0.01 m em 8.0 s
+[bt_navigator-5] [ERROR] [1786583192.433205826] [bt_navigator]: Goal failed
+[bt_navigator-5] [ERROR] [1786583225.986545626] [bt_navigator]: Goal failed

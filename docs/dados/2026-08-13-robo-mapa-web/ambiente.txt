@@ -1,0 +1,32 @@
+Sessão 2026-08-13 — robô real, andar 3 do estágio, a sala de sempre
+==================================================================
+
+Local     sala do andar 3 do estágio (a mesma de 12-08), piso do prédio.
+          Sala COM MOBÍLIA — e é o achado da sessão: o mapa do estágio
+          (`scan_andar3_ajustado`) é a versão limpa, sem os móveis.
+Commits   d8216d1 (inflação 0,20) e 33f3d06 (conserto do path_follower);
+          branch `slam-meu-mapa`.
+Domínio   ROS_DOMAIN_ID=42 (a pilha de 12-08 estava no 0 — combinar sempre).
+Mapa      maps/sala_andar3/ — desenhado NESTA sessão pelo próprio robô.
+
+BATERIA   ⚠️ NÃO FOI LIDA em volt nenhuma vez, e ela decidiu o fim da sessão:
+          o robô morreu DUAS vezes e o NUC caiu junto nas duas. As duas
+          últimas tentativas de porta aconteceram com a bateria baixa e o
+          dono pediu, com razão, que não fossem levadas em conta:
+          "amanhã vou carregar ele antes, aí fazemos mais testes".
+
+O que cada arquivo é
+--------------------
+13-08-nav-sala.csv        corrida com mapa e inflação 0,50 (a que passeia)
+13-08-nav-inf020.csv      MESMO alvo com inflação 0,20 (a que anda reto)
+13-08-scan-mapa.csv       scan x mapa do ESTÁGIO — 41,4% dentro de 0,15 m
+13-08-scan-mapa-novo.csv  scan x mapa PRÓPRIO   — 97,7% dentro de 0,15 m
+13-08-amcl-*.csv          AMCL antes e depois da correção de pose
+13-08-fresco.csv          o scan usado na busca de pose que travou o AMCL
+13-08-pose-*.csv          poses intermediárias (uma delas propositalmente ruim)
+nav_metrics_20260812.csv  métricas do serviço web (primeiro dia dele no ar)
+eventos-*.txt             só as linhas de reflexo/ré/planner dos logs grandes
+
+⚠️ Os `.log` completos (48 MB) ficaram FORA do git: `*.log` é ignorado, e o
+que importa deles está nos `eventos-*.txt`. Se precisar dos originais, eles
+estão no NUC em ~/dados/13-08-* até alguém limpar.

@@ -20,6 +20,48 @@
 pela porta**, contra mapa próprio, localizado por AMCL, com o destino clicado
 numa página web. Palavras do dono: *"FOI LINDO ELE ATRAVESSOU A PORTA E TUDO"*.
 
+## 🔴 O CRITÉRIO DE ACEITAÇÃO ENDURECEU (13-08): ELE NÃO PODE BATER
+
+> *"o pior foi ele bater, ele não pode bater de jeito nenhum"* — o dono,
+> fechando a sessão, depois da 2ª tentativa de porta.
+
+O critério de 12-08 media **disparo do reflexo** contra obstáculo mapeado. Este
+mede **contato**. **Colisão reprova a corrida inteira**, qualquer que seja a
+explicação — bateria, mapa ou sintonia. É o critério mais duro do projeto e
+está acima dos outros.
+
+### A porta, três vezes, em ordem decrescente de qualidade
+
+```
+1ª  atravessou LIMPO, fazendo o que o planejador mandava
+2ª  foi DE CARA na porta, emperrou, a ré rodou 8 s sem sair do lugar,
+    o planner recusou ("start é obstáculo") e ele BATEU
+3ª  de cara na porta de novo, mas curvou forte para a esquerda no fim e passou
+```
+
+⚠️ **RESSALVA DO DONO, e ela vale**: as duas últimas foram com **bateria
+baixa** (o robô morreu logo depois, e o NUC caiu junto, duas vezes). *"Não dá
+para levar essas duas últimas em consideração total; amanhã vou carregar ele
+antes."* A tensão **não foi lida** nenhuma vez hoje — a mesma falta de 10-08.
+
+🔴 **ACHADO NOVO, a confirmar com bateria cheia: A RÉ É INEFICAZ.** Ela foi
+acionada (o conserto do seguidor funcionou), mediu 1,02 m livres atrás, comandou
+recuo e:
+
+```
+fim da ré: recuou 0,01 m em 8,0 s      <- bateu o teto e andou 1 cm
+```
+
+Duas hipóteses, nenhuma testada: (a) o comando de ré está **abaixo da zona morta
+da placa** — a mesma de 020, que escolhe o MÓDULO e ignora pedido pequeno; (b) o
+robô estava encravado na quina. Bateria baixa contamina as duas.
+
+➡️ **O mecanismo por trás da batida já tem nome**: ele **entra torto na porta**,
+que é a dívida nº 1 (erro de trajeto do seguidor, p50 0,128 m contra 0,118 m de
+margem num vão de 0,90 m). A observação do dono é a pista boa: *"na primeira foi
+perfeitamente, fez o que o planner mandava, depois começou a errar o caminho do
+planner"*.
+
 🔴 **O mapa do estágio não servia, e a prova é exaustiva.** Varri TODAS as poses
 possíveis da sala contra `scan_andar3_ajustado`:
 
@@ -83,6 +125,18 @@ sim só poder ser ativada quando tiver um destino"*. Hoje o seguidor obedece
 **plano**, não objetivo — foi assim que o `tools/banco/plano.py` (documentado
 como "planeja sem mover o robô") fez o robô dar uma ré do nada. Amarrar a ré a
 objetivo ativo mata a causa.
+
+### 📋 AMANHÃ (14-08), NA ORDEM — decidido com o dono
+
+1. **CARREGAR A BATERIA ANTES**, e ler a tensão no início e no fim. Hoje ela
+   acabou duas vezes e derrubou o NUC junto; nenhuma leitura foi feita.
+2. **Repetir a porta com o robô cheio.** A 1ª tentativa de hoje diz que ele
+   consegue; as duas seguintes podem ter sido tensão. É isto que separa
+   "defeito de navegação" de "robô com fome".
+3. Se a **ré de 8 s para 1 cm** se repetir com bateria cheia, é a zona morta da
+   placa (020) e não geometria — e a ré precisa de comando acima do piso.
+4. **Amarrar a ré a objetivo ativo** (pedido do dono, item acima).
+5. **O erro de trajeto do seguidor**, que é quem entorta a entrada na porta.
 
 ### 🔧 Como subir tudo (o que funcionou hoje, na ordem)
 
