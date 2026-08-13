@@ -75,9 +75,12 @@ class MalhaDeReta:
                  segura_rumo=True, preditor=False, preditor_atraso=0.94,
                  preditor_ganho=1.0, preditor_max=0.35,
                  adapta=False, adapta_t=8.0, adapta_desvio_max=0.5,
-                 adapta_v_min=0.05):
+                 adapta_v_min=0.05, ganho_wz=1.0, wz_cmd_max=2.2):
         if kp < 0.0 or ki < 0.0:
             raise ValueError('kp e ki não podem ser negativos')
+        if not 0.0 < ganho_wz <= 1.0:
+            raise ValueError('ganho_wz é a FRAÇÃO do wz pedido que o robô '
+                             'entrega: 0 < g <= 1')
         # `segura_rumo=False` deixa só o FEEDFORWARD: cancela o arco do corpo
         # e não escolhe rumo nenhum. É o modo para quando há um controlador de
         # rumo ACIMA (o `heading_controller`, na pilha). Com ele ligado os dois
@@ -93,6 +96,37 @@ class MalhaDeReta:
         self.wz_max = wz_max
         self.int_max = int_max
         self.limiar_curva = limiar_curva
+        # 🔴 O GANHO DA CADEIA (decisão 038). Medido em 13-08 no Gazebo
+        # (`tools/banco/ganho_de_giro.py`, campo aberto, janela de 3 s):
+        #
+        #     wz pedido   wz real
+        #        0,00      −0,116     o arco sobrando
+        #       +0,15      −0,042     pediu esquerda, foi para a direita
+        #       +0,30      −0,001     pediu esquerda, ficou reto
+        #       +0,50      +0,050     10% do pedido
+        #       −0,50      −0,378     76% do pedido
+        #
+        # g = 0,433 pela regressão; refeito linha a linha com o `v` de cada
+        # corrida dá 0,30–0,57, mediana 0,45. A assimetria não é outro defeito:
+        # o arco puxa para a direita, então pedido para a direita SOMA e pedido
+        # para a esquerda apanha.
+        #
+        # Por que dividir: o `ff` é calculado em rad/s de giro DESEJADO, mas
+        # quem executa entrega `g` disso. Sem dividir, o cancelamento do arco
+        # chega a 45% e sobra (1−g)·|curv|·v ≈ −0,12 rad/s — do tamanho exato
+        # da curva suave que sumia. Dividindo, o arco é cancelado inteiro E a
+        # curva pedida sai do tamanho pedido.
+        #
+        # ⚠️ DEFAULT 1,0 DE PROPÓSITO: `g` é da MÁQUINA e não foi medido no
+        # robô real. O perfil do simulador (`movimentacao_sim.yaml`) traz o
+        # 0,45 medido; o robô real fica em 1,0 até alguém medir lá, que é a
+        # mesma regra do `curv_medido_em` da 013.
+        self.ganho_wz = ganho_wz
+        # Grampo do COMANDO (não da correção): dividir por 0,45 mais que dobra
+        # o número que sai. A placa satura sozinha — ela tem um módulo só,
+        # 2,204 rad/s medidos — mas comando sem teto vira log ilegível e
+        # esconde saturação. 2,2 é o módulo da placa.
+        self.wz_cmd_max = wz_cmd_max
         self.rumo_ref = None      # capturado ao entrar em reta
         self.integral = 0.0       # [rad·s]
         self.sentido = 0          # +1 frente, -1 ré, 0 parado
@@ -203,7 +237,7 @@ class MalhaDeReta:
         if abs(wz_cmd) >= self.limiar_curva or not self.segura_rumo:
             if abs(wz_cmd) >= self.limiar_curva:
                 self._descarta()
-            return wz_cmd + ff
+            return self._para_o_atuador(wz_cmd + ff)
         if sentido != self.sentido:
             # O viés da frente (−0,82) não é o da ré (−0,10): integrador
             # carregado do sentido errado viraria chicote na troca.
@@ -228,7 +262,22 @@ class MalhaDeReta:
         # transferência sem solavanco também no tempo.
         if dt > 0.0:
             self._drena_para_o_ff(sentido, v_ff, dt)
-        return max(-self.wz_max, min(self.wz_max, wz))
+        # O grampo `wz_max` é da lei (quanto de giro esta malha pode PEDIR) e
+        # por isso vem antes da conversão para o atuador — dividir primeiro
+        # afrouxaria o grampo pelo fator do ganho, que é uma mudança de
+        # comportamento escondida numa mudança de unidade.
+        return self._para_o_atuador(max(-self.wz_max, min(self.wz_max, wz)))
+
+    def _para_o_atuador(self, wz_desejado):
+        """Converte "giro que eu quero" em "giro que eu peço".
+
+        Uma linha só, e ela é a decisão 038: quem executa entrega `ganho_wz`
+        do que se pede, então pedir o desejado entrega o desejado vezes `g`.
+        Com `ganho_wz=1.0` (o default, e o robô real até ser medido lá) isto é
+        identidade — nada muda.
+        """
+        wz = wz_desejado / self.ganho_wz
+        return max(-self.wz_cmd_max, min(self.wz_cmd_max, wz))
 
     def _drena_para_o_ff(self, sentido, v_ff, dt):
         """Passa devagar, do integrador para a curvatura, o que é viés de planta.

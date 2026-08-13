@@ -33,6 +33,7 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 
 from robot_motion.heading_controller import yaw_de
+from robot_motion.lei_de_freio_linear import FreioLinear
 from robot_motion.lei_de_reta import MalhaDeReta, herdado_ff
 
 
@@ -182,6 +183,34 @@ class CompensadorRumo(Node):
             ('adapta_t', 8.0),           # [s] constante de tempo da drenagem
             ('adapta_desvio_max', 0.5),  # [1/m] quanto pode fugir da semente
             ('adapta_v_min', 0.05),      # [m/s] abaixo disso não estima
+
+            # --- ganho da cadeia de giro (decisão 038) ---
+            # A FRAÇÃO do `wz` pedido que o robô entrega. Medido em 13-08 no
+            # Gazebo: 0,45 (varredura em `ganho_de_giro.py`). O racional inteiro
+            # está em `lei_de_reta.py`, ao lado do atributo.
+            #
+            # ⚠️ 1,0 aqui é "não sei": o perfil do simulador traz o 0,45 medido
+            # e o robô real fica em 1,0 até alguém medir LÁ. Mesma regra do
+            # `curv_medido_em` (013) — knob de planta não se herda entre
+            # máquinas, e este projeto já pagou por isso.
+            ('ganho_wz', 1.0),
+            ('wz_cmd_max', 2.2),   # [rad/s] o módulo da placa (020)
+
+            # --- freio LINEAR (decisão 038), LIGADO por padrão ---
+            # Ele mora aqui, na ÚLTIMA camada, porque quem corta o comando é o
+            # reflexo, que está ACIMA: um freio antes do `collision_monitor`
+            # teria o próprio contra-torque zerado por ele, morrendo no
+            # instante em que é preciso. Mesmo argumento do arco, escrito no
+            # `twist_mux.yaml`: "o arco do corpo é do robô, não da fonte" — a
+            # inércia da placa também é. Freio vetável não é freio.
+            #
+            # Ligado por padrão porque a alternativa é o estado de 13-08: o
+            # reflexo corta a 0,30 m da parede e o robô come 0,10 m dela.
+            ('freio_linear', True),
+            ('freio_solta_em', 0.25),    # [m/s] solta com o robô AINDA andando
+            ('freio_pico_min', 0.12),    # [m/s] "a inércia já apareceu"
+            ('freio_teto_s', 1.0),       # [s] teto duro do contra-torque
+            ('freio_v_comando', 0.5),    # o módulo é da placa; aqui vale o SINAL
         ])
         par = {x.name: x.value for x in p}
 
@@ -195,8 +224,13 @@ class CompensadorRumo(Node):
             preditor_max=par['preditor_max'],
             adapta=par['adapta'], adapta_t=par['adapta_t'],
             adapta_desvio_max=par['adapta_desvio_max'],
-            adapta_v_min=par['adapta_v_min'])
+            adapta_v_min=par['adapta_v_min'],
+            ganho_wz=par['ganho_wz'], wz_cmd_max=par['wz_cmd_max'])
         self.validade_pose = par['validade_pose']
+        self.freio = FreioLinear(
+            v_comando=par['freio_v_comando'], solta_em=par['freio_solta_em'],
+            pico_min=par['freio_pico_min'], teto_s=par['freio_teto_s']
+        ) if par['freio_linear'] else None
 
         qos = QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE)
         self.pub = self.create_publisher(
@@ -208,6 +242,7 @@ class CompensadorRumo(Node):
         self.t_pose = None
         self.t_passo = None
         self.v_real = 0.0
+        self.v_real_sinal = 0.0
         self.hist = []      # (t, x, y) para medir a velocidade de verdade
 
         self.get_logger().warn(
@@ -216,6 +251,33 @@ class CompensadorRumo(Node):
             f"ki={par['ki']:.2f}, correção limitada a ±{par['wz_max']:.2f} "
             f"rad/s. Curva pedida (|wz|≥{par['limiar_curva']:.2f}) passa "
             f"intocada.")
+        if par['ganho_wz'] < 1.0:
+            self.get_logger().warn(
+                f"GANHO DA CADEIA {par['ganho_wz']:.2f} (decisão 038): o que a "
+                f"lei quer de giro sai dividido por ele, porque o robô entrega "
+                f"só essa fração do que se pede. Com 1,00 o nó volta ao "
+                f"comportamento de antes — e 1,00 é o que o ROBÔ REAL usa até "
+                f"alguém medir o ganho lá.")
+        else:
+            self.get_logger().warn(
+                "GANHO DA CADEIA 1,00 (não medido nesta máquina): o "
+                "cancelamento do arco sai ATENUADO pelo que o atuador deixar "
+                "de entregar. No Gazebo isso valeu −0,12 rad/s de arco "
+                "sobrando, e era ele que comia a curva suave. Medir com "
+                "`tools/banco/ganho_de_giro.py`.")
+        if self.freio is not None:
+            self.get_logger().warn(
+                f"FREIO LINEAR LIGADO (decisão 038): comando cortado com o "
+                f"robô andando vira contra-torque, soltando em "
+                f"{par['freio_solta_em']:.2f} m/s, teto "
+                f"{par['freio_teto_s']:.1f} s. Sem ele a placa segura 0,52 s e "
+                f"o robô anda +0,10 m depois do corte — foi a batida de 13-08, "
+                f"com o reflexo tendo cortado a 0,30 m da parede.")
+        else:
+            self.get_logger().error(
+                "FREIO LINEAR DESLIGADO — o corte de comando não para este "
+                "robô: ele desliza +0,10 m depois de zerar. Só rode assim numa "
+                "bancada que precise do deslizamento cru.")
         # De onde veio o feedforward — a linha que separa "medido hoje" de
         # "herdado". Ela é WARN nos dois casos de propósito: o `rosout` é como
         # eu leio a bancada por ssh (o dono só roda), e um INFO se perde no
@@ -269,6 +331,12 @@ class CompensadorRumo(Node):
             (t0, x0, y0), (t1, x1, y1) = self.hist[0], self.hist[-1]
             if t1 - t0 > 1e-4:
                 self.v_real = math.hypot(x1 - x0, y1 - y0) / (t1 - t0)
+                # COM SINAL, para o freio: o módulo não distingue "ainda indo
+                # para a parede" de "já voltando", e um freio cego para isso
+                # fica preso ao contra-torque até o teto (medido na bancada do
+                # giro em 14-08, −300° de giro). Projeção no rumo atual.
+                self.v_real_sinal = ((x1 - x0) * math.cos(self.yaw)
+                                     + (y1 - y0) * math.sin(self.yaw)) / (t1 - t0)
 
     def cb_cmd(self, msg):
         v = msg.twist.linear.x
@@ -285,11 +353,35 @@ class CompensadorRumo(Node):
                     'correção de rumo, o robô vai arcar como sempre arcou',
                     throttle_duration_sec=1.0)
             self.malha._descarta()
+            # Sem pose não há `v_medido`, e freio sem velocidade medida é
+            # chute: ele solta, como a correção de rumo solta. O aviso acima
+            # já cobre os dois — o robô volta a arcar E a deslizar no corte.
+            if self.freio is not None:
+                self.freio.reset()
             return self.publica(msg, v, wz)
 
         dt = 0.0 if self.t_passo is None else t - self.t_passo
         self.t_passo = t
         saida = self.malha.passo(v, wz, self.yaw, dt, self.v_real)
+
+        # --- FREIO LINEAR (038), depois da malha e antes do atuador ---
+        # Zerar o comando não para nada: a placa segura a saída 0,52 s e o robô
+        # anda +0,10 m — foi assim que ele comeu a porta em 13-08 com o reflexo
+        # tendo cortado a 0,30 m. Aqui o corte de QUALQUER fonte (reflexo,
+        # humano, autonomia) vira contra-torque.
+        if self.freio is not None:
+            v_freio = self.freio.passo(v, self.v_real_sinal, dt)
+            if v_freio != v:
+                # Contra-torque é PURO: wz vai a zero enquanto ele age. A
+                # bancada mediu a sobra assim (só `linear.x`), e a correção de
+                # rumo calculada para a marcha da frente teria o sinal errado
+                # num comando de ré — meio segundo de esterço ao contrário.
+                self.get_logger().warn(
+                    f'FREIO LINEAR: cortaram o comando com o robô a '
+                    f'{self.v_real_sinal:+.2f} m/s — contra-torque '
+                    f'{v_freio:+.2f} ({self.freio.motivo or "freando"})',
+                    throttle_duration_sec=0.5)
+                return self.publica(msg, v_freio, 0.0)
         # O estimador tem de ser LEGÍVEL na bancada: o dono só roda, e a
         # diferença entre "aprendeu" e "encostou no grampo" não aparece no
         # comportamento — o robô anda torto dos dois jeitos.

@@ -20,6 +20,50 @@
 pela porta**, contra mapa próprio, localizado por AMCL, com o destino clicado
 numa página web. Palavras do dono: *"FOI LINDO ELE ATRAVESSOU A PORTA E TUDO"*.
 
+## 🚦 ESTADO EM 13-08 (dev + Gazebo) — A BATIDA ACABOU, A RÉ ACABOU, SOBROU O S
+
+> Sessão inteira no simulador com o dono na tela. Decisão **038**. **Nada foi ao
+> robô** — a sessão terminou com ele indo para a máquina de verdade.
+
+### 🟢 O que ficou de pé, e é medido
+
+| | antes | depois | evidência |
+|---|---|---|---|
+| **bater na porta** | folga 0,20 m (encostou) | 0,35 m | freio linear: sobra +0,107 → +0,031 m |
+| **ré para passar** | 6% das amostras | **0%** | ganho da cadeia 0,45 |
+| **corte do reflexo** | 12% | **0%** | ele nem chega perto |
+| **caminho / reta** | 1,40x | **1,21x** | curva suave voltou a existir |
+| tempo até a porta | 39,5 s | 30,8 s | mesmo alvo (6,24 · 3,51) |
+
+As duas mudanças fazem coisas diferentes e as duas ficam: o **freio linear** é
+rede de segurança (não atuou na corrida boa, e é assim que tem de ser); o
+**ganho 0,45** é a causa da ré, corrigida.
+
+### 🔴 O que está aberto, e é o próximo assunto
+
+**O S na reta.** A guinada desperdiçada dobrou (26,9 → 53,5°/m) quando o robô
+passou a obedecer ao que se pede. Duas tentativas falharam e estão registradas
+na 038 com número: mira do seguidor (não mexeu na reta e amoleceu a curva) e
+tolerância de rumo (não chegou ao alvo, reflexo cortou 77%).
+
+⚠️ **A restrição que as duas descobriram**: reta e porta puxam para lados
+opostos com um knob GLOBAL. A próxima tentativa (`a_dec` 0,3 → 0,10) não foi
+rodada, e o YAML ficou em 0,3 de propósito.
+
+### ⚠️ O QUE MUDA NO ROBÔ REAL, e é para ler antes de ligar ele
+
+```
+freio linear     LIGADO por padrão, e NUNCA rodou na máquina de verdade
+ganho da cadeia  NEUTRO (1,0) no robô — o 0,45 é default só com sim:=true
+a_dec, mira      inalterados; o que tentei e falhou vive só no perfil do SIM
+```
+
+A física do freio foi medida NO ROBÔ (retenção de 0,52 s, 04-08), mas os
+parâmetros dele saíram do Gazebo. **Primeira coisa lá**: `freio_linear.py` num
+trecho livre, comparando a sobra; e `ganho_de_giro.py` para saber se o ganho de
+0,45 existe fora do simulador. Se o ganho real for ~1, a ré na porta tem outra
+causa no robô e a parte 2 da 038 vale só para o simulador.
+
 ## 🧭 ESTADO REAL EM 14-08, FIM DO DIA — leia isto antes de qualquer coisa
 
 > Três levas de trabalho, decisões **030 a 037**. **Nada foi ao robô.** O dia

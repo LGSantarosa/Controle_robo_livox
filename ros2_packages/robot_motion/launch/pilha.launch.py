@@ -162,6 +162,23 @@ def generate_launch_description():
          'curv_medido_em': ParameterValue(LaunchConfiguration('curv_medido_em'),
                                           value_type=str)},
     ]
+    # 🔴 GANHO DA CADEIA DE GIRO (decisão 038). A fração do `wz` pedido que o
+    # robô entrega — 0,45 medido no Gazebo em 13-08 (`ganho_de_giro.py`), e
+    # NÃO medido no robô real, onde o default 1,0 continua valendo.
+    #
+    # Por que ele mora aqui e não num YAML: o valor é da MÁQUINA, e as duas
+    # máquinas deste projeto (Gazebo e robô) usam o mesmo `nav2.yaml` e o mesmo
+    # perfil de movimentação. Ficar no launch deixa a diferença visível na
+    # linha de comando, que é onde o `curv_medido_em` da 013 também mora.
+    #
+    #     ros2 launch robot_motion pilha.launch.py ganho_wz:=0.45
+    #
+    # ⚠️ O mesmo cuidado de tipo do `curv_frente`: argumento de launch chega
+    # como TEXTO e o nó declarou double.
+    ganho = [
+        {'ganho_wz': ParameterValue(LaunchConfiguration('ganho_wz'),
+                                    value_type=float)},
+    ]
     # ⚠️ Mesmo cuidado do `curv_frente` acima: o nó declara `lookahead_piso`
     # como double, e argumento de launch chega como TEXTO. Cru, o seguidor cai
     # na subida com "parameter type mismatch" — e sem seguidor a pilha sobe
@@ -407,6 +424,18 @@ def generate_launch_description():
             'curv_medido_em', default_value='HERDADO',
             description='a data da medida acima. Não entra na conta: entra no '
                         'log, para o número herdado não passar por medido'),
+        # No SIMULADOR o default é o valor MEDIDO lá (0,45, 13-08); no robô
+        # real é 1,0, que é a identidade — o ganho dele não foi medido, e
+        # herdar knob de planta entre máquinas é o erro que o CLAUDE.md proíbe
+        # em letras grandes por causa do robô 1.
+        DeclareLaunchArgument(
+            'ganho_wz',
+            default_value=PythonExpression(
+                ["'0.45' if '", LaunchConfiguration('sim'),
+                 "' == 'true' else '1.0'"]),
+            description='fração do wz pedido que a cadeia entrega (038). '
+                        '0,45 medido no Gazebo em 13-08 com ganho_de_giro.py; '
+                        '1,0 no robô real, onde ninguém mediu ainda'),
 
         # ---------------------------------------------------- o simulador
         IncludeLaunchDescription(
@@ -556,13 +585,15 @@ def generate_launch_description():
         # defeito que o `ensaio.py` tinha e que o `--topico` consertou.
         Node(package='robot_motion', executable='compensador_rumo',
              name='compensador_rumo', output='both',
-             parameters=[{'use_sim_time': sim, 'segura_rumo': False}] + curv,
+             parameters=[{'use_sim_time': sim, 'segura_rumo': False}]
+                        + curv + ganho,
              remappings=[('/hoverboard_base_controller/cmd_vel',
                           '/cmd_vel_bruto')],
              condition=IfCondition(sim)),
         Node(package='robot_motion', executable='compensador_rumo',
              name='compensador_rumo', output='both',
-             parameters=[{'use_sim_time': sim, 'segura_rumo': False}] + curv,
+             parameters=[{'use_sim_time': sim, 'segura_rumo': False}]
+                        + curv + ganho,
              condition=UnlessCondition(sim)),
         Node(package='robot_motion', executable='path_follower',
              name='path_follower', output='both',

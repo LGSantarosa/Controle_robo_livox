@@ -1,0 +1,41 @@
+Sessão 2026-08-13 — GAZEBO na máquina de dev, o dono na tela
+============================================================
+
+Mundo    worlds/sala_andar3.sdf, mapa maps/sala_andar3/sala_andar3.yaml
+Pilha    pilha.launch.py sim:=true localizacao:=amcl, gui ON, rviz OFF,
+         web em :5000 (WEB_TELEOP=on ROBOT_MODE=nav2)
+Alvo     (6,24 · 3,51) — o mesmo alvo documentado de 14-08, para comparar
+Robô     nasce em (0 · 0)
+
+ARQUIVOS
+--------
+varredura-1-INVALIDA-robo-no-batente.csv
+    ⚠️ INVÁLIDA. Rodou com o robô encaixado no vão da porta: a fase comandada
+    andou 0,04-0,12 m em vez dos 0,36 esperados, e o x,y de todas as linhas
+    ficou em (4,95 · 1,60). Números plausíveis, instrumento errado.
+varredura-2.csv                 a varredura boa do freio, em campo aberto
+depois-do-freio.csv             sobra com o freio LIGADO no compensador
+ganho-de-giro.csv               1ª varredura de ganho — v_real pulou 4x, NÃO VALE
+ganho-de-giro-2.csv             a boa: campo aberto, janela de regime de 3 s
+corrida-porta-com-freio.csv     porta com freio, ganho ainda 1,0
+corrida-com-ganho.csv           porta com freio + ganho 0,45  <- A CORRIDA BOA
+corrida-lookahead-055.csv       tentativa de matar o S com mira 0,55: falhou
+corrida-zona-morta-012.csv      tentativa com tolerância 0,12: NÃO CHEGOU
+
+CRITÉRIO (o do dono, de 13-08)
+------------------------------
+1. chegar ao alvo (raio 0,25 m);
+2. NÃO ENCOSTAR EM NADA — folga do centro à parede > 0,2275 m, a meia-largura
+   medida com trena em 29-07.
+
+RESULTADO
+---------
+                       chegou   folga min   reflexo   ré    cam/reta
+bateu (início do dia)    não      0,20 m      12%      —     1,40x
+só freio                 SIM      0,35 m      12%      6%    1,40x
+freio + ganho 0,45       SIM      0,35 m       0%      0%    1,21x   <- 30,8 s
+
+EM ABERTO
+---------
+O S na reta: guinada desperdiçada 26,9 -> 53,5 graus/m. Duas tentativas
+falharam (ver 038). a_dec 0,3 -> 0,10 é a próxima, e NÃO foi rodada.

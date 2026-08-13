@@ -686,3 +686,61 @@ def test_a_drenagem_e_mais_lenta_que_o_laco():
     assert MalhaDeReta().adapta_t >= 8.0, (
         'drenagem rápida demais: ela passa a perseguir o transiente do laço '
         'em vez do viés de planta')
+
+
+# ---------------------------------------------------------------------------
+# O ganho da cadeia (decisão 038) — medido em 13-08, `ganho_de_giro.py`
+# ---------------------------------------------------------------------------
+
+def test_ganho_1_e_identidade_e_e_o_default():
+    """O robô real não teve o ganho medido, e lá o nó tem de sair como antes."""
+    m = MalhaDeReta(ki=0.0, kp=0.0)
+    assert m.ganho_wz == 1.0
+    sem = m.passo(0.3, 0.4, 0.0, 0.05, v_real=0.3)
+    m2 = MalhaDeReta(ki=0.0, kp=0.0, ganho_wz=1.0)
+    assert m2.passo(0.3, 0.4, 0.0, 0.05, v_real=0.3) == sem
+
+
+def test_com_ganho_medido_o_comando_SOBE_para_o_robo_entregar_o_pedido():
+    """Se a cadeia entrega 45%, pedir o desejado entrega 45% dele. A conversão
+    é o que faz o cancelamento do arco chegar inteiro."""
+    m = MalhaDeReta(ki=0.0, kp=0.0, ganho_wz=0.45)
+    saida = m.passo(0.3, 0.4, 0.0, 0.05, v_real=0.3)
+    sem = MalhaDeReta(ki=0.0, kp=0.0).passo(0.3, 0.4, 0.0, 0.05, v_real=0.3)
+    assert saida == pytest.approx(sem / 0.45, rel=1e-6)
+
+
+def test_o_que_o_ROBO_faz_volta_a_ser_o_que_foi_PEDIDO():
+    """O teste que vale: simulando a planta (entrega g do comando e soma o
+    arco), a curva realizada tem de ser a pedida.
+
+    Sem a conversão, um pedido de +0,15 rad/s virava −0,03 real — medido na
+    corrida da porta de 13-08, e é a curva suave que sumia.
+    """
+    v, curv, g = 0.30, -0.817, 0.45
+    for pedido in (0.15, -0.15, 0.30):
+        m = MalhaDeReta(ki=0.0, kp=0.0, curv_frente=curv, ganho_wz=g)
+        comando = m.passo(v, pedido, 0.0, 0.05, v_real=v)
+        realizado = g * comando + curv * v      # a planta
+        assert realizado == pytest.approx(pedido, abs=1e-6)
+
+
+def test_sem_a_conversao_o_arco_come_a_curva_suave():
+    """A regressão ao contrário: com ganho 1,0 numa planta que entrega 0,45,
+    o pedido de +0,15 sai NEGATIVO. É o defeito, e ele fica travado aqui."""
+    v, curv, g = 0.30, -0.817, 0.45
+    m = MalhaDeReta(ki=0.0, kp=0.0, curv_frente=curv)   # sem saber do ganho
+    comando = m.passo(v, 0.15, 0.0, 0.05, v_real=v)
+    realizado = g * comando + curv * v
+    assert realizado < 0.0, 'é este o sintoma que a 038 conserta'
+
+
+def test_o_grampo_do_comando_existe_para_a_divisao_nao_explodir():
+    m = MalhaDeReta(ki=0.0, kp=0.0, ganho_wz=0.1, wz_cmd_max=2.2)
+    assert abs(m.passo(0.5, 1.5, 0.0, 0.05, v_real=0.5)) <= 2.2
+
+
+def test_ganho_fora_da_faixa_e_erro():
+    for ruim in (0.0, -0.5, 1.5):
+        with pytest.raises(ValueError):
+            MalhaDeReta(ganho_wz=ruim)

@@ -4,6 +4,94 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-08-13 — A BATIDA VIRA FREIO, E O GANHO ESCONDIDO DA CADEIA DE GIRO
+
+> Dev + Gazebo, o dono na tela do começo ao fim. Decisão **038**. Nada foi ao
+> robô: a sessão terminou com ele indo para a máquina de verdade.
+
+### Como começou: subir a pilha, e três órfãos do dia anterior
+
+O pedido era simples — "sobe o Gazebo e o serviço web, vou soltar um ponto". A
+subida travou duas vezes e o motivo é o de sempre neste projeto: **seis nós
+órfãos** de duas tentativas anteriores (`heading_controller`, `path_follower` e
+`compensador_rumo`, em triplicata), publicando nos mesmos tópicos. O sintoma foi
+`/clock` com **publisher count 0** e o Nav2 inteiro pendurado esperando TF.
+
+Minha checagem de órfãos não os pegou porque eu procurei por `ros2`, `gz sim` e
+`nav2` — e os nós nossos rodam por caminho de `install/`, que não casa com
+nenhum desses. E depois eu repeti o erro em outra forma: mandei matar a pilha,
+o comando saiu com erro, **eu não conferi**, e subi outra por cima. Foi o dono
+quem apontou: *"vc tem que matar o outro primeiro, se não da conflito como vc já
+viu antes"*.
+
+➡️ Virou `mata_pilha.sh`: mata por PID, **confere**, repete até três vezes, e só
+devolve quando a lista está vazia. Verificar não é opcional.
+
+### 1. A batida, e ela estava medida antes de eu propor conserto
+
+O dono mandou um ponto e o robô entrou na porta. A corrida gravada dá o
+instante exato: o reflexo cortou o comando a **0,30 m** da parede e o robô ainda
+andou **+0,10 m** — parou a 0,20, contra 0,2275 de meia-largura. Encostou.
+
+**O reflexo funcionou.** O que não existia era o freio, e o eixo é o que a 037
+deixou de fora. A decisão 038 tem os números; o resumo é que a sobra sem freio
+(+0,107 e +0,127 m na bancada) bate com a batida (+0,100 m), e com freio ela cai
+para −0,084…+0,018 m.
+
+### 2. O ganho da cadeia — e a minha hipótese errada no caminho
+
+Com o freio de pé ele parou de bater e **continuou dando ré** na porta. Eu disse
+ao dono que a causa era o compensador "desligar na curva". Fui ler o código
+antes de mexer: **ele não desliga** — o `ff` entra na curva também, e o
+comentário no arquivo explica por quê. Quem me enganou foi a mensagem de subida
+do nó, desatualizada.
+
+Refazendo a conta com o `ff` somado sobrou uma explicação só, e ela se mede: a
+cadeia entrega **~45%** do `wz` pedido. Então o cancelamento do arco chega a 45%
+e sobra ≈ −0,12 rad/s de arco permanente — do tamanho exato da curva suave que
+sumia. Bancada nova (`ganho_de_giro.py`) confirmou com o teste do modelo
+batendo: intercepto medido −0,129 contra −0,099 previsto.
+
+Corrigido, a corrida da porta ficou: **chegou em 30,8 s, zero ré, zero corte do
+reflexo**, caminho 1,21x a reta (era 1,40x).
+
+### 3. O que o conserto ABRIU, e ficou aberto
+
+O dono viu na hora: *"não quero essa porra desse S nas retas"*. Medido, a guinada
+desperdiçada dobrou (26,9 → 53,5°/m). A causa não é laço rápido demais — o
+comando trocou de sinal MENOS vezes que antes. É a lei de rumo `√(2·a_dec·|e|)`
+ser íngreme perto de zero: 6° de erro pedem 0,245 rad/s, e a placa varre ~7°
+depois do comando zerar. Antes a planta engolia isso; agora ela obedece.
+
+Duas tentativas minhas, as duas falharam, e a segunda ensina mais que a primeira:
+
+- **mira do seguidor 0,30 → 0,55 m**: não mexeu na reta (`|wz|` 0,236 → 0,235) e
+  amoleceu a curva (0,346 → 0,226). Knob errado;
+- **tolerância de rumo 0,02 → 0,12 rad**: **não chegou ao alvo**, reflexo cortou
+  77%. Ele deixou de afinar o rumo na chegada, entrou torto na porta e travou.
+
+➡️ **Reta e porta puxam para lados opostos com um knob global.** Longe e rápido,
+tolerar erro ajuda; perto e devagar, tolerar erro cega. Qualquer conserto do S
+tem de saber a diferença entre os dois regimes — e nenhum dos knobs que eu mexi
+sabe.
+
+A próxima tentativa (`a_dec` 0,3 → 0,10) **não foi rodada**, e por isso o YAML
+ficou em 0,3: valor não medido não entra na frente de valor medido.
+
+### O que eu erraria de novo se ninguém anotasse
+
+1. **conferir a limpeza é parte de matar** — duas subidas em cima de órfãos, uma
+   delas apontada pelo dono. O script existe agora;
+2. **ler o código antes de acusar** — eu propus consertar um "desligamento" que
+   não existia. O conserto certo (o ganho) só apareceu depois da leitura;
+3. **bancada em espaço apertado mede o aperto** — a primeira varredura do freio
+   rodou com o robô encaixado no batente e deu números plausíveis (fase
+   comandada de 0,04 m em vez de 0,36). Salvou o diagnóstico ter conferido
+   `x,y` de cada linha do CSV;
+4. **eu criei um gravador duplicado** escrevendo no MESMO arquivo de outro que
+   ainda rodava, e perdi uma corrida boa. Mesmo defeito dos órfãos, em outra
+   roupa.
+
 ## 2026-08-14 (3ª leva) — O FREIO QUE FOI MEDIDO, E O EIXO ERRADO
 
 > Dev + Gazebo, com o dono na tela. Decisão **037**. A sessão terminou com o
