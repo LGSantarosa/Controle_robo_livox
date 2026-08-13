@@ -1,0 +1,53 @@
+Sessão 2026-08-14 — GAZEBO na máquina de dev, mapa que o robô desenhou em 13-08
+===============================================================================
+
+Pergunta   o robô real tem capacidade de repetir a primeira leva de 13-08?
+           (pergunta do dono: "se fizer é pq o robô real tem capacidade de
+           fazer igual ao gazebo")
+
+Mundo      worlds/sala_andar3.sdf, gerado por bin/map2world.py a partir de
+           maps/sala_andar3/sala_andar3.yaml com --height 1.5 (1,5 m e não os
+           0,5 m padrão, para a parede cobrir a fatia 2D inteira de 0,15-1,00 m).
+           197x636 células @0,05 m, 2212 ocupadas -> 713 caixas num mesh só.
+           Mundo e mapa no MESMO frame (o origin do YAML é respeitado), então o
+           robô nasce localizado.
+Pilha      pilha.launch.py sim:=true localizacao:=amcl, mesmo mapa, inflação
+           0,20, planta normal, gui/rviz off.
+Alvo       (2,030 · -0,090) no frame do mapa — recuperado do CSV real de 13-08
+           por trilateração, resíduo máximo 0,2 mm.
+
+⚠️ O QUE INVALIDOU A PRIMEIRA CORRIDA (arquivo ...-INVALIDA.csv)
+---------------------------------------------------------------
+Três Gazebos ÓRFÃOS de tentativas de launch que falharam ficaram vivos, todos
+no mesmo ROS_DOMAIN_ID, publicando os MESMOS tópicos. O /clock vinha de uma
+instância e a nuvem de outra:
+
+    /clock 751,7 s   x   nuvem 437,1 s   ->  314,6 s de diferença
+
+O collision_monitor (source_timeout 1,0) recusou a fonte, corretamente, e
+cortou toda a autonomia. Com a frente bloqueada, a ré — que fura o reflexo por
+projeto (025) — virou o único canal capaz de mover o robô, e ele andou 0,55 m
+de costas e congelou. Foi essa corrida que expôs a ré sem objetivo (031).
+
+Depois de matar os órfãos POR PID e subir uma instância só:
+
+    atraso da nuvem 0,132 s | RTF 0,95 | nuvem 8,3 Hz
+
+Não foi preciso mexer na fidelidade do sensor simulado (400x50 pontos), que
+era a primeira hipótese e estava errada.
+
+Comparação (a MESMA conta aplicada aos três CSV)
+------------------------------------------------
+                        chegou  referênc     yaw   v não-0  cam/reta
+    REAL 13-08 inf 0,20    7,1 s    3,4°     4,2°    96,5%    1,02x
+    REAL 13-08 inf 0,50   11,2 s   18,4°    31,1°    96,4%    1,24x
+    GAZEBO 14-08 inf 0,20  7,5 s    5,6°     5,1%*   95,3%    1,00x
+    (*yaw em graus)
+
+⚠️ Estes números NÃO reproduzem os do ESTADO_PROJETO de 13-08 (que dizem 23,4°
+e 14,0°): lá a "referência" foi calculada de outro jeito. O que vale aqui é que
+a conta é IDÊNTICA nas três linhas — a comparação é válida, os valores
+absolutos não são comparáveis com os do documento antigo.
+
+Veredito: o Gazebo repetiu a leva boa. Reflexo não agiu nenhuma vez, caminho
+1,00x a reta, chegou a 0,033 m do alvo.
