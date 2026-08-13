@@ -6112,3 +6112,141 @@ a corrida `b` e ia emendar a `c` sem pedir posição e sem esperar o "pode",
 apoiado num "pode" dado para UMA corrida. O dono cortou. Uma corrida por vez, e
 o "pode" é por corrida — ainda mais aqui, onde entre uma e outra ele PRECISA
 entrar no campo de visão do sensor para recolocar o robô.
+
+## 2026-08-13 — O MAPA DO PRÓPRIO ROBÔ, E A INFLAÇÃO ERA A CULPADA (robô)
+
+Sessão no robô real, no andar 3 do estágio, na sala de sempre. Objetivo do
+roteiro: passo 6 (mapa + AMCL). Terminou com o robô andando **reto com mapa**,
+que é o que faltava desde 12-08.
+
+### 1. O `/scan` estava morto havia horas, e ninguém sabia
+
+O primeiro achado nem era o assunto da sessão. Com a pilha de pé:
+
+```
+20:00:54  base sobe, scan_2d (pointcloud_to_laserscan) começa, /scan vivo
+20:05:47  scan_2d MORRE com exit code -9 = SIGKILL
+```
+
+Não foi OOM (11 GB livres, zero evento no kernel): foi **SIGKILL na mão**, a
+assinatura de um `pkill` de limpeza que levou junto um nó que ninguém queria
+matar. É a armadilha do `pkill -f` de novo, com vítima nova — e eu mesmo caí
+nela **duas vezes** durante esta sessão, matando a própria sessão ssh porque a
+linha do ssh continha o padrão.
+
+Consequência escondida: **as corridas de 12-08 à noite rodaram sem `/scan`**. O
+`path_follower` gritou `emperrado, mas SEM medida do vão traseiro` a cada 5 s a
+noite inteira. A ré da 025 esteve inerte — não invalida "o robô anda reto", mas
+significa que a rede de segurança não existia.
+
+### 2. O mapa do estágio não serve para esta sala, e isso tem número
+
+O passo 6 mandava localizar contra `maps/andar3/scan_andar3_ajustado`. Com o
+AMCL de pé e a pose semeada, e depois por **busca exaustiva** da melhor pose
+possível na sala inteira:
+
+```
+pose semeada         47,2% dos feixes sem parede nenhuma perto
+melhor pose possível 41,4% a menos de 0,15 m, erro mediano 0,300 m
+esperado (12-08)     100% dentro de 0,15 m
+```
+
+Não é pose errada, é **mapa errado**. O `ajustado` é a versão LIMPA de uma
+planta do estágio, e a limpeza que dobrou a folga p10 (0,212 → 0,400 m) foi
+apagar a mobília. A sala real está cheia de coisa. Palavras do dono quando eu
+ainda insistia em achar a pose: *"ela ta cheia de coisa, mas no mapa foi tirado
+[...] vamos criar um novo mapa então"*. Ele estava certo e eu estava caçando
+pose de um mapa que não existia.
+
+### 3. O robô desenhou o próprio mapa
+
+Decisão **028**: `mapeia.launch.py` sobe `slam_toolbox` em mapping mais a cadeia
+de comando do humano (`twist_mux` → `compensador_rumo`), e **não** sobe AMCL,
+`map_server`, `tf_map_odom` nem autonomia — os três primeiros brigariam por
+`map → odom`, e o último seria robô perseguindo mapa que muda debaixo dele.
+
+⚠️ Achado de ferramenta: **`use_lifecycle_manager: False` NÃO faz o
+`slam_toolbox` se auto-ativar no Jazzy.** Ele nasce `unconfigured` e fica lá,
+calado, sem erro — o sintoma é `/map` que nunca aparece. Entrou um
+`nav2_lifecycle_manager` com lista de um nome.
+
+O dono dirigiu por teleop pela sala e pelo corredor. Mapa salvo em
+`maps/sala_andar3/` (197 × 636 células). ⚠️ O `map_saver_cli` estoura o timeout
+default de 2 s neste NUC: `-p save_map_timeout:=30.0`.
+
+**A régua do mapa novo, contra o mesmo scan:**
+
+```
+                             <0,15 m de parede   erro mediano
+mapa do estágio (limpo)           41,4%             0,300 m
+mapa desenhado hoje               97,7%             0,050 m
+```
+
+### 4. A pose inicial sem tela: busca exaustiva em vez de chute
+
+O NUC não tem tela e o dono lê coordenadas de figura, não de RViz. O que
+funcionou foi **busca por força bruta**: transformada de distância do mapa,
+varredura de (x, y, yaw) sobre todas as células livres com folga ≥ 0,25 m,
+pontuação robusta (fração de feixes a menos de 0,10 m de parede) para o corpo do
+dono dentro da sala não estragar a conta. Sai pose com 99% dos feixes dentro de
+0,15 m, e vai pro AMCL por `/initialpose`.
+
+⚠️ **A pose envelhece**: uma correção calculada de um scan de minutos antes foi
+recusada pelo filtro (o AMCL assentou 0,26 m ao lado). Capturar, buscar e
+empurrar **sem intervalo**, com o robô parado, resolveu — 98,9% e depois 99,7%.
+
+### 5. 🎯 A INFLAÇÃO ERA A CULPADA — e a previsão passou
+
+Primeira corrida com mapa, alvo a 2,5 m, `inflation_radius: 0.50` (a de
+produção): ele **chegou sem encostar em nada**, mas passeando. O dono viu:
+*"ele fica perdidinho até chegar no goal"*. O CSV concordou, e apontou o dedo:
+
+```
+                     chegou   referência    yaw     v não-nula   caminho/reta
+inflação 0,50        26,1 s      83,8°     103,2°     41,9%        1,45x
+inflação 0,20         8,1 s      23,4°      14,0°     87,1%        1,02x
+12-08, SEM mapa       9,5 s      14,7°      10,0°       —          1,09x
+```
+
+Quem passeava era o **PLANO**, não o robô: a referência de rumo excursionava
+83,8° e o yaw obedecia. Mesmo veredito de 12-08, muito pior. A previsão escrita
+ANTES da corrida ("a excursão cai para a casa de 20–30°") saiu **23,4°**.
+
+**1,02× é reta.** Com mapa e AMCL, o robô ficou igual à corrida sem mapa que o
+dono lembrava, e mais rápido. A `inflation_radius: 0.50` foi escolhida em 05-08
+para a porta de 0,90 m da pista SIMULADA; nesta sala, onde 35,4% das células
+livres estão a menos de 0,32 m de alguma coisa, ela não recusa plano — ela
+**entorta** o plano.
+
+⚠️ O `corrida_nav.py` reportou 1,85× nas duas corridas porque **não encerra na
+chegada**: 52 dos 60 s foram robô parado no alvo. Medido até a chegada é 1,02×.
+Dívida do instrumento já anotada em 12-08, agora mordendo de novo.
+
+### 6. A ré saiu do nada, e a culpa foi minha
+
+No meio da sessão o robô recuou sozinho. O dono viu e reclamou. O log:
+
+```
+EMPERRADO a 1.97 m do objetivo — ré de até 0.30 m (vão medido atrás: 0.98 m)
+fim da ré: recuou 0.31 m em 6.2 s
+```
+
+**Quem mandou o robô andar fui eu**: o `tools/banco/plano.py` está documentado
+como "planeja sem mover o robô", e é verdade na bancada — mas com a pilha
+inteira de pé ele publica um plano, e o seguidor obedece **plano**, não
+objetivo. A ré só pôde agir porque o `/scan` tinha voltado.
+
+Entrou `re_max_seguidas` como argumento de launch (`0` desliga a ré), porque o
+nó lê o parâmetro na subida e não tem callback — `ros2 param set` não chega lá.
+É band-aid, e o dono já apontou o conserto certo: *"o ideal era ela não sair e
+sim só poder ser ativada quando tiver um destino"*. Amarrar a ré a **objetivo
+ativo** mata a causa; fica para a próxima leva.
+
+### O que fica aberto
+
+- a ré amarrada a objetivo ativo (acima), e o `plano.py` que dirige o robô sem
+  avisar — os dois são a mesma família: "quem pode mandar o robô andar?";
+- o `corrida_nav.py` que não encerra na chegada e polui tortuosidade e `raw_v`;
+- a régua de folga: o `maps/andar3/README.md` diz p10 0,400 m e 7,5% de "corpo
+  não cabe"; recalculado hoje pela definição que o próprio README descreve, dá
+  p10 0,100 m e 37,4%. Um dos dois cálculos está errado — dívida de dev.
