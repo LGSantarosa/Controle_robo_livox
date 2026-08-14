@@ -193,6 +193,10 @@ def generate_launch_description():
     olhar = [
         {'lookahead_piso': ParameterValue(
             LaunchConfiguration('lookahead_piso'), value_type=float)},
+        # 039 — ver a declaração do argumento para por que ele existe e por
+        # que vai a 0.0 na primeira corrida no robô.
+        {'k_lat': ParameterValue(
+            LaunchConfiguration('k_lat'), value_type=float)},
         # 🔴 O FREIO DA RÉ, e ele é do DONO (13-08). A ré da 025 dirige por
         # FORA do reflexo (canal `unstuck_vel`, prioridade 30) — é a única
         # coisa neste robô que anda sem o freio de mão automático. Quem está na
@@ -393,6 +397,18 @@ def generate_launch_description():
             description='[m] distância mínima que o seguidor mira à frente. '
                         'Subir alisa a referência de rumo e corta curva '
                         'fechada por dentro'),
+        # 🔴 A REALIMENTAÇÃO DO DESVIO LATERAL (039), e ela tem de nascer
+        # NEUTRA no robô. `k_lat:=0.0` reproduz exatamente a lei de hoje (só
+        # rumo do carrot), e é assim que ela vai para a primeira corrida com o
+        # robô LIGADO — mesma regra da 038: mudança grande não vai blind pro
+        # robô. No Gazebo o default do nó (1,0) já vale, que é onde ela foi
+        # medida.
+        DeclareLaunchArgument(
+            'k_lat', default_value='1.0',
+            description='[1/s] ganho do desvio lateral do seguidor (039). '
+                        'O erro decai com constante de tempo 1/k. 0.0 desliga '
+                        'e volta à lei só-de-rumo — use 0.0 na primeira '
+                        'corrida com o robô ligado'),
         DeclareLaunchArgument(
             're_habilitada', default_value='true',
             description='false DESLIGA a ré de desencalhe (025), o único '

@@ -4,6 +4,146 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-08-14 — A RÉ MORRE COMO IDEIA, E O SEGUIDOR GANHA O DESVIO LATERAL
+
+> Dev + Gazebo, o dono mandando o goal pelo web. Decisão **039**. Nada foi ao
+> robô. Bag da sessão: `docs/dados/2026-08-14-porta-gazebo/corrida_a`.
+
+### Como começou: a proposta de andar de ré
+
+O dono abriu com uma ideia de projeto: *"para o robô parar de nos dar dor de
+cabeça, temos a opção de fazer ele andar de ré — eu troco a direção do lidar,
+vc altera os comandos pra frente virar a atual ré"*.
+
+**A ideia tem base medida e eu concordei com a premissa**: a razão frente/ré da
+curvatura é 8,3× (04-08), corroborada em 9,4× e 8,74×. Raio de 1,22 m de frente
+contra 10,19 m de ré. E o argumento mais forte nem é esse — é a **calibração**:
+o `curv_frente` já foi remedido três vezes (−0,817 → −0,9116 → −0,9145), anda
+~12% entre sessões, e 12% de 0,82 é ~0,10 1/m sem cancelar, do tamanho do arco
+INTEIRO da ré. De frente o robô depende de uma constante recalibrada toda
+sessão; de ré quase não precisa dela.
+
+**O que matou a ideia foi uma frase do dono, não uma conta minha**: *"nem no
+Gazebo ele tá passando a porta sem ter que dar uma ré"*. O Gazebo (a) tem boba
+que é patim (BO-4) e (b) cancela o arco de frente por construção — a
+`placa_simulada` e o compensador usam o mesmo −0,817. **Se ele erra a porta
+ali, o defeito da porta não é do sentido de marcha**, e virar o robô levaria o
+erro junto. Ele abortou a virada na hora: *"temos que arrumar o seguidor
+então"*.
+
+➡️ **Fracasso útil, e vai para o artigo**: uma hipótese com 8× de evidência a
+favor foi descartada por um teste que custou zero, porque a evidência era sobre
+o eixo errado. O arco estava medido; o que ninguém tinha medido era se o arco
+era o que derrubava na porta.
+
+### O que eu errei no meio do caminho, e o dono não viu
+
+Na resposta anterior eu tinha dito *"é o seguidor, dívida nº 1"* apoiado na
+medida de 13-08. Fui conferir a procedência antes de mandar sintonizar: aquela
+medida é de **`inflation_radius: 0.20`**, e o costmap mudou **duas vezes hoje**
+(0.20 → 0.90, `robot_radius` 0.32 → 0.26 → 0.28). Culpar o seguidor com número
+de outra configuração seria mandar o dono sintonizar a peça errada. Remedi
+tudo contra o bag de hoje antes de tocar em código.
+
+E na primeira leitura do bag eu errei duas vezes, as duas do mesmo jeito —
+medindo contra a referência errada:
+
+1. **Peguei `/compensador_rumo/cmd_vel` como saída do compensador.** É a
+   ENTRADA dele (a saída no sim é `/cmd_vel_bruto`). Com isso os três eventos
+   de ré apareceram como "desencalhe" e o freio não aparecia.
+2. **Medi desvio de trajeto contra o plano do instante.** Dá ~zero por
+   construção: o Nav2 replaneja **a partir de onde o robô está**. A medida boa
+   é contra o último plano publicado ANTES de o robô sair dele.
+3. E o alinhamento `map←odom` por transformada única deixava resíduo de
+   **0,234 m** — do tamanho do efeito. Passou a ser interpolado no tempo.
+
+### O número que fechou o diagnóstico
+
+```
+porta: vão de 0,880 m, corpo de 0,455 m
+
+o PLANO cruza a 3,8 cm do centro    -> deixa 0,175 m para o corpo
+o ROBÔ  cruza a 14,8 cm do centro   -> deixa 0,065 m
+                                       o seguidor come 0,110 m (2/3 da margem)
+
+desvio contra o plano bom:  p50 0,053   p90 0,088   no corte do reflexo 0,094 m
+```
+
+Bate com o robô real de 13-08 (o seguidor comia 0,082 m lá). **Mesmo defeito,
+mesmo tamanho, e num simulador sem boba.** A lei era só de rumo
+(`rumo_para(x, y, carrot)`), que é pure pursuit e tem erro permanente em curva
+— e a porta vem logo depois de uma.
+
+### 🔴 O FREIO LINEAR NÃO FREIA: ELE INVERTE A MARCHA
+
+O dono viu antes de mim: *"o freio linear tá forte demais, dá um cutucão e faz
+o robô recuar uns 10 cm; é pra parar o robô mas no fim tá parando e ainda
+invertendo o sentido"*. **E é isso mesmo**, pego no bag separando entrada de
+saída do compensador (entrada parada, saída não-nula = assinatura do freio):
+
+```
+t=33,25  engata a +0,319 m/s, manda −0,500 por 0,44 s
+t=33,69  SOLTA com o robô ainda a +0,256 m/s
+         ->  ele termina a −0,224 m/s      (87% da velocidade que tinha, ao contrário)
+```
+
+Aconteceu 8 vezes na corrida. O mecanismo está fechado e é **estrutural**:
+
+```
+o freio manda contra-torque e a placa entrega 0,298 m/s (020), qualquer que
+  seja o pedido               -> não tem proporção: é sempre no talo (o cutucão)
+ele SOLTA por realimentação de velocidade  (freio_solta_em = 0,25 m/s)
+mas a placa RETÉM o comando por atraso_desliga = 0,52 s   (medido 04-08)
+```
+
+🔴 **O tempo morto (0,52 s) é MAIOR que o evento inteiro de frenagem (0,44 s).**
+Malha fechada com tempo morto maior que o transitório não tem como não passar
+do ponto — não é ganho mal escolhido, é a forma da lei. A velocidade durante a
+frenagem quase não responde (0,319 → 0,256 em 0,44 s = 0,14 m/s² de
+desaceleração); **todo o efeito chega depois que o freio já soltou.**
+
+Dois defeitos menores achados junto:
+
+- **`freio_pico_min` (0,12) é código morto**: o freio só engata acima de 0,25 e
+  `maior` nasce com esse valor, então `maior >= pico_min` já é verdade no
+  primeiro ciclo. O portão nunca atrasa nada.
+- **Um limiar só serve de engate E de solta** (`solta_em` nos dois papéis), o
+  que torna os dois impossíveis de sintonizar separado.
+
+➡️ **O conserto proposto é abrir mão da realimentação**: contra-torque de
+duração calculada no engate (`t_freio = v_ini / a_freio`), aberto, curto. Pelo
+bag, o comando de ré entrega ~1,23 m/s² de Δv por segundo comandado, então
+0,32 m/s pedem ~0,26 s — **metade** dos 0,44 s que ele fez. **NÃO implementado**
+— é redesenho da 038, o dono estava fora da sala, e vai esperar o "pode".
+
+### O que entrou (039)
+
+`rumo_alvo = rumo_carrot − atan2(k·e_lat, max(|v|, v_ref))`, o termo de
+Stanley. Ganho escolhido pela dinâmica e não por varredura: o erro decai com
+constante de tempo **1/k segundos, independente da velocidade** — e é por isso
+que o `v` está no denominador, porque perto da porta o robô anda devagar e um
+proporcional puro ficaria fraco justo ali. Com `k=1,0` os 11 cm medidos viram
+~1 cm em 3 s (0,90 m de caminho).
+
+11 testes novos, 283 → **294** no `robot_motion`. A lei **nasce neutra**:
+`k_lat=0` devolve o rumo do carrot intacto, e é assim que ela vai para a
+primeira corrida no robô — mesma regra da 038.
+
+⚠️ **Nenhuma corrida rodou com a lei ligada.** O Gazebo não sobe sem o dono
+olhando. A régua já está no lugar: o `path_follower` passou a gravar
+`desvio_lateral` no CSV, então a corrida de validação mede o conserto sem
+precisar reabrir bag contra mapa.
+
+### Higiene: mais um órfão, e o grep da receita não pega ele
+
+A porta 5000 estava ocupada por um **web de ontem 16:25**, vivo desde a sessão
+passada, publicando em `/web_vel` na prioridade 50 do mux. O grep da receita de
+limpeza não o encontra: os args dele são só `.venv/bin/python app.py`, que não
+casa com `ros2|gz sim|nav2|install`. Terceira vez que órfão custa tempo nesta
+casa (07-31 com três pilhas, 13-08 com seis nós).
+
+---
+
 ## 2026-08-13 — A BATIDA VIRA FREIO, E O GANHO ESCONDIDO DA CADEIA DE GIRO
 
 > Dev + Gazebo, o dono na tela do começo ao fim. Decisão **038**. Nada foi ao

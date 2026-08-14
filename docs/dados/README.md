@@ -53,3 +53,31 @@ parado). Todo CSV traz as **duas** odometrias no mesmo instante — é a coluna
 >
 > `-giro-roda.csv` é a corrida em que o dono disse "no giro ele não se mexeu": o
 > LIO concorda com ele. Ver DIARIO 07-31 4ª leva.
+
+## A porta no Gazebo — 2026-08-14 (`2026-08-14-porta-gazebo/`)
+
+Corrida com o dono mandando o goal pelo web, gravada por `ros2 bag record`
+passivo (22 tópicos, 167 s). Sustenta a **decisão 039**.
+
+| arquivo | o que é |
+|---|---|
+| `corrente.csv` | a corrente inteira a ~10 Hz: pose no frame do MAPA, o que o seguidor pediu (`v_seguidor`), o que o reflexo deixou passar (`v_apos_reflexo`), a ré de desencalhe, e a **entrada e a saída do compensador** separadas. `freio_agindo=1` marca a assinatura do freio linear (entrada parada, saída não-nula) — 27 amostras, os 8 eventos da corrida. |
+| `plano-x-caminho.csv` | os dois traçados que a 039 compara: `plano_antes_do_reflexo` (o último plano publicado antes de o reflexo cortar, que é a referência honesta) e `caminho_realizado`. |
+| `porta.png` | o desenho dos dois, com os eventos de freio e de ré marcados. |
+
+⚠️ **Duas armadilhas de leitura, as duas cometidas e corrigidas em 14-08:**
+
+1. `/compensador_rumo/cmd_vel` é a **ENTRADA** do compensador, não a saída — a
+   saída no simulador é `/cmd_vel_bruto`. Trocar as duas faz o freio linear
+   desaparecer da análise e vira "foi o desencalhe".
+2. Desvio de trajeto medido contra o plano do **instante** dá ~zero por
+   construção: o Nav2 replaneja a partir de onde o robô está, então ele está
+   sempre em cima do próprio plano. A medida boa é contra o último plano
+   publicado **antes** de o robô sair dele.
+
+A pose foi levada de `odom` para `map` com a correção do AMCL **interpolada no
+tempo**. Uma transformada rígida única deixava resíduo de 0,234 m — do tamanho
+do efeito medido (0,110 m).
+
+O bag `.mcap` (9,7 MB) **não é versionado** (ver `.gitignore`): a convenção
+desta pasta é CSV + txt, que se lê sem ROS e cabe no clone.

@@ -41,11 +41,13 @@ from robot_motion.lei_de_seguimento import (
     chegou,
     comando_de_parada,
     curvatura_adiante,
+    desvio_lateral,
     indice_mais_proximo,
     lookahead_de,
     orcamento_de_re,
     raio_de_chegada_minimo,
     re_esgotada,
+    rumo_com_desvio,
     rumo_para,
     vao_no_corredor_traseiro,
     velocidade_de_seguimento,
@@ -78,6 +80,37 @@ class PathFollower(Node):
             # oscilação. Com 1,0 o lookahead vira 0,37 m — cabe dentro do vão.
             ('lookahead_fator', 1.0),
             ('lookahead_piso', 0.30),
+            # --- realimentação do DESVIO LATERAL (decisão 039) ---
+            #
+            # Até 14-08 a lei era só de rumo: `rumo_para(x, y, carrot)`. O
+            # desvio lateral só voltava ao comando de forma implícita e com
+            # atraso, e pure pursuit tem erro permanente conhecido em curva —
+            # a mira à frente corta a curva por dentro. A entrada da porta vem
+            # logo depois de uma curva, e foi exatamente ali que doeu:
+            #
+            #   14-08, Gazebo    plano deixa 0,175 m p/ o corpo, robô deixa 0,065
+            #   13-08, robô real plano deixa 0,118 m,             robô deixa 0,036
+            #
+            # Nos dois o PLANO estava bom e quem saiu dele foi o seguidor. Com
+            # 2/3 da margem comida, o reflexo dispara contra parede MAPEADA —
+            # que é o critério de aceitação que o dono fixou em 12-08.
+            #
+            # `k_lat` escolhido pela dinâmica que impõe, não por varredura: o
+            # erro decai com constante de tempo 1/k s (ver `rumo_com_desvio`).
+            # Com 1,0, os 11 cm medidos viram ~1 cm em 3 s — 0,90 m de caminho
+            # a 0,30 m/s, que cabe folgado na reta de aproximação.
+            #
+            # ⚠️ NASCE LIGADO NO SIMULADOR E TEM DE NASCER NEUTRO NO ROBÔ:
+            # `k_lat: 0.0` reproduz o comportamento de hoje exatamente, e é
+            # assim que ele vai para a primeira corrida com o robô ligado.
+            # Mesma regra da 038.
+            ('k_lat', 1.0),
+            # Piso do denominador do termo de Stanley [m/s]. Em `v -> 0` ele
+            # pediria 90° e o robô giraria parado em cima do caminho.
+            ('desvio_v_ref', 0.20),
+            # Acima disto não é correção, é manobra — e manobra tem dono (o
+            # pivô da 036, a ré da 025).
+            ('desvio_teto_deg', 30.0),
             ('v_max', 0.5),
             ('a_lin', 0.3),
             ('wz_max', 1.0),
@@ -511,12 +544,19 @@ class PathFollower(Node):
                           self.par['lookahead_fator'],
                           self.par['lookahead_piso'])
         _, alvo = carrot(self.plano, i0, la)
-        rumo_alvo = rumo_para(x, y, alvo)
         raio = curvatura_adiante(self.plano, i0, janela=la)
         v = velocidade_de_seguimento(dist, raio, self.par['v_max'],
                                      self.par['a_lin'], self.par['wz_max'])
+        # Decisão 039: o rumo do carrot MAIS a realimentação do desvio lateral.
+        # Só o carrot deixa erro permanente em curva (pure pursuit corta por
+        # dentro), e foi ele que comeu 11 cm da margem da porta em 14-08.
+        e_lat = desvio_lateral(self.plano, i0, x, y)
+        rumo_alvo = rumo_com_desvio(rumo_para(x, y, alvo), e_lat, v,
+                                    self.par['k_lat'],
+                                    self.par['desvio_v_ref'],
+                                    math.radians(self.par['desvio_teto_deg']))
         self.publica(rumo_alvo, v)
-        self.registra(t, x, y, rumo, rumo_alvo, v, dist, raio)
+        self.registra(t, x, y, rumo, rumo_alvo, v, dist, raio, e_lat)
 
         # Progresso de verdade apaga a dívida: se o robô chegou mais perto do
         # que estava antes da última ré, aquela ré cumpriu o papel dela.
@@ -698,7 +738,7 @@ class PathFollower(Node):
             self.progresso.reinicia()
 
     # ------------------------------------------------------------ registro
-    def registra(self, t, x, y, rumo, rumo_alvo, v, dist, raio):
+    def registra(self, t, x, y, rumo, rumo_alvo, v, dist, raio, e_lat=0.0):
         """CSV de diagnóstico — o dono só roda, os números vêm por ssh.
 
         `rumo_alvo` está aqui de propósito: o plano salta entre replanejamentos,
@@ -716,6 +756,9 @@ class PathFollower(Node):
                                           math.cos(rumo_alvo - rumo)), 4),
             'v_alvo': round(v, 4), 'dist': round(dist, 4),
             'raio_curva': ('inf' if math.isinf(raio) else round(raio, 4)),
+            # 039: com sinal (+ à esquerda). É a régua do conserto da porta —
+            # sem ele o desvio só aparecia medindo o bag contra o mapa depois.
+            'desvio_lateral': round(e_lat, 4),
         })
 
     def grava(self):

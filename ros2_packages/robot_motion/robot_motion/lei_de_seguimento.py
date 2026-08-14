@@ -84,6 +84,72 @@ def rumo_para(x, y, alvo):
     return math.atan2(alvo[1] - y, alvo[0] - x)
 
 
+def desvio_lateral(caminho, i0, x, y, janela=6):
+    """Distância do robô ao caminho, COM SINAL [m]: + à esquerda, − à direita.
+
+    O sinal é o que faltava. `rumo_para(x, y, carrot)` já corrige desvio de
+    forma implícita — mirando o carrot o robô volta para o caminho — mas só
+    depois que o desvio virou ângulo, e num vão de porta esse atraso é o
+    defeito inteiro. Sem o sinal não dá para realimentar: módulo não sabe para
+    que lado corrigir.
+
+    Mede contra o SEGMENTO mais próximo numa janela em torno de `i0`, e não
+    contra o ponto mais próximo: ponto a ponto o caminho do planner vem a ~5 cm,
+    e a distância ao vértice mais próximo satura em ~2,5 cm mesmo com o robô
+    bem fora da linha.
+    """
+    a = max(0, i0 - janela)
+    b = min(len(caminho) - 1, i0 + janela)
+    melhor, sinal = float('inf'), 0.0
+    for k in range(a, b):
+        ax, ay = caminho[k]
+        bx, by = caminho[k + 1]
+        vx, vy = bx - ax, by - ay
+        n2 = vx * vx + vy * vy
+        if n2 < 1e-12:
+            continue
+        u = max(0.0, min(1.0, ((x - ax) * vx + (y - ay) * vy) / n2))
+        px, py = ax + u * vx, ay + u * vy
+        d = math.hypot(x - px, y - py)
+        if d < melhor:
+            melhor = d
+            # Produto vetorial do segmento com o vetor até o robô: positivo
+            # quando o robô está à ESQUERDA de quem percorre o caminho.
+            sinal = math.copysign(1.0, vx * (y - ay) - vy * (x - ax))
+    return 0.0 if math.isinf(melhor) else melhor * sinal
+
+
+def rumo_com_desvio(rumo_carrot, e_lat, v, k_lat, v_ref=0.20,
+                    teto=math.radians(30.0)):
+    """Rumo alvo do carrot corrigido pelo desvio lateral [rad].
+
+    O termo é o de Stanley: `atan2(k·e, v)`. A propriedade que o justifica é a
+    dinâmica que ele impõe ao erro — com a correção aplicada,
+
+        ė = −v·sen(δ) ≈ −k·e
+
+    ou seja, **o erro lateral decai com constante de tempo 1/k segundos,
+    independente da velocidade**. É o que se quer aqui: perto da porta o robô
+    anda devagar, e uma correção proporcional pura (sem o `v` no denominador)
+    ficaria fraca justo onde ela precisa ser forte.
+
+    Com `k_lat = 0` esta função devolve o `rumo_carrot` intacto — a lei nasce
+    NEUTRA, e ligá-la é uma mudança de parâmetro que se desfaz sozinha. Mesmo
+    cuidado da 038.
+
+    - `v_ref` é PISO do denominador, não a velocidade real: em `v → 0` o termo
+      pediria 90° e o robô giraria parado em cima do caminho.
+    - `teto` limita o pedido a 30°: acima disso a correção deixa de ser
+      correção e vira manobra, e manobra tem dono (o pivô, a ré).
+    """
+    if k_lat == 0.0:
+        return norm_ang(rumo_carrot)
+    corr = math.atan2(k_lat * e_lat, max(abs(v), v_ref))
+    corr = max(-teto, min(teto, corr))
+    # Erro à ESQUERDA (e_lat > 0) pede rumo para a DIREITA: subtrai.
+    return norm_ang(rumo_carrot - corr)
+
+
 def curvatura_adiante(caminho, i0, janela):
     """Raio da curva mais fechada dentro de `janela` metros à frente [m].
 

@@ -13,9 +13,11 @@ import pytest
 from robot_motion.lei_de_seguimento import (
     carrot,
     curvatura_adiante,
+    desvio_lateral,
     indice_mais_proximo,
     lookahead_de,
     orcamento_de_re,
+    rumo_com_desvio,
     rumo_para,
     vao_no_corredor_traseiro,
     velocidade_de_seguimento,
@@ -105,6 +107,113 @@ def test_indice_mais_proximo_acha_onde_o_robo_esta():
 
 def test_rumo_para_o_carrot():
     assert rumo_para(0.0, 0.0, (1.0, 1.0)) == pytest.approx(math.pi / 4)
+
+
+# --------------------------------------------------- o desvio lateral (039)
+#
+# O defeito medido em 14-08 no Gazebo, e antes dele em 13-08 no robô real:
+# o PLANO cruza a porta quase centrado e o ROBÔ chega 11 cm para o lado,
+# comendo 2/3 da margem do vão e disparando o reflexo contra parede mapeada.
+
+
+def test_desvio_lateral_tem_SINAL_esquerda_positivo():
+    """Sem sinal não há realimentação — módulo não sabe para que lado voltar."""
+    pts = reta(20, 0.1)                       # caminho ao longo de +x
+    assert desvio_lateral(pts, 5, 0.5, +0.10) == pytest.approx(+0.10, abs=1e-6)
+    assert desvio_lateral(pts, 5, 0.5, -0.10) == pytest.approx(-0.10, abs=1e-6)
+
+
+def test_desvio_e_medido_contra_o_SEGMENTO_nao_contra_o_vertice():
+    """Ponto a ponto o caminho vem a ~5 cm; a distância ao vértice satura.
+
+    Robô exatamente entre dois pontos do caminho, 10 cm fora: a distância ao
+    vértice mais próximo daria 0,112 m e depende de onde ele está no passo. A
+    distância ao segmento é 0,10 m, sempre.
+    """
+    pts = reta(20, 0.1)
+    assert desvio_lateral(pts, 5, 0.55, 0.10) == pytest.approx(0.10, abs=1e-9)
+
+
+def test_desvio_zero_em_cima_do_caminho():
+    pts = reta(20, 0.1)
+    assert desvio_lateral(pts, 5, 0.5, 0.0) == pytest.approx(0.0, abs=1e-9)
+
+
+def test_a_lei_NASCE_NEUTRA_ganho_zero_e_o_comportamento_de_hoje():
+    """Ligar o termo tem de ser reversível por parâmetro. Mesma regra da 038."""
+    for e in (-0.20, -0.05, 0.0, 0.05, 0.20):
+        assert rumo_com_desvio(0.7, e, 0.3, k_lat=0.0) == pytest.approx(0.7)
+
+
+def test_erro_a_esquerda_pede_rumo_a_DIREITA():
+    """O sinal errado aqui afasta o robô do caminho em vez de trazer."""
+    assert rumo_com_desvio(0.0, +0.10, 0.30, k_lat=1.0) < 0.0
+    assert rumo_com_desvio(0.0, -0.10, 0.30, k_lat=1.0) > 0.0
+
+
+def test_a_correcao_e_a_de_STANLEY_atan_de_k_e_sobre_v():
+    e, v, k = 0.10, 0.30, 1.0
+    esperado = -math.atan2(k * e, v)
+    assert rumo_com_desvio(0.0, e, v, k_lat=k) == pytest.approx(esperado)
+
+
+def integra_erro(e0, v, k, ate_s, dt=0.0005):
+    """Integra o erro lateral sob a correção, cinemática de bicicleta."""
+    e, t = e0, 0.0
+    while t < ate_s:
+        delta = rumo_com_desvio(0.0, e, v, k_lat=k, v_ref=0.0)
+        e += v * math.sin(delta) * dt          # rumo negativo reduz e>0
+        t += dt
+    return e
+
+
+def test_o_erro_decai_com_constante_de_tempo_1_sobre_k():
+    """A propriedade que ESCOLHE o ganho, e ela não depende da velocidade.
+
+    ⚠️ Vale no limite de ângulo pequeno, que é onde a lei deve viver:
+
+        ė = −v·sen(atan(k·e/v)) = −k·e / sqrt(1 + (k·e/v)²)
+
+    O denominador é 1 só enquanto `k·e ≪ v`. Com erro de 10 cm a 0,20 m/s ele
+    já vale 1,12 e o decaimento sai ~5% mais lento — não é defeito, é a lei
+    saturando de propósito (é o mesmo mecanismo do teto de 30°).
+    """
+    for v in (0.20, 0.45):
+        assert integra_erro(0.02, v, 1.0, ate_s=1.0) == \
+            pytest.approx(0.02 / math.e, rel=0.02)
+
+
+def test_o_decaimento_NAO_depende_da_velocidade():
+    """É por isso que o termo tem `v` no denominador, e não é P puro.
+
+    Perto da porta o robô anda devagar. Uma correção proporcional pura ficaria
+    fraca justo onde ela precisa ser forte — que é o defeito de 14-08.
+    """
+    devagar = integra_erro(0.02, 0.20, 1.0, ate_s=1.0)
+    rapido = integra_erro(0.02, 0.45, 1.0, ate_s=1.0)
+    assert devagar == pytest.approx(rapido, rel=0.02)
+
+
+def test_com_o_erro_medido_na_porta_o_ganho_1_resolve_em_um_metro():
+    """A régua do conserto: 11 cm de desvio (14-08) têm de virar ~1 cm.
+
+    A 0,30 m/s, 3 s de correção são 0,90 m de caminho — cabe folgado na reta
+    de aproximação da porta.
+    """
+    assert integra_erro(0.11, 0.30, 1.0, ate_s=3.0) < 0.015
+
+
+def test_a_correcao_tem_TETO_e_nao_vira_manobra():
+    """Acima de 30° não é mais correção: manobra tem dono (o pivô, a ré)."""
+    corr = rumo_com_desvio(0.0, 5.0, 0.30, k_lat=1.0)
+    assert corr == pytest.approx(-math.radians(30.0))
+
+
+def test_velocidade_quase_zero_NAO_pede_giro_de_90_graus():
+    """Sem o piso `v_ref` o termo explode e o robô gira parado em cima da linha."""
+    corr = rumo_com_desvio(0.0, 0.10, 0.0, k_lat=1.0)
+    assert abs(corr) == pytest.approx(math.atan2(0.10, 0.20))
+    assert abs(corr) < math.radians(30.0)
 
 
 # ------------------------------------------- o teto de velocidade pela curva

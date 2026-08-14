@@ -1,12 +1,94 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-08-13**.
+> Versionado na `main`. Atualizado em **2026-08-14**.
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+---
+
+## 🧭 14-08 (dev + Gazebo) — A RÉ MORRE COMO IDEIA, O SEGUIDOR GANHA O DESVIO LATERAL
+
+> Decisão **039**. Bag: `docs/dados/2026-08-14-porta-gazebo/corrida_a`.
+> **Nada foi ao robô.** Nenhuma corrida rodou com a lei nova ligada.
+
+### ❌ A VIRADA PARA A RÉ FOI PROPOSTA E ABORTADA — com dado, não por gosto
+
+O dono propôs inverter a frente do robô (girar o lidar + trocar os comandos),
+porque **a ré é 8,3× mais reta em arco** (04-08; corroborado 9,4× e 8,74×).
+A premissa está certa e continua valendo. **O que a derrubou**: no Gazebo ele
+erra a porta do mesmo jeito — e o Gazebo tem boba que é patim (BO-4) e cancela
+o arco de frente por construção. Logo **o defeito da porta não é do sentido de
+marcha**, e virar o robô levaria o erro lateral junto, inteiro.
+
+⚠️ A carta continua na mesa para o ARCO, e o melhor argumento dela não é o 8×:
+é que o `curv_frente` já foi remedido 3 vezes (−0,817 → −0,9116 → −0,9145),
+anda ~12% entre sessões, e 12% de 0,82 é ~0,10 1/m sem cancelar — do tamanho do
+arco INTEIRO da ré. De frente ele depende de calibração toda sessão; de ré
+quase não.
+
+### 🔴 O SEGUIDOR ERA O CULPADO, E AGORA ESTÁ MEDIDO NAS DUAS MÁQUINAS
+
+```
+porta de 0,880 m, corpo de 0,455 m
+
+o PLANO cruza a 3,8 cm do centro   -> deixa 0,175 m p/ o corpo   <- o plano está BOM
+o ROBÔ  cruza a 14,8 cm do centro  -> deixa 0,065 m
+                                      o seguidor come 0,110 m (2/3 da margem)
+
+13-08 no robô real: o seguidor comia 0,082 m.  Mesmo defeito, mesmo tamanho.
+```
+
+**Entrou (039)**: o termo de Stanley somado ao rumo do carrot,
+`rumo_alvo = rumo_carrot − atan2(k·e_lat, max(|v|, v_ref))`. O ganho veio da
+dinâmica (erro decai com constante de tempo 1/k s, independente da velocidade),
+não de varredura. 11 testes novos, **283 → 294** no `robot_motion` (470 no
+repo). **A lei nasce neutra**: `k_lat:=0.0` reproduz a lei de hoje.
+
+### 🔴 O FREIO LINEAR NÃO FREIA — ELE INVERTE A MARCHA (achado do dono)
+
+*"dá um cutucão e faz o robô recuar uns 10 cm; tá parando e ainda invertendo o
+sentido"*. Confirmado no bag, 8 vezes na corrida:
+
+```
+engata a +0,319 m/s, manda −0,500 por 0,44 s
+SOLTA com o robô ainda a +0,256 m/s   ->   ele termina a −0,224 m/s
+```
+
+**A causa é estrutural, não é ganho**: o tempo morto da placa
+(`atraso_desliga` 0,52 s) é MAIOR que o evento de frenagem inteiro (0,44 s).
+Malha fechada nessas condições não tem como não passar do ponto. Junto vieram
+dois defeitos menores: `freio_pico_min` (0,12) é **código morto** (o freio só
+engata acima de 0,25, então o portão já nasce satisfeito), e **um limiar só**
+faz papel de engate E de solta, o que impede sintonizar os dois.
+
+➡️ **Conserto proposto, NÃO implementado**: contra-torque de duração calculada
+no engate (`t_freio = v_ini / a_freio`), aberto, curto — pelo bag, ~0,26 s em
+vez de 0,44 s. É redesenho da 038 e **espera o "pode" do dono**.
+
+⚠️ **E isso põe em xeque a verificação da 038** logo abaixo, que registrou
+"ré para passar: 6% → 0%". Na corrida de hoje, mesma configuração de costmap,
+a ré de desencalhe disparou **3 vezes**. O alvo era outro; a tabela da 038 não
+está errada para o alvo dela, mas **não generaliza** — e a porta é o caso que
+importa.
+
+### ▶️ O PRÓXIMO PASSO, e ele precisa do dono na tela
+
+1. **Uma corrida no Gazebo com `k_lat=1.0`**, mesmo goal pela porta. A régua já
+   está no CSV do `path_follower` (coluna `desvio_lateral` nova) — alvo: sair
+   dos 0,110 m comidos para < 0,02 m, sem ré nenhuma;
+2. se passar, o "pode" para o redesenho do freio linear;
+3. só depois o robô ligado, e lá o `k_lat` vai **0.0** na primeira corrida.
+
+### 🧹 Higiene
+
+Um **web órfão de ontem 16:25** segurava a porta 5000, publicando `/web_vel` na
+prioridade 50 desde a sessão passada. ⚠️ **O grep da receita de limpeza não
+pega ele** — os args são só `.venv/bin/python app.py`. Terceira vez que órfão
+custa tempo (07-31, 13-08, hoje).
 
 ---
 

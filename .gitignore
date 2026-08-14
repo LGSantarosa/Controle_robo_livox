@@ -70,6 +70,12 @@ firmware/**/.pio/
 pov_*.mkv
 pov_*.mjpeg
 
+# Bags de corrida (grandes — o de 14-08 tem 9,7 MB). A convenção do
+# `docs/dados` é CSV + txt: o que sustenta afirmação vira CSV exportado, que
+# se lê sem ROS e cabe no clone. O bag fica na máquina de quem gravou.
+docs/dados/**/*.mcap
+docs/dados/**/metadata.yaml
+
 # Workspace de referência do estágio (mesmo robô, pilha Nav2 de fábrica),
 # clonado à mão para comparação. É um repo git próprio — commitá-lo aqui
 # criaria um submódulo acidental. O que sai da comparação vira medida nossa
