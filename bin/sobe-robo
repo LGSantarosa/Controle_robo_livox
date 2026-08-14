@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+# Sobe TUDO no robô: base + Nav2 + web, na ordem certa, com as conferências
+# que decidem se vale a pena mandar objetivo.
+#
+#   bash bin/sobe-robo            sobe
+#   bash bin/sobe-robo --mata     mata tudo e confere que morreu
+#
+# Escrito em 14-08 depois de uma sessão em que o robô ficou parado com o
+# objetivo aceito e o plano desenhado, porque faltava UMA transformada. As
+# conferências abaixo existem cada uma por causa de um tombo:
+#
+#   órfão vivo            -> `/clock` sem publisher, Nav2 pendurado (30-07, 13-08)
+#   web órfão na 5000     -> publica /web_vel na prioridade 50 desde ontem (14-08)
+#   /scan morto           -> a ré roda cega, e o launch NÃO ressuscita (12-08)
+#   map->base_link ausente-> objetivo aceito, plano desenhado, robô PARADO (14-08)
+#
+# ⚠️ NÃO usa `pkill -f`: ele já matou a sessão ssh e o `scan_2d` (12-08).
+set +u
+R="$HOME/Controle_robo_livox"
+LOGS="$HOME/logs_sessao"
+MAPA="$R/maps/sala_andar3/sala_andar3.yaml"
+MUNDO_POSE="pose_x:=0.0 pose_y:=0.0 pose_yaw:=0.0"
+# ⚠️ Remedir por sessão: a planta anda ~12% entre dias (ver DIARIO 14-08).
+CURV="curv_frente:=-0.9145 curv_medido_em:=2026-08-11"
+
+export ROS_DOMAIN_ID=42
+mkdir -p "$LOGS"
+
+vivos() {
+  ps -eo pid,args | grep -E "Controle_robo_livox/install|ros2 launch|parameter_bridge|\
+robot_state_publisher|lifecycle_manager|nav2_|laser_mapping|livox|\.venv/bin/python app\.py|python3 app\.py" \
+    | grep -v grep
+}
+
+mata() {
+  echo "== matando =="
+  vivos | awk '{print $1}' | sort -u | xargs -r kill -9
+  sleep 5
+  local resto; resto=$(vivos | wc -l)
+  local porta; porta=$(ss -lptn 'sport = :5000' 2>/dev/null | grep -c 5000)
+  echo "   processos restantes: $resto   porta 5000 ocupada: $porta"
+  [ "$resto" -eq 0 ] && [ "$porta" -eq 0 ] && echo "   🟢 limpo" || {
+    echo "   🔴 AINDA TEM COISA VIVA — não suba por cima, resolva antes"; return 1; }
+}
+
+[ "$1" = "--mata" ] && { mata; exit $?; }
+
+mata || exit 1
+cd "$R" || exit 1
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+echo "== 1/4 base (rodas + Livox + FAST-LIO) =="
+setsid nohup ros2 launch robot_base base.launch.py > "$LOGS/base.log" 2>&1 < /dev/null &
+sleep 20
+echo -n "   /scan: "; timeout 12 ros2 topic hz /scan --window 10 2>&1 | grep -oE "average rate: [0-9.]+" | head -1
+echo -n "   placa: "; timeout 10 ros2 topic echo /hoverboard/connected --once 2>&1 | grep -oE "true|false" | head -1
+echo -n "   bateria das RODAS: "; timeout 12 ros2 topic echo /hoverboard/battery_voltage --once 2>&1 | grep -oE "[0-9]+\.[0-9]+" | head -1
+echo "   ⚠️ a bateria do NUC é OUTRA e não tem telemetria — olhe nela."
+
+echo "== 2/4 Nav2 + seguidor =="
+setsid nohup ros2 launch robot_motion pilha.launch.py sim:=false gui:=false rviz:=false \
+    mapa:="$MAPA" localizacao:=amcl $MUNDO_POSE $CURV log_dir:="$HOME/logs_robo2" \
+    > "$LOGS/pilha.log" 2>&1 < /dev/null &
+for i in $(seq 1 45); do
+  grep -q "Managed nodes are active" "$LOGS/pilha.log" && break
+  grep -q "Aborting bringup" "$LOGS/pilha.log" && break
+  sleep 4
+done
+grep -q "Managed nodes are active" "$LOGS/pilha.log" \
+  && echo "   🟢 Nav2 ativo" || { echo "   🔴 bringup FALHOU — veja $LOGS/pilha.log"; exit 1; }
+
+echo "== 3/4 a transformada que faz ele ANDAR =="
+# 🔴 O FAST-LIO chama a origem dele de `camera_init` e o resto da pilha chama de
+# `odom`. É o MESMO lugar — medido: o offset do sensor é 0,420 m só em Z, e a
+# pose crua do LIO bate com `map->base_link` em 1 mm. Sem esta identidade a
+# árvore de TF fica partida em duas e o seguidor RECUSA o plano (corretamente).
+# ⚠️ Remendo de runtime; o conserto de verdade é o seguidor ler a pose por TF.
+setsid nohup ros2 run tf2_ros static_transform_publisher \
+    --frame-id odom --child-frame-id camera_init \
+    > "$LOGS/tf_camera_init.log" 2>&1 < /dev/null &
+sleep 4
+
+echo "== 4/4 web =="
+cd "$R/controle_web" || exit 1
+PY=python3; [ -x .venv/bin/python ] && PY=.venv/bin/python
+WEB_TELEOP=on ROBOT_MODE=nav2 setsid nohup $PY app.py > "$LOGS/web.log" 2>&1 < /dev/null &
+sleep 9
+ss -lptn 'sport = :5000' 2>/dev/null | grep -q 5000 \
+  && echo "   🟢 web em http://$(hostname -I | awk '{print $NF}'):5000" \
+  || { echo "   🔴 web não subiu — veja $LOGS/web.log"; }
+
+echo
+echo "======== PRÉ-VOO: só mande objetivo se as DUAS derem Translation ========"
+cd "$R"
+echo -n "   map  -> base_link : "
+timeout 12 ros2 run tf2_ros tf2_echo map base_link 2>&1 | grep -m1 -oE "Translation: .*" || echo "🔴 NÃO EXISTE — ele NÃO vai andar"
+echo -n "   odom -> base_link : "
+timeout 12 ros2 run tf2_ros tf2_echo odom base_link 2>&1 | grep -m1 -oE "Translation: .*" || echo "🔴 NÃO EXISTE"
+echo
+echo "   toda corrida grava sozinha em ~/logs_robo2 (CSV + bag)"
+echo "   para derrubar tudo:  bash bin/sobe-robo --mata"
