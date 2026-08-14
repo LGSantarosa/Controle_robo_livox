@@ -1021,21 +1021,45 @@ def test_o_default_do_NO_mantem_o_pivo_desligado():
 
 @pytest.mark.parametrize('arquivo', [MOVIMENTACAO_SIM, MOVIMENTACAO])
 def test_o_pivo_so_dispara_para_erro_GRANDE(arquivo):
-    """A manobra é um QUANTUM de ~95°, não um controle de ângulo.
+    """O gatilho tem de casar com o MENOR GOLPE que a manobra sabe dar.
 
-    A placa entrega um módulo de giro só (2,204 rad/s medido) e segura a saída
-    cheia por 0,52 s depois do corte: a varredura é de 93–101° e **não depende
-    do wz do corte** (n=5, decisão 023). Foi por isso que os 28 disparos de
-    12-08, com erro entre 35° e 81°, não fecharam nenhum ângulo.
+    A regra tem duas formas, e a razão é o cabeçalho desta seção: *"no dia em
+    que alguém consertar o mecanismo, é o teste do `lei_de_pivo` que abre"*.
 
-    Um golpe de 95° só é a manobra CERTA quando o erro é da ordem de 95°. Daí a
-    faixa: gatilho entre 70° e 100°. Abaixo disso o quantum passa do alvo e
-    quem responde tem de ser a lei contínua (que assenta em 0,5–0,6°).
+    ANTES (decisão 023): a placa entrega um módulo só (2,204 rad/s) e segura a
+    saída cheia 0,52 s depois do corte -> varredura de 93–101°, que NÃO depende
+    do wz do corte. Um golpe de ~95° só é a manobra certa para erro da ordem de
+    95°, daí a faixa de 70 a 100°.
+
+    DEPOIS (14-08, 4ª leva): o `heading_controller` dava `return` dentro do
+    pivô ANTES do bloco do freio de giro (037) — o pivô era o ÚNICO caminho da
+    cadeia que girava sem freio, e por isso varreu 150–310° por pulso na
+    corrida G. Com o `wz` do pivô caindo no freio, o golpe mínimo passa a sair
+    do `pivo_a_dec` do perfil: `wz²/(2·a_dec)`.
+
+    Perfil que declara `pivo_a_dec` está afirmando "meu pivô é freado" e cai na
+    regra amarrada ao mecanismo; quem não declara continua na faixa velha.
     """
+    WZ_MODULO = 2.204        # rad/s, o módulo único da placa (023)
     limiar = math.degrees(valor(arquivo, 'limiar_pivo'))
-    assert 70.0 <= limiar <= 100.0, (
-        f'limiar_pivo={limiar:.0f}° fora da faixa em que o quantum de ~95° é a '
-        'manobra certa')
+    try:
+        a_dec = valor(arquivo, 'pivo_a_dec')
+    except Exception:
+        a_dec = None
+    if not a_dec:
+        assert 70.0 <= limiar <= 100.0, (
+            f'limiar_pivo={limiar:.0f}° fora da faixa em que o quantum de ~95° '
+            'é a manobra certa')
+        return
+    golpe_min = math.degrees(WZ_MODULO ** 2 / (2.0 * a_dec))
+    assert limiar >= golpe_min, (
+        f'limiar_pivo={limiar:.0f}° é MENOR que o golpe mínimo de '
+        f'{golpe_min:.0f}° (pivo_a_dec={a_dec}): o pulso passa do alvo e '
+        'ressuscita o ciclo-limite')
+    assert limiar <= 4.0 * golpe_min, (
+        f'limiar_pivo={limiar:.0f}° é {limiar / golpe_min:.1f}x o golpe mínimo '
+        f'de {golpe_min:.0f}°: gatilho alto demais deixa o robô fazendo BALÃO '
+        'onde o pivô já resolveria')
 
 
 @pytest.mark.parametrize('arquivo', [MOVIMENTACAO_SIM, MOVIMENTACAO])

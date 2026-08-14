@@ -25,6 +25,8 @@ aqui é o `v_piso`, e só para calcular o raio de chegada — ver o aviso de sub
 """
 import csv
 import math
+import os
+import time
 
 import rclpy
 from action_msgs.msg import GoalStatusArray
@@ -34,8 +36,11 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import LaserScan
 from std_msgs.msg import Float64
+from tf2_ros import Buffer, TransformException, TransformListener
 
 from robot_motion.lei_de_seguimento import (
+    CorrecaoDeDesvio,
+    MiraAdaptativa,
     ProgressoDeAvanco,
     carrot,
     chegou,
@@ -47,8 +52,8 @@ from robot_motion.lei_de_seguimento import (
     orcamento_de_re,
     raio_de_chegada_minimo,
     re_esgotada,
-    rumo_com_desvio,
     rumo_para,
+    vao_no_corredor_frontal,
     vao_no_corredor_traseiro,
     velocidade_de_seguimento,
 )
@@ -80,6 +85,37 @@ class PathFollower(Node):
             # oscilação. Com 1,0 o lookahead vira 0,37 m — cabe dentro do vão.
             ('lookahead_fator', 1.0),
             ('lookahead_piso', 0.30),
+            # --- MIRA ADAPTATIVA (decisão 040) ---
+            #
+            # A mira fixa de 0,37 m é a causa medida do S. O rumo pedido muda
+            # por `atan(salto_do_plano / mira)`, e o plano salta de lado no
+            # replanejamento (p90 5,8 cm, max 15,1 cm, medido em 14-08):
+            #
+            #   com 0,37 m   15 cm viram 22°     <- amplitude p90 medida: 20,0°
+            #   com 1,00 m   15 cm viram  8,6°
+            #
+            # O robô 1 (`Controle_robo_web`) chegou nisto antes e por outro
+            # caminho: *"carrot 0.6 amplifica ruído de pose (12 cm = 12°) ->
+            # 184 giros no lugar, zigue-zague em corredor; a 1.5 m os mesmos
+            # 12 cm = ~4,6° -> segue reto"*. A mira dele em curva é 0,6 — a
+            # nossa era 0,37, mais curta ainda.
+            #
+            # ⚠️ O esticão é CONDICIONAL, e essa é a parte que o robô 1
+            # aprendeu errando: mira longa corta curva por dentro. Estica só em
+            # trecho reto E com espaço medido pelo SCAN. Passagem apertada é
+            # parede perto por definição, e ali a mira curta é que segura a
+            # linha — é o caso da porta.
+            ('mira_longa', 1.00),
+            # Limiares da geometria, não de varredura (`desvio_da_corda` sobre
+            # 1,0 m): raio 2,0 m desvia 0,068; raio 1,0 m desvia 0,125.
+            # Estica em curva suave (>= ~2 m), encolhe em curva de verdade
+            # (<= ~1 m), e a banda entre os dois é a HISTERESE — sem ela o
+            # carrot pula na fronteira e o limite-ciclo volta por outra porta.
+            ('mira_tol_estica', 0.07),
+            ('mira_tol_encolhe', 0.12),
+            # Só estica com este vão livre à frente, medido no corredor
+            # retangular do corpo. `None` (scan velho ou ausente) = não estica.
+            ('mira_folga_min', 0.60),
             # --- realimentação do DESVIO LATERAL (decisão 039) ---
             #
             # Até 14-08 a lei era só de rumo: `rumo_para(x, y, carrot)`. O
@@ -96,21 +132,49 @@ class PathFollower(Node):
             # que é o critério de aceitação que o dono fixou em 12-08.
             #
             # `k_lat` escolhido pela dinâmica que impõe, não por varredura: o
-            # erro decai com constante de tempo 1/k s (ver `rumo_com_desvio`).
+            # erro decai com constante de tempo 1/k s (ver `CorrecaoDeDesvio`).
             # Com 1,0, os 11 cm medidos viram ~1 cm em 3 s — 0,90 m de caminho
             # a 0,30 m/s, que cabe folgado na reta de aproximação.
             #
-            # ⚠️ NASCE LIGADO NO SIMULADOR E TEM DE NASCER NEUTRO NO ROBÔ:
-            # `k_lat: 0.0` reproduz o comportamento de hoje exatamente, e é
-            # assim que ele vai para a primeira corrida com o robô ligado.
-            # Mesma regra da 038.
-            ('k_lat', 1.0),
+            # 🔴 REPROVADO EM 1,0 NA CORRIDA B DE 14-08 — o robô fez
+            # zigue-zague e o resultado PIOROU:
+            #
+            #                       k_lat=0    k_lat=1,0
+            #   amplitude p90        20,0°       39,8°
+            #   pico                 50,3°       88,1°
+            #   período p50           1,00 s      0,70 s
+            #
+            # E a causa não é só ganho alto: o Nav2 republica o plano ~1 Hz,
+            # às vezes deslocado de lado. Isso é DEGRAU em `e_lat`, e o termo
+            # o converte em degrau de rumo contra uma placa com ~0,5 s de
+            # tempo morto. Degraus grandes de referência dobraram (7 → 14) e o
+            # maior foi de 26° para 62°.
+            #
+            # ↑ 14-08, DEPOIS: o termo ganhou limite de taxa
+            # (`desvio_taxa_deg_s`, ver `CorrecaoDeDesvio`), que é o conserto
+            # da causa — baixar o ganho sozinho não resolveria, porque o degrau
+            # continuaria degrau, só menor.
+            #
+            # ⚠️ MESMO ASSIM O DEFAULT FICA EM 0,0, e desta vez de propósito:
+            # o valor 1,0 foi para a corrida B como default e o dono descobriu
+            # o defeito na tela. Ganho só sobe por argumento explícito de
+            # launch, e só vira default depois de uma corrida que o aprove.
+            ('k_lat', 0.0),
             # Piso do denominador do termo de Stanley [m/s]. Em `v -> 0` ele
             # pediria 90° e o robô giraria parado em cima do caminho.
             ('desvio_v_ref', 0.20),
             # Acima disto não é correção, é manobra — e manobra tem dono (o
             # pivô da 036, a ré da 025).
             ('desvio_teto_deg', 30.0),
+            # 🔴 O LIMITE DE TAXA, e ele é o que a corrida B de 14-08 comprou.
+            # O plano salta de lado no replanejamento (p90 5,8 cm, max 15,1 cm)
+            # e sem limite isso virava degrau de rumo no mesmo ciclo, contra
+            # uma placa com ~0,5 s de tempo morto.
+            #
+            # 15°/s: o teto de 30° se completa em 2 s = 4× o tempo morto (a
+            # malha vê movimento lento, que é a condição de não oscilar), e
+            # fica 3,8× abaixo dos ~57°/s que a máquina fecha com `wz_max` 1,0.
+            ('desvio_taxa_deg_s', 15.0),
             ('v_max', 0.5),
             ('a_lin', 0.3),
             ('wz_max', 1.0),
@@ -269,7 +333,19 @@ class PathFollower(Node):
             # Sem plano novo por este tempo, para. Plano velho é plano perigoso
             # — mesma regra do `timeout_alvo` da movimentação.
             ('timeout_plano', 2.0),
+            # 🔴 14-08: LOG DE TODA CORRIDA, POR PADRÃO (pedido do dono).
+            #
+            # Até hoje `csv` nascia vazio E `grava()` NUNCA era chamado — o nó
+            # sabia gravar e não gravava, em nenhuma corrida. Foi por isso que
+            # o dia inteiro dependeu de eu lembrar de subir um `ros2 bag` à
+            # mão, e a primeira corrida BOA do dia ficou sem registro.
+            #
+            # Agora: `log_dir` não-vazio faz o nó abrir um CSV com carimbo de
+            # tempo a cada subida, sem ninguém pedir. `csv` continua existindo
+            # como caminho explícito, para a bancada escolher o nome.
             ('csv', ''),
+            ('log_dir', ''),
+            ('log_periodo_s', 5.0),
         ])
         self.par = {x.name: x.value for x in p}
 
@@ -317,6 +393,11 @@ class PathFollower(Node):
 
         self.pose = None
         self.plano = []
+        # Frame em que o `/plan` chegou (`map` com AMCL). Sem ele não dá
+        # para saber se a transformada é necessária — ver `plano_em_odom`.
+        self.plano_frame = None
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
         self.t_plano = None
         self.estado = 'ocioso'
         self.progresso = ProgressoDeAvanco(self.par['re_parado_s'],
@@ -335,7 +416,34 @@ class PathFollower(Node):
         self.rumo_objetivo = None
 
         self.linhas = []
+        # `dt` do laço é fixo porque o `passo` roda por timer de taxa fixa —
+        # é o mesmo que a correção lateral usa para limitar a taxa.
+        self.dt = 1.0 / self.par['taxa']
+        self.correcao = CorrecaoDeDesvio(
+            k_lat=self.par['k_lat'], v_ref=self.par['desvio_v_ref'],
+            teto=math.radians(self.par['desvio_teto_deg']),
+            taxa_max=math.radians(self.par['desvio_taxa_deg_s']))
+        self.mira = MiraAdaptativa(
+            curto=lookahead_de(self.par['raio_min_curva'],
+                               self.par['lookahead_fator'],
+                               self.par['lookahead_piso']),
+            longo=self.par['mira_longa'],
+            tol_estica=self.par['mira_tol_estica'],
+            tol_encolhe=self.par['mira_tol_encolhe'],
+            folga_min=self.par['mira_folga_min'])
         self.create_timer(1.0 / self.par['taxa'], self.passo)
+        # Caminho do CSV: explícito ganha; senão, carimbo de tempo no log_dir.
+        if not self.par['csv'] and self.par['log_dir']:
+            os.makedirs(self.par['log_dir'], exist_ok=True)
+            carimbo = time.strftime('%Y-%m-%d_%H%M%S')
+            self.par['csv'] = os.path.join(
+                self.par['log_dir'], f'seguidor_{carimbo}.csv')
+        if self.par['csv']:
+            # Reescreve periodicamente: corrida que termina em Ctrl-C, queda de
+            # bateria ou `kill -9` (as três aconteceram este mês) não pode
+            # perder o registro por estar tudo em memória.
+            self.create_timer(self.par['log_periodo_s'], self.grava)
+            self.get_logger().info(f"log da corrida -> {self.par['csv']}")
         self.avisa_de_saida()
 
     # ------------------------------------------------------------- subida
@@ -353,7 +461,8 @@ class PathFollower(Node):
                           self.par['lookahead_piso'])
         self.get_logger().info(
             f"seguidor de pé — raio da máquina {self.par['raio_min_curva']:.2f} m, "
-            f'lookahead {la:.2f} m, piso de linear {self.par["v_piso"]:.3f} m/s')
+            f'mira {la:.2f} m em curva e {self.par["mira_longa"]:.2f} m em reta '
+            f'(040), piso de linear {self.par["v_piso"]:.3f} m/s')
         if self.par['raio_chegada'] < minimo:
             self.get_logger().error(
                 f"raio_chegada={self.par['raio_chegada']:.3f} m é MENOR que a "
@@ -368,6 +477,54 @@ class PathFollower(Node):
     # --------------------------------------------------------- callbacks
     def cb_odom(self, msg):
         self.pose = msg
+
+    def plano_em_odom(self):
+        """O plano trazido para o frame da POSE. `None` se não der.
+
+        🔴 O DEFEITO DE 14-08, E ELE EXPLICA O DIA INTEIRO.
+
+        Até esta data este nó comparava `/plan` (frame `map`) com `/Odometry`
+        (frame `odom`) **sem nunca aplicar a transformada entre os dois** — não
+        havia `TransformListener` no arquivo. A diferença entre os dois frames
+        é exatamente a correção do AMCL, e ela foi medida nas corridas de hoje:
+
+            corrida A   salto p90 14,3 cm   deriva total   76 cm
+            corrida C   salto p90  9,6 cm   deriva total   56 cm
+            corrida E   salto p90  100 cm   deriva total  833 cm  (o AMCL fugiu)
+
+        Ou seja: o seguidor se achava fora do caminho por uma quantidade que
+        era puro erro de frame, e dirigia para corrigir um desvio que não
+        existe — que pula a cada atualização do AMCL. É o S, é a entrada torta
+        na porta, e é por que toda melhoria de responsividade PIORAVA o
+        resultado: mais fidelidade ao sinal errado.
+
+        Traz o PLANO para `odom` (e não a pose para `map`) porque o
+        `heading_controller` mede o rumo no referencial do `/Odometry` — está
+        escrito na primeira linha da docstring dele. Mexer no frame da pose
+        obrigaria a girar o `rumo_alvo` junto, e seria a mesma armadilha de
+        frame trocada de lugar.
+        """
+        if self.plano is None or self.pose is None:
+            return None
+        destino = self.pose.header.frame_id or 'odom'
+        if not self.plano_frame or self.plano_frame == destino:
+            return self.plano          # já no mesmo frame: nada a fazer
+        try:
+            t = self.tf_buffer.lookup_transform(
+                destino, self.plano_frame, rclpy.time.Time())
+        except TransformException as e:
+            # Não cair no comportamento antigo: usar o plano cru aqui é
+            # exatamente o defeito. Sem transformada, não se dirige.
+            self.get_logger().warn(
+                f'sem TF {destino}<-{self.plano_frame} ({e}); o plano não pode '
+                'ser usado — dirigir com ele seria o defeito de 14-08 de volta',
+                throttle_duration_sec=5.0)
+            return None
+        dx = t.transform.translation.x
+        dy = t.transform.translation.y
+        dth = yaw_de(t.transform.rotation)
+        c, s = math.cos(dth), math.sin(dth)
+        return [(c * x - s * y + dx, s * x + c * y + dy) for (x, y) in self.plano]
 
     def cb_scan(self, msg):
         self.scan = msg
@@ -386,6 +543,22 @@ class PathFollower(Node):
         if self.agora() - self.t_scan > self.par['re_scan_velho_s']:
             return None
         return vao_no_corredor_traseiro(
+            self.scan.ranges, self.scan.angle_min, self.scan.angle_increment,
+            self.par['re_largura'], self.par['re_recuo_para_choque'],
+            alcance_max=self.scan.range_max)
+
+    def vao_frente(self):
+        """Vão livre à frente do para-choque [m], ou `None` se não dá para saber.
+
+        Gate da mira adaptativa (040). Mesmo contrato do `vao_atras`: `None` é
+        "não medi", e quem chama trata como "não estica" — o lado seguro, que
+        aqui é a mira curta.
+        """
+        if self.scan is None or self.t_scan is None:
+            return None
+        if self.agora() - self.t_scan > self.par['re_scan_velho_s']:
+            return None
+        return vao_no_corredor_frontal(
             self.scan.ranges, self.scan.angle_min, self.scan.angle_increment,
             self.par['re_largura'], self.par['re_recuo_para_choque'],
             alcance_max=self.scan.range_max)
@@ -432,6 +605,10 @@ class PathFollower(Node):
         if len(novo) < 2:
             return
         self.plano = novo
+        # 🔴 14-08: GUARDAR O FRAME DO PLANO. Até esta data ele era ignorado, e
+        # o plano (`map`) era comparado direto contra a pose (`odom`) — ver
+        # `plano_em_odom`, que é onde o defeito está descrito.
+        self.plano_frame = msg.header.frame_id
         # O ângulo de chegada sai do ÚLTIMO ponto do plano, e não de uma
         # assinatura própria de `/goal_pose`.
         #
@@ -473,11 +650,17 @@ class PathFollower(Node):
     def passo(self):
         if self.pose is None or not self.plano:
             return
+        # 🔴 O plano vem de `/plan` em `map`; a pose vem de `/Odometry` em
+        # `odom`. Comparar os dois crus é o defeito de 14-08 — ver
+        # `plano_em_odom`. Daqui para baixo, `plano` é o único que se usa.
+        plano = self.plano_em_odom()
+        if not plano:
+            return
         t = self.agora()
         x = self.pose.pose.pose.position.x
         y = self.pose.pose.pose.position.y
         rumo = yaw_de(self.pose.pose.pose.orientation)
-        objetivo = self.plano[-1]
+        objetivo = plano[-1]
         dist = math.hypot(objetivo[0] - x, objetivo[1] - y)
 
         # ⚠️ A CHEGADA VEM ANTES DO FRESCOR DO PLANO, e a ordem é o conserto de
@@ -539,22 +722,22 @@ class PathFollower(Node):
             return
 
         # --- seguindo ---
-        i0 = indice_mais_proximo(self.plano, x, y)
-        la = lookahead_de(self.par['raio_min_curva'],
-                          self.par['lookahead_fator'],
-                          self.par['lookahead_piso'])
-        _, alvo = carrot(self.plano, i0, la)
-        raio = curvatura_adiante(self.plano, i0, janela=la)
+        i0 = indice_mais_proximo(plano, x, y)
+        # Decisão 040: a mira ESTICA em reta e encolhe em curva. Mira fixa de
+        # 0,37 m amplificava o salto do plano (p90 5,8 cm, max 15,1 cm) em até
+        # 22° de referência — a amplitude p90 medida em 14-08 foi 20,0°.
+        # `vao_frente` é o gate: passagem apertada volta para a mira curta.
+        la = self.mira.passo(plano, i0, self.vao_frente())
+        _, alvo = carrot(plano, i0, la)
+        raio = curvatura_adiante(plano, i0, janela=la)
         v = velocidade_de_seguimento(dist, raio, self.par['v_max'],
                                      self.par['a_lin'], self.par['wz_max'])
         # Decisão 039: o rumo do carrot MAIS a realimentação do desvio lateral.
         # Só o carrot deixa erro permanente em curva (pure pursuit corta por
         # dentro), e foi ele que comeu 11 cm da margem da porta em 14-08.
-        e_lat = desvio_lateral(self.plano, i0, x, y)
-        rumo_alvo = rumo_com_desvio(rumo_para(x, y, alvo), e_lat, v,
-                                    self.par['k_lat'],
-                                    self.par['desvio_v_ref'],
-                                    math.radians(self.par['desvio_teto_deg']))
+        e_lat = desvio_lateral(plano, i0, x, y)
+        rumo_alvo = self.correcao.passo(rumo_para(x, y, alvo), e_lat, v,
+                                        self.dt)
         self.publica(rumo_alvo, v)
         self.registra(t, x, y, rumo, rumo_alvo, v, dist, raio, e_lat)
 
@@ -736,6 +919,9 @@ class PathFollower(Node):
             self.get_logger().info(f'parado ({motivo})')
             self.estado = 'ocioso'
             self.progresso.reinicia()
+            # Correção lateral acumulada não sobrevive a uma parada: aplicada
+            # ao caminho seguinte ela é comando sem dono.
+            self.correcao.reset()
 
     # ------------------------------------------------------------ registro
     def registra(self, t, x, y, rumo, rumo_alvo, v, dist, raio, e_lat=0.0):
@@ -769,7 +955,8 @@ class PathFollower(Node):
             w.writeheader()
             w.writerows(self.linhas)
         self.get_logger().info(
-            f"{len(self.linhas)} amostras -> {self.par['csv']}")
+            f"{len(self.linhas)} amostras -> {self.par['csv']}",
+            throttle_duration_sec=30.0)
 
 
 def main():

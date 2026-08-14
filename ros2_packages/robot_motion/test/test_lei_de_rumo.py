@@ -8,6 +8,7 @@ import math
 import pytest
 
 from robot_motion.lei_de_rumo import (
+    GatilhoDeGiro,
     ajusta_para_zona_morta,
     comando,
     comando_de_re,
@@ -325,3 +326,71 @@ def test_re_recusa_velocidade_para_frente():
     for pedida in [0.0, 0.3]:
         with pytest.raises(ValueError):
             comando_de_re(pedida, ZONA_MORTA, MARGEM, V_MAX)
+
+
+# ------------------------------- A HISTERESE DO GIRO (14-08, corridas A a F)
+#
+# Um limiar só (`tolerancia_rumo` 0,02 rad = 1,15°) contra um atuador cujo
+# MENOR golpe é de 14 a 28° (medido na 037, com freio): a lei pedia correção
+# 12 a 24x mais fina do que a placa sabe entregar, e o resultado era
+# ciclo-limite. O período medido em cinco corridas ficou em 2,0-2,8 s e NÃO
+# mudou quando lei, ganho, mira, pivô e frame mudaram — assinatura de planta
+# (relé com tempo morto L oscila em ~4L; `atraso_desliga` = 0,52 s -> 2,08 s).
+
+ENTRA = math.radians(16.0)
+SAI = math.radians(5.0)
+
+
+def test_nao_reengata_por_ruido_abaixo_do_gatilho():
+    """O defeito: com 1,15° de gate, 2° de ruído já mandava girar."""
+    g = GatilhoDeGiro(entra=ENTRA, sai=SAI)
+    for erro_deg in (0.5, 2.0, 8.0, 15.0):
+        assert g.deve_girar(math.radians(erro_deg)) is False
+
+
+def test_entra_a_girar_com_erro_da_ordem_do_golpe_da_maquina():
+    g = GatilhoDeGiro(entra=ENTRA, sai=SAI)
+    assert g.deve_girar(math.radians(17.0)) is True
+
+
+def test_uma_vez_GIRANDO_ele_aperta_ate_o_limiar_de_SAIDA():
+    """Entrada larga, saída apertada — é o que faz o erro assentado ser <=5°
+    sem que o reengate vire caça a ruído."""
+    g = GatilhoDeGiro(entra=ENTRA, sai=SAI)
+    g.deve_girar(math.radians(30.0))
+    for erro_deg in (20.0, 12.0, 8.0, 6.0):        # ainda acima da saída
+        assert g.deve_girar(math.radians(erro_deg)) is True
+    assert g.deve_girar(math.radians(4.0)) is False
+
+
+def test_o_sinal_do_erro_nao_importa_so_o_modulo():
+    g = GatilhoDeGiro(entra=ENTRA, sai=SAI)
+    assert g.deve_girar(math.radians(-17.0)) is True
+
+
+def test_sem_histerese_a_construcao_e_RECUSADA():
+    with pytest.raises(ValueError):
+        GatilhoDeGiro(entra=SAI, sai=SAI)
+
+
+def test_comando_com_girar_FALSE_nao_pede_giro():
+    v, wz = comando(math.radians(10.0), v_max=0.4, a_dec=0.3, wz_max=1.0,
+                    zona_morta=0.02, bitola=0.27, margem_piso=0.05,
+                    tolerancia=SAI, girar=False)
+    assert wz == 0.0 and v == pytest.approx(0.4)
+
+
+def test_comando_com_girar_TRUE_pede_giro_mesmo_com_erro_pequeno():
+    """É o outro lado da histerese: já girando, ele fecha até a saída."""
+    _, wz = comando(math.radians(6.0), v_max=0.4, a_dec=0.3, wz_max=1.0,
+                    zona_morta=0.02, bitola=0.27, margem_piso=0.05,
+                    tolerancia=SAI, girar=True)
+    assert wz != 0.0
+
+
+def test_sem_o_argumento_a_lei_ANTIGA_e_preservada():
+    """`girar=None` = um limiar só. É o que trava os testes da 005."""
+    v, wz = comando(math.radians(0.5), v_max=0.4, a_dec=0.3, wz_max=1.0,
+                    zona_morta=0.02, bitola=0.27, margem_piso=0.05,
+                    tolerancia=math.radians(1.15))
+    assert wz == 0.0 and v == pytest.approx(0.4)

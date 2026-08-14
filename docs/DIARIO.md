@@ -4,6 +4,120 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-08-14 (2ª leva) — DOIS DEFEITOS DE VERDADE, E QUATRO TENTATIVAS MINHAS QUE FALHARAM
+
+> Dev + Gazebo, o dono na tela até o almoço; o protocolo final rodado pelo
+> assistente com autorização explícita dele. Decisão **040**.
+> Dados: `docs/dados/2026-08-14-porta-gazebo/`.
+
+### A forma do dia, e ela é a lição
+
+Oito corridas. **Quatro mudanças minhas foram reprovadas com número e duas
+correções de defeito ficaram.** A diferença entre as duas listas é sempre a
+mesma: as que falharam mexiam em NÚMERO; as que ficaram consertaram MECANISMO.
+
+O dono disse duas vezes que estava piorando (*"essa porra tá piorando a cada
+atualização"*, *"joga esse seguidor no lixo"*) e ele estava certo nas duas —
+eu continuei sintonizando em cima de um sinal corrompido.
+
+### 🔴 Defeito 1 — o seguidor comparava `map` com `odom`
+
+O `path_follower` lia pose em `odom` e plano em `map` **sem TransformListener
+nenhum no arquivo**. A diferença entre os frames é a correção do AMCL:
+
+```
+corrida A   salto p90  14,3 cm   deriva total   76 cm
+corrida E   salto p90 100,3 cm   deriva total  833 cm   (o AMCL fugiu)
+```
+
+Ele dirigia para fechar um desvio que **não existia**, e que pulava a cada
+atualização do AMCL. Isso explica o S, a entrada torta e — o mais importante —
+por que cada melhoria de responsividade minha PIORAVA: mais fidelidade ao sinal
+errado.
+
+### 🔴 Defeito 2 — o pivô era o único caminho sem freio
+
+`heading_controller` dava `return` dentro do pivô ANTES do bloco do freio de
+giro (037). Varredura medida: **150 a 310° por pulso** (p50 170°) — o dono viu
+como *"metendo um monte de 180"*. Com o freio chegando lá: **91° e 131°**, que é
+a ordem certa para o gatilho de **80°** que ele pediu na 036.
+
+🟢 **E foi isso que fez o pivô existir**: *"FOI PORRA FOI, AGORA O PIVO DELE
+EXISTE E GIRA NA HORA CERTA PRA PASSAR A PORTA"*.
+
+### O que eu errei, com nome e número
+
+| tentativa | mediu | veredito |
+|---|---|---|
+| `k_lat=1,0` (Stanley sem limite) | amplitude p90 20,0° → **39,8°** | reprovado |
+| `k_lat=0,5` + limite de taxa | inversões 26,9 → **30,5**/min | reprovado |
+| pivô em 34° com `a_dec` 6,6 | varredura **150–310°**/pulso | reprovado |
+| pivô em 34° com `a_dec` 6,6, já com freio | varredura **91–131°** | reprovado |
+
+🔴 **O `pivo_a_dec` real é 0,79** (medido). O valor que já estava lá era 0,6;
+eu inventei 6,6 **duas vezes**, errando por ~8× nas duas. **Derivação não é
+medida**, e a régua sempre existiu — bastava rodar antes de mexer.
+
+Também derrubei a proposta de virar o robô de ré (o dono levantou de manhã) —
+mas essa foi descartada com dado bom: o Gazebo erra a porta igual, e lá não há
+boba nem arco. Fracasso útil.
+
+### O número que atravessou o dia e continua aberto
+
+```
+período da oscilação de rumo, 7 corridas:  2,0 a 2,8 s  — CONSTANTE
+enquanto mudavam lei, ganho, mira, pivô, frame e histerese
+```
+
+Relé com tempo morto `L` oscila em ~4L; `atraso_desliga` = 0,52 s → 2,08 s. A
+placa É um relé (020). ➡️ **Se confirmar, nenhuma reescrita do seguidor mata o
+S** — o alvo vira a placa. É a hipótese mais importante em aberto.
+
+### Log de toda corrida (pedido do dono)
+
+Dois furos, não um: `csv` nascia vazio **e `grava()` nunca era chamado** —
+código morto desde sempre. Nenhuma corrida deste projeto tinha sido gravada
+pelo nó, e a primeira corrida BOA de hoje se perdeu por isso. Agora `log_dir`
+(default `~/logs_robo2`) liga CSV + bag nos DOIS perfis, sem opt-in, como o
+robô 1 faz.
+
+### 🔴 O PROTOCOLO DE 5 CORRIDAS: 1 PASSOU, 4 TRAVARAM
+
+Rodado pelo assistente com o dono no almoço (autorização explícita dele, que
+inverte a regra de "Gazebo só sobe com o dono olhando"). Pilha NOVA a cada
+corrida — `tools/banco/protocolo_porta.sh`.
+
+```
+corrida  veredito       parou em       folga   sobra p/ corpo   yaw     reflexo
+   1      PASSOU     (+6.15,+3.71)     0.949      +0.722       no alvo  NÃO AGIU
+   2      TRAVOU     (+4.64,+1.41)     0.402      +0.175       -10.2°   14x, 51 s
+   3      TRAVOU     (+4.65,+1.58)     0.347      +0.120       -16.7°    4x, 69 s
+   4      TRAVOU     (+4.72,+1.52)     0.408      +0.180       -33.6°    3x, 70 s
+   5      TRAVOU     (+4.92,+1.58)     0.353      +0.126       -33.2°    3x, 69 s
+```
+
+🔴 **Em nenhuma falha o corpo invadiu o mapa** — parou com 12 a 18 cm de folga
+por lado e ficou congelado ~69 s. Não é colisão: é o reflexo travando com
+margem sobrando, porque as quatro **entraram tortas** (−10° a −34°). O
+`PolygonApproach` (meia-largura 0,2575 contra 0,2275 do corpo) é projetado pela
+velocidade, e a −33° a projeção alcança a ombreira antes do corpo.
+
+➡️ **A dívida nº 1 continua a mesma: ele entra torto na porta.** As duas
+correções de mecanismo de hoje eram reais e necessárias, mas atacavam outra
+coisa. O próximo alvo é chegar à porta JÁ APONTADO — e o desenho que a medida
+pede é o do robô 1 (`door_crossing`: alinhar até `|lat|<8 cm` e `|yaw|<5°`
+ANTES de cruzar), mesmo estando desativado lá.
+
+### Higiene: órfãos, de novo, e um vizinho barulhento
+
+O grep da receita de limpeza não pegava `parameter_bridge` nem
+`robot_state_publisher` (rodam de `/opt/ros`, não casam com "Controle_robo_livox"
+nem "gz sim"). Foram se acumulando e **duas subidas falharam por isso** — o
+`planner_server` estourou 65 s de ativação com load 19 em 12 núcleos. Há também
+um `mysqld` de snap comendo ~1 core e reiniciando em laço, alheio ao projeto.
+
+---
+
 ## 2026-08-14 — A RÉ MORRE COMO IDEIA, E O SEGUIDOR GANHA O DESVIO LATERAL
 
 > Dev + Gazebo, o dono mandando o goal pelo web. Decisão **039**. Nada foi ao

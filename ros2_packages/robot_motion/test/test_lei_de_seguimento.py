@@ -11,14 +11,19 @@ import math
 import pytest
 
 from robot_motion.lei_de_seguimento import (
+    CorrecaoDeDesvio,
+    MiraAdaptativa,
     carrot,
+    correcao_de_desvio,
     curvatura_adiante,
+    desvio_da_corda,
     desvio_lateral,
     indice_mais_proximo,
     lookahead_de,
     orcamento_de_re,
     rumo_com_desvio,
     rumo_para,
+    vao_no_corredor_frontal,
     vao_no_corredor_traseiro,
     velocidade_de_seguimento,
 )
@@ -109,6 +114,121 @@ def test_rumo_para_o_carrot():
     assert rumo_para(0.0, 0.0, (1.0, 1.0)) == pytest.approx(math.pi / 4)
 
 
+# ------------------------------------------- a MIRA ADAPTATIVA (040, 14-08)
+#
+# Vem do robô 1 (`Controle_robo_web`), que mediu antes: carrot de 0,6 m
+# amplifica ruído de pose (12 cm = 12°) -> 184 giros no lugar, zigue-zague em
+# corredor; a 1,5 m os mesmos 12 cm viram 4,6°. Aqui a mira era 0,37 m — mais
+# curta ainda — e a corrida A de 14-08 mediu o mesmo efeito por outro caminho:
+# salto do plano de 15,1 cm -> 22° de referência, amplitude p90 de 20,0°.
+
+CURTO, LONGO = 0.37, 1.00
+
+
+def test_desvio_da_corda_e_zero_em_reta():
+    assert desvio_da_corda(reta(20, 0.1), 0, 1.0) == pytest.approx(0.0, abs=1e-9)
+
+
+def test_desvio_da_corda_e_a_regua_da_geometria():
+    """Os limiares saem DESTA tabela, não de varredura.
+
+    ⚠️ Arcos de 180° de propósito: um arco de 90° em raio pequeno tem menos de
+    1,0 m de comprimento, a corda acaba antes e o desvio sai artificialmente
+    baixo (0,108 em vez de 0,293 no raio 0,37). Foi o que derrubou a primeira
+    versão deste teste — e é um caso REAL, no fim do caminho.
+    """
+    assert desvio_da_corda(arco(0.37, 180.0, 2.0), 0, 1.0) == \
+        pytest.approx(0.293, abs=0.01)      # o mais fechado que a máquina faz
+    assert desvio_da_corda(arco(1.00, 180.0, 2.0), 0, 1.0) == \
+        pytest.approx(0.125, abs=0.01)      # curva de verdade -> encolhe
+    assert desvio_da_corda(arco(2.00, 180.0, 2.0), 0, 1.0) == \
+        pytest.approx(0.068, abs=0.01)      # suave -> pode esticar
+
+
+def test_estica_em_reta_e_encolhe_em_curva():
+    m = MiraAdaptativa(CURTO, LONGO)
+    assert m.passo(reta(40, 0.1), 0) == pytest.approx(LONGO)
+    assert m.passo(arco(0.37, 180.0, 2.0), 0) == pytest.approx(CURTO)
+
+
+def test_o_caminho_ACABANDO_nao_finge_ser_reta():
+    """No fim do caminho a corda encurta e o desvio cai — mas ali o carrot
+    esticado devolve o último ponto de qualquer jeito (é o destino), então
+    esticar não corta nada. O que este teste trava é que não quebra."""
+    curto_demais = arco(0.37, 90.0, 2.0)             # ~0,58 m de caminho
+    m = MiraAdaptativa(CURTO, LONGO)
+    assert m.passo(curto_demais, 0) in (CURTO, LONGO)
+
+
+def test_a_mira_longa_derruba_a_amplificacao_do_ruido():
+    """A conta que justifica o número, com o salto de plano medido em 14-08."""
+    salto = 0.151                                   # max medido, plano suave
+    assert math.degrees(math.atan2(salto, CURTO)) == pytest.approx(22.2, abs=0.3)
+    assert math.degrees(math.atan2(salto, LONGO)) == pytest.approx(8.6, abs=0.3)
+
+
+def test_HISTERESE_o_carrot_nao_fica_pulando_na_fronteira():
+    """Sem isto o limite-ciclo do robô 1 volta por outra porta.
+
+    Caminho cujo desvio cai ENTRE os dois limiares: quem já esticou continua
+    esticado, quem não esticou continua curto. O mesmo caminho, dois estados.
+    """
+    m = MiraAdaptativa(CURTO, LONGO, tol_estica=0.07, tol_encolhe=0.12)
+    meio = arco(1.20, 180.0, 2.0)                   # desvio na faixa do meio
+    d = desvio_da_corda(meio, 0, LONGO)
+    assert 0.07 < d < 0.12, f'o caminho de teste saiu da faixa (desvio {d:.3f})'
+
+    assert m.passo(meio, 0) == pytest.approx(CURTO)  # não estica
+    m.passo(reta(40, 0.1), 0)                        # estica numa reta
+    assert m.passo(meio, 0) == pytest.approx(LONGO)  # e AGUENTA no mesmo trecho
+
+
+def test_o_gate_do_scan_encolhe_SEM_histerese():
+    """Encolher é o lado seguro: hesitar perto de parede é o que não pode."""
+    m = MiraAdaptativa(CURTO, LONGO, folga_min=0.60)
+    m.passo(reta(40, 0.1), 0)                        # esticada
+    assert m.passo(reta(40, 0.1), 0, vao_frente=0.30) == pytest.approx(CURTO)
+    assert m.esticada is False
+
+
+def test_espaco_livre_deixa_esticar():
+    m = MiraAdaptativa(CURTO, LONGO, folga_min=0.60)
+    assert m.passo(reta(40, 0.1), 0, vao_frente=2.0) == pytest.approx(LONGO)
+
+
+def test_mira_sem_histerese_e_recusada_na_construcao():
+    with pytest.raises(ValueError):
+        MiraAdaptativa(CURTO, LONGO, tol_estica=0.10, tol_encolhe=0.10)
+    with pytest.raises(ValueError):
+        MiraAdaptativa(LONGO, CURTO)
+
+
+# --------------------------------------- o corredor da FRENTE (gate do scan)
+
+def test_vao_frontal_ve_o_que_esta_na_frente_descontando_o_para_choque():
+    # feixe reto à frente a 1,0 m, para-choque a 0,25 m do centro
+    d = vao_no_corredor_frontal([1.0], -0.0, 0.1, largura=0.46, avanco=0.25)
+    assert d == pytest.approx(0.75)
+
+
+def test_vao_frontal_ignora_o_que_esta_ATRAS():
+    d = vao_no_corredor_frontal([1.0], math.pi, 0.1, largura=0.46, avanco=0.25)
+    assert math.isinf(d)
+
+
+def test_vao_frontal_ignora_o_que_passa_de_LADO_do_corredor():
+    # feixe a 60°: y = 1,0·sen(60°) = 0,87 m, fora da meia-largura 0,23
+    d = vao_no_corredor_frontal([1.0], math.radians(60.0), 0.1,
+                                largura=0.46, avanco=0.25)
+    assert math.isinf(d)
+
+
+def test_vao_frontal_nunca_devolve_negativo():
+    """Orçamento negativo somado com folga viraria permissão — igual à irmã."""
+    d = vao_no_corredor_frontal([0.10], 0.0, 0.1, largura=0.46, avanco=0.25)
+    assert d == 0.0
+
+
 # --------------------------------------------------- o desvio lateral (039)
 #
 # O defeito medido em 14-08 no Gazebo, e antes dele em 13-08 no robô real:
@@ -192,6 +312,75 @@ def test_o_decaimento_NAO_depende_da_velocidade():
     devagar = integra_erro(0.02, 0.20, 1.0, ate_s=1.0)
     rapido = integra_erro(0.02, 0.45, 1.0, ate_s=1.0)
     assert devagar == pytest.approx(rapido, rel=0.02)
+
+
+# ------------------------------------- o LIMITE DE TAXA (corrida B, 14-08)
+#
+# A corrida B reprovou a correção SEM limite: amplitude p90 da referência de
+# rumo 20,0° -> 39,8°, pico 50,3° -> 88,1°, período 1,00 s -> 0,70 s. A causa
+# não é o ganho: é o plano que salta de lado no replanejamento (p90 5,8 cm,
+# max 15,1 cm), e um degrau de posição virava degrau de rumo no mesmo ciclo.
+
+DT = 0.1
+
+
+def test_o_degrau_do_replanejamento_NAO_vira_degrau_de_rumo():
+    """O defeito exato da corrida B, reproduzido: 15 cm de salto de plano."""
+    c = CorrecaoDeDesvio(k_lat=0.5, taxa_max=math.radians(15.0))
+    c.passo(0.0, 0.0, 0.30, DT)                      # em cima do caminho
+    rumo = c.passo(0.0, 0.151, 0.30, DT)             # o plano saltou 15,1 cm
+    assert abs(rumo) <= math.radians(15.0) * DT + 1e-9
+    assert abs(rumo) < math.radians(2.0)             # ~1,5°, não um tranco
+
+
+def test_sem_limite_o_mesmo_degrau_daria_um_TRANCO():
+    """A testemunha do defeito: é isto que a corrida B fez."""
+    sem = rumo_com_desvio(0.0, 0.151, 0.30, k_lat=0.5)
+    assert abs(sem) > math.radians(12.0)
+
+
+def test_a_correcao_CHEGA_no_alvo_so_que_devagar():
+    """Limitar taxa não pode virar limitar autoridade."""
+    c = CorrecaoDeDesvio(k_lat=0.5, taxa_max=math.radians(15.0))
+    alvo = correcao_de_desvio(0.151, 0.30, k_lat=0.5)
+    rumo = None
+    for _ in range(int(3.0 / DT)):                   # 3 s
+        rumo = c.passo(0.0, 0.151, 0.30, DT)
+    assert -rumo == pytest.approx(alvo, rel=0.02)
+
+
+def test_o_pior_caso_se_completa_em_dois_segundos():
+    """O teto é 30°; a 15°/s isso é 2 s — 4x o tempo morto da placa (0,5 s)."""
+    c = CorrecaoDeDesvio(k_lat=5.0, taxa_max=math.radians(15.0))
+    for _ in range(int(2.0 / DT) + 1):
+        rumo = c.passo(0.0, 1.0, 0.30, DT)
+    assert abs(rumo) == pytest.approx(math.radians(30.0), rel=0.01)
+
+
+def test_a_taxa_pedida_cabe_no_que_a_maquina_fecha():
+    """15°/s contra os ~57°/s de `wz_max` 1,0 rad/s: folga de 3,8x."""
+    assert math.radians(15.0) < 0.30 * 1.0
+
+
+def test_ganho_zero_continua_neutro_mesmo_com_o_limite():
+    c = CorrecaoDeDesvio(k_lat=0.0)
+    for e in (-0.20, 0.0, 0.20):
+        assert c.passo(0.7, e, 0.3, DT) == pytest.approx(0.7)
+
+
+def test_reset_zera_correcao_acumulada():
+    """Correção velha em caminho novo é comando sem dono (a ré do nada, 13-08)."""
+    c = CorrecaoDeDesvio(k_lat=0.5, taxa_max=math.radians(15.0))
+    for _ in range(20):
+        c.passo(0.0, 0.15, 0.30, DT)
+    assert c.corr != 0.0
+    c.reset()
+    assert c.passo(0.7, 0.0, 0.30, DT) == pytest.approx(0.7)
+
+
+def test_taxa_max_invalida_e_recusada_na_construcao():
+    with pytest.raises(ValueError):
+        CorrecaoDeDesvio(k_lat=0.5, taxa_max=0.0)
 
 
 def test_com_o_erro_medido_na_porta_o_ganho_1_resolve_em_um_metro():

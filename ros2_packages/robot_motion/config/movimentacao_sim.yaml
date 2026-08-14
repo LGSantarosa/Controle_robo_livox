@@ -50,7 +50,25 @@ heading_controller:
     # porta puxam para lados opostos com um knob global: longe e rápido, a
     # tolerância ajuda; perto e devagar, ela cega. O que sobrou como conserto
     # do S foi `a_dec` — QUANTO corrigir, não QUANDO.
-    tolerancia_rumo: 0.02
+    # 🔴 14-08 (3ª leva): A HISTERESE DO GIRO — o conserto do zigue-zague.
+    #
+    # `tolerancia_rumo` virou o limiar de SAÍDA e ganhou um par de ENTRADA.
+    # Com um limiar só, em 1,15°, a lei pedia correção 12 a 24× mais fina do
+    # que a placa sabe entregar (menor golpe 14–28°, medido na 037 com freio)
+    # e o robô entrava em ciclo-limite. O período disso é da PLANTA: relé com
+    # tempo morto de 0,52 s oscila em ~4L = 2,08 s, e as cinco corridas de hoje
+    # mediram 2,0–2,8 s **sem mudar** enquanto lei, ganho, mira, pivô e frame
+    # mudavam em volta.
+    #
+    #   entra a girar   > 16°   da ordem do menor golpe executável
+    #   só para         <  5°   aperta o alvo sem reengatar por ruído
+    #
+    # O robô 1 chegou em 16°/3° por experiência própria (*"63% dos giros eram
+    # VAI-E-VOLTA, +14/−14 que se cancelam"*). Os 16° daqui saíram da medida
+    # da NOSSA placa. As duas baterem por caminhos independentes é o que
+    # sustenta o número.
+    tolerancia_rumo: 0.087        # rad = 5°, a SAÍDA
+    tolerancia_entra_rumo: 0.28   # rad = 16°, a ENTRADA
     taxa: 20.0
     timeout_alvo: 1.0
     plantao_s: 0.5
@@ -100,5 +118,27 @@ heading_controller:
     # `pivo_max_pulsos: 1` é o que impede a volta do ciclo-limite de 12-08
     # (±50–60°, período 5,5 s): com 6 pulsos a lei fica caçando o alvo com um
     # martelo de 95°. Um pulso é "vira grosso e sai da frente".
-    limiar_pivo: 1.40          # rad = 80°, o número que o dono pediu
+    # 🔴 14-08: DUAS TENTATIVAS DE RELIGAR O PIVÔ, AS DUAS REPROVADAS.
+    #
+    # 2ª leva — baixei o gatilho para 34° com `pivo_a_dec: 6.6`, derivado da
+    # varredura freada da 037 (14–28°). Resultado medido na corrida G:
+    # 150–310° por pulso, p50 170°. O dono: *"ele ta metendo um monte de 180"*.
+    #
+    # 4ª leva — achei o mecanismo: o `heading_controller` dava `return` dentro
+    # do pivô ANTES do bloco do freio de giro. O pivô era o ÚNICO caminho da
+    # cadeia que girava sem freio. **Esse conserto ficou** (é correto e vale
+    # por si). Mas ele NÃO salvou a manobra — corrida H, já com freio:
+    #
+    #     varredura por pulso   91,2°  e  131,0°
+    #     a_dec real implícito  0,79 rad/s²   (contra os 6,6 que eu supus)
+    #     golpe mínimo          ~132°
+    #
+    # ➡️ O `pivo_a_dec: 0.6` original estava praticamente certo o tempo todo, e
+    # a decisão 023 fica de pé: **esta manobra não sabe fazer ângulo pequeno**,
+    # nem com o freio de giro por cima. Para servir à porta ela precisaria de
+    # freio PRÓPRIO dentro do pulso, não de outro valor de parâmetro.
+    #
+    # Fica em 80°, que é onde o dono a pediu na 036 e onde ela ao menos não
+    # dispara sozinha. Bancada para reabrir isto: `tools/banco/freio_de_giro.py`.
+    limiar_pivo: 1.40          # rad = 80°
     pivo_max_pulsos: 1         # UM golpe grosso, nunca uma perseguição

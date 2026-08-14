@@ -80,11 +80,13 @@ racional está em `config/nav2_sem_mapa.yaml`, e a consequência a ter em mente 
 que o robô planeja com MEMÓRIA CURTA — o que ele nunca viu conta como livre.
 """
 import os
+import time
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
+    ExecuteProcess,
     IncludeLaunchDescription,
     LogInfo,
     OpaqueFunction,
@@ -125,6 +127,10 @@ def _recusa_combinacao_sem_sentido(contexto, *_args, **_kwargs):
 
 
 def generate_launch_description():
+    # Carimbo de tempo da SUBIDA — resolvido aqui, em Python, e não por
+    # substituição: `PythonExpression` com `__import__` funciona até o dia
+    # em que não funciona, e o preço seria a corrida sem registro.
+    CARIMBO = time.strftime('%Y-%m-%d_%H%M%S')
     pkg = get_package_share_directory('robot_motion')
     nav2_params = os.path.join(pkg, 'config', 'nav2.yaml')
     amcl_params = os.path.join(pkg, 'config', 'localizacao_amcl.yaml')
@@ -197,6 +203,10 @@ def generate_launch_description():
         # que vai a 0.0 na primeira corrida no robô.
         {'k_lat': ParameterValue(
             LaunchConfiguration('k_lat'), value_type=float)},
+        {'log_dir': ParameterValue(
+            LaunchConfiguration('log_dir'), value_type=str)},
+        {'desvio_taxa_deg_s': ParameterValue(
+            LaunchConfiguration('desvio_taxa_deg_s'), value_type=float)},
         # 🔴 O FREIO DA RÉ, e ele é do DONO (13-08). A ré da 025 dirige por
         # FORA do reflexo (canal `unstuck_vel`, prioridade 30) — é a única
         # coisa neste robô que anda sem o freio de mão automático. Quem está na
@@ -403,12 +413,54 @@ def generate_launch_description():
         # robô LIGADO — mesma regra da 038: mudança grande não vai blind pro
         # robô. No Gazebo o default do nó (1,0) já vale, que é onde ela foi
         # medida.
+        # 🔴 DEFAULT 0.0 DESDE A CORRIDA B DE 14-08, e o motivo é medido:
+        # com 1,0 o robô fez zigue-zague e PIOROU. Amplitude p90 da referência
+        # de rumo foi de 20,0° para 39,8°, o pico de 50° para 88°, e o período
+        # encurtou de 1,00 s para 0,70 s.
+        #
+        # A causa não é só o ganho: o Nav2 republica o plano ~1 Hz e às vezes
+        # DESLOCADO de lado. Isso é um DEGRAU em `e_lat`, e o termo o converte
+        # direto em degrau de rumo (até o teto de 30°) contra uma placa com
+        # ~0,5 s de tempo morto. Já em `k_lat=0` 57% dos degraus grandes de
+        # referência caíam logo depois de um plano novo; com 1,0 eles dobraram
+        # (7 → 14) e o maior foi de 26° para 62°.
+        #
+        # ➡️ Ligar de novo exige ANTES limitar a taxa do termo — degrau de
+        # plano não pode virar degrau de rumo. Enquanto isso não existir, o
+        # default fica em 0,0, que é a lei de antes, exatamente.
         DeclareLaunchArgument(
-            'k_lat', default_value='1.0',
+            'k_lat', default_value='0.0',
             description='[1/s] ganho do desvio lateral do seguidor (039). '
-                        'O erro decai com constante de tempo 1/k. 0.0 desliga '
-                        'e volta à lei só-de-rumo — use 0.0 na primeira '
-                        'corrida com o robô ligado'),
+                        'O erro decai com constante de tempo 1/k. ⚠️ 1.0 sem '
+                        'limite de taxa foi REPROVADO em 14-08 (zigue-zague). '
+                        'O limite existe agora; o ganho só vira default '
+                        'depois de uma corrida que o aprove'),
+        # 🔴 LOG DE TODA CORRIDA (14-08, pedido do dono): *"quero que toda
+        # corrida, tanto Gazebo quanto robô real, salvem log de tudo, assim
+        # como o robô 1 faz"*.
+        #
+        # Vale para os DOIS perfis de propósito. O robô 1 (`Controle_robo_web`)
+        # grava `follow_debug.csv` sempre, sem opt-in, e é por isso que lá dá
+        # para ler uma corrida depois. Aqui o `path_follower` sabia gravar
+        # desde sempre — mas nascia com `csv: ''` e o `grava()` nunca era
+        # chamado. Resultado: nenhuma corrida deste projeto foi gravada pelo
+        # nó, e em 14-08 a primeira corrida BOA do dia se perdeu porque eu
+        # tinha esquecido de subir um `ros2 bag` à mão.
+        DeclareLaunchArgument(
+            'log_dir', default_value=os.path.join(
+                os.path.expanduser('~'), 'logs_robo2'),
+            description='diretório dos logs de corrida (CSV do seguidor + bag '
+                        'da corrente). Vazio DESLIGA — mas não desligue: '
+                        'corrida sem registro não vira número'),
+        DeclareLaunchArgument(
+            'bag', default_value='true',
+            description='grava a corrente inteira em `ros2 bag` junto com o '
+                        'CSV. false deixa só o CSV (NUC com disco apertado)'),
+        DeclareLaunchArgument(
+            'desvio_taxa_deg_s', default_value='15.0',
+            description='[°/s] o quanto a correção lateral pode mover a '
+                        'referência de rumo por segundo. É o que impede o '
+                        'salto do plano no replanejamento de virar tranco'),
         DeclareLaunchArgument(
             're_habilitada', default_value='true',
             description='false DESLIGA a ré de desencalhe (025), o único '
@@ -623,6 +675,32 @@ def generate_launch_description():
              arguments=['-d', rviz_config],
              parameters=[{'use_sim_time': sim}],
              condition=IfCondition(rviz)),
+
+        # 🔴 GRAVADOR DA CORRENTE, LIGADO POR PADRÃO (14-08).
+        #
+        # O CSV do seguidor conta o que o SEGUIDOR pensou; este bag conta o que
+        # a cadeia inteira fez — plano, pedido do seguidor, o que o reflexo
+        # deixou passar, o que o compensador entregou, pose e TF. Foi essa
+        # combinação que permitiu ler as oito corridas de 14-08; a diferença é
+        # que agora ela não depende de eu lembrar de subir à mão.
+        #
+        # ⚠️ SEM a nuvem (`/livox/pontos`) e sem os costmaps de propósito: são
+        # os dois que fariam o bag inviável no NUC. O que está aqui é leve —
+        # ~10 MB por 3 minutos de corrida.
+        ExecuteProcess(
+            cmd=['ros2', 'bag', 'record', '-o',
+                 [LaunchConfiguration('log_dir'), f'/corrida_{CARIMBO}'],
+                 '/plan', '/plan_smoothed', '/received_global_plan',
+                 '/auto_vel_raw', '/auto_vel', '/unstuck_vel', '/key_vel',
+                 '/compensador_rumo/cmd_vel', '/cmd_vel_bruto',
+                 '/hoverboard_base_controller/cmd_vel',
+                 '/Odometry', '/amcl_pose', '/odom',
+                 '/collision_monitor_state', '/polygon_stop',
+                 '/heading_controller/rumo_alvo',
+                 '/heading_controller/velocidade_alvo',
+                 '/behavior_tree_log', '/rosout', '/tf', '/tf_static'],
+            output='log',
+            condition=IfCondition(LaunchConfiguration('bag'))),
 
         LogInfo(msg='PILHA subindo — espere os servidores ativarem '
                     '(o Smac leva ~16 s montando a heurística) e então clique '

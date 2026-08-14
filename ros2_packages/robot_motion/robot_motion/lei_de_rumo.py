@@ -111,8 +111,56 @@ def linear_de_avanco(erro, v_max):
     return v_max * max(0.0, math.cos(erro))
 
 
+class GatilhoDeGiro:
+    """Histerese do "girar ou não girar" — dois limiares, não um.
+
+    🔴 O ZIGUE-ZAGUE DE 14-08, E A CONTA QUE O EXPLICA.
+
+    Até esta data a lei tinha UM limiar (`tolerancia_rumo`, 0,02 rad = 1,15°):
+    parava de girar em 1,15° e voltava a girar no instante em que o erro
+    passasse de 1,15° de novo. Contra este atuador isso não fecha:
+
+        menor giro que a máquina executa (037, com freio)   14 a 28°
+        erro em que a lei mandava corrigir                   1,15°
+
+    A lei pedia correções 12 a 24× mais finas do que a placa sabe entregar.
+    Ela manda girar, a placa dá um golpe de 14°+, o erro troca de sinal, ela
+    manda girar de volta: ciclo-limite. E o período disso é da PLANTA, não da
+    sintonia — relé com tempo morto `L` oscila em ~4L, e com `atraso_desliga`
+    de 0,52 s isso dá 2,08 s. Medido em cinco corridas de 14-08: 2,0 a 2,8 s,
+    **constante** enquanto lei, ganho, mira, pivô e frame mudavam em volta.
+
+    Com histerese o reengate deixa de ser gatilho de ruído: entra a girar só
+    com erro da ordem do golpe que a máquina sabe dar, e sai apertado.
+
+    O robô 1 (`Controle_robo_web`) chegou em 16°/3° por experiência própria,
+    depois de medir *"63% dos giros eram VAI-E-VOLTA (+14/−14 que se
+    cancelam)"*. Aqui os 16° saíram da medida da nossa placa. As duas baterem,
+    por caminhos independentes, é o que sustenta o número.
+    """
+
+    def __init__(self, entra, sai):
+        if not entra > sai:
+            raise ValueError('sem histerese: `entra` tem de ser maior que `sai`')
+        self.entra = entra
+        self.sai = sai
+        self.girando = False
+
+    def reset(self):
+        self.girando = False
+
+    def deve_girar(self, erro):
+        e = abs(norm_ang(erro))
+        if self.girando:
+            if e <= self.sai:
+                self.girando = False
+        elif e > self.entra:
+            self.girando = True
+        return self.girando
+
+
 def comando(erro, v_max, a_dec, wz_max, zona_morta, bitola, margem_piso,
-            tolerancia, erro_do_movimento=None):
+            tolerancia, erro_do_movimento=None, girar=None):
     """(v, wz) em SI para um erro de rumo. É o laço de controle inteiro.
 
     1. o giro sai da lei de frenagem, sobre o erro do BICO — é o rumo que ele
@@ -132,7 +180,13 @@ def comando(erro, v_max, a_dec, wz_max, zona_morta, bitola, margem_piso,
     quase parado), recai no erro do bico, que é o comportamento antigo.
     """
     erro = norm_ang(erro)
-    if abs(erro) <= tolerancia:
+    # `girar=None` mantém o gate de UM limiar, que é o comportamento anterior a
+    # 14-08 — é o que preserva os testes que travam a lei antiga. Quem quer a
+    # histerese passa a decisão pronta, do `GatilhoDeGiro`.
+    if girar is None:
+        if abs(erro) <= tolerancia:
+            return v_max, 0.0
+    elif not girar:
         return v_max, 0.0
 
     wz = wz_de_frenagem(erro, a_dec, wz_max)

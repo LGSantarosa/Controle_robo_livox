@@ -99,5 +99,11 @@ heading_controller:
     # `pivo_max_pulsos: 1` é o que impede a volta do ciclo-limite de 12-08
     # (±50–60°, período 5,5 s): com 6 pulsos a lei fica caçando o alvo com um
     # martelo de 95°. Um pulso é "vira grosso e sai da frente".
-    limiar_pivo: 1.40          # rad = 80°, o número que o dono pediu
+    # 🔴 14-08 (2ª leva): tentei derivar `pivo_a_dec` = 6,6 do freio da 037 e
+    # baixar o gatilho. REPROVADO na corrida G do simulador: a varredura por
+    # pulso deu 150–310° (p50 170°) e o robô ficou dando 180°. O `0,6` original
+    # previa 232° e estava certo — os 14–28° da 037 são do freio do laço de
+    # rumo em arco, não de um pulso de pivô no módulo cheio.
+    # A decisão 023 segue de pé, e este perfil nunca chegou a ser mexido.
+    limiar_pivo: 1.40          # rad = 80° — ver o aviso acima antes de baixar
     pivo_max_pulsos: 1         # UM golpe grosso, nunca uma perseguição

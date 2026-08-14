@@ -31,6 +31,7 @@ from std_msgs.msg import Float64
 
 from robot_motion.lei_de_freio import FreioDeGiro
 from robot_motion.lei_de_pivo import DESISTIU, PRONTO, PivoPorCorte
+from robot_motion.lei_de_rumo import GatilhoDeGiro
 from robot_motion.lei_de_rumo import (
     comando,
     comando_de_re,
@@ -66,7 +67,22 @@ class HeadingController(Node):
             # Bitola MEDIDA com trena em 2026-07-29 (era 0.32, herdada).
             ('bitola', 0.270),
             ('margem_piso', 0.05),
+            # ⚠️ 14-08: ESTE É O LIMIAR DE **SAÍDA** DA HISTERESE.
+            #
+            # Era o limiar único, em 0,02 rad = 1,15°, contra um atuador cujo
+            # menor golpe é de 14 a 28° (037, com freio). A lei pedia correção
+            # 12 a 24x mais fina do que a placa entrega -> ciclo-limite, com
+            # período de PLANTA (relé com tempo morto 0,52 s oscila em ~4L =
+            # 2,08 s; medido 2,0-2,8 s em cinco corridas, sem mudar quando lei,
+            # ganho, mira, pivô e frame mudaram em volta).
+            #
+            # Quem manda no reengate agora é `tolerancia_entra_rumo`.
             ('tolerancia_rumo', 0.02),
+            # Limiar de ENTRADA. Da ordem do menor golpe executável — abaixo
+            # disso a lei está pedindo o que a máquina não sabe fazer.
+            # ⚠️ Default = saída: quem não configurar perfil NÃO ganha
+            # histerese de brinde (regra da 019, o default é o caso seguro).
+            ('tolerancia_entra_rumo', 0.02),
             ('taxa', 20.0),
             # Sem alvo novo por este tempo, o robô para. Alvo velho é alvo
             # perigoso.
@@ -152,6 +168,12 @@ class HeadingController(Node):
         self.hist_yaw = []      # (t, yaw) para estimar o giro realizado
         self.wz_real = 0.0
         self.pivo = None        # manobra em curso, quando houver
+        # Histerese do giro (14-08). `entra == sai` reproduz o gate de um
+        # limiar só, que é o comportamento anterior — e é o default.
+        self.gatilho = GatilhoDeGiro(
+            entra=max(self.par['tolerancia_entra_rumo'],
+                      self.par['tolerancia_rumo'] + 1e-9),
+            sai=self.par['tolerancia_rumo'])
         self.t_passo = None
         # O freio de giro (037). `None` quando desligado — assim o caminho de
         # código nem existe, em vez de existir com um `if` que ninguém lê.
@@ -326,6 +348,7 @@ class HeadingController(Node):
         # com ele em zero o `v_teto` de `ajusta_para_zona_morta` fecha a saída
         # "por cima". Medido nos dois perfis, de 2° a 150°: `v` sai 0,000 em
         # toda a faixa. O piso de linear é inalcançável quando o teto é zero.
+        pivo_dirigindo = False
         precisa_pivo = abs(erro) > self.par['limiar_pivo']
         if self.pivo is None and precisa_pivo:
             self.pivo = PivoPorCorte(
@@ -357,9 +380,26 @@ class HeadingController(Node):
                 self.get_logger().error(f'PIVÔ DESISTIU — {self.pivo.motivo}')
                 self.pivo = None
             else:
-                self.publica(0.0, wz)     # linear ZERO: é giro no eixo
-                self.plantao(agora, 0.0, wz)
-                return
+                # 🔴 14-08: AQUI TINHA UM `return`, E ELE ERA O DEFEITO DO PIVÔ.
+                #
+                # Este era o único caminho da cadeia que girava SEM passar pelo
+                # freio de giro (037) — o bloco do freio mora abaixo, e o
+                # `return` pulava por cima dele. A 037 mediu a diferença:
+                #
+                #     sem freio 63,8°   ->   com freio 14 a 28°
+                #
+                # Sem freio, cada pulso varria 150–310° (medido na corrida G de
+                # 14-08, p50 170°), o resíduo virava erro grande do outro lado
+                # e ele disparava de novo: os "180 graus" que o dono viu.
+                #
+                # Não é que a máquina não saiba girar pouco — ela sabe. Era a
+                # manobra que estava sem freio. Agora `v` fica zero (giro no
+                # eixo) e o `wz` do pivô CAI no bloco do freio, como todo o
+                # resto. Durante o GIRANDO o freio deixa passar (ele só age com
+                # a lei calada); no ASSENTANDO, que é onde o pivô pede zero e a
+                # inércia entrega a sobra, ele morde.
+                v = 0.0
+                pivo_dirigindo = True
         # O mesmo `dt` limitado que o pivô usa, e pelo mesmo motivo: ciclo
         # suspenso não pode entrar de uma vez nos cronômetros do freio.
         dt_ciclo = (0.0 if self.t_passo is None
@@ -371,17 +411,21 @@ class HeadingController(Node):
         direcao = self.direcao_do_movimento()
         erro_mov = None if direcao is None else norm_ang(self.rumo_alvo - direcao)
 
-        v, wz = comando(
-            erro,
-            v_max=self.v_alvo,
-            a_dec=self.par['a_dec'],
-            wz_max=self.par['wz_max'],
-            zona_morta=self.par['zona_morta'],
-            bitola=self.par['bitola'],
-            margem_piso=self.par['margem_piso'],
-            tolerancia=self.par['tolerancia_rumo'],
-            erro_do_movimento=erro_mov,
-        )
+        # Com o pivô dirigindo, `v` e `wz` já vieram dele — a lei contínua não
+        # roda, mas o freio abaixo roda para os dois. É essa a mudança de 14-08.
+        if not pivo_dirigindo:
+            v, wz = comando(
+                erro,
+                v_max=self.v_alvo,
+                a_dec=self.par['a_dec'],
+                wz_max=self.par['wz_max'],
+                zona_morta=self.par['zona_morta'],
+                bitola=self.par['bitola'],
+                margem_piso=self.par['margem_piso'],
+                tolerancia=self.par['tolerancia_rumo'],
+                erro_do_movimento=erro_mov,
+                girar=self.gatilho.deve_girar(erro),
+            )
         # 🔴 O FREIO ENTRA AQUI, NA ÚLTIMA LINHA ANTES DE PUBLICAR (decisão
         # 037), e a posição é o desenho: ele não decide para onde virar nem
         # quando parar de girar — isso é da lei de rumo, que já rodou. Ele só

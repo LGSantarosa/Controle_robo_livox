@@ -52,6 +52,136 @@ def lookahead_de(raio_min, fator=1.5, piso=0.30):
     return max(piso, fator * raio_min)
 
 
+def desvio_da_corda(caminho, i0, distancia):
+    """Maior desvio do caminho até a corda, em `distancia` m à frente [m].
+
+    A régua de "o trecho à frente é reto?". Corda e não curvatura porque é a
+    corda que diz quanto se PERDE mirando longe: o carrot esticado mira o fim
+    do trecho, e o desvio da corda é exatamente o quanto o caminho real se
+    afasta dessa mira.
+    """
+    fim = None
+    andado = 0.0
+    pontos = [caminho[i0]]
+    for k in range(i0, len(caminho) - 1):
+        andado += math.hypot(caminho[k + 1][0] - caminho[k][0],
+                             caminho[k + 1][1] - caminho[k][1])
+        pontos.append(caminho[k + 1])
+        if andado >= distancia:
+            fim = caminho[k + 1]
+            break
+    if fim is None:
+        fim = caminho[-1]
+    ax, ay = pontos[0]
+    bx, by = fim
+    vx, vy = bx - ax, by - ay
+    n = math.hypot(vx, vy)
+    if n < 1e-9:
+        return 0.0
+    pior = 0.0
+    for (px, py) in pontos:
+        # distância do ponto à RETA que liga início e fim
+        pior = max(pior, abs(vx * (py - ay) - vy * (px - ax)) / n)
+    return pior
+
+
+def vao_no_corredor_frontal(distancias, angulo_min, incremento, largura,
+                            avanco, alcance_max=None):
+    """Vão livre à FRENTE do para-choque, em metros [m].
+
+    Espelho exato do `vao_no_corredor_traseiro`, e pela mesma razão de forma:
+    retângulo (a forma do robô) e não setor angular, porque cone é cego para a
+    quina — o argumento inteiro está na irmã de trás, e ele não muda de lado.
+
+    Existe para o gate da mira adaptativa: esticar o carrot só faz sentido com
+    ESPAÇO à frente. Passagem apertada é parede perto por definição.
+    """
+    meia = largura / 2.0
+    vao = RETO
+    for i, r in enumerate(distancias):
+        if r is None or not math.isfinite(r) or r <= 0.0:
+            continue
+        if alcance_max is not None and r > alcance_max:
+            continue
+        a = angulo_min + i * incremento
+        x, y = r * math.cos(a), r * math.sin(a)
+        if x <= 0.0 or abs(y) > meia:
+            continue
+        vao = min(vao, max(0.0, x - avanco))
+    return vao
+
+
+class MiraAdaptativa:
+    """O carrot que ESTICA em reta e encolhe em curva. Uma vez por ciclo::
+
+        la = mira.passo(caminho, i0, vao_frente)
+
+    🔴 DE ONDE VEM — o robô 1 (`Controle_robo_web`), que passou por isto antes
+    e mediu (`path_follower.py`, 07-08): *"carrot 0.6 amplifica ruído de pose
+    (12 cm lateral = 12°) -> 184 giros no lugar, 127 <10°, zigue-zague em
+    corredor. A 1.5 m os mesmos 12 cm = ~4,6° -> segue reto."*
+
+    É a mesma lei que a corrida A de 14-08 mediu aqui, por outro caminho: o
+    plano salta de lado no replanejamento (p90 5,8 cm, max 15,1 cm) e o rumo
+    pedido muda por `atan(salto / lookahead)`. Com a mira de 0,37 m que este
+    robô usava, 15 cm viram **22°** — e a amplitude p90 medida da referência
+    foi 20,0°. Com 1,0 m os mesmos 15 cm viram 8,6°.
+
+    ⚠️ E o esticão é CONDICIONAL, que é a parte que o robô 1 aprendeu errando:
+    mira longa corta curva por dentro. Estica só quando o trecho à frente é
+    reto E há espaço medido pelo SCAN — passagem apertada é parede perto por
+    definição, e ali a mira curta é que segura a linha.
+
+    ⚠️ A HISTERESE é sobre a decisão estica/encolhe, não sobre girar. Sem ela
+    o carrot fica pulando entre 0,37 e 1,0 m na mesma fronteira, e isso é o
+    limite-ciclo do robô 1 (*"girava e parava no MESMO limiar -> pulinhos"*)
+    entrando por outra porta. Encolher pede desvio maior do que esticar pediu.
+
+    Os dois limiares saem da GEOMETRIA, medidos com `desvio_da_corda` sobre
+    1,0 m de caminho — não de varredura:
+
+        R = 0,37 m (o mais fechado que a máquina faz)   desvio 0,293
+        R = 1,00 m                                             0,125
+        R = 1,50 m                                             0,090
+        R = 2,00 m                                             0,068
+        reta                                                   0,000
+
+    `tol_estica = 0,07` = estica só em curva de raio >= ~2 m (suave de
+    verdade); `tol_encolhe = 0,12` = encolhe em raio <= ~1 m (curva de
+    verdade). A banda entre os dois é a histerese, e ela vale 1,7x.
+    """
+
+    def __init__(self, curto, longo, tol_estica=0.07, tol_encolhe=0.12,
+                 folga_min=0.60):
+        if not longo > curto:
+            raise ValueError('a mira longa tem de ser maior que a curta')
+        if not tol_encolhe > tol_estica:
+            raise ValueError('sem histerese: tol_encolhe tem de ser > tol_estica')
+        self.curto = curto
+        self.longo = longo
+        self.tol_estica = tol_estica
+        self.tol_encolhe = tol_encolhe
+        self.folga_min = folga_min
+        self.esticada = False
+
+    def reset(self):
+        self.esticada = False
+
+    def passo(self, caminho, i0, vao_frente=None):
+        # O gate do espaço NÃO tem histerese: encolher é o lado seguro do erro,
+        # e hesitar em encolher perto de parede é exatamente o que não pode.
+        if vao_frente is not None and vao_frente < self.folga_min:
+            self.esticada = False
+            return self.curto
+        desvio = desvio_da_corda(caminho, i0, self.longo)
+        if self.esticada:
+            if desvio > self.tol_encolhe:
+                self.esticada = False
+        elif desvio <= self.tol_estica:
+            self.esticada = True
+        return self.longo if self.esticada else self.curto
+
+
 def indice_mais_proximo(caminho, x, y):
     """Onde o robô está, em índice do caminho."""
     melhor, melhor_d = 0, float('inf')
@@ -117,6 +247,80 @@ def desvio_lateral(caminho, i0, x, y, janela=6):
             # quando o robô está à ESQUERDA de quem percorre o caminho.
             sinal = math.copysign(1.0, vx * (y - ay) - vy * (x - ax))
     return 0.0 if math.isinf(melhor) else melhor * sinal
+
+
+def correcao_de_desvio(e_lat, v, k_lat, v_ref=0.20, teto=math.radians(30.0)):
+    """Só o ÂNGULO da correção de Stanley [rad], sem aplicá-lo.
+
+    Separado de `rumo_com_desvio` porque o limite de taxa (`CorrecaoDeDesvio`)
+    precisa do alvo da correção para poder persegui-lo devagar.
+    """
+    if k_lat == 0.0:
+        return 0.0
+    corr = math.atan2(k_lat * e_lat, max(abs(v), v_ref))
+    return max(-teto, min(teto, corr))
+
+
+class CorrecaoDeDesvio:
+    """A correção de Stanley com limite de TAXA. Uma vez por ciclo::
+
+        rumo_alvo = corr.passo(rumo_carrot, e_lat, v, dt)
+
+    🔴 POR QUE O LIMITE EXISTE — medido na corrida B de 14-08, que REPROVOU a
+    versão sem ele. O Nav2 republica o plano a 0,31 Hz, e entre um plano e o
+    seguinte o ponto que o seguidor mira salta de lado:
+
+        salto do alvo (plano suavizado)   p50 2,9 cm   p90 5,8 cm   max 15,1 cm
+
+    Salto de posição é DEGRAU em `e_lat`, e sem limite de taxa o termo o
+    converte em degrau de rumo no mesmo ciclo — contra uma placa que tem ~0,5 s
+    de tempo morto. Resultado medido com `k_lat=1,0` e sem limite:
+
+        amplitude p90 da referência   20,0° -> 39,8°     (dobrou)
+        pico                          50,3° -> 88,1°
+        período p50                    1,00 s -> 0,70 s
+
+    Com o limite, o mesmo degrau vira RAMPA: a correção anda no máximo
+    `taxa_max` por segundo, então ela se completa em ~2 s no pior caso (teto de
+    30°). Isso é 4× o tempo morto da placa — a malha enxerga a correção como
+    movimento lento, que é a condição para não oscilar — e fica bem abaixo dos
+    ~57°/s que a máquina fecha com `wz_max` de 1,0 rad/s.
+
+    ⚠️ O limite é sobre a CORREÇÃO, não sobre o rumo alvo inteiro. O rumo do
+    carrot também dá degrau no replanejamento (57% dos degraus grandes da
+    corrida A, que rodou com `k_lat=0`), mas isso é defeito PRÉ-EXISTENTE e de
+    outra natureza — limitar o rumo inteiro atrasaria também o pivô da 036 e a
+    saída da ré, que precisam ser rápidos.
+    """
+
+    def __init__(self, k_lat=0.0, v_ref=0.20, teto=math.radians(30.0),
+                 taxa_max=math.radians(15.0)):
+        if taxa_max <= 0.0:
+            raise ValueError('taxa_max tem de ser positiva — é rad/s')
+        self.k_lat = k_lat
+        self.v_ref = v_ref
+        self.teto = teto
+        self.taxa_max = taxa_max
+        self.corr = 0.0
+
+    def reset(self):
+        """Zera a correção acumulada.
+
+        Chamado quando o seguidor para ou troca de objetivo: correção velha
+        aplicada a caminho novo é comando sem dono, e foi assim que a ré da 025
+        nasceu do nada em 13-08.
+        """
+        self.corr = 0.0
+
+    def passo(self, rumo_carrot, e_lat, v, dt):
+        if self.k_lat == 0.0:
+            self.corr = 0.0
+            return norm_ang(rumo_carrot)
+        alvo = correcao_de_desvio(e_lat, v, self.k_lat, self.v_ref, self.teto)
+        passo_max = self.taxa_max * dt
+        self.corr += max(-passo_max, min(passo_max, alvo - self.corr))
+        # Erro à ESQUERDA (e_lat > 0) pede rumo à DIREITA: subtrai.
+        return norm_ang(rumo_carrot - self.corr)
 
 
 def rumo_com_desvio(rumo_carrot, e_lat, v, k_lat, v_ref=0.20,

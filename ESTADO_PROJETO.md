@@ -10,6 +10,97 @@
 
 ---
 
+## 🔧 14-08 (2ª leva) — DOIS DEFEITOS DE VERDADE, E O PIVÔ PASSOU A EXISTIR
+
+> Decisão **040**. Dados em `docs/dados/2026-08-14-porta-gazebo/`, protocolo de
+> repetição em `protocolo/`. **Nada foi ao robô.**
+
+### 🟢 O QUE FICOU (defeitos de mecanismo, corrigidos)
+
+**1. O seguidor comparava frames diferentes.** `path_follower` lia pose em
+`odom` e plano em `map`, **sem TransformListener nenhum**. A diferença é a
+correção do AMCL — salto p90 de 14,3 cm na corrida A, deriva de 76 cm; e 833 cm
+na corrida E, quando o AMCL fugiu. Ele dirigia para fechar um desvio que não
+existia. Isso explica o S, a entrada torta na porta, e por que **toda melhoria
+de responsividade piorava o resultado**.
+
+**2. O pivô era o único caminho da cadeia sem freio.** `heading_controller`
+dava `return` dentro do pivô ANTES do bloco do freio de giro (037). Varredura
+medida: 150–310° por pulso. Com o freio chegando lá: **91° e 131°** — a ordem
+certa para o gatilho de **80°** da decisão 036.
+
+🟢 **É isto que fez o pivô existir**, nas palavras do dono: *"AGORA O PIVO DELE
+EXISTE E GIRA NA HORA CERTA PRA PASSAR A PORTA"*. **O 80° era dele e estava
+certo o tempo todo.**
+
+**3. Log de toda corrida, por padrão** (pedido do dono). Dois furos: `csv`
+nascia vazio **e `grava()` nunca era chamado** — código morto. Nenhuma corrida
+deste projeto tinha sido gravada pelo nó. Agora `log_dir` (default
+`~/logs_robo2`) liga CSV do seguidor + bag da corrente nos DOIS perfis.
+
+### ⚪ O QUE FOI REPROVADO (quatro tentativas, todas medidas)
+
+| tentativa | mediu | veredito |
+|---|---|---|
+| `k_lat=1,0` (Stanley sem limite) | amplitude p90 20,0° → **39,8°** | reprovado |
+| `k_lat=0,5` + limite de taxa | inversões 26,9 → **30,5**/min | reprovado |
+| pivô em 34°, `a_dec` 6,6 | varredura 150–310°/pulso | reprovado |
+| idem, já com freio | varredura 91–131° | reprovado |
+
+🔴 **`pivo_a_dec` real medido: 0,79.** O valor original era 0,6; o assistente
+inventou 6,6 duas vezes, errando ~8× nas duas. **Derivação não é medida.**
+
+Estado dos knobs: `k_lat: 0`, `limiar_pivo: 80°`, `pivo_a_dec: 0,6`.
+No ar e **ainda sem julgamento isolado**: histerese do giro (16°/5°) e mira
+adaptativa (0,37 m em curva / 1,00 m em reta).
+
+### 🔴 A HIPÓTESE MAIS IMPORTANTE EM ABERTO
+
+```
+período da oscilação de rumo, 7 corridas:  2,0–2,8 s  — CONSTANTE
+enquanto mudavam lei, ganho, mira, pivô, frame e histerese
+```
+
+Relé com tempo morto `L` oscila em ~4L; `atraso_desliga` = 0,52 s → 2,08 s. A
+placa É um relé (decisão 020). ➡️ **Se confirmar, nenhuma reescrita do seguidor
+mata o S** — o alvo passa a ser a placa (`deadband_enable`, tempo morto).
+
+### 🔴 O PROTOCOLO DE 5 CORRIDAS: 1 PASSOU, 4 TRAVARAM
+
+Rodado pelo assistente com o dono no almoço (autorização explícita dele, que
+inverte a regra de "Gazebo só sobe com o dono olhando"). Pilha NOVA a cada
+corrida — `tools/banco/protocolo_porta.sh`.
+
+```
+corrida  veredito       parou em       folga   sobra p/ corpo   yaw     reflexo
+   1      PASSOU     (+6.15,+3.71)     0.949      +0.722       no alvo  NÃO AGIU
+   2      TRAVOU     (+4.64,+1.41)     0.402      +0.175       -10.2°   14x, 51 s
+   3      TRAVOU     (+4.65,+1.58)     0.347      +0.120       -16.7°    4x, 69 s
+   4      TRAVOU     (+4.72,+1.52)     0.408      +0.180       -33.6°    3x, 70 s
+   5      TRAVOU     (+4.92,+1.58)     0.353      +0.126       -33.2°    3x, 69 s
+```
+
+🔴 **Em nenhuma falha o corpo invadiu o mapa** — parou com 12 a 18 cm de folga
+por lado e ficou congelado ~69 s. Não é colisão: é o reflexo travando com
+margem sobrando, porque as quatro **entraram tortas** (−10° a −34°). O
+`PolygonApproach` (meia-largura 0,2575 contra 0,2275 do corpo) é projetado pela
+velocidade, e a −33° a projeção alcança a ombreira antes do corpo.
+
+➡️ **A dívida nº 1 continua a mesma: ele entra torto na porta.** As duas
+correções de mecanismo de hoje eram reais e necessárias, mas atacavam outra
+coisa. O próximo alvo é chegar à porta JÁ APONTADO — e o desenho que a medida
+pede é o do robô 1 (`door_crossing`: alinhar até `|lat|<8 cm` e `|yaw|<5°`
+ANTES de cruzar), mesmo estando desativado lá.
+
+### ⚠️ Higiene da máquina de dev
+
+O grep de limpeza NÃO pega `parameter_bridge` nem `robot_state_publisher` (rodam
+de `/opt/ros`). Acumularam a tarde toda e **duas subidas falharam** — o
+`planner_server` estoura 65 s de ativação com load 19 em 12 núcleos. Há um
+`mysqld` de snap comendo ~1 core, alheio ao projeto.
+
+---
+
 ## 🧭 14-08 (dev + Gazebo) — A RÉ MORRE COMO IDEIA, O SEGUIDOR GANHA O DESVIO LATERAL
 
 > Decisão **039**. Bag: `docs/dados/2026-08-14-porta-gazebo/corrida_a`.
