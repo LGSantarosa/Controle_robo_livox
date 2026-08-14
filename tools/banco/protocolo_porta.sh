@@ -14,6 +14,7 @@ set -e
 set +u
 N="${1:-5}"
 SAIDA="${2:-docs/dados/2026-08-14-porta-gazebo/protocolo}"
+EXTRA="${3:-}"        # argumentos extras de launch (para A/B)
 R="/home/luiz-santarosa/Workspace/Controle_robo_livox"
 S="/tmp/claude-1000/-home-luiz-santarosa-Workspace-Controle-robo-livox/818d5d95-96b2-4997-bdd6-5ecc16c16121/scratchpad"
 ALVO_X=6.14
@@ -38,7 +39,7 @@ for i in $(seq 1 "$N"); do
       mundo:="$R/worlds/sala_andar3.sdf" \
       mapa:="$R/maps/sala_andar3/sala_andar3.yaml" \
       localizacao:=amcl pose_x:=0.0 pose_y:=0.0 pose_yaw:=0.0 \
-      log_dir:="$R/$SAIDA/logs_$i" \
+      log_dir:="$R/$SAIDA/logs_$i" $EXTRA \
       > "$S/protocolo_$i.log" 2>&1 &
 
   # espera ativar (ou desistir)

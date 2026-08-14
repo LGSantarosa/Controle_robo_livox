@@ -126,6 +126,19 @@ def _recusa_combinacao_sem_sentido(contexto, *_args, **_kwargs):
     return []
 
 
+def _passou(nome):
+    """O argumento foi passado na linha de comando?
+
+    `DeclareLaunchArgument` com default vazio não dá para distinguir de "não
+    passou" dentro de uma substituição — e passar string vazia para um
+    `value_type=float` explode na subida. Ler o argv resolve, e é honesto: é
+    exatamente a informação que se quer.
+    """
+    import sys
+    return any(a.startswith(f'{nome}:=') and a.split(':=', 1)[1]
+               for a in sys.argv)
+
+
 def generate_launch_description():
     # Carimbo de tempo da SUBIDA — resolvido aqui, em Python, e não por
     # substituição: `PythonExpression` com `__import__` funciona até o dia
@@ -446,6 +459,13 @@ def generate_launch_description():
         # chamado. Resultado: nenhuma corrida deste projeto foi gravada pelo
         # nó, e em 14-08 a primeira corrida BOA do dia se perdeu porque eu
         # tinha esquecido de subir um `ros2 bag` à mão.
+        # Exposto em 14-08 para o A/B da histerese: sem argumento, comparar
+        # com/sem exigia editar YAML entre corridas — e config editada à mão no
+        # meio de um protocolo é como se perde a condição inicial idêntica.
+        DeclareLaunchArgument(
+            'tolerancia_entra_rumo', default_value='',
+            description='[rad] limiar de ENTRADA do giro (histerese). Vazio = '
+                        'usa o perfil. Igual ao de saída DESLIGA a histerese'),
         DeclareLaunchArgument(
             'log_dir', default_value=os.path.join(
                 os.path.expanduser('~'), 'logs_robo2'),
@@ -619,7 +639,15 @@ def generate_launch_description():
         # tornou desnecessário.
         Node(package='robot_motion', executable='heading_controller',
              name='heading_controller', output='both',
-             parameters=[mov_params, {'use_sim_time': sim}],
+             # O dicionário do argumento vem DEPOIS do perfil: valor vazio não
+             # sobrescreve (o ParameterValue só entra se o usuário passou), e
+             # valor dado ganha do YAML. É o que permite o A/B sem editar
+             # config no meio do protocolo.
+             parameters=[mov_params, {'use_sim_time': sim},
+                         *([{'tolerancia_entra_rumo': ParameterValue(
+                             LaunchConfiguration('tolerancia_entra_rumo'),
+                             value_type=float)}]
+                           if _passou('tolerancia_entra_rumo') else [])],
              remappings=[('/hoverboard_base_controller/cmd_vel',
                           '/auto_vel_raw')]),
 

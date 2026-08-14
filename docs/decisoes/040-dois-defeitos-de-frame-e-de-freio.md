@@ -178,3 +178,54 @@ alavancas plausíveis, nesta ordem:
 2. **o `PolygonApproach` projetado** — 3 cm de folga lateral sobre o corpo é
    pouco para um vão de 88 cm com entrada torta. Mexer nisso é band-aid e o
    dono já recusou band-aid antes (a ré da 025), então vem depois de (1).
+
+## 7. O A/B da histerese, e o que ele revelou por acidente
+
+10 corridas, condição inicial idêntica, `tolerancia_entra_rumo` como argumento
+de launch (exposto para isto — config editada à mão no meio de um protocolo é
+como se perde a condição idêntica).
+
+```
+                 passou   inversões de rumo/min (nas que passaram)
+COM histerese     3/5              2,7 – 4,1
+SEM histerese     3/5              8,7 – 8,8
+```
+
+➡️ **A histerese não muda a taxa de passagem, mas CORTA AS INVERSÕES PELA
+METADE.** Ela faz o que foi feita para fazer (o S) e não tem relação com a
+porta. **Fica**, e passa a ser a primeira coisa do dia que se sustenta em
+medida controlada.
+
+### 🔴 O que a coluna que eu não tinha olhado mostra
+
+```
+nas TRAVADAS:  yaw −23° a −27°   mas   erro_rumo  1,5°  5,7°  −7,5°  11,0°
+```
+
+**O erro de rumo é PEQUENO enquanto o corpo está a 25° atravessado.** O
+seguidor está alinhado com o que a referência pede — quem está torto é a
+**referência**. O plano curva atravessando o vão e o robô obedece a curva para
+dentro da porta, em vez de se endireitar antes de entrar.
+
+➡️ **Não é falha de rastreamento; é geometria de aproximação.** Isso reclassifica
+o dia inteiro: todas as minhas tentativas melhoravam o rastreamento de uma
+referência que já estava sendo seguida corretamente. A dívida nº 1 do projeto
+("ele entra torto na porta") não é do seguidor — é de **quem decide o rumo na
+aproximação**.
+
+O desenho que a medida pede é o do robô 1 (`door_crossing`, mesmo desativado
+lá): alinhar ao eixo do vão até `|lat| < 8 cm` e `|yaw| < 5°`, e só então
+cruzar reto. É a decisão 026 ("chegar já apontado") levada a sério — ela nasceu
+desse miolo e parou no meio do caminho.
+
+### ⚠️ E uma contaminação que vale para TODAS as medidas de hoje
+
+```
+protocolo das 14h (load 15–19)   1 de 5
+A/B      das 12h (load  2–5)     3 de 5  e  3 de 5
+```
+
+**A taxa de passagem triplica com a máquina descarregada.** As corridas da tarde
+estavam contaminadas por CPU faminta — inclusive as que eu usei para reprovar as
+minhas próprias mudanças. Nenhum veredito de hoje sobre `k_lat` ou mira
+adaptativa deve ser considerado definitivo sem repetir com a máquina limpa.
