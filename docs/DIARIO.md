@@ -7168,3 +7168,84 @@ indicadores diferentes. É primo do erro da 023.
 chamando aquilo de "porta". Não é: é um bloco que sobe pelo meio de um corredor
 de 1,30 m, e o centro do vão está 22,5 cm acima do centro do corredor por onde
 ele vem. Metade das minhas hipóteses supunha parede dos dois lados.
+
+## 🔴 2026-08-14 (NO ROBÔ, 2ª leva) — ELE ATRAVESSOU A PORTA, E DEPOIS SAMBOU
+
+> Primeira vez que os consertos de 039–042 dirigem o robô real. Deploy por
+> `git bundle`. CSV em `~/logs_robo2/seguidor_2026-08-14_171807.csv`.
+
+### 🟢 A IDA FUNCIONOU, E É O 042 NO CHÃO REAL
+
+Palavras do dono: *"ele passou a porta na ida perfeitamente"* e, na corrida
+seguinte, *"ele passou e chegou"*. O plano suavizado (042) é a primeira coisa
+deste dia que se sustenta fora do simulador.
+
+⚠️ E só rodou porque o frame foi destravado na hora: o seguidor pedia
+`map→camera_init` e `camera_init` é uma **raiz solta** — o FAST-LIO chama a
+origem dele de `camera_init` e o resto da pilha chama de `odom`. Medido: o
+offset do sensor é **0,420 m em Z apenas**, zero em X e Y, e a pose crua do LIO
+bate com `map→base_link` em 1 mm. São o mesmo lugar com dois nomes. Resolvido em
+tempo de execução com um `static_transform_publisher` de identidade
+`odom→camera_init`. **Isso ainda não está no repo.**
+
+### 🔴 A VOLTA — ele girou dentro da porta e bateu
+
+```
+ t=86,7   x 4,834  y 1,487   entrando centrado
+ t=87,6   x 4,604  y 1,620   erro de rumo +53°
+ t=88,4   x 4,433  y 1,762   erro +88°   <- cruzou o limiar de pivô (80°)
+ t=90,9   x 4,491  y 1,877   giro +115°/s
+```
+
+A jamba de cima está em y=1,931. Com o corpo em 1,877 e meia-largura 0,2275, ele
+estava **17 cm dentro da parede, girando**. Antes disso derivou **39 cm para
+cima** (y 1,49 → 1,88) com o erro subindo 25° → 53° → 72° → 88°. O pivô foi o
+sintoma; a deriva foi a causa.
+
+🔴 **E o reflexo VIU e não adiantou.** O dono pediu *"o pivô TAMBÉM DEVE TER O
+COLLISION MONITOR"* — ele já tem, e disparou 4 vezes em 8 s. O problema é outro:
+
+```
+t=88,7 a 89,6   pedido wz=+1,00   entregue +0,00   vetou
+t=89,9          pedido wz=+1,00   entregue +1,00   soltou
+t=90,5          pedido wz=−1,00   entregue −1,00   soltou
+t=90,8 a 91,1   pedido wz=−1,00   entregue +0,00   vetou
+```
+
+O reflexo **pisca**, e cada janela solta é um pulso de giro máximo. Pior:
+
+```
+t=90,2   pedido wz=−1,00   entregue wz=+1,00
+```
+
+Pedido para um lado, saída para o outro — a retenção de 0,52 s da placa (020).
+**Zerar o comando não para o giro.** O reflexo não tem como impedir uma rotação
+nesta máquina.
+
+### 🔴 O SAMBA DEPOIS DA PORTA — 20 inversões em 61 s
+
+Pedido do dono, textual: *"deu uns 20 pivos depois da porta, isso não deve mais
+acontecer, o pivo dele ta forte demais, ele gira com um simples toque, não
+precisa sentar o dedo, ai o freio tentava parar ele e ele ia pro outro lado ai
+ele devolvia pro outro e ficou lá sambando"*.
+
+```
+20 inversões de sentido em 61 s (19,6/min), TODAS depois da porta (x>5,0)
+t=444,9 a 456,4   x preso em 5,30, dist parada em ~4,2 m  -> 11 s no lugar
+rumo oscilando +42° <-> +125°
+giro alternando  −101 +40 +103 −33 −102 +41 +104 −6 −94 −54 +85 …
+v_alvo = +0,500 o tempo TODO
+```
+
+🔴 **Não é o estado de pivô.** `v_alvo` nunca caiu a zero: ele pedia para ANDAR
+e girava no lugar. E o pico de ±100°/s ≈ 1,75 rad/s é o **módulo único da placa**
+(2,204 rad/s, decisão 023): ela não entrega giro parcial, qualquer `wz` vira
+módulo cheio para um lado ou para o outro. É a observação do dono, medida.
+
+➡️ **E é por isso que o freio de giro (037) PIORA aqui.** Contra-torque contra
+uma placa que só sabe módulo cheio não freia — **inverte**, e vira o próximo
+pulso do samba. O freio foi projetado e medido em bancada com o robô livre; em
+malha fechada de rumo ele fecha um relé.
+
+⚠️ Isto reforça a hipótese que o ESTADO já lista como a mais importante em
+aberto: **relé com tempo morto**. Não é sintonia do seguidor; é a planta.
