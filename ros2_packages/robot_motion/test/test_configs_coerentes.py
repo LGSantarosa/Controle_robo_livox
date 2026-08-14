@@ -242,6 +242,28 @@ def test_a_caixa_estatica_cobre_ao_menos_o_CORPO():
         'arco veta a própria curva (o impasse de 14-08)')
 
 
+def test_a_margem_da_caixa_estatica_e_medida_na_QUINA():
+    """A margem que importa num vão apertado é a da QUINA, não a das faces.
+
+    Medido em 14-08 (decisão 041): somar 5 cm em cada face empurrava a quina
+    em 5·√2 = 7,1 cm, e era a quina de TRÁS que encostava na jamba enquanto o
+    corpo ainda tinha 5 a 7 cm de folga. As 4 travadas do A/B são isso, e não
+    houve contato em nenhuma.
+
+    O teto é 4 cm na quina: acima disso a caixa volta a comer o vão de 0,90 m,
+    onde o orçamento por lado é 22,3 cm e o corpo a 25° já gasta 17.
+    """
+    import math
+    pontos = eval(_cm()['PolygonStop']['points'])  # noqa: S307
+    corpo = math.hypot(0.433 / 2, 0.455 / 2)       # trena de 29-07
+    pior = max(math.hypot(x, y) for x, y in pontos if x < 0)   # quinas de trás
+    assert pior - corpo <= 0.04, (
+        f'quina de trás a {pior:.4f} m, {pior - corpo:.3f} m além do corpo: é '
+        'ela que trava o robô cruzando porta torto (041)')
+    assert pior >= corpo, (
+        f'quina de trás a {pior:.4f} m está DENTRO do corpo ({corpo:.4f})')
+
+
 def test_a_lateral_do_reflexo_cabe_no_que_o_PLANEJADOR_permite():
     """Se o reflexo exigir mais folga lateral que o planejador, o Nav2 traça
     por um vão que o reflexo veta e o robô fica parado entre os dois — foi o

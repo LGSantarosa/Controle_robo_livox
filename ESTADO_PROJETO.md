@@ -10,6 +10,61 @@
 
 ---
 
+## 🔎 14-08 (3ª leva) — A CAIXA DO REFLEXO É QUE NÃO CABE NA PORTA
+
+> Decisão **041**. Só análise offline das 10 corridas do A/B da histerese.
+> **O Gazebo não subiu, o robô não foi ligado, e o conserto NÃO FOI RODADO.**
+
+### 🔴 A CAUSA DA TRAVADA, MEDIDA EM 4 POSES INDEPENDENTES
+
+Quem veta é o **`PolygonStop`** (caixa estática), 61–64 s por travada. O
+`PolygonApproach` aparece 0,0–0,1 s. ⚠️ **A 040 acusou o `PolygonApproach` e
+estava errada.**
+
+```
+na pose exata da travada (robô a −23° a −27° cruzando o vão de 0,90 m)
+
+  folga do CORPO até a jamba     +0,049 a +0,069 m    cabia, e sobrava
+  folga da CAIXA na mesma pose   −0,017 a +0,002 m    vetava
+```
+
+🔴 **É aritmética de retângulo**: somar 5 cm por FACE empurra a QUINA em 5·√2 =
+**7,1 cm**, e é a quina de TRÁS do lado de dentro da curva que sobra para a
+jamba. Num vão de 0,90 m o orçamento por lado é 22,3 cm e o corpo a 25° já
+gasta ~17.
+
+### 🟢 O CONSERTO — um parâmetro, margem medida na QUINA
+
+```
+traseira  0,2665 -> 0,2375     lateral  0,2775 -> 0,2475
+frente    0,35 INALTERADA  (varrida até 0,2165, não move a folga 1 mm)
+pior folga nas 4 poses:  −0,017  ->  +0,022 m
+```
+
+Invariante nova no `test_configs_coerentes`, verificada por mutação. **324
+verdes** em `robot_motion`.
+
+### 🟢 O SEGUIDOR JÁ SEGUE O PLANO — não sobrou o que sintonizar
+
+`|desvio_lateral|` p50 **2,5 cm** (era 11 cm em 13-08); travadas e passagens
+**não se separam** em nenhum percentil. E no plano da porta o **plano** cruza a
+5–13 cm do centro com −18° a 0°, enquanto o **robô** cruza a 1–7 cm com −20° a
++5°: colar mais no plano (`k_lat`) mandaria o robô para o defeito.
+
+⚠️ **Um artefato meu que quase virou conclusão**: filtrando por `v_alvo != 0`, a
+separação saía perfeita e INVERTIDA — porque na travada o seguidor segue
+pedindo velocidade por ~70 s com o robô parado em cima do plano. Filtro de
+"está andando" tem de olhar deslocamento **medido**, nunca o pedido.
+
+### ▶️ PRÓXIMO PASSO, e precisa do dono na tela
+
+Protocolo de 5 corridas (`tools/banco/protocolo_porta.sh`), máquina limpa.
+Linha de base: **3/5**. Previsão escrita antes: as travadas somem; o que
+sobrar de falha tem outra causa. ⚠️ O robô **continua entrando torto** — isto
+não conserta a entrada, só para de proibir uma passagem que cabe.
+
+---
+
 ## 🔧 14-08 (2ª leva) — DOIS DEFEITOS DE VERDADE, E O PIVÔ PASSOU A EXISTIR
 
 > Decisão **040**. Dados em `docs/dados/2026-08-14-porta-gazebo/`, protocolo de
@@ -82,9 +137,11 @@ corrida  veredito       parou em       folga   sobra p/ corpo   yaw     reflexo
 
 🔴 **Em nenhuma falha o corpo invadiu o mapa** — parou com 12 a 18 cm de folga
 por lado e ficou congelado ~69 s. Não é colisão: é o reflexo travando com
-margem sobrando, porque as quatro **entraram tortas** (−10° a −34°). O
-`PolygonApproach` (meia-largura 0,2575 contra 0,2275 do corpo) é projetado pela
-velocidade, e a −33° a projeção alcança a ombreira antes do corpo.
+margem sobrando, porque as quatro **entraram tortas** (−10° a −34°).
+⚠️ ~~O `PolygonApproach` é projetado pela velocidade, e a −33° a projeção
+alcança a ombreira antes do corpo.~~ **ERRADO, corrigido pela 041**: quem veta
+é o `PolygonStop` estático (61–64 s por travada, contra 0,0–0,1 s do
+`PolygonApproach`), e o canto que encosta é a **quina de trás**.
 
 ➡️ **A dívida nº 1 continua a mesma: ele entra torto na porta.** As duas
 correções de mecanismo de hoje eram reais e necessárias, mas atacavam outra

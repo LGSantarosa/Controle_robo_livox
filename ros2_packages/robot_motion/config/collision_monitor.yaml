@@ -187,7 +187,48 @@ collision_monitor:
       # ⚠️ E o `robot_radius` do planejador subiu junto (0,26 -> 0,28), senão
       # volta o impasse: reflexo exigindo mais folga do que o planejador
       # garante = robô parado entre os dois.
-      points: "[[0.35, 0.2775], [0.35, -0.2775], [-0.2665, -0.2775], [-0.2665, 0.2775]]"
+      #
+      # ══════════════════════════════════════════════════════════════════════
+      # 🔴 14-08 (3ª leva): É ESTA CAIXA QUE TRAVA O ROBÔ NA PORTA, e a culpa
+      # é da QUINA DE TRÁS. Medido nas 10 corridas do A/B da histerese
+      # (`docs/dados/2026-08-14-porta-gazebo/ab_*`), decisão 041.
+      #
+      # Quem veta é o `PolygonStop`, não o `PolygonApproach` — o
+      # `/collision_monitor_state` dos bags é explícito: nas 4 travadas o STOP
+      # segura 61 a 64 s e o APPROACH aparece 0,0–0,1 s. A 040 acusou o
+      # `PolygonApproach`, e a 040 estava errada.
+      #
+      # Nas 4 poses de travada, com o robô a −23° a −27° cruzando o vão:
+      #
+      #     folga do CORPO até a jamba de cima    +0,049 a +0,069 m  (cabe)
+      #     folga desta CAIXA na mesma pose       −0,017 a +0,002 m  (veta)
+      #
+      # O corpo tinha 5 a 7 cm sobrando e a caixa não tinha nenhum. Nenhuma
+      # das 4 chegou a encostar em nada.
+      #
+      # 🔴 A RAZÃO É ARITMÉTICA, e é a armadilha de somar margem por FACE:
+      # somar 5 cm em cada face de um retângulo empurra a QUINA em 5·√2 ≈ 7,1
+      # cm. A caixa de cima anunciava "margem de 5 cm" e entregava 7,1 cm de
+      # margem na quina — justo o canto que sobra para a jamba quando o robô
+      # cruza torto. Num vão de 0,90 m com um corpo de 0,455, o orçamento
+      # inteiro por lado é 22,3 cm, e a 25° o corpo já gasta 17 cm dele.
+      #
+      # A margem passa a ser medida NA QUINA, 3 cm, que é a mesma do
+      # `PolygonApproach`:
+      #
+      #     por face 0,021 m  ->  na quina 0,021·√2 = 0,030 m
+      #     traseira  0,2165 + 0,021 = 0,2375
+      #     lateral   0,2275 + 0,020 = 0,2475
+      #     quina     0,3466 contra 0,3141 do corpo  =  +3,3 cm
+      #
+      # Pior folga nas mesmas 4 poses: **+0,022 m** (era −0,017).
+      #
+      # ⚠️ A FRENTE NÃO MUDA e isso é medida, não deferência: varrida de 0,35 a
+      # 0,2165, a folga na jamba não se move 1 mm — quem encosta é a quina de
+      # trás. O pedido do dono depois da batida ("mais na frente e nas quinas
+      # da frente") fica inteiro de pé.
+      # ══════════════════════════════════════════════════════════════════════
+      points: "[[0.35, 0.2475], [0.35, -0.2475], [-0.2375, -0.2475], [-0.2375, 0.2475]]"
       action_type: "stop"
       # 2 pontos, não 1: ponto solto é ruído. O Mid-360 entrega 20 000 pontos
       # por quadro, então exigir 2 não atrasa nada real.

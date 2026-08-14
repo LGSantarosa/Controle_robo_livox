@@ -7047,3 +7047,62 @@ falta é ele não bater.
 4. amarrar a ré a **objetivo ativo** (pedido do dono), matando a ré-do-nada que
    o `plano.py` provocou;
 5. o erro de trajeto do seguidor, que é quem entorta a entrada na porta.
+
+## 🔎 2026-08-14 (3ª leva) — A CAIXA DO REFLEXO É QUE NÃO CABE NA PORTA (só análise)
+
+> Decisão **041**. Nenhuma corrida nova: as mesmas 10 do A/B da histerese,
+> relidas com outra pergunta. **O Gazebo não subiu e o robô não foi ligado.**
+
+O dono cortou o assunto pela raiz: *"o door crossing nunca será implementado
+aqui. Pode fazer as medidas, mas quero essa porra seguindo o plan direito, só
+arrumar os parâmetros"*. As medidas responderam melhor do que o pedido.
+
+### O seguidor já segue o plano, e a régua tinha um viés meu
+
+`|desvio_lateral|` p50 de **2,5 cm** (era 11 cm em 13-08), e as travadas não se
+separam das passagens em nenhum percentil. Não sobrou defeito de seguimento
+para arrumar por parâmetro.
+
+⚠️ **E a primeira leitura foi um artefato que quase virou conclusão.** Filtrando
+por `v_alvo != 0`, a separação saía **perfeita e invertida** — as travadas
+seguiam o plano *melhor*. Motivo: na travada o seguidor continua **pedindo**
+velocidade por ~70 s com o reflexo zerando depois dele, e o robô fica parado em
+cima do plano, enchendo a amostra de `e_lat ≈ 0`. Filtro de "está andando" tem
+de olhar deslocamento **medido**, nunca o pedido. Primo do erro da 023.
+
+### O plano entra mais torto que o robô
+
+No plano da porta o **plano** cruza a 5–13 cm do centro com −18° a 0°; o
+**robô** cruza a 1–7 cm com −20° a +5°. Ou seja: colar mais no plano
+(`k_lat`) mandaria o robô para o defeito. Dá um segundo motivo, geométrico,
+para o `k_lat = 1,0` ter reprovado na 040 — independente da CPU faminta.
+
+### A causa, e a 040 tinha acusado o polígono errado
+
+`/collision_monitor_state`: nas 4 travadas o **`PolygonStop`** segura 61–64 s e
+o `PolygonApproach` aparece 0,0–0,1 s. Desenhando caixa e corpo na pose de cada
+travada:
+
+```
+folga do CORPO até a jamba    +0,049 a +0,069 m   (cabia, e sobrava)
+folga da CAIXA na mesma pose  −0,017 a +0,002 m   (vetava)
+```
+
+Quatro poses independentes, todas a menos de 2 cm de zero, nenhuma encostando
+em nada. O canto é sempre a **quina de trás do lado de dentro da curva**.
+
+🔴 **E a razão é aritmética**: somar 5 cm por FACE empurra a QUINA em 5·√2 =
+7,1 cm. A caixa anunciava 5 cm de margem e cobrava 7,1 justo onde o vão de
+0,90 m não tem — a 25° o corpo já gasta 17 dos 22,3 cm de orçamento por lado.
+
+**Conserto**: margem medida na quina, 3 cm (traseira 0,2375 · lateral 0,2475).
+Frente **inalterada** — varrida de 0,35 a 0,2165, ela não move a folga 1 mm, e
+o pedido do dono depois da batida fica de pé. Invariante nova no
+`test_configs_coerentes`, verificada por mutação. 324 verdes.
+
+### O que fica para a próxima
+
+Rodar o protocolo de 5 corridas com o dono na tela. Linha de base com a máquina
+limpa: **3/5**. Previsão escrita antes: as travadas somem; o que sobrar de
+falha tem outra causa. E o robô **continua entrando torto** — isso não conserta
+a geometria de entrada, só para de proibir uma passagem que cabe.
