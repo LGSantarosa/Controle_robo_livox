@@ -10,6 +10,82 @@
 
 ---
 
+## 🔴 14-08 (NO ROBÔ) — O SEGUIDOR NÃO DIRIGE NO ROBÔ REAL: `camera_init` É RAIZ SOLTA
+
+> Primeira ida ao robô com o trabalho de 039–042. Deploy feito por `git bundle`
+> (o NUC não tem chave do GitHub — igual 30-07). **Nenhuma corrida aconteceu.**
+
+### 🔴 O DEFEITO, e ele é do conserto da 040
+
+Objetivo aceito, plano desenhado, **robô parado**. O log acusa, e é honesto:
+
+```
+[path_follower] sem TF camera_init<-map (... not part of the same tree.
+                Tf has two or more unconnected trees.); o plano não pode ser
+                usado — dirigir com ele seria o defeito de 14-08 de volta
+```
+
+`path_follower.py:545`:
+
+```python
+destino = self.pose.header.frame_id or 'odom'
+```
+
+```
+no GAZEBO   /Odometry nasce em `odom`        -> está na árvore, funciona
+no ROBÔ     FAST-LIO publica `camera_init`   -> RAIZ SOLTA, o lookup falha
+```
+
+O `tf_odom` consome esse mesmo `/Odometry` e publica `odom→base_link` (medido
+funcionando: `tf2_echo odom base_link` responde), mas **ninguém liga
+`camera_init` à árvore do `map`**.
+
+➡️ **O conserto de frame da 040 foi validado o dia inteiro no simulador, onde o
+frame por acaso bate. Ele nunca podia ter funcionado no robô.**
+
+### 🔴 E TEM UM SEGUNDO DEFEITO NO MESMO LUGAR
+
+A pose que o seguidor usa é a do `/Odometry` cru = a pose do **SENSOR**. O
+próprio `tf_odom` avisa na subida: *"A pose do LIO é do SENSOR; a composição com
+o URDF é o que impede os 42 cm do Mid-360 de virarem erro silencioso de
+navegação"*. Mesmo com o frame conectado, ele dirigiria por um ponto 42 cm fora
+do centro do corpo.
+
+### ▶️ CONSERTO PROPOSTO, **NÃO IMPLEMENTADO** (o dono quer testar antes)
+
+Ler a pose por **TF** (`map→base_link` ou `odom→base_link`) em vez do
+`/Odometry` cru — resolve os dois de uma vez. Ordem combinada: (1) no dev, com
+teste que trave o caso `camera_init`, que hoje **nenhum teste cobre**; (2)
+protocolo no Gazebo para garantir que o 4/5 não quebrou; (3) só então o robô.
+
+### ⚪ O que ficou VERIFICADO no robô, apesar de tudo
+
+```
+deploy por git bundle        c9ff66f -> 9598367, 5 commits
+build + 329 testes           verdes NO PRÓPRIO NUC
+/plan_smoothed               publicando a 0,95 Hz — o 042 vale lá
+caixa do reflexo             quina 0,385 (a protetora) confirmada no nó vivo
+odom->base_link              existe e responde
+bateria das RODAS            40,36 V   (12-08 rodou bem com 41,13)
+/scan                        7,36 Hz   (12-08: 9,998 Hz) — degradação nova, causa desconhecida
+```
+
+### ⚠️ Três obstáculos de infra que custaram tempo, de novo
+
+1. **rede**: NUC em `10.244.3.205`, dev em `10.150.x.x` — sub-redes diferentes,
+   sem rota. Resolveu quando o DHCP moveu o dev para `10.244.3.5/24`. Usuário do
+   NUC é **`bara`**, não `robo`; `robo-desktop.local` não resolve entre redes;
+2. **a bateria do NUC morreu no meio do teste** — ela não tem telemetria, e a
+   dos 40,36 V é só a das rodas;
+3. **o pré-voo não cobria a árvore de TF** — foi por isso que eu disse "pode
+   mandar o ponto" para um robô que não podia dirigir.
+
+⚠️ `rosbag2_recorder` assina `/tf` com DURABILITY TRANSIENT_LOCAL e os
+publishers são VOLATILE: **os bags gravados no robô saem sem TF**. Não afeta a
+navegação, afeta a análise depois.
+
+---
+
 ## 🟢 14-08 (4ª leva) — O SEGUIDOR NUNCA VIU O PLANO SUAVIZADO. 4/5 E ZERO RÉ
 
 > Decisão **042**. Dados em `docs/dados/2026-08-14-porta-042/`.
