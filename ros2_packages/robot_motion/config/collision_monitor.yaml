@@ -227,8 +227,34 @@ collision_monitor:
       # 0,2165, a folga na jamba não se move 1 mm — quem encosta é a quina de
       # trás. O pedido do dono depois da batida ("mais na frente e nas quinas
       # da frente") fica inteiro de pé.
+      #
+      # 🔴🔴 REVERTIDO NO MESMO DIA — O ROBÔ BATEU A TRASEIRA, COM O DONO
+      # OLHANDO. A caixa encolhida ficou no ar por três levas, NUNCA mudou o
+      # placar (3/5 antes, 3/5 depois), e na primeira corrida que o dono rodou
+      # à mão ele girou na garganta e encostou a quina de trás na ombreira.
+      #
+      # A medida do log dessa corrida (`seguidor_2026-08-14_161705.csv`):
+      #
+      #   pior folga do CORPO até a jamba      +0,025 m  (2,5 cm)
+      #   1º veto da caixa ENCOLHIDA           t = 53,0 s
+      #   1º veto desta caixa (a de baixo)     t = 52,2 s   <- 0,8 s ANTES
+      #
+      # A placa segura a saída cheia 0,52 s depois do corte (decisão 020).
+      # **0,8 s de antecedência é a diferença entre parar antes e parar em
+      # cima**, e foi exatamente essa margem que a 041 gastou.
+      #
+      # ⚠️ O ERRO DE MÉTODO, e ele é pior que o número: a 041 trocou margem de
+      # segurança por uma hipótese de passagem que ela mesma registrou como
+      # NÃO VERIFICADA, e depois de a verificação REPROVAR (3/5, sem mudança)
+      # a troca ficou no ar assim mesmo. Quem passou a caber na porta foi o
+      # plano suavizado (042), que não gastou segurança nenhuma.
+      #
+      # 🔵 O que a 041 achou de verdade e continua valendo como CONHECIMENTO:
+      # somar margem por FACE empurra a QUINA em margem·√2 (5 cm de face =
+      # 7,1 cm de quina). Isso é verdade e está medido. O que NÃO se segue
+      # dali é que os 7,1 cm sobrem — eles são o que para o robô a tempo.
       # ══════════════════════════════════════════════════════════════════════
-      points: "[[0.35, 0.2475], [0.35, -0.2475], [-0.2375, -0.2475], [-0.2375, 0.2475]]"
+      points: "[[0.35, 0.2775], [0.35, -0.2775], [-0.2665, -0.2775], [-0.2665, 0.2775]]"
       action_type: "stop"
       # 2 pontos, não 1: ponto solto é ruído. O Mid-360 entrega 20 000 pontos
       # por quadro, então exigir 2 não atrasa nada real.
