@@ -1,0 +1,13 @@
+esperando o servidor `navigate_to_pose`...
+objetivo mandado: (6.14 · 3.78) no frame map. TECLADO NA MÃO.
+
+teto de 90 s atingido.
+objetivo CANCELADO.
+
+1786 amostras -> /home/luiz-santarosa/Workspace/Controle_robo_livox/docs/dados/2026-08-14-porta-041/corrida_1.csv
+
+🟢 chegada        0.095 m do alvo (raio 0.25 m) em 89.2 s
+   caminho        10.40 m andados para 7.18 m de reta  (tortuosidade 1.45)
+   replanejou     38x
+🛡️ reflexo        agiu 1x, 4.5 s no total (1ª vez em t=18.9 s)
+   pose           49.9 Hz mediana, pior intervalo 0.033 s

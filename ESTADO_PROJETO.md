@@ -10,6 +10,75 @@
 
 ---
 
+## 🟢 14-08 (4ª leva) — O SEGUIDOR NUNCA VIU O PLANO SUAVIZADO. 4/5 E ZERO RÉ
+
+> Decisão **042**. Dados em `docs/dados/2026-08-14-porta-042/`.
+> **Nada foi ao robô.**
+
+### 🔴 O DEFEITO ERA DE FIAÇÃO, NÃO DE SINTONIA
+
+A decisão 026 escreveu uma árvore de comportamento própria só para suavizar o
+plano — e o `path_follower` assinava **`/plan`**, o Theta\* CRU. Desde a 026 o
+suavizador trabalha e o resultado ia para o lixo, sem uma linha de log. Mesma
+família do defeito de frame da 040.
+
+```
+curvatura exigida na aproximação da porta, 5 corridas em 5
+
+/plan            raio mínimo  0,215 a 0,275 m    a máquina fecha 0,37 → NÃO CABE
+/plan_smoothed                0,402 a 0,477 m    cabe
+```
+
+**Conserto**: `topico_plano` default `/plan_smoothed`, com **queda para o cru**
+se o suavizado calar mais que `timeout_plano` (o `SmoothPath` recusou 1 vez em
+79 numa corrida; sem a queda isso vira robô parado sem culpado no log).
+
+### 🟢 A VERIFICAÇÃO
+
+```
+             passou   folga na garganta   corridas com ré
+cx041 (antes)  3/5      0,037 a 0,063          3 de 5
+cx042 (agora)  4/5      0,109 a 0,158          0 de 5
+```
+
+**Zero ré** — que é o alvo que o dono fixou. Em 3 das 5 o reflexo não agiu
+nenhuma vez; em 20 corridas de porta isso nunca tinha acontecido.
+
+### 📏 A RÉGUA DO DIA, 20 corridas, separa sem sobreposição
+
+```
+passou LIMPO (sem ré)  n=8    folga do corpo na garganta  +0,122 a +0,158
+passou com ré          n=5                                +0,047 a +0,105
+travou                 n=7                                +0,037 a +0,109
+```
+
+⚠️ A que travou agora teve folga **0,109** — a maior de qualquer falha do dia,
+encostada no limiar. **Causa não investigada**; não é mais o regime antigo.
+
+### 🔴 TRÊS HIPÓTESES MINHAS MORTAS PELA MEDIDA, no caminho até aqui
+
+| | como morreu |
+|---|---|
+| a caixa do reflexo (041) | encolhida e rodada: 3/5, igual à base |
+| a mira adaptativa esticada | 42% do tempo esticada nos DOIS lados |
+| a inflação do costmap | reproduzida offline: de `0,90·3,0` a `1,50·0,7` o caminho não se move |
+
+⚠️ **E duas vezes quase concluí de um artefato**: filtrar por `v_alvo != 0`
+mostra as travadas seguindo o plano MELHOR, porque na travada o seguidor
+continua pedindo velocidade por ~70 s com o robô parado em cima do plano.
+**Filtro de "está andando" olha deslocamento MEDIDO, nunca o pedido.**
+
+### 🔵 A RÉ, medida e deixada em paz por decisão do dono
+
+Das 15 corridas anteriores: a ré disparou em 5 e as 5 passaram; nas 6 que
+travaram não disparou nenhuma. O log diz por quê — *"emperrado e sem vão para
+recuar, atrás há 0.00 m"*: com o robô a 30° atravessado, o corredor retangular
+da ré pega a ombreira. Ele fica preso entre as duas regras de segurança dele.
+➡️ **O dono vetou mexer na ré**: o alvo é ele não precisar dela — e agora não
+precisa.
+
+---
+
 ## 🔎 14-08 (3ª leva) — A CAIXA DO REFLEXO É QUE NÃO CABE NA PORTA
 
 > Decisão **041**. Só análise offline das 10 corridas do A/B da histerese.

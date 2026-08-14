@@ -7106,3 +7106,65 @@ Rodar o protocolo de 5 corridas com o dono na tela. Linha de base com a máquina
 limpa: **3/5**. Previsão escrita antes: as travadas somem; o que sobrar de
 falha tem outra causa. E o robô **continua entrando torto** — isso não conserta
 a geometria de entrada, só para de proibir uma passagem que cabe.
+
+## 🟢 2026-08-14 (4ª leva) — O SEGUIDOR NUNCA VIU O PLANO SUAVIZADO
+
+> Decisão **042**. Dados em `docs/dados/2026-08-14-porta-042/`. Nada foi ao robô.
+
+O dono cortou duas coisas: *"o door crossing nunca será implementado aqui"* e,
+depois de eu achar que a ré era o separador, *"não precisamos mudar a ré e sim
+fazer ele sequer precisar dela pra passar"*.
+
+### Três hipóteses minhas, três mortes por medida
+
+A **caixa do reflexo** (041) foi encolhida e rodada: 3/5, igual à base — nas
+travadas novas ela tinha +0,009 e +0,020 m de folga e travou assim mesmo. A
+**mira esticada** foi reconstruída offline com os parâmetros de produção: 42%
+do tempo esticada nos dois lados, e o portão do vão frontal dispara sim. A
+**inflação** foi reproduzida offline (inflação do Nav2 + custo do Theta\*): de
+`0,90·3,0` até `1,50·0,7` o caminho não se move um centímetro — quem prende o
+caminho embaixo é a zona proibida, não o gradiente. Essa última morreu **sem
+gastar corrida**, que é o jeito certo de matar hipótese.
+
+### E o defeito era de fiação
+
+```
+/plan            raio mínimo exigido  0,215 a 0,275 m   a máquina fecha 0,37
+/plan_smoothed                        0,402 a 0,477 m
+```
+
+5 corridas em 5. A decisão 026 escreveu uma árvore de comportamento inteira só
+para suavizar, com a justificativa exata — *"o plano do Theta\* ia cru para o
+seguidor"* — e o `path_follower` assinava `/plan`. **Desde a 026 o suavizador
+trabalha e o resultado ia para o lixo.** Quem dirige este robô não é o
+`FollowPath` do Nav2; a árvore consertou o caminho de quem não dirige.
+
+### O resultado
+
+```
+             passou   folga na garganta   corridas com ré
+antes (041)    3/5      0,037 a 0,063          3 de 5
+agora (042)    4/5      0,109 a 0,158          0 de 5
+```
+
+**Zero ré.** Em três das cinco o reflexo não agiu nenhuma vez — em 20 corridas
+de porta, inédito.
+
+⚠️ **Acertei o número e errei o mecanismo.** A previsão dizia "ele chega mais
+reto"; não chega — o yaw na garganta continua +27° a +39°. O ganho é de
+POSIÇÃO: com curva que a máquina fecha, ele deixa de ser jogado contra a
+ombreira.
+
+### O que eu erraria de novo se ninguém anotasse
+
+**Filtro de "está andando" tem de olhar deslocamento MEDIDO, nunca o pedido.**
+Filtrando por `v_alvo != 0`, as travadas apareciam seguindo o plano MELHOR que
+as passagens, com separação perfeita e invertida — porque numa travada o
+seguidor segue pedindo velocidade por ~70 s com o reflexo zerando depois dele e
+o robô parado em cima do plano. Aconteceu **duas vezes no mesmo dia**, com dois
+indicadores diferentes. É primo do erro da 023.
+
+**E medir a geometria antes de teorizar sobre ela.** Passei metade do dia
+chamando aquilo de "porta". Não é: é um bloco que sobe pelo meio de um corredor
+de 1,30 m, e o centro do vão está 22,5 cm acima do centro do corredor por onde
+ele vem. Metade das minhas hipóteses supunha parede dos dois lados.

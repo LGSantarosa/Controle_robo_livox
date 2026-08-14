@@ -333,6 +333,12 @@ class PathFollower(Node):
             # Sem plano novo por este tempo, para. Plano velho é plano perigoso
             # — mesma regra do `timeout_alvo` da movimentação.
             ('timeout_plano', 2.0),
+            # 🔴 O TÓPICO DO PLANO — o suavizado, não o cru (decisão 042). O
+            # porquê, com número, está na assinatura lá embaixo. O cru fica
+            # declarado porque ele é a QUEDA quando o suavizador recusa, e
+            # porque um dia pode ser preciso voltar atrás por parâmetro.
+            ('topico_plano', '/plan_smoothed'),
+            ('topico_plano_cru', '/plan'),
             # 🔴 14-08: LOG DE TODA CORRIDA, POR PADRÃO (pedido do dono).
             #
             # Até hoje `csv` nascia vazio E `grava()` NUNCA era chamado — o nó
@@ -353,7 +359,33 @@ class PathFollower(Node):
         self.pub_rumo = self.create_publisher(Float64, '~/rumo_alvo', qos)
         self.pub_vel = self.create_publisher(Float64, '~/velocidade_alvo', qos)
         self.create_subscription(Odometry, '/Odometry', self.cb_odom, qos)
-        self.create_subscription(Path, '/plan', self.cb_plano, qos)
+        # ══════════════════════════════════════════════════════════════════
+        # 🔴 O SEGUIDOR SEGUE O PLANO SUAVIZADO (decisão 042). Até 14-08 ele
+        # assinava `/plan` — o Theta* CRU — e a suavização da 026 nunca chegou
+        # nele. Medido nas 5 corridas do protocolo, na aproximação da porta:
+        #
+        #   /plan            raio mínimo exigido  0,215 a 0,275 m   NÃO CABE
+        #   /plan_smoothed                        0,402 a 0,477 m   cabe
+        #                    a máquina fecha 0,37 m (`raio_min_curva`)
+        #
+        # O plano cru pede curva mais fechada do que o robô sabe fazer, bem na
+        # boca de um vão de 0,85 m. Ele chega ainda girando, e o resíduo de
+        # rumo come 7 cm dos 22 cm de folga por lado.
+        #
+        # A árvore JÁ suaviza e escreve o suavizado de volta em `{path}` — quem
+        # não recebia era este nó, que lia o tópico do PLANEJADOR em vez do
+        # tópico do SUAVIZADOR.
+        #
+        # ⚠️ E POR ISSO A QUEDA PARA O CRU EXISTE: se o `SmoothPath` recusar, a
+        # árvore segue com o plano cru e `/plan_smoothed` PARA de sair. Sem a
+        # queda, o sintoma seria o pior deste projeto — "objetivo aceito, plano
+        # desenhado, robô parado, ninguém culpado no log" (13-08). O cru só
+        # entra quando o suave está mais velho que `timeout_plano`.
+        # ══════════════════════════════════════════════════════════════════
+        self.create_subscription(Path, self.par['topico_plano'],
+                                 lambda m: self.cb_plano(m, suave=True), qos)
+        self.create_subscription(Path, self.par['topico_plano_cru'],
+                                 lambda m: self.cb_plano(m, suave=False), qos)
 
         # 🔴 QUEM DIZ QUE EXISTE OBJETIVO VIVO — e sem isto a ré recua sozinha.
         #
@@ -393,9 +425,13 @@ class PathFollower(Node):
 
         self.pose = None
         self.plano = []
-        # Frame em que o `/plan` chegou (`map` com AMCL). Sem ele não dá
+        # Frame em que o plano chegou (`map` com AMCL). Sem ele não dá
         # para saber se a transformada é necessária — ver `plano_em_odom`.
         self.plano_frame = None
+        # Quando o plano SUAVIZADO chegou pela última vez. `None` = nunca veio,
+        # e aí o cru é aceito sem discussão: é o caso da bancada e de qualquer
+        # pilha que não suba o `smoother_server` (042).
+        self.t_plano_suave = None
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
         self.t_plano = None
@@ -600,10 +636,24 @@ class PathFollower(Node):
         """
         return any(self._objetivo.values())
 
-    def cb_plano(self, msg):
+    def cb_plano(self, msg, suave=True):
         novo = [(q.pose.position.x, q.pose.position.y) for q in msg.poses]
         if len(novo) < 2:
             return
+        agora = self.agora()
+        if suave:
+            self.t_plano_suave = agora
+        elif (self.t_plano_suave is not None
+              and agora - self.t_plano_suave <= self.par['timeout_plano']):
+            # o suavizado está vivo: o cru é a mesma missão, com curva que a
+            # máquina não fecha. Descartar aqui é o ponto inteiro da 042.
+            return
+        elif self.t_plano_suave is not None:
+            self.get_logger().warn(
+                f'plano suavizado calado há '
+                f'{agora - self.t_plano_suave:.1f} s — seguindo o CRU, que '
+                'pede curva mais fechada do que a máquina fecha',
+                throttle_duration_sec=5.0)
         self.plano = novo
         # 🔴 14-08: GUARDAR O FRAME DO PLANO. Até esta data ele era ignorado, e
         # o plano (`map`) era comparado direto contra a pose (`odom`) — ver
