@@ -40,6 +40,38 @@ atravessam ele intactos. Com mira a 1 m, 29 cm valem **16,2° de ordem de rumo**
 num corredor onde a ordem certa é zero. O robô tem 0,32 m de raio: o plano
 manda ele tecer quase a própria largura numa reta.
 
+### 🔴 E AS CURVAS SÃO FORTES DEMAIS — observação do dono, medida
+
+O raio que a máquina fecha é **0,37 m** (medido 29-07), ou seja, curvatura
+máxima de 2,70 1/m. O que os planos pedem:
+
+```
+/plan            PICO por plano  p50 2,53   p90 3,10   max 4,24 1/m
+                 41% dos planos pedem curva que a maquina NAO fecha
+                 raio exigido no pico mediano: 0,395 m
+
+/plan_smoothed   PICO por plano  p50 1,72   p90 2,53   max 3,51 1/m
+                 8% dos planos ainda nao cabem
+                 raio exigido no pico mediano: 0,580 m
+```
+
+**Onde isso nasce**: o planejador é `nav2_theta_star_planner::ThetaStarPlanner`
+— grade *any-angle*, **sem nenhuma noção de raio mínimo**. Ele não sabe que o
+robô existe. É a mesma raiz da reta quebrada: um planejador sem modelo
+cinemático produz caminho que ignora a máquina.
+
+**E o suavizador tem a trava certa, com o peso errado.** No `nav2.yaml`:
+
+```
+minimum_turning_radius: 0.37     ✅ o raio da maquina, correto
+w_curve:                30.0     <- peso de RESPEITAR o raio
+w_smooth:           15000.0      <- peso de ficar LISO
+```
+
+➡️ **500 para 1.** Quando "liso" e "cabe no robô" discordam, o liso ganha por
+500×. Bate com o medido: as emendas somem (o liso ganha) e 8% dos picos seguem
+furando o raio. A trava existe e é atropelada.
+
 ### A cadeia do S, com três elos
 
 ```
