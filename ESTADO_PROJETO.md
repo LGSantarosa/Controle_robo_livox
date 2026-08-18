@@ -55,7 +55,15 @@ depois do mux. Mas só o feedforward; a malha PI (`segura_rumo`) segue desligada
 na pilha, por escolha explícita dele, e mede-se o desvio no campo antes de
 mexer. Racional completo na 043 §5.
 
-### ▶️ PROTOCOLO DE CAMPO — o robô precisa estar LIGADO, e nada disto rodou
+### ▶️ PROTOCOLO DE CAMPO — `docs/ROTEIRO_XBOX_NO_ROBO.md`
+
+> 📋 **O roteiro da tarde de 18-08 está escrito e é para seguir na ordem.** Ele
+> tem uma coisa que o resumo abaixo não tem: a **Fase A inteira roda com a
+> bateria das RODAS DESLIGADA** — parear, medir os botões e provar o
+> homem-morto não exigem roda nenhuma, e o `joystick.launch.py` sobe sem a
+> base. A validação de segurança acontece com o robô incapaz de se mover.
+
+Resumo (o detalhe, os critérios de parada e o que mandar estão no roteiro):
 
 ```
 1. ./pair-xbox.sh                     no NUC (usuário bara). Sucesso é o
