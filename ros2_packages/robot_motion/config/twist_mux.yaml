@@ -13,9 +13,10 @@
 #
 # A cadeia, e onde este nó entra:
 #
-#     heading_controller  ──/auto_vel──┐
-#     teclado (robot-key) ──/key_vel───┤  twist_mux
-#     web                 ──/web_vel───┘      │
+#     joystick (Xbox)     ──/joy_vel───┐
+#     teclado (robot-key) ──/key_vel───┤
+#     web                 ──/web_vel───┤  twist_mux
+#     heading_controller  ──/auto_vel──┘      │
 #                                             ▼  /cmd_vel_mux
 #                                      compensador_rumo   (cancela o arco)
 #                                             ▼
@@ -42,6 +43,23 @@ twist_mux:
 
     topics:
       # --- HUMANO: sempre vence, e nunca é filtrado por nada ---
+      #
+      # 🎮 O JOYSTICK VEM PRIMEIRO, e a ordem entre os humanos importa: quem
+      # está com o homem-morto na mão está OLHANDO para o robô, ao lado dele.
+      # O teclado e a web são operados de um terminal ou de um navegador, que
+      # podem estar noutra sala. Entre duas mãos humanas discordando, ganha a
+      # que enxerga a máquina — mesma razão pela qual o humano ganha do goal.
+      #
+      # ⚠️ E ele é o único canal com FREIO DE MÃO físico: o `teleop_twist_joy`
+      # só publica enquanto o LB está apertado (`require_enable_button`).
+      # Soltou o botão, o canal emudece, o `timeout` abaixo expira e o mux
+      # devolve o comando para quem vier a seguir. Prioridade 100 sem
+      # homem-morto seria um robô sequestrado por um analógico encostado na
+      # mochila; com ele, é o operador podendo interromper qualquer coisa.
+      joystick:
+        topic: joy_vel         # teleop_twist_joy (joystick.launch.py)
+        timeout: 0.5           # soltou o LB por 0,5 s -> devolve o comando
+        priority: 100
       teclado:
         topic: key_vel         # bin/robot-key, num terminal ssh separado
         timeout: 0.5           # soltou a tecla por 0,5 s -> devolve o comando

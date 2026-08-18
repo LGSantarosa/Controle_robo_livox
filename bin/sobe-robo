@@ -12,6 +12,9 @@
 #   órfão vivo            -> `/clock` sem publisher, Nav2 pendurado (30-07, 13-08)
 #   web órfão na 5000     -> publica /web_vel na prioridade 50 desde ontem (14-08)
 #   /scan morto           -> a ré roda cega, e o launch NÃO ressuscita (12-08)
+#   joy_node órfão        -> roda de /opt/ros, FORA do padrão antigo do vivos();
+#                            sobreviveria ao --mata e a subida seguinte teria
+#                            dois joy_node brigando pelo mesmo /dev/input/jsN
 #   map->base_link ausente-> objetivo aceito, plano desenhado, robô PARADO (14-08)
 #
 # ⚠️ NÃO usa `pkill -f`: ele já matou a sessão ssh e o `scan_2d` (12-08).
@@ -28,7 +31,8 @@ mkdir -p "$LOGS"
 
 vivos() {
   ps -eo pid,args | grep -E "Controle_robo_livox/install|ros2 launch|parameter_bridge|\
-robot_state_publisher|lifecycle_manager|nav2_|laser_mapping|livox|\.venv/bin/python app\.py|python3 app\.py" \
+robot_state_publisher|lifecycle_manager|nav2_|laser_mapping|livox|joy_node|teleop_twist_joy|\
+\.venv/bin/python app\.py|python3 app\.py" \
     | grep -v grep
 }
 
@@ -50,7 +54,7 @@ cd "$R" || exit 1
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
-echo "== 1/4 base (rodas + Livox + FAST-LIO) =="
+echo "== 1/5 base (rodas + Livox + FAST-LIO) =="
 setsid nohup ros2 launch robot_base base.launch.py > "$LOGS/base.log" 2>&1 < /dev/null &
 sleep 20
 echo -n "   /scan: "; timeout 12 ros2 topic hz /scan --window 10 2>&1 | grep -oE "average rate: [0-9.]+" | head -1
@@ -58,7 +62,7 @@ echo -n "   placa: "; timeout 10 ros2 topic echo /hoverboard/connected --once 2>
 echo -n "   bateria das RODAS: "; timeout 12 ros2 topic echo /hoverboard/battery_voltage --once 2>&1 | grep -oE "[0-9]+\.[0-9]+" | head -1
 echo "   ⚠️ a bateria do NUC é OUTRA e não tem telemetria — olhe nela."
 
-echo "== 2/4 Nav2 + seguidor =="
+echo "== 2/5 Nav2 + seguidor =="
 setsid nohup ros2 launch robot_motion pilha.launch.py sim:=false gui:=false rviz:=false \
     mapa:="$MAPA" localizacao:=amcl $MUNDO_POSE $CURV log_dir:="$HOME/logs_robo2" \
     > "$LOGS/pilha.log" 2>&1 < /dev/null &
@@ -70,7 +74,7 @@ done
 grep -q "Managed nodes are active" "$LOGS/pilha.log" \
   && echo "   🟢 Nav2 ativo" || { echo "   🔴 bringup FALHOU — veja $LOGS/pilha.log"; exit 1; }
 
-echo "== 3/4 a transformada que faz ele ANDAR =="
+echo "== 3/5 a transformada que faz ele ANDAR =="
 # 🔴 O FAST-LIO chama a origem dele de `camera_init` e o resto da pilha chama de
 # `odom`. É o MESMO lugar — medido: o offset do sensor é 0,420 m só em Z, e a
 # pose crua do LIO bate com `map->base_link` em 1 mm. Sem esta identidade a
@@ -81,7 +85,25 @@ setsid nohup ros2 run tf2_ros static_transform_publisher \
     > "$LOGS/tf_camera_init.log" 2>&1 < /dev/null &
 sleep 4
 
-echo "== 4/4 web =="
+echo "== 4/5 controle Xbox (o freio de mão) =="
+# ⚠️ NÃO aborta se o controle não estiver ligado: o `joy_node` sobe e fica
+# esperando o /dev/input/jsN aparecer. Ligar ou parear o controle DEPOIS
+# funciona, e isso é de propósito — a pilha não pode depender de um acessório.
+setsid nohup ros2 launch robot_motion joystick.launch.py \
+    > "$LOGS/joystick.log" 2>&1 < /dev/null &
+sleep 6
+if ls /dev/input/js* >/dev/null 2>&1; then
+  grep -m1 -oE "\[joystick\] usando js.*" "$LOGS/joystick.log" | sed "s/^/   /"
+  echo -n "   /joy: "
+  # ⚠️ Sem ninguém tocando no controle a taxa é a do autorepeat (20 Hz), não 0.
+  timeout 10 ros2 topic hz /joy --window 5 2>&1 | grep -oE "average rate: [0-9.]+" | head -1 \
+    || echo "🔴 mudo — o controle está ligado? veja $LOGS/joystick.log"
+else
+  echo "   ⚪ nenhum controle conectado — ligue no botão Xbox (reconecta sozinho"
+  echo "      se já foi pareado nesta máquina; senão: bash pair-xbox.sh)"
+fi
+
+echo "== 5/5 web =="
 cd "$R/controle_web" || exit 1
 PY=python3; [ -x .venv/bin/python ] && PY=.venv/bin/python
 WEB_TELEOP=on ROBOT_MODE=nav2 setsid nohup $PY app.py > "$LOGS/web.log" 2>&1 < /dev/null &
@@ -98,5 +120,7 @@ timeout 12 ros2 run tf2_ros tf2_echo map base_link 2>&1 | grep -m1 -oE "Translat
 echo -n "   odom -> base_link : "
 timeout 12 ros2 run tf2_ros tf2_echo odom base_link 2>&1 | grep -m1 -oE "Translation: .*" || echo "🔴 NÃO EXISTE"
 echo
+echo "   controle: segure LB e mexa o analógico esquerdo · RB = turbo"
+echo "             soltou o LB, ele para — é o homem-morto, é de propósito"
 echo "   toda corrida grava sozinha em ~/logs_robo2 (CSV + bag)"
 echo "   para derrubar tudo:  bash bin/sobe-robo --mata"

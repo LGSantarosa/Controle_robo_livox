@@ -1,12 +1,88 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-08-14**.
+> Versionado na `main`. Atualizado em **2026-08-18**.
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+---
+
+## 🎮 18-08 (dev, robô desligado) — O ROBÔ GANHA UM CONTROLE XBOX
+
+> Decisão **043**. Pedido do dono: adaptar o robô 2 ao Xbox como foi feito no
+> robô 1 (`ecd6e70`). **Nada verificado no robô** — ver o protocolo abaixo.
+
+### O que passou a existir
+
+```
+config/teleop_xbox.yaml       mapa de botões + escalas DESTE robô
+config/twist_mux.yaml         faixa `joystick`, prioridade 100 (a maior)
+launch/joystick.launch.py     joy_node + teleop_twist_joy, auto-detecta o jsN
+test/test_joystick_coerente.py  11 casos; 8 mutações conferidas
+bin/sobe-robo                 passo 4/5, e o `vivos()` agora mata os dois nós
+pair-xbox.sh + scripts/_bluez_fixes.sh + scripts/js_mapping.py   portados
+```
+
+Dirigir: **segure o LB** e mexa o analógico esquerdo. **RB** = turbo. Soltou o
+LB, ele para — homem-morto, e é o que justifica a prioridade 100.
+
+### 🔴 O QUE NÃO ATRAVESSOU DO ROBÔ 1, e por que copiar teria sido pior
+
+```
+publish_stamped_twist   lá false, AQUI TEM DE SER true
+                        (a cadeia daqui é TwistStamped; com false o DDS
+                         recusa por type hash e o robô ignora o controle
+                         SEM UMA LINHA DE ERRO)
+scale_angular 6.0       knob anti-skid do 4 rodas; o CLAUDE.md proíbe herdar.
+                        Aqui: 0,80 normal / 1,00 turbo (= wz_max da máquina)
+entorno do pareamento   lá Pi + `robo` + mDNS; aqui NUC + `bara` + IP que muda
+```
+
+### ⚠️ O que o operador vai sentir, e NÃO é o config errado
+
+Girar parado é quantum de ~95° (módulo único de 2,204 rad/s, decisão 023) —
+a mesma coisa que o dono viu em 14-08 (*"o pivô dele tá forte demais"*), agora
+com o analógico na mão. **Baixar `scale_angular` não resolve** (a placa ignora
+o teto) e piora o giro em movimento, que funciona.
+
+### Decisão do dono nesta sessão
+
+O filtro de ir reto **pega o joystick de graça** — o `compensador_rumo` fica
+depois do mux. Mas só o feedforward; a malha PI (`segura_rumo`) segue desligada
+na pilha, por escolha explícita dele, e mede-se o desvio no campo antes de
+mexer. Racional completo na 043 §5.
+
+### ▶️ PROTOCOLO DE CAMPO — o robô precisa estar LIGADO, e nada disto rodou
+
+```
+1. ./pair-xbox.sh                     no NUC (usuário bara). Sucesso é o
+                                      /dev/input/jsN aparecer, não o BlueZ
+                                      dizer "Connected"
+2. ./scripts/js_mapping.py /dev/input/jsN
+   🔴 CONFIRMAR LB=6 e RB=7. Estes números vieram MEDIDOS DO ROBÔ 1, não
+      deste controle. Divergiu, o config muda ANTES de qualquer corrida
+3. bash bin/sobe-robo                 o passo 4/5 imprime o js e a taxa do /joy
+4. homem-morto: com o LB SOLTO, mexer o analógico -> robô tem de ficar PARADO
+5. só então dirigir
+```
+
+### ⚪ Verificado no dev
+
+```
+build                limpo
+suíte                340 testes verdes
+teste novo           11 casos; as 8 mutações que ele deveria pegar, pegou
+auto-detecção        exercida (sem controle, cai em js0 e o joy_node espera)
+```
+
+### Achado de lado
+
+`scripts/setup_headless.sh` dava `source` em `scripts/_bluez_fixes.sh`, que
+**não existia neste repo** (veio no clone sem o arquivo). Com `set -e`, o setup
+headless morria ali. O port do Bluetooth conserta.
 
 ---
 

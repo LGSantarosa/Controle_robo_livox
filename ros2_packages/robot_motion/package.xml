@@ -22,6 +22,9 @@
   <exec_depend>nav2_controller</exec_depend>
   <exec_depend>nav2_bt_navigator</exec_depend>
   <exec_depend>twist_mux</exec_depend>
+  <!-- teleop por controle Xbox (`joystick.launch.py`); só em execução. -->
+  <exec_depend>joy</exec_depend>
+  <exec_depend>teleop_twist_joy</exec_depend>
   <exec_depend>nav2_collision_monitor</exec_depend>
   <exec_depend>nav2_smac_planner</exec_depend>
   <exec_depend>nav2_regulated_pure_pursuit_controller</exec_depend>

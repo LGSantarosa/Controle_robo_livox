@@ -1,0 +1,75 @@
+# Mapa do controle Xbox Series X|S → teleop_twist_joy, para o robô 2.
+#
+# Portado do robô 1 (`robot_nav/config/teleop_xbox.yaml`, commit ecd6e70), mas
+# TRÊS coisas mudaram de valor na travessia, e cada uma delas é um jeito de o
+# robô não andar.
+#
+# ─── 1) `publish_stamped_twist: true` — SEM ISSO O ROBÔ NÃO ANDA, EM SILÊNCIO
+#
+# O mux do robô 2 roda com `use_stamped: true` (`twist_mux.yaml`), porque a
+# cadeia inteira daqui fala TwistStamped: o `diff_drive_controller`, a placa
+# fingida e o `compensador_rumo`. O robô 1 usava `false`, e o arquivo de lá
+# traz `publish_stamped_twist: false`.
+#
+# Copiar aquele valor NÃO dá erro: o `teleop_twist_joy` sobe, o `/joy` publica,
+# o `joy_vel` aparece em `ros2 topic list` — e o DDS recusa a ligação por type
+# hash. O mux fica sem publisher naquela entrada e o robô simplesmente não
+# reage ao controle. É o mesmo modo de falha que o comentário do `twist_mux.yaml`
+# já descreve para o caso inverso. Há teste travando o par.
+#
+# ─── 2) `scale_angular` NÃO é o 6.0 do robô 1
+#
+# Aqueles 6,0 rad/s eram knob anti-skid: o chassi de 4 rodas do robô 1 não
+# apoiava uniformemente, as rodas patinavam e comando angular baixo não girava
+# a máquina. O `CLAUDE.md` proíbe herdar isso por escrito — o diferencial gira
+# fácil, e aqui se calibra do zero.
+#
+# Os tetos deste robô estão em `movimentacao.yaml` e são `wz_max: 1.0` e
+# `v_max: 0.5`. O teleop fica DENTRO deles: mão humana não é o lugar de
+# estrear velocidade que a autonomia não usa.
+#
+# ⚠️ E TEM UM FATO DA MÁQUINA QUE NENHUM NÚMERO AQUI CONSERTA. Girar parado
+# neste robô não é proporcional: a placa entrega um módulo de giro só
+# (2,204 rad/s, medido) e segura a saída cheia por ~0,52 s depois do corte,
+# varrendo 93–101° (`movimentacao.yaml`, decisão 023). Ou seja:
+#
+#     robô ANDANDO   o arco preserva a razão entre as rodas → proporcional
+#     robô PARADO    um toque lateral no analógico vira um quantum de ~95°
+#
+# Quem dirigir vai sentir isso como "o robô gira demais quando está parado".
+# Não é o `scale_angular` errado; é a placa. Baixar este número não resolve —
+# só piora o giro em movimento, que funciona. Está aqui escrito para ninguém
+# gastar uma sessão perseguindo o sintoma.
+#
+# ─── 3) Os botões são do Xbox, não do PS4
+#
+#     Xbox Series   LB = 6 (homem-morto)     RB = 7 (turbo)
+#     PS4           L1 = 4                   R1 = 5
+#
+# Medido no robô 1 por ioctl JSIOCGBTNMAP (commit ecd6e70). Com os números do
+# PS4 o homem-morto cairia num botão que ninguém aperta e o robô não andaria.
+# Reconferir neste controle com `scripts/js_mapping.py` antes de confiar.
+teleop_twist_joy_node:
+  ros__parameters:
+    # Analógico ESQUERDO: eixo 1 = frente/ré, eixo 0 = giro.
+    axis_linear:
+      x: 1
+    scale_linear:
+      x: 0.30          # m/s
+    scale_linear_turbo:
+      x: 0.50          # = v_max de movimentacao.yaml; o turbo não passa dele
+
+    axis_angular:
+      yaw: 0
+    scale_angular:
+      yaw: 0.80
+    scale_angular_turbo:
+      yaw: 1.00        # = wz_max de movimentacao.yaml
+
+    enable_button: 6        # LB = homem-morto (só anda enquanto segurado)
+    enable_turbo_button: 7  # RB = turbo
+    require_enable_button: true
+
+    # 🔴 Ver bloco 1 do cabeçalho. Este `true` é o que faz o mux escutar.
+    publish_stamped_twist: true
+    frame: base_link        # mesmo frame que o teleop_teclado carimba

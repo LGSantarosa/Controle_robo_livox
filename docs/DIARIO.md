@@ -7249,3 +7249,104 @@ malha fechada de rumo ele fecha um relé.
 
 ⚠️ Isto reforça a hipótese que o ESTADO já lista como a mais importante em
 aberto: **relé com tempo morto**. Não é sintonia do seguidor; é a planta.
+
+## 🎮 2026-08-18 — O ROBÔ GANHA UM CONTROLE, E O PERIGO ERA COPIAR CERTO DEMAIS
+
+> Dev, robô desligado. Decisão **043**. Pedido do dono: adaptar o robô 2 ao
+> controle Xbox *"assim como foi feito recentemente para o robô 1"*.
+
+### O ponto de partida: o robô 2 não tinha joystick nenhum
+
+O `joy_node` existia no repo, dentro de `robot_nav/launch/robot.launch.py` —
+herança morta do clone. O `bin/sobe-robo` nunca chamou aquilo, e o mux da pilha
+viva não tinha faixa de joystick. Os dois canais humanos deste robô eram um
+terminal SSH e um navegador: **nenhum dos dois operável ao lado da máquina**.
+
+O robô 1 tinha resolvido isso em `ecd6e70`, com a receita de pareamento medida
+numa Pi. A tentação óbvia era `cherry-pick`. Ela estava errada.
+
+### As três coisas que a cópia teria quebrado
+
+```
+1. publish_stamped_twist   robô 1: false   |   robô 2 PRECISA de true
+2. scale_angular           robô 1: 6.0     |   knob anti-skid, PROIBIDO herdar
+3. entorno do pareamento   robô 1: Pi/robo/mDNS  |  aqui NUC/bara/IP que muda
+```
+
+A **1** é a perigosa, e é a que dá o nome do dia. Ela não dá sintoma:
+
+```
+o joy_node sobe                      ✅
+o /joy publica                       ✅
+o /joy_vel aparece em topic list     ✅
+o DDS recusa por type hash           ❌  <- só isto acontece
+o robô ignora o controle             ❌  sem UMA linha de erro
+```
+
+Toda a cadeia do robô 2 fala `TwistStamped`; a do robô 1 falava `Twist` cru. É
+a mesma família de defeito da 040 (frame validado num simulador onde ele por
+acaso batia) e do de 29-07 (bitola divergente em quatro arquivos): **a peça
+está certa em si e errada em relação à vizinha**. Um `cherry-pick` bem-sucedido
+teria produzido exatamente isso, e a descoberta seria numa sessão no robô.
+
+➡️ Virou teste, e o teste foi conferido **quebrando o arquivo de propósito**:
+8 mutações, 8 pegadas — `stamped: false`, `scale_angular: 6.0`, dead-man igual
+ao turbo, homem-morto desligado, `autorepeat` que não sustenta o timeout do
+mux, `sticky_buttons` ligado, nome do nó divergente da chave do YAML, e
+joystick abaixo do teclado.
+
+### Duas armadilhas que só apareceram escrevendo a launch
+
+**`autorepeat_rate`.** O `joy_node` só publica quando algo MUDA. Analógico
+segurado parado num ângulo = nenhuma mensagem nova = o `timeout: 0.5` do mux
+expira = **o mux devolve o robô para a autonomia com o operador ainda segurando
+o LB**. O robô sairia da mão de quem está com ele na mão.
+
+**`vivos()` do `sobe-robo`.** O `joy_node` e o `teleop_node` rodam de
+`/opt/ros`, fora do padrão `Controle_robo_livox/install` que o `--mata` usa.
+Sobreviveriam ao `--mata` e a subida seguinte teria dois `joy_node` brigando
+pelo mesmo `/dev/input/jsN` — o "órfão vivo" que o script foi escrito para
+evitar, entrando pela porta que eu abri.
+
+### O que o operador vai sentir, e não é defeito do config
+
+Girar **parado** neste robô não é proporcional: módulo único de 2,204 rad/s,
+saída cheia segura por 0,52 s, varrendo 93–101° (decisão 023). É a observação
+do dono em 14-08 — *"o pivô dele tá forte demais, ele gira com um simples
+toque"* — só que agora com um analógico na mão dele.
+
+Baixar `scale_angular` **não resolve** (a placa ignora o teto) e piora o giro
+em movimento, que funciona. Escrito no cabeçalho do YAML para não custar uma
+sessão a ninguém.
+
+### Uma decisão do dono, tomada com as opções na mesa
+
+*"se eu estiver mandando ele ir reto eu quero o filtro de ir reto sim"* — e ele
+já vinha: o `compensador_rumo` fica depois do mux e atende qualquer comandante,
+então o feedforward que cancela o arco de 1,22 m pega o joystick de graça.
+
+O que **não** vem é a malha PI (`segura_rumo: False` na pilha), desligada por
+um motivo que é só da autonomia — a disputa com o `heading_controller`. Como é
+parâmetro do nó e não da fonte, ligá-la para o joystick ligaria para a pilha
+inteira. **Escolha do dono: fica como está**, e mede-se o desvio no campo antes
+de escrever código. Registrado na 043 §5 para ninguém reabrir sem número.
+
+### Achado de brinde
+
+`scripts/setup_headless.sh` fazia `source` de `scripts/_bluez_fixes.sh`, que
+**não existia neste repo** — veio no clone sem o arquivo junto. Com `set -e` no
+topo, o setup headless morria ali. Estava quebrado desde sempre e ninguém
+tinha rodado; o port do Bluetooth conserta de lado.
+
+### Estado ao fim do dia
+
+```
+build                       limpo
+suíte                       340 testes, todos verdes
+teste novo                  11 casos, 8 mutações conferidas
+verificado no robô          NADA — o robô esteve desligado o dia todo
+```
+
+O protocolo de campo está na 043 §7, e o passo 2 dele não é opcional:
+**reconferir LB=6 e RB=7 com o `js_mapping.py` antes de qualquer corrida**. Os
+números vieram medidos do robô 1, não deste controle.
