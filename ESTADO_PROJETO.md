@@ -1,12 +1,76 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-08-18**.
+> Versionado na `main`. Atualizado em **2026-08-18** (2ª leva, no robô).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+---
+
+## 🐍 18-08 (NO ROBÔ) — O S TEM UM GATILHO, E ELE ESTÁ NO PLANO, NÃO NO CONTROLE
+
+> 🔴 **É ISTO QUE ESTÁ ABERTO E É A PRIORIDADE.** Achado pelo DONO, a olho nu,
+> enquanto eu media atuador. Medido depois. Diário: entrada 18-08.
+
+### A frase que mudou onde procurar
+
+> *"o plan ficava mudando um pouco, não tava reto, aí o robô tentava ir pro
+> lado e se perdia e começava o S"* — e, mais preciso: *"ele não fica uma
+> linha, ele fica uma linha quebrada em várias partes, aí essas partes que
+> tinham diferenças, pequenas, mas isso ferrava o robô"*
+
+### O número, num corredor RETO de 14 m
+
+```
+/plan            26 pedacos onde UMA reta bastaria, de 0,32 m cada
+                 EMENDA entre pedacos:  p50 11,3°   p90 25,6°   max 49,8°
+                 84% das emendas > 5°   ·   60% > 10°
+
+/plan_smoothed   emendas caem para p50 2,6°  (o suavizador GANHA aqui)
+                 ...mas sobram 3% acima de 10°, e uma de 45°
+
+ONDULACAO contra a reta   /plan 28,9 cm  ·  /plan_smoothed 29,2 cm   <- IGUAL
+```
+
+➡️ **O suavizador conserta as emendas e NÃO conserta o meandro.** Os 29 cm
+atravessam ele intactos. Com mira a 1 m, 29 cm valem **16,2° de ordem de rumo**
+num corredor onde a ordem certa é zero. O robô tem 0,32 m de raio: o plano
+manda ele tecer quase a própria largura numa reta.
+
+### A cadeia do S, com três elos
+
+```
+1. GATILHO       plano quebrado / meandro de 29 cm  ->  ~16° de rumo espurio
+2. AMPLIFICADOR  a placa so entrega MODULO CHEIO (2,204 rad/s, decisao 023)
+3. REALIMENTA    tempo morto 0,94 s — medido nesta sessao: o sentido do giro
+                 casa com o do comando em 75% assumindo 0,94 s, contra 47% sem
+```
+
+🔴 **É por isso que sintonizar ganho nunca resolveu.** O elo 1 é uma REFERÊNCIA
+ERRADA, e nenhum controlador conserta referência errada. Toda a leva 037/038 e
+a conversa do `segura_rumo` atacavam os elos 2 e 3.
+
+### O que está medido e o que NÃO está
+
+```
+✅ o meandro existe, tem 29 cm, e o suavizador nao o remove
+✅ as emendas existem: 11,3° a cada 0,32 m no plano cru
+✅ o tempo morto de 0,94 s aparece no proprio dado da sessao
+❌ que o meandro CAUSA o S — falta correlacionar no tempo (analise offline,
+   NAO precisa de robo)
+❌ o teste do PESO na traseira: o `y` da corrida e monotono, entao "onde" e
+   "quando" sao a mesma coluna e nao da para separar o peso do trecho.
+   O teste que decide: o MESMO trecho duas vezes, com e sem peso
+```
+
+### ⚪ De bom: o mapa novo localiza bem
+
+Primeira corrida no `andar3todo`: salto de pose **máximo 4,0 cm** em 499 s, 1
+amostra acima de 5 cm em 4946. O AMCL não pula — **o mapa serve**, e isso
+derruba a ressalva com que eu o commitei.
 
 ---
 

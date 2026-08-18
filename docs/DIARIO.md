@@ -7350,3 +7350,134 @@ verificado no robô          NADA — o robô esteve desligado o dia todo
 O protocolo de campo está na 043 §7, e o passo 2 dele não é opcional:
 **reconferir LB=6 e RB=7 com o `js_mapping.py` antes de qualquer corrida**. Os
 números vieram medidos do robô 1, não deste controle.
+
+## 🐍 2026-08-18 (NO ROBÔ) — O ANDAR INTEIRO MAPEADO, E O S TEM UM GATILHO NOVO: O PLANO SERPENTEIA
+
+> Tarde no robô, com o dono dirigindo. Saiu: o modo `slam` do `sobe-robo`, o
+> mapa `andar3todo`, e — o que mais vale — **a observação do dono a olho nu que
+> mudou onde eu estava procurando o S**.
+
+### O que entrou funcionando
+
+```
+bash bin/sobe-robo slam                mapeia (slam_toolbox), 5 passos
+bash bin/sobe-robo --salva-mapa <nome> grava em maps/<nome>/<nome>
+bash bin/sobe-robo mapa=<nome>         navega em outro mapa
+maps/andar3todo/                       143 m2 mapeados, 2,7x o sala_andar3
+```
+
+Dois defeitos apareceram e foram consertados no caminho, os dois da mesma
+família (processo de `/opt/ros` fora do padrão do `vivos()`): o `slam_toolbox`
+sobrevivia ao `--mata`, e órfão dele é pior que o do `joy_node` porque ele
+continua dono de `map->odom` — a subida seguinte com AMCL teria dois donos da
+mesma TF. E o `--salva-mapa` terminava mandando "troque a linha MAPA= no topo
+deste script", o dono leu como argumento (naturalmente), digitou
+`sobe-robo MAPA=andar3todo` e o script recusou. Recusar a forma que o próprio
+script sugeriu é armadilha nossa: agora `mapa=<nome>` existe, e a conferência
+acontece ANTES do `mata()`, para um erro de digitação não custar a pilha.
+
+### ⚪ O mapa novo localiza bem, e isso eu tinha marcado como dúvida
+
+Eu commitei o `andar3todo` avisando que ele estava "guardado, não validado". A
+primeira corrida nele responde:
+
+```
+salto de pose maximo    4,0 cm na corrida inteira (499 s)
+saltos > 5 cm           1 amostra em 4946
+```
+
+O AMCL não pula. **O mapa serve** — e o balanço que apareceu na corrida não é
+localização, o que era a minha suspeita principal ao commitá-lo.
+
+### 🔴 O ACHADO DO DIA, E ELE É DO DONO
+
+Enquanto eu media atuador, o dono olhou o robô e disse:
+
+> *"dessa vez eu vi com meus olhos, o plan ficava mudando um pouco, não tava
+> reto, aí o robô tentava ir pro lado e se perdia e começava o S"*
+
+Fui medir as duas metades da frase, e a segunda é a que pega.
+
+**O plano MUDA pouco entre replanejamentos** — a direção que o seguidor miraria
+1 m à frente varia p50 0,4°, p90 2,4°, e só 1% das vezes passa de 10°. Não é
+churn de replanejamento.
+
+**Mas o plano NÃO É RETO** — e aqui o dono corrigiu a MINHA descrição, que
+estava frouxa. Eu tinha escrito "serpenteia", que sugere onda suave. Ele:
+
+> *"ele não fica uma linha, ele fica uma linha quebrada em várias partes, aí
+> essas partes que tinham diferenças, pequenas, mas isso ferrava o robô"*
+
+Retas emendadas em ângulo, não ondulação. É outra medida, e é a certa.
+Quebrando o plano em trechos retos (tolerância 2°) no corredor:
+
+```
+/plan            26 pedacos onde UMA reta bastaria
+                 pedaco de 0,32 m (p50)  ·  1,05 m (p90)
+                 EMENDA  p50 11,3°   p90 25,6°   p99 45,0°   max 49,8°
+                 84% das emendas passam de 5°  ·  60% passam de 10°
+
+/plan_smoothed   56 pedacos (reamostra mais fino)
+                 pedaco de 0,15 m (p50)
+                 EMENDA  p50  2,6°   p90  3,9°   p99 18,4°   max 45,0°
+                 5% passam de 5°  ·  3% passam de 10°
+```
+
+➡️ **Onze graus a cada 32 cm de caminho, no plano cru.** A 0,5 m/s isso é um
+degrau de rumo a cada 0,64 s — da ordem do tempo morto de 0,94 s da malha. A
+referência muda mais rápido do que a máquina consegue responder a ela.
+
+O suavizador ATACA as emendas e ganha muito (11,3° → 2,6° na mediana), mas não
+entrega uma reta: sobram 3% de emendas acima de 10° e uma de 45°. E o meandro
+de escala grande atravessa inteiro — a medida do resíduo contra a reta:
+
+```
+                   ondulacao MAXIMA por plano
+/plan              p50 28,9 cm   p90 37,8 cm   max 57,1 cm
+/plan_smoothed     p50 29,2 cm   p90 37,4 cm   max 56,6 cm
+```
+
+**O suavizador não conserta o meandro.** Ele conserta as EMENDAS, que é outra
+coisa. Meandro de 30 cm ao longo de metros não é quina — é a forma da rota, e
+suavizar não muda forma de rota.
+
+➡️ **O robô tem 0,32 m de raio. O plano manda ele tecer quase a própria largura
+descendo um corredor reto.** E com a mira a 1 m, esse meandro vira ordem de
+rumo:
+
+```
+29 cm  ->  16,2°        38 cm  ->  20,8°        57 cm  ->  29,7°
+```
+
+Dezesseis graus de ordem de rumo, na mediana, num corredor reto onde a ordem
+certa é zero.
+
+### A cadeia do S, agora com três elos e não um
+
+```
+1. GATILHO      o plano nao e uma reta: e reta quebrada. Emendas de 11,3°
+                (p50) a cada 0,32 m no cru; depois do suavizador, meandro
+                residual de ±29 cm que vale ~16° de ordem de rumo espuria
+2. AMPLIFICADOR a placa so entrega modulo cheio (2,204 rad/s, decisao 023):
+                qualquer wz vira giro cheio para um lado
+3. REALIMENTA   tempo morto de 0,94 s: medido nesta sessao, o sentido do giro
+                so casa com o do comando em 75% das amostras assumindo 0,94 s
+                de atraso, contra 47% sem atraso
+```
+
+Nenhum dos três é o culpado sozinho, e é por isso que sintonizar ganho nunca
+resolveu: **o elo 1 é uma referência errada, e nenhum controlador conserta
+referência errada.** Eu estava trabalhando o elo 3 e o dono apontou o elo 1
+olhando para o robô.
+
+### ⚠️ O que NÃO está provado
+
+Que o meandro CAUSA o S. Está medido que ele existe, que tem tamanho suficiente
+para explicar a ordem espúria, e que o suavizador não o remove. Falta correlacionar
+meandro e início do S no tempo, e isso é análise offline — não precisa de robô.
+
+E teve um teste do dono que este log NÃO consegue julgar: ele pôs um peso na
+traseira e disse que o robô melhorou depois do meio do corredor. O `y` da
+corrida é monótono — ele subiu uma vez, sem voltar — então "onde" e "quando"
+são a mesma coluna e não dá para separar *o peso saiu* de *aquele trecho é mais
+difícil*. O teste que decidiria é o mesmo trecho duas vezes, com e sem peso.
