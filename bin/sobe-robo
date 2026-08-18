@@ -3,6 +3,7 @@
 # pena mandar objetivo (nav2) ou começar a desenhar (slam).
 #
 #   bash bin/sobe-robo                  sobe para NAVEGAR (mapa pronto + AMCL)
+#   bash bin/sobe-robo mapa=<nome>      idem, com OUTRO mapa de maps/<nome>/
 #   bash bin/sobe-robo slam             sobe para MAPEAR  (slam_toolbox)
 #   bash bin/sobe-robo --mata           mata tudo e confere que morreu
 #   bash bin/sobe-robo --salva-mapa <nome>   grava o mapa que o slam desenhou
@@ -76,18 +77,50 @@ salva_mapa() {
   timeout 60 ros2 run nav2_map_server map_saver_cli -f "$R/maps/$nome/$nome"
   ls -l "$R/maps/$nome/" 2>/dev/null | sed 's/^/   /'
   echo
-  echo "   para NAVEGAR neste mapa, troque a linha MAPA= no topo deste script,"
-  echo "   ou passe mapa:=maps/$nome/$nome.yaml na pilha.launch.py"
+  echo "   para NAVEGAR neste mapa:"
+  echo "       bash bin/sobe-robo mapa=$nome"
   echo "   ⚠️ o mapa fica só no NUC — puxe por scp e commite, senão ele some"
 }
 
+# ⚠️ `mapa=` aceita MAPA=/mapa=/--mapa porque a mensagem do --salva-mapa dizia
+# "troque a linha MAPA=" e isso se lê como argumento — foi o que aconteceu em
+# 18-08. Recusar a forma que o proprio script sugeriu e armadilha nossa.
 case "$1" in
   --mata)       mata; exit $? ;;
   --salva-mapa) salva_mapa "$2"; exit $? ;;
   slam)         MODO=slam ;;
   ""|nav2)      MODO=nav2 ;;
-  *) echo "modo desconhecido: $1"; echo "use: (vazio)|slam|--mata|--salva-mapa <nome>"; exit 1 ;;
+  mapa=*|MAPA=*) MODO=nav2; MAPA_NOME="${1#*=}" ;;
+  --mapa)       MODO=nav2; MAPA_NOME="$2" ;;
+  *) echo "modo desconhecido: $1"
+     echo "use: (vazio) | mapa=<nome> | slam | --mata | --salva-mapa <nome>"
+     echo
+     echo "mapas disponiveis em maps/:"
+     ls -d "$R"/maps/*/ 2>/dev/null | xargs -r -n1 basename | sed 's/^/   /'
+     exit 1 ;;
 esac
+
+# 🔴 Resolve e CONFERE o mapa ANTES do mata(). Recusar depois de derrubar a
+# pilha custaria ao dono uma subida inteira por um erro de digitacao.
+if [ -n "$MAPA_NOME" ]; then
+  case "$MAPA_NOME" in
+    */*|*.yaml) MAPA="$MAPA_NOME" ;;                       # caminho explicito
+    *)          MAPA="$R/maps/$MAPA_NOME/$MAPA_NOME.yaml" ;;  # convencao do repo
+  esac
+  if [ ! -f "$MAPA" ]; then
+    echo "🔴 mapa nao encontrado: $MAPA"
+    echo
+    echo "mapas disponiveis em maps/:"
+    ls -d "$R"/maps/*/ 2>/dev/null | xargs -r -n1 basename | sed 's/^/   /'
+    exit 1
+  fi
+  echo "   mapa: $MAPA"
+  # ⚠️ A pose inicial do AMCL continua 0,0,0 — e ela e no frame DESTE mapa.
+  # Casa se o robo estiver onde o mapeamento comecou. Noutro lugar, o filtro
+  # nasce mentindo e o Nav2 planeja a partir de uma pose que nao existe.
+  echo "   ⚠️ pose inicial 0,0,0 NESTE mapa — o robo tem de estar onde o"
+  echo "      mapeamento comecou, senao o AMCL nasce mentindo"
+fi
 
 echo "===== MODO: $MODO ====="
 mata || exit 1
