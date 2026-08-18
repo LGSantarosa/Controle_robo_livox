@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
-# Sobe TUDO no robô: base + Nav2 + web, na ordem certa, com as conferências
-# que decidem se vale a pena mandar objetivo.
+# Sobe TUDO no robô, na ordem certa, com as conferências que decidem se vale a
+# pena mandar objetivo (nav2) ou começar a desenhar (slam).
 #
-#   bash bin/sobe-robo            sobe
-#   bash bin/sobe-robo --mata     mata tudo e confere que morreu
+#   bash bin/sobe-robo                  sobe para NAVEGAR (mapa pronto + AMCL)
+#   bash bin/sobe-robo slam             sobe para MAPEAR  (slam_toolbox)
+#   bash bin/sobe-robo --mata           mata tudo e confere que morreu
+#   bash bin/sobe-robo --salva-mapa <nome>   grava o mapa que o slam desenhou
 #
 # Escrito em 14-08 depois de uma sessão em que o robô ficou parado com o
 # objetivo aceito e o plano desenhado, porque faltava UMA transformada. As
@@ -11,10 +13,18 @@
 #
 #   órfão vivo            -> `/clock` sem publisher, Nav2 pendurado (30-07, 13-08)
 #   web órfão na 5000     -> publica /web_vel na prioridade 50 desde ontem (14-08)
-#   /scan morto           -> a ré roda cega, e o launch NÃO ressuscita (12-08)
+#   /scan morto           -> a ré roda cega, e o launch NÃO ressuscita (12-08);
+#                            no slam é pior: sem /scan o slam_toolbox não
+#                            desenha nada e o mapa sai vazio sem dizer por quê
 #   joy_node órfão        -> roda de /opt/ros, FORA do padrão antigo do vivos();
 #                            sobreviveria ao --mata e a subida seguinte teria
 #                            dois joy_node brigando pelo mesmo /dev/input/jsN
+#   slam_toolbox órfão    -> mesma história, mesmo motivo (18-08): roda de
+#                            /opt/ros e não casava com nenhum padrão daqui.
+#                            Órfão dele é PIOR que os outros: ele continua dono
+#                            de `map->odom`, e a subida seguinte com AMCL tem
+#                            DOIS donos da mesma TF — o defeito que a
+#                            `pilha.launch.py` marca em vermelho
 #   map->base_link ausente-> objetivo aceito, plano desenhado, robô PARADO (14-08)
 #
 # ⚠️ NÃO usa `pkill -f`: ele já matou a sessão ssh e o `scan_2d` (12-08).
@@ -32,7 +42,7 @@ mkdir -p "$LOGS"
 vivos() {
   ps -eo pid,args | grep -E "Controle_robo_livox/install|ros2 launch|parameter_bridge|\
 robot_state_publisher|lifecycle_manager|nav2_|laser_mapping|livox|joy_node|teleop_twist_joy|\
-\.venv/bin/python app\.py|python3 app\.py" \
+slam_toolbox|\.venv/bin/python app\.py|python3 app\.py" \
     | grep -v grep
 }
 
@@ -47,8 +57,39 @@ mata() {
     echo "   🔴 AINDA TEM COISA VIVA — não suba por cima, resolva antes"; return 1; }
 }
 
-[ "$1" = "--mata" ] && { mata; exit $?; }
+# --- salvar o mapa: o passo final do slam, e o que mais se erra de caminho ---
+# A convenção do repo é maps/<nome>/<nome>.{yaml,pgm} — o `map_saver_cli` NÃO
+# cria diretório, e sem o mkdir ele falha depois de já ter pedido o mapa.
+salva_mapa() {
+  local nome="$1"
+  [ -z "$nome" ] && { echo "uso: bash bin/sobe-robo --salva-mapa <nome>"; return 1; }
+  cd "$R" || return 1
+  source /opt/ros/jazzy/setup.bash
+  source install/setup.bash
+  if ! ros2 node list 2>/dev/null | grep -q slam_toolbox; then
+    echo "🔴 o slam_toolbox não está vivo — não há mapa para salvar."
+    echo "   suba com:  bash bin/sobe-robo slam"
+    return 1
+  fi
+  mkdir -p "$R/maps/$nome"
+  echo "== salvando maps/$nome/$nome =="
+  timeout 60 ros2 run nav2_map_server map_saver_cli -f "$R/maps/$nome/$nome"
+  ls -l "$R/maps/$nome/" 2>/dev/null | sed 's/^/   /'
+  echo
+  echo "   para NAVEGAR neste mapa, troque a linha MAPA= no topo deste script,"
+  echo "   ou passe mapa:=maps/$nome/$nome.yaml na pilha.launch.py"
+  echo "   ⚠️ o mapa fica só no NUC — puxe por scp e commite, senão ele some"
+}
 
+case "$1" in
+  --mata)       mata; exit $? ;;
+  --salva-mapa) salva_mapa "$2"; exit $? ;;
+  slam)         MODO=slam ;;
+  ""|nav2)      MODO=nav2 ;;
+  *) echo "modo desconhecido: $1"; echo "use: (vazio)|slam|--mata|--salva-mapa <nome>"; exit 1 ;;
+esac
+
+echo "===== MODO: $MODO ====="
 mata || exit 1
 cd "$R" || exit 1
 source /opt/ros/jazzy/setup.bash
@@ -62,17 +103,36 @@ echo -n "   placa: "; timeout 10 ros2 topic echo /hoverboard/connected --once 2>
 echo -n "   bateria das RODAS: "; timeout 12 ros2 topic echo /hoverboard/battery_voltage --once 2>&1 | grep -oE "[0-9]+\.[0-9]+" | head -1
 echo "   ⚠️ a bateria do NUC é OUTRA e não tem telemetria — olhe nela."
 
-echo "== 2/5 Nav2 + seguidor =="
-setsid nohup ros2 launch robot_motion pilha.launch.py sim:=false gui:=false rviz:=false \
-    mapa:="$MAPA" localizacao:=amcl $MUNDO_POSE $CURV log_dir:="$HOME/logs_robo2" \
-    > "$LOGS/pilha.log" 2>&1 < /dev/null &
-for i in $(seq 1 45); do
-  grep -q "Managed nodes are active" "$LOGS/pilha.log" && break
-  grep -q "Aborting bringup" "$LOGS/pilha.log" && break
-  sleep 4
-done
-grep -q "Managed nodes are active" "$LOGS/pilha.log" \
-  && echo "   🟢 Nav2 ativo" || { echo "   🔴 bringup FALHOU — veja $LOGS/pilha.log"; exit 1; }
+if [ "$MODO" = nav2 ]; then
+  echo "== 2/5 Nav2 + seguidor =="
+  setsid nohup ros2 launch robot_motion pilha.launch.py sim:=false gui:=false rviz:=false \
+      mapa:="$MAPA" localizacao:=amcl $MUNDO_POSE $CURV log_dir:="$HOME/logs_robo2" \
+      > "$LOGS/pilha.log" 2>&1 < /dev/null &
+  for i in $(seq 1 45); do
+    grep -q "Managed nodes are active" "$LOGS/pilha.log" && break
+    grep -q "Aborting bringup" "$LOGS/pilha.log" && break
+    sleep 4
+  done
+  grep -q "Managed nodes are active" "$LOGS/pilha.log" \
+    && echo "   🟢 Nav2 ativo" || { echo "   🔴 bringup FALHOU — veja $LOGS/pilha.log"; exit 1; }
+else
+  echo "== 2/5 SLAM (slam_toolbox desenha; quem dirige é você) =="
+  # 🔴 O QUE ESTA LAUNCH NÃO SOBE, e cada ausência tem motivo (ver o cabeçalho
+  # da mapeia.launch.py): nada de AMCL nem de tf_map_odom — aqui o dono de
+  # `/map` e de `map->odom` é o slam_toolbox, e dois donos da mesma TF fazem a
+  # pose piscar. E nada de Nav2/seguidor: autonomia enquanto se mapeia é robô
+  # perseguindo um mapa que muda debaixo dele.
+  setsid nohup ros2 launch robot_motion mapeia.launch.py $CURV \
+      > "$LOGS/mapeia.log" 2>&1 < /dev/null &
+  for i in $(seq 1 30); do
+    grep -qE "Managed nodes are active|Registering sensor" "$LOGS/mapeia.log" && break
+    sleep 2
+  done
+  # O teste que vale não é o log: é o slam_toolbox estar publicando `/map`.
+  echo -n "   /map: "
+  timeout 25 ros2 topic hz /map --window 2 2>&1 | grep -oE "average rate: [0-9.]+" | head -1 \
+    || { echo "🔴 NÃO publica — veja $LOGS/mapeia.log"; exit 1; }
+fi
 
 echo "== 3/5 a transformada que faz ele ANDAR =="
 # 🔴 O FAST-LIO chama a origem dele de `camera_init` e o resto da pilha chama de
@@ -80,6 +140,12 @@ echo "== 3/5 a transformada que faz ele ANDAR =="
 # pose crua do LIO bate com `map->base_link` em 1 mm. Sem esta identidade a
 # árvore de TF fica partida em duas e o seguidor RECUSA o plano (corretamente).
 # ⚠️ Remendo de runtime; o conserto de verdade é o seguidor ler a pose por TF.
+#
+# ⚠️ No modo slam ela NÃO é quem faz o robô andar — não há seguidor para
+# recusar plano nenhum, e o `compensador_rumo` lê o yaw da mensagem, não por
+# lookup. Fica assim mesmo, e de propósito: sem ela a árvore nasce partida em
+# duas e todo diagnóstico de TF da sessão vira caça ao fantasma. Custo zero,
+# um dono só, nenhum conflito com o `map->odom` do slam_toolbox.
 setsid nohup ros2 run tf2_ros static_transform_publisher \
     --frame-id odom --child-frame-id camera_init \
     > "$LOGS/tf_camera_init.log" 2>&1 < /dev/null &
@@ -89,6 +155,10 @@ echo "== 4/5 controle Xbox (o freio de mão) =="
 # ⚠️ NÃO aborta se o controle não estiver ligado: o `joy_node` sobe e fica
 # esperando o /dev/input/jsN aparecer. Ligar ou parear o controle DEPOIS
 # funciona, e isso é de propósito — a pilha não pode depender de um acessório.
+#
+# No modo slam ele deixa de ser acessório e vira a ferramenta principal: mapa
+# bom é mapa desenhado devagar e sem solavanco, e analógico faz isso melhor
+# que WASD (que só sabe liga/desliga).
 setsid nohup ros2 launch robot_motion joystick.launch.py \
     > "$LOGS/joystick.log" 2>&1 < /dev/null &
 sleep 6
@@ -101,26 +171,49 @@ if ls /dev/input/js* >/dev/null 2>&1; then
 else
   echo "   ⚪ nenhum controle conectado — ligue no botão Xbox (reconecta sozinho"
   echo "      se já foi pareado nesta máquina; senão: bash pair-xbox.sh)"
+  echo "      no modo slam dá para mapear com o teclado: bin/robot-key"
 fi
 
 echo "== 5/5 web =="
 cd "$R/controle_web" || exit 1
 PY=python3; [ -x .venv/bin/python ] && PY=.venv/bin/python
-WEB_TELEOP=on ROBOT_MODE=nav2 setsid nohup $PY app.py > "$LOGS/web.log" 2>&1 < /dev/null &
+# O `app.py` trata 'slam' e 'nav2' como modos distintos (ver ROBOT_MODE lá):
+# nos dois ele sobe a ponte de mapa; só no 'nav2' ele oferece mandar objetivo,
+# que é justamente o que não existe enquanto se mapeia.
+WEB_TELEOP=on ROBOT_MODE="$MODO" setsid nohup $PY app.py > "$LOGS/web.log" 2>&1 < /dev/null &
 sleep 9
 ss -lptn 'sport = :5000' 2>/dev/null | grep -q 5000 \
   && echo "   🟢 web em http://$(hostname -I | awk '{print $NF}'):5000" \
   || { echo "   🔴 web não subiu — veja $LOGS/web.log"; }
 
-echo
-echo "======== PRÉ-VOO: só mande objetivo se as DUAS derem Translation ========"
 cd "$R"
-echo -n "   map  -> base_link : "
-timeout 12 ros2 run tf2_ros tf2_echo map base_link 2>&1 | grep -m1 -oE "Translation: .*" || echo "🔴 NÃO EXISTE — ele NÃO vai andar"
-echo -n "   odom -> base_link : "
-timeout 12 ros2 run tf2_ros tf2_echo odom base_link 2>&1 | grep -m1 -oE "Translation: .*" || echo "🔴 NÃO EXISTE"
+echo
+if [ "$MODO" = nav2 ]; then
+  echo "======== PRÉ-VOO: só mande objetivo se as DUAS derem Translation ========"
+  echo -n "   map  -> base_link : "
+  timeout 12 ros2 run tf2_ros tf2_echo map base_link 2>&1 | grep -m1 -oE "Translation: .*" || echo "🔴 NÃO EXISTE — ele NÃO vai andar"
+  echo -n "   odom -> base_link : "
+  timeout 12 ros2 run tf2_ros tf2_echo odom base_link 2>&1 | grep -m1 -oE "Translation: .*" || echo "🔴 NÃO EXISTE"
+  echo
+  echo "   toda corrida grava sozinha em ~/logs_robo2 (CSV + bag)"
+else
+  echo "======== PRÉ-VOO DO MAPEAMENTO: as três têm de responder ========"
+  # Aqui o dono de `map->odom` é o slam_toolbox. Se esta TF não existe, ele
+  # não casou scan nenhum ainda e o que for desenhado sai colado na origem.
+  echo -n "   map  -> odom      : "
+  timeout 12 ros2 run tf2_ros tf2_echo map odom 2>&1 | grep -m1 -oE "Translation: .*" || echo "🔴 NÃO EXISTE — o slam ainda não casou scan"
+  echo -n "   map  -> base_link : "
+  timeout 12 ros2 run tf2_ros tf2_echo map base_link 2>&1 | grep -m1 -oE "Translation: .*" || echo "🔴 NÃO EXISTE"
+  echo -n "   /scan             : "
+  timeout 12 ros2 topic hz /scan --window 10 2>&1 | grep -oE "average rate: [0-9.]+" | head -1 || echo "🔴 MORTO — sem ele o mapa sai vazio"
+  echo
+  echo "   dirija DEVAGAR e sem solavanco; feche voltas passando de novo por"
+  echo "   onde já passou — é assim que o slam fecha o laço e corrige a deriva"
+  echo "   ⚠️ o mapeamento NÃO grava CSV/bag como as corridas do Nav2"
+  echo
+  echo "   quando terminar:  bash bin/sobe-robo --salva-mapa <nome>"
+fi
 echo
 echo "   controle: segure LB e mexa o analógico esquerdo · RB = turbo"
 echo "             soltou o LB, ele para — é o homem-morto, é de propósito"
-echo "   toda corrida grava sozinha em ~/logs_robo2 (CSV + bag)"
 echo "   para derrubar tudo:  bash bin/sobe-robo --mata"
