@@ -37,6 +37,13 @@ maps/*
 # porque a sala tem mobília e a "limpeza" daquele mapa foi apagá-la.
 !maps/sala_andar3/
 !maps/sala_andar3/*
+# ...e menos o ANDAR INTEIRO (18-08), o primeiro mapa desenhado pelo
+# `bash bin/sobe-robo slam`. Mesmo motivo de todos acima: o deploy aqui é
+# `git reset --hard`, então mapa que não vem no clone é pilha que não sobe.
+# ⚠️ Ele está GUARDADO, não validado: ninguém rodou AMCL contra ele ainda, e
+# é essa medida — não o tamanho — que reprovou o mapa limpo do estágio (13-08).
+!maps/andar3todo/
+!maps/andar3todo/*
 
 # Colcon workspace (build artifacts deste repo)
 build/
