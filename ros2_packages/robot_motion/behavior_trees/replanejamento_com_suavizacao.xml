@@ -128,7 +128,32 @@
                      é defeito em qualquer cenário, e sem ela ninguém consegue
                      nem avaliar o `suave`. Ele volta a ser candidato, não
                      titular. -->
-                <SmoothPath unsmoothed_path="{path}" smoothed_path="{path}" smoother_id="simples" max_smoothing_duration="0.2" error_code_id="{smoother_error_code}"/>
+                <!-- 🔴 20-08, NO ROBO: `max_smoothing_duration` era 0,2 s e
+                     por isso o suavizador NUNCA rodava em caminho longo. O
+                     `/plan_smoothed` saia IDENTICO ao `/plan`, digito por
+                     digito, e o robo seguia o plano CRU.
+
+                     Medido na bancada, caminho de 19 m no corredor do andar 3:
+
+                         teto 1,0 s -> `simples` FALHA (sem caminho)
+                         teto 3,0 s -> `simples` OK, quina 24,6° -> 19,8°
+
+                     E o defeito era invisivel: este `SmoothPath` vive dentro
+                     de um RecoveryNode com `AlwaysSuccess`, entao a falha
+                     passa em silencio e o plano cru segue adiante. O log so
+                     diz "Received a path to smooth" — 2.959 vezes.
+
+                     Consequencia medida no corredor RETO (y 5 a 18), juntas
+                     reamostradas a 20 cm: p50 3,1°, p90 13,8°, MAX 31,1°, com
+                     25% das juntas acima de 10°. Uma reta nao tem junta de
+                     31° — e esse serrilhado que o seguidor obedece, e e o S
+                     que o dono ve ("o plan do corredor fica quebrando").
+
+                     3,0 s e o valor MEDIDO como suficiente. Cabe no ciclo: o
+                     replanejamento roda a 0,2 Hz (5 s), e o SmoothPath esta
+                     dentro desse mesmo RateController.
+                     ⚠️ O limiar exato entre 1,0 e 3,0 nao foi varrido. -->
+                <SmoothPath unsmoothed_path="{path}" smoothed_path="{path}" smoother_id="simples" max_smoothing_duration="3.0" error_code_id="{smoother_error_code}"/>
                 <AlwaysSuccess/>
               </RecoveryNode>
             </Sequence>
