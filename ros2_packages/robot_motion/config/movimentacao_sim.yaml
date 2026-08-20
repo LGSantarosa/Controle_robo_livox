@@ -25,6 +25,22 @@ heading_controller:
     # sendo corrigida). Fica em 0,3 porque 0,3 é o que a corrida BOA de 13-08
     # usou — `corrida-com-ganho.csv`, 30,8 s, zero ré, zero reflexo — e valor
     # não medido não entra na frente de valor medido.
+    #
+    # 🔴 20-08: 0,10 FOI TENTADO E VOLTOU PARA 0,3. A corrida que o testou é a
+    # `continua_03`, e ela não decide nada: foi interrompida sem completar uma
+    # perna (`pernas: []`, `sucessos: 0`), e trocou o `a_dec` junto com a
+    # detecção de gargalo e o alvo congelado. O próprio autor a marcou
+    # `mudancas-continua-03-reprovada.patch` e voltou a rodar com 0,3 — todas
+    # as corridas com parâmetros salvos (06 em diante) mostram `a_dec: 0.3`.
+    #
+    # O diagnóstico que justificava a troca também não se sustentou: o giro
+    # atravessando a porta não era "golpe de giro contra 0,52 s de retenção".
+    # Medido no bag, o atraso comando→giro real é 0,20 s com correlação 0,94, e
+    # o que girava o robô era comando, não inércia — o feedforward de curvatura
+    # do compensador injetando +0,45 rad/s com o seguidor pedindo zero.
+    #
+    # A regra da linha de cima continua valendo e é ela que manda aqui: valor
+    # não medido não entra na frente de valor medido.
     a_dec: 0.3          # planta degradada de propósito (ver DIARIO 07-27)
     wz_max: 1.0
     v_max: 0.5

@@ -403,7 +403,26 @@ class PathFollower(Node):
             # 0,555 m visto no RViz é a envolvente de parada, não o corpo.
             # Mede o círculo físico + 2 cm; nunca gira só porque os corredores
             # retangulares disseram zero.
-            ('desencalhe_pivo_habilitado', True),
+            #
+            # 🔴 DESLIGADO EM 20-08, e a razão não é a conta acima — ela está
+            # certa. É o PAPEL. Palavras do dono: *"o collision monitor não foi
+            # feito para ajeitar a posição e fazer manobra, ele foi feito pra
+            # parar impactos inevitáveis, com obstáculo fora do mapa, não
+            # obstáculo conhecido"*. Girar no lugar dentro de um vão de 0,80 m
+            # é a manobra que ele não quer ver: o robô tem que passar de
+            # primeira. Enquanto a travessia depender de pivô, o defeito está
+            # na APROXIMAÇÃO e é lá que se conserta.
+            #
+            # E o pivô é o que mais gasta folga. Girando, a quina varre 0,314 m
+            # de raio contra 0,2275 de meia-largura: num vão de 0,80 sobram
+            # 8,6 cm por lado, e a caixa do reflexo (0,3466 de quina) não cabe
+            # de jeito nenhum. Foi assim que a `continua_11` acumulou 14
+            # recuperações e 61 s parada.
+            #
+            # O código fica: é a saída correta quando o robô estiver mesmo
+            # encaixotado em obstáculo NOVO, que é o caso para o qual ele foi
+            # escrito. Religar exige medir a folga radial no local.
+            ('desencalhe_pivo_habilitado', False),
             ('desencalhe_pivo_folga', 0.334),
             ('desencalhe_pivo_angulo_deg', 25.0),
             ('desencalhe_pivo_wz', 1.0),
@@ -422,7 +441,26 @@ class PathFollower(Node):
             # parado porque um contador acabou. Os tetos antigos continuam
             # disponíveis para bancada com este knob em false; em produção a
             # recuperação repete, sempre limitada pelo scan em cada manobra.
-            ('recuperacao_infinita_com_objetivo', True),
+            #
+            # 🔴 DESLIGADO EM 20-08. A regra do dono continua de pé — o robô
+            # não pode desistir com objetivo vivo — mas ela não se cumpre
+            # tirando o teto: sem teto, um erro que não é de encalhe passa a
+            # repetir para sempre, e foi exatamente isso que a série de 20-08
+            # mediu na perna de ida:
+            #
+            #     continua_02   2 paradas    0,4 s parado    0 recuperações
+            #     continua_10  22 paradas   39,9 s parado    8 recuperações
+            #     continua_11  41 paradas   61,0 s parado   14 recuperações
+            #
+            # Nenhuma dessas manobras estava desencalhando coisa nenhuma: o
+            # corpo tinha 3 a 12 cm de folga em todas elas. O contador não era
+            # o problema — era o único aviso de que a recuperação não servia.
+            # Com o teto, a falha aparece e dá para diagnosticar; sem ele, ela
+            # vira um robô dançando na porta, que é o sintoma reclamado.
+            #
+            # Voltar a discutir SÓ depois de a travessia passar de primeira:
+            # aí um teto que estoura é sinal de verdade, e não de ruído.
+            ('recuperacao_infinita_com_objetivo', False),
             # 🔴 RÉ SÓ COM OBJETIVO VIVO (14-08, decisão 031). Requisito do
             # dono, com as palavras dele: *"a ré é para desencalhar, mas quando
             # ele ENCALHA por conta de um erro, é pra desencalhar E IR ATÉ UM
