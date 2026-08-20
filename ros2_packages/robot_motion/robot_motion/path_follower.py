@@ -188,6 +188,37 @@ class PathFollower(Node):
             # porta; o conserto certo é ainda desconhecido e está na fila.
             ('mira_tol_estica', 0.07),
             ('mira_tol_encolhe', 0.08),
+            # 🔴 20-08: 3°/5° ERAM INCONSISTENTES COM O RESTO DA REGRA, e era
+            # esta a razao de a mira ficar curta — nao o serrilhado, que eu
+            # culpei em duas tentativas reprovadas antes desta.
+            #
+            # A conta: uma curva de raio R muda o rumo ~0,8/R rad na janela de
+            # 1 m. Entao 3° so aceita raio >= 15,3 m — reta praticamente
+            # perfeita — enquanto o `tol_estica` de 0,07 aceita raio >= ~2 m.
+            # O criterio de rumo anulava o de desvio SEMPRE: medido sobre 219
+            # amostras de `/plan_smoothed` reais do `sala_andar3`, o desvio
+            # aprovava 77,2% e o rumo so 14,2%.
+            #
+            # Calibrado nas mesmas amostras, com o caso de regressao da PORTA
+            # (19-08) medindo 71,6° como referencia do que TEM de encolher:
+            #
+            #     limiar   raio minimo   estica    margem ate a porta
+            #      3°       15,3 m        14,2%        24x
+            #      6°        7,6 m        45,7%        12x
+            #     10°        4,6 m        61,6%         7x
+            #     23°        2,0 m        77,2%         3x   (teto do desvio)
+            #
+            # 🔴 6°/10° FOI TESTADO E REPROVOU NA CURVA. Veredito do dono:
+            # *"piorou demais a curva, nao compensou melhorar a reta, quero que
+            # ele ande reto e que continue como estava a curva"*. Aceitar raio
+            # >= 7,6 m como "reto" estica a mira dentro de curvas de 7 m, e o
+            # carrot longo corta por dentro — o defeito de 19-08 de novo, com
+            # outro numero.
+            #
+            # Volta a 3°/5°, que e a curva como estava. A RETA passa a ser
+            # atacada pelo `mira_rumo_passo` abaixo, que filtra serrilhado sem
+            # mexer em limiar nenhum — nao troca curva por reta, que foi
+            # exatamente o que reprovou aqui.
             ('mira_rumo_estica_deg', 3.0),
             ('mira_rumo_encolhe_deg', 5.0),
             # Passo de reamostragem da regra de rumo. 0,20 nao filtrava o
@@ -199,7 +230,20 @@ class PathFollower(Node):
             # ⚠️ Nao subir para 0,60: a janela de 1 m fica com uma amostra so,
             # a medida degenera em zero e a mira esticaria em curva (o defeito
             # de 19-08). A lei recusa isso na subida.
-            ('mira_rumo_passo', 0.20),
+            #
+            # 🔵 0,40 EM TESTE (20-08), e agora ele e valido: a primeira
+            # tentativa reprovou nos unitarios porque a funcao nao media o fim
+            # da janela e perdia a curva do ultimo trecho. Com o bug corrigido
+            # (32cf2c6), o passo volta a ser escolha de FILTRO:
+            #
+            #     passo   PORTA (tem que encolher)   curva R=2 m   reta real
+            #     0,20 m          71,6°                 21,4°       estica 14,2%
+            #     0,40 m          71,6°                 18,5°       estica 23,7%
+            #
+            # A porta e a curva de 2 m enxergam o MESMO tanto; o que muda e o
+            # serrilhado da reta. E o unico jeito que achei de melhorar a reta
+            # sem tocar no limiar que protege a curva.
+            ('mira_rumo_passo', 0.40),
             # Só estica com este vão livre à frente, medido no corredor
             # retangular do corpo. `None` (scan velho ou ausente) = não estica.
             ('mira_folga_min', 0.60),
