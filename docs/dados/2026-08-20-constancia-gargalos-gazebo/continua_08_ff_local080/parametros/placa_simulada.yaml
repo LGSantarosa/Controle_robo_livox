@@ -1,0 +1,18 @@
+/placa_simulada:
+  ros__parameters:
+    atraso_desliga: 0.52
+    bitola: 0.27
+    curvatura_frente: -0.817
+    curvatura_re: -0.098
+    deadband_speed: 100.0
+    escala_driver: 0.10472
+    escala_real: 0.0372
+    latencia: 0.27
+    modelo: medido
+    raio: 0.08
+    rendimento_giro: 0.93
+    start_type_description_service: true
+    taxa_avisos: 2.0
+    use_sim_time: true
+    zona_morta_crua: 0.3
+

@@ -1,0 +1,72 @@
+{
+  "inicio_utc": "2026-08-20T15:02:38.268114+00:00",
+  "ciclos_pedidos": 3,
+  "teto_por_perna_s": 120.0,
+  "ida": [
+    10.65,
+    6.6
+  ],
+  "volta": [
+    2.0,
+    5.0
+  ],
+  "pernas": [
+    {
+      "perna": 1,
+      "nome": "ida",
+      "alvo": [
+        10.65,
+        6.6
+      ],
+      "status": 4,
+      "sucesso": true,
+      "duracao_s": 66.081,
+      "final": [
+        10.50851354299735,
+        6.405834465890977
+      ],
+      "dist_final_m": 0.24024710643627875,
+      "amostras_odom": 3271,
+      "csv": "perna_01_ida.csv"
+    },
+    {
+      "perna": 2,
+      "nome": "volta",
+      "alvo": [
+        2.0,
+        5.0
+      ],
+      "status": 4,
+      "sucesso": true,
+      "duracao_s": 104.08,
+      "final": [
+        2.0524365668822413,
+        4.782137570462977
+      ],
+      "dist_final_m": 0.22408398369845647,
+      "amostras_odom": 5189,
+      "csv": "perna_02_volta.csv"
+    },
+    {
+      "perna": 3,
+      "nome": "ida",
+      "alvo": [
+        10.65,
+        6.6
+      ],
+      "status": 4,
+      "sucesso": true,
+      "duracao_s": 106.281,
+      "final": [
+        10.61862541784095,
+        6.405476747744649
+      ],
+      "dist_final_m": 0.1970372047955766,
+      "amostras_odom": 5297,
+      "csv": "perna_03_ida.csv"
+    }
+  ],
+  "sucessos": 3,
+  "falhas": 0,
+  "interrompido": true
+}

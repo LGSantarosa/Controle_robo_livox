@@ -1,0 +1,576 @@
+# Nav2 de PRODUÇÃO do robô 2 — o que roda quando o robô anda de verdade.
+#
+# Não confundir com `robot_planning/config/bancada_planner.yaml`: aquele é a
+# BANCADA, sobe dois planners lado a lado e não move nada. Este sobe um só, o
+# escolhido pela decisão 008, e entra na pilha que dirige.
+#
+# ⚠️ Os números de GEOMETRIA (raio mínimo de curva, raio do robô, inflação)
+# aparecem nos dois arquivos, e `test_configs_coerentes.py` falha se eles
+# divergirem. Isso não é zelo: em 29-07 a bitola estava com valores diferentes
+# no simulador (0,20) e no robô (0,32), nenhum medido, e sintonizar num e levar
+# para o outro erraria duas vezes em sentidos opostos.
+#
+# QUEM DIRIGE NÃO É O NAV2. O `controller_server` sobe porque a árvore de
+# comportamento padrão usa `FollowPath` e sem ele a árvore falha — e junto morre
+# o replanejamento, que é o que queremos do Nav2. O `cmd_vel` dele não vai a
+# lugar nenhum: quem move roda é `path_follower` → `heading_controller` →
+# `/hoverboard_base_controller/cmd_vel`. Os tópicos são diferentes de propósito,
+# então nem `twist_mux` é preciso aqui.
+
+map_server:
+  ros__parameters:
+    yaml_filename: ""          # a launch preenche
+
+bt_navigator:
+  ros__parameters:
+    global_frame: map
+    robot_base_frame: base_link
+    odom_topic: /Odometry
+    bt_loop_duration: 10
+    default_server_timeout: 20
+
+    # SÓ o navegador de um objetivo. O padrão carrega `navigate_through_poses`
+    # junto, com a árvore COM recuperação — e ela derrubava a subida mesmo com a
+    # de um objetivo já trocada, porque o `bt_navigator` carrega as duas. Não
+    # usamos rota com pontos intermediários; quando usarmos, a árvore dela entra
+    # aqui pelo mesmo caminho.
+    navigators: ["navigate_to_pose"]
+    navigate_to_pose:
+      plugin: "nav2_bt_navigator::NavigateToPoseNavigator"
+
+    # Árvore SEM nós de recuperação, replanejando a 1 Hz. A launch aponta o
+    # caminho (é de fábrica, `nav2_bt_navigator/behavior_trees/`).
+    #
+    # A árvore padrão (`..._w_replanning_and_recovery.xml`) foi a primeira
+    # tentativa e derrubou o `bt_navigator` na subida: ela exige os servidores
+    # `spin`, `backup`, `wait` e `drive_on_heading` do `behavior_server`. Subir
+    # o `behavior_server` para satisfazê-la seria errado por dois motivos, e
+    # nenhum deles é o erro de carregamento:
+    #
+    #   1. `spin` é PIVÔ, e este robô não pivota — medido em 29-07, zero
+    #      amostras de giro parado no perfil pessimista de zona morta;
+    #   2. `backup` é a ré do Nav2, e a decisão 009 tirou a ré do Nav2 do
+    #      caminho de propósito. Quem recua é o `path_follower`, por gatilho.
+    #
+    # E as duas seriam no-op de qualquer jeito: o `cmd_vel` desses
+    # comportamentos sai pelo mesmo tópico ignorado do `controller_server`, então
+    # a árvore acharia que recuperou sem nada ter acontecido — falha silenciosa,
+    # que é a classe de defeito que mais custou tempo neste projeto (BO-3).
+    #
+    # Recuperação existe, mas é nossa e vive no seguidor.
+
+planner_server:
+  ros__parameters:
+    # 19-08: 1 Hz fazia um plano novo puxar o rumo a cada segundo mesmo com a
+    # rota anterior valida. 0,2 Hz preserva a rota por 5 s; surpresa continua
+    # sendo parada imediatamente pelo collision_monitor.
+    expected_planner_frequency: 0.2
+    planner_plugins: ["GridBased"]
+
+    # 🔴 SMAC 2D EM 19-08. O Theta* foi medido no corredor reto:
+    # meandro de 29 cm, emendas p50 de 11,3 graus e curvas que em 41% dos
+    # planos exigiam mais que o raio da maquina. O SimpleSmoother arredondava
+    # as emendas, mas preservava o meandro. Na porta, o caminho voltou a passar
+    # perto da ombreira mesmo quando o seguidor o cumpriu corretamente.
+    #
+    # A primeira troca usou Hybrid-A* com DUBIN e foi reprovada na tela: para
+    # voltar 180 graus ele desenhou um balao enorme, porque Dubin nao pivota.
+    # Smac 2D e o modelo certo aqui: A* de custo para base diferencial que pode
+    # girar no lugar. A mudanca brusca de rumo chega ao heading_controller, que
+    # ja tem o pivo por corte medido, em vez de virar arco de carro.
+    GridBased:
+      plugin: "nav2_smac_planner::SmacPlanner2D"
+      tolerance: 0.25
+      downsample_costmap: false
+      downsampling_factor: 1
+      allow_unknown: false
+      max_iterations: 1000000
+      max_on_approach_iterations: 1000
+      max_planning_time: 5.0
+      angle_quantization_bins: 1
+      # Alto dentro da faixa recomendada do Smac: o corredor/porta precisam
+      # preferir o centro, nao apenas o caminho geometricamente mais curto.
+      cost_travel_multiplier: 5.0
+      use_final_approach_orientation: false
+      smoother:
+        max_iterations: 1000
+        w_smooth: 0.3
+        w_data: 0.2
+        tolerance: 1.0e-10
+        do_refinement: true
+
+controller_server:
+  ros__parameters:
+    # Frequência baixa de propósito: ele não dirige nada, só mantém a árvore de
+    # comportamento viva. Rodar a 20 Hz seria queimar CPU para jogar fora.
+    controller_frequency: 5.0
+    controller_plugins: ["FollowPath"]
+    progress_checker_plugins: ["progress_checker"]
+    goal_checker_plugins: ["goal_checker"]
+
+    progress_checker:
+      plugin: "nav2_controller::SimpleProgressChecker"
+      required_movement_radius: 0.5
+      # Generoso: quem move o robô é a nossa cadeia, e o progresso dela não tem
+      # nada a ver com o que este servidor acha que está mandando. Apertar isto
+      # faria a árvore abortar uma navegação que está indo bem.
+      #
+      # 🔴 14-08: 30 s -> 1e9, ou seja, DESLIGADO (decisão 035). Pedido do dono
+      # com todas as letras: *"ele desiste das corridas, faça com que nunca
+      # desista, que tente pra sempre"*.
+      #
+      # Era este cheque que matava as corridas dele: `Failed to make progress`
+      # -> `FollowPath` aborta -> a árvore devolve `Goal failed` -> o seguidor
+      # para para sempre. E ele estava julgando a coisa errada: mede o robô
+      # contra o `cmd_vel` DESTE servidor, que não move roda nenhuma neste robô.
+      #
+      # ⚠️ O preço, e ele é real: robô genuinamente encalhado agora tenta para
+      # sempre em vez de reportar falha. É escolha do dono e é a certa aqui —
+      # quem recupera é a ré do seguidor, e ela exige objetivo VIVO (031). Um
+      # objetivo que morre de impaciência desliga a própria recuperação.
+      movement_time_allowance: 1000000000.0
+
+    goal_checker:
+      plugin: "nav2_controller::SimpleGoalChecker"
+      stateful: true
+      # TEM que bater com o `raio_chegada` do `path_follower`: é este cheque
+      # que faz a árvore declarar sucesso, e quem de fato chega é o nosso
+      # seguidor. Se o do Nav2 for menor, a árvore fica pedindo mais depois de
+      # o robô já ter parado.
+      xy_goal_tolerance: 0.25
+      # Rumo na chegada não é requisito deste seguidor (ver decisão 006: girar
+      # depois de chegar arrasta o robô para fora do ponto). Tolerância larga
+      # para a árvore não exigir o que ninguém vai entregar.
+      yaw_goal_tolerance: 3.15
+
+    FollowPath:
+      plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
+      desired_linear_vel: 0.5
+      lookahead_dist: 0.55
+      max_angular_accel: 1.0
+
+      # ⚠️ SEM detecção de colisão, e isto NÃO é afrouxar segurança.
+      #
+      # Descoberto na primeira corrida da pilha (29-07, alvo do outro lado da
+      # porta de 0,90 m): o robô ATRAVESSOU a porta e então parou, com
+      # `RegulatedPurePursuitController detected collision ahead!` abortando o
+      # `FollowPath`, a árvore devolvendo `Goal failed` e o `/plan` parando de
+      # sair — o seguidor então parou sozinho por "plano velho", corretamente.
+      #
+      # A premissa de que este servidor era inofensivo por não dirigir estava
+      # errada: ele não move roda, mas ABORTA a navegação. E o palpite dele é
+      # sobre uma trajetória que ninguém vai executar — ele projeta o caminho a
+      # partir da pose supondo os comandos DELE, que vão para o tópico
+      # ignorado. Julgar colisão de um movimento que não vai acontecer só pode
+      # errar.
+      #
+      # Quem responde por não bater é o costmap (o plano já nasce inflado) e,
+      # quando o Mid-360 entrar no modelo, uma guarda nossa com o sensor de
+      # verdade. Enquanto isso o risco fica anotado no ESTADO_PROJETO.
+      use_collision_detection: false
+
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      update_frequency: 1.0
+      publish_frequency: 1.0
+      global_frame: map
+      robot_base_frame: base_link
+      resolution: 0.05
+      track_unknown_space: false
+      # ⚠️ 0,32 desde 05-08, era 0,36 — que NÃO era o circunscrito da caixa.
+      # A trena de 29-07 deu caixa 0,433 × 0,455, e o circunscrito disso é
+      # 0,314 m; as rodas (borda a 0,158) e a boba (ponta a 0,215) ficam
+      # DENTRO. Os 0,36 eram 15% de robô a mais, e numa porta de 0,90 m isso
+      # é a diferença entre 9 cm e 13 cm de folga por lado — foi o que fez o
+      # planner declarar `Start occupied` com o robô DENTRO do vão.
+      # 0,32 = 0,314 medido + 6 mm.
+      #
+      # 🔴 14-08: `robot_radius` SAIU, entrou o CONTORNO REAL (decisão 032).
+      #
+      # O dono viu na tela e nomeou: *"até no RViz dá para ver que o desenho do
+      # robô claramente não passa onde a linha diz que passa; se ele fosse fino
+      # ele passava, mas não é o caso"*. Estava certo, e a causa é como o Nav2
+      # trata footprint CIRCULAR:
+      #
+      #   célula bloqueada = min(inflation_radius, raio inscrito)
+      #
+      # Com `robot_radius` o inscrito é 0,324, e a `inflation_layer` só percorre
+      # células até `inflation_radius`. Com inflação 0,20 o planejador bloqueia
+      # só 0,20 -> **planeja onde o corpo não cabe** (o que ele viu). Subindo a
+      # inflação para 0,33 o bloqueio vira 0,324 e a porta de 0,90 m fica com um
+      # canal de 0,90 − 2×0,324 = 0,25 m — cinco células, e o Smac devolveu
+      # `Could not generate path`. Os dois lados do mesmo círculo, os dois
+      # ruins: ou o robô é pequeno demais, ou a porta some.
+      #
+      # Com o CONTORNO o disco desaparece do problema:
+      #
+      #   inscrito passa a ser 0,2165 (meia caixa, o menor dos dois semi-eixos)
+      #   e o Smac passa a checar o RETÂNGULO ORIENTADO contra o obstáculo
+      #
+      # Numa porta de 0,90 m o retângulo precisa da LARGURA (0,455) e não do
+      # circunscrito (0,628): a folga total sai de 0,25 m para **0,445 m**. O
+      # corpo passa a ser respeitado de verdade — inclusive o giro, porque a
+      # checagem é por pose — e a porta fica folgada.
+      #
+      # Caixa medida com trena em 29-07: 0,433 (comprimento) × 0,455 (largura).
+      # 🔴 14-08: 0,32 -> 0,26, e o motivo é o PLANEJADOR QUE ESTÁ NO AR
+      # (decisão 032). O Theta* não conhece contorno: ele bloqueia célula com
+      # custo > 252 e pronto. Então o raio do robô entra no plano por UMA via
+      # só — o `min(inflation_radius, raio inscrito)`.
+      #
+      # 0,30 fica na única faixa que serve, e ela é estreita:
+      #
+      #   >= 0,26  a meia-largura que o polígono do reflexo exige — abaixo
+      #            disso o planejador manda por onde o reflexo veta, e nasce o
+      #            impasse de 14-08 (um diz que passa, o outro não deixa)
+      #   <= 0,314 o circunscrito medido — acima disso o Theta* recusa planejar
+      #            de 15% da sala, inclusive de onde o robô está
+      #
+      # Por que não 0,324 (o circunscrito de verdade): testado hoje e reprovado
+      # na hora. Bloquear 0,324 proíbe 15,1% das células livres da sala — a
+      # célula onde o robô ESTÁ, muitas vezes — e o Theta* devolve `Could not
+      # generate path`. Numa porta de 0,90 m sobra um canal de 0,25 m.
+      #
+      # O que sustenta 0,26 é a GEOMETRIA do vão: para atravessar uma porta o
+      # que aperta é a LARGURA da caixa (0,455 -> meia 0,2275), não o
+      # circunscrito (0,314), que só manda quando o robô gira parado. E girar
+      # perto de parede é justamente o caso que o reflexo cobre (0,26 lateral,
+      # 0,28 atrás).
+      # Smac checa o contorno ORIENTADO. Corpo medido (0,433 x 0,455 m) mais
+      # 3 cm em toda volta, igual ao PolygonApproach. Diferente do circulo de
+      # 0,28 m, isto inclui a varredura das quinas/traseira durante a curva.
+      footprint: "[[0.35, 0.2775], [0.35, -0.2775], [-0.2665, -0.2775], [-0.2665, 0.2775]]"
+      plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
+      static_layer:
+        plugin: "nav2_costmap_2d::StaticLayer"
+        map_subscribe_transient_local: true
+
+      # ⚠️ A MESMA camada do local, e ela é OBRIGATÓRIA aqui — não é redundância.
+      #
+      # MEDIDO no simulador (mundo `pista_surpresa.sdf`, obstáculo que o mapa
+      # não tem, em 2,00 · 6,50): com a camada só no local, o
+      # `compute_path_to_pose` de (2,0 · 5,0) para (2,0 · 7,2) devolveu um plano
+      # RETO — 2,20 m de caminho para 2,20 m de reta, passando a 0,035 m do
+      # centro do obstáculo. Quem DIRIGE via a caixa; quem PLANEJA não.
+      #
+      # O efeito prático disso é um robô que vai reto até o obstáculo novo e
+      # para lá: o `collision_monitor` salva a máquina, e ninguém replaneja —
+      # ele fica preso, e o replanejamento a 1 Hz devolve o mesmo plano ruim
+      # para sempre. Obstáculo que só entra no local costmap não produz desvio,
+      # produz travamento educado.
+      #
+      # Os números que diferem do local, e por quê:
+      #   - alcance maior (3,0 marcando, 4,0 limpando): o global existe para
+      #     escolher ROTA, e rota se decide com o que está longe. O local é uma
+      #     janela de 4 m e não tem para onde guardar isso.
+      #   - o resto é idêntico de propósito: duas faixas de altura diferentes
+      #     fariam o planejador e o seguidor discordarem sobre o que é chão.
+      #
+      # ⚠️ AQUI A MARCAÇÃO É PERMANENTE. O global não tem janela rolante: o que
+      # for marcado fica até o raytrace limpar ou alguém chamar
+      # `/global_costmap/clear_entirely_global_costmap`. Com a TF `map→odom`
+      # fixa e provisória (ver o cabeçalho da `pilha.launch.py`), toda deriva do
+      # LIO no robô real vira obstáculo fantasma acumulado. **Isto é seguro no
+      # simulador e é dívida no robô** — é o mesmo buraco que já obriga o mapa a
+      # ser argumento, e a saída é a mesma: localização que case `map` com
+      # `odom`.
+      obstacle_layer:
+        plugin: "nav2_costmap_2d::VoxelLayer"
+        enabled: true
+        footprint_clearing_enabled: true
+        origin_z: 0.0
+        z_resolution: 0.05
+        z_voxels: 16
+        mark_threshold: 2
+        combination_method: 1
+        publish_voxel_map: false
+        observation_sources: livox
+        livox:
+          topic: /livox/pontos
+          data_type: "PointCloud2"
+          marking: true
+          clearing: true
+          min_obstacle_height: 0.10
+          max_obstacle_height: 0.50
+          obstacle_max_range: 3.0
+          raytrace_max_range: 4.0
+          # Ver a nota do local: 0,50 s, e o número saiu de medida.
+          expected_update_rate: 0.5
+
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+      # Inflação: a ALAVANCA que decide o que ele aceita, e não é medida —
+      # é escolha. 0,30 aqui, contra 0,45 da bancada, e a diferença é
+      # deliberada (ver `test_configs_coerentes.py`).
+      #
+      # MEDIDO em 29-07, alvo do outro lado da porta de 0,90 m:
+      #   0,45 -> o robô ATRAVESSA a porta e trava: o replanejamento a 1 Hz
+      #           falha com "Start occupied", porque com raio 0,36 e inflação
+      #           0,45 o vão inteiro fica inflado e a célula do próprio robô
+      #           conta como ocupada;
+      #   0,30 -> chega em 12,4 s, 5,57 m de caminho para 5,32 m de reta (1,05x).
+      #
+      # Subir de novo faz ele RECUSAR vãos apertados e dar a volta — o que pode
+      # ser a decisão certa num corredor de verdade. A launch expõe isto como
+      # argumento (`inflacao:=`) justamente para você comparar sem editar YAML.
+        # ⚠️ 0,40 desde 05-08, e ANTES era 0,30 — abaixo do raio inscrito
+        # (0,363). O Nav2 acusava isso como ERRO desde 01-08 (item 7 do
+        # ESTADO) e ninguém tinha medido o custo: sobrava uma faixa de 6 cm
+        # onde o CORPO do robô encosta no obstáculo e o costmap diz "livre".
+        # O planner roteava por ali e o robô raspava.
+        #
+        # MEDIDO com 0,30 (`tools/banco/folga.py`, 4 alvos): folga mínima de
+        # 0,308 m contra raio de 0,36 — 5 cm de corpo dentro da parede, 2509
+        # amostras invadindo. O pior ponto das quatro corridas caiu sempre no
+        # vão da porta, que é onde a margem é mais apertada.
+        #
+        # 0,40 fica ACIMA do inscrito e ABAIXO dos 0,45 que em 29-07 travaram
+        # o robô DENTRO da porta de 0,90 m ("Start occupied" no
+        # replanejamento, porque o vão inteiro ficava inflado).
+        # 🔴 13-08, NA SALA REAL: 0,50 -> 0,20. A sala do andar 3 tem 6,5 x 4,4 m
+        # e mobília; medido no mapa que o próprio robô desenhou hoje, 35,4% das
+        # células livres estão a menos do `robot_radius` (0,32 m) de alguma
+        # coisa. Com 0,50 quase toda a sala fica cara, e o efeito não é recusar
+        # plano — é plano TORTO: na corrida de hoje a referência de rumo
+        # passeou 83,8° (contra 14,7° em 12-08 sem mapa), o robô ficou parado
+        # 58% do tempo e andou 4,51 m para 2,46 m de reta. A inflação de 0,50
+        # foi escolhida em 05-08 para a porta de 0,90 m da pista SIMULADA.
+        # 🔴 14-08: 0,20 -> 0,40, e é ISTO que atende o pedido do dono — *"ir
+        # pelo meio, ao invés de colar nos obstáculos e paredes"* (decisão 032).
+        #
+        # O ponto que eu não tinha entendido: com inflação MENOR que o raio
+        # inscrito não existe faixa graduada NENHUMA. Célula perto = 253
+        # (proibida), célula longe = 0 (de graça), e nada no meio. A paisagem
+        # de custo fica BINÁRIA e o Theta*, que minimiza distância, raspa a
+        # borda do proibido — que é o robô colando na parede.
+        #
+        # Com raio 0,26 e inflação 0,40 existe uma faixa de 14 cm em que o
+        # custo DECAI, e o `cost_scaling_factor` 3,0 faz as inflações das duas
+        # paredes se encontrarem no meio do vão: mínimo de custo no centro. É o
+        # gradiente que empurra o caminho para o meio, e ele só passou a existir
+        # agora.
+        #
+        # ⚠️ Isto NÃO é voltar aos 0,50 de 13-08 (decisão 029). Lá a inflação
+        # também BLOQUEAVA até 0,324 e encarecia a sala inteira; o plano saía
+        # torto e o caminho deu 1,45x a reta. Aqui o bloqueio é 0,2165 fixo e a
+        # inflação só inclina o custo. É a mesma palavra para duas coisas
+        # diferentes, e foi essa confusão que me fez errar duas vezes hoje.
+        inflation_radius: 0.90
+        # ⚠️ `cost_scaling_factor` baixo é o que CENTRA o robô no vão, e sem
+        # ele a inflação maior não adianta nada. O padrão do Nav2 (10) faz o
+        # custo despencar logo depois do inscrito: dentro da porta a paisagem
+        # fica PLANA, e planner que não vê diferença entre o meio e a quina
+        # escolhe o caminho mais curto — a quina. Foi o que 05-08 mediu:
+        # folga de 0,331 m onde centrar daria 0,45.
+        #
+        # Com 3,0 o custo decai devagar e as inflações das DUAS ombreiras se
+        # encontram no meio do vão, criando um mínimo exatamente no centro.
+        # É o gradiente que empurra o caminho para o meio.
+        cost_scaling_factor: 3.0
+
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      update_frequency: 5.0
+      publish_frequency: 2.0
+      global_frame: odom
+      robot_base_frame: base_link
+      rolling_window: true
+      width: 4
+      height: 4
+      resolution: 0.05
+      # Mesmo número do global, e pelo mesmo motivo — ver lá (decisão 032).
+      footprint: "[[0.35, 0.2775], [0.35, -0.2775], [-0.2665, -0.2775], [-0.2665, 0.2775]]"
+      # ⚠️ A ordem importa: a inflação é sempre a ÚLTIMA, senão ela infla um
+      # mapa que ainda não tem o obstáculo que acabou de chegar.
+      plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
+      static_layer:
+        plugin: "nav2_costmap_2d::StaticLayer"
+        map_subscribe_transient_local: true
+
+      # ══════════════════════════════════════════════════════════════════
+      # A NUVEM DO MID-360 ENTRA AQUI — é esta camada que faz o desvio ao
+      # vivo existir (fatia B). Até 06-08 os dois costmaps rodavam só com o
+      # mapa estático, e o único consumidor da nuvem no projeto inteiro era o
+      # `collision_monitor`: ou seja, o robô não DESVIAVA de obstáculo novo,
+      # ele PARAVA na frente dele. O sensor já existia dos dois lados desde
+      # 04-08 (decisão 012 no simulador, driver real desde 24-07) — o que
+      # faltava era esta camada.
+      #
+      # ⚠️ `VoxelLayer` e NÃO `ObstacleLayer`, e o motivo é a GEOMETRIA deste
+      # sensor. O Mid-360 olha para CIMA: −7° a +52°. A `ObstacleLayer`
+      # projeta tudo em 2D e limpa por raytrace 2D, então um raio que passa
+      # POR CIMA de uma caixa baixa limpa a célula da própria caixa — o robô
+      # esqueceria o obstáculo que acabou de ver. A `VoxelLayer` limpa por
+      # voxel em altura e não tem esse modo de falha.
+      #
+      # ⚠️ Isto é o OPOSTO do que o robô 1 concluiu (`robot_nav/config/
+      # nav2_params_pi.yaml`: "sem câmera RGB-D o eixo Z do voxel é desperdício
+      # puro", VoxelLayer -> ObstacleLayer). Lá o sensor era um LD06 PLANAR, e
+      # com nuvem plana o eixo z é mesmo desperdício. Aqui ele é o que separa
+      # "passa por baixo" de "bate". Não portar aquela troca para cá.
+      obstacle_layer:
+        plugin: "nav2_costmap_2d::VoxelLayer"
+        enabled: true
+        # O robô vê o próprio corpo em incidência rasante; sem isto ele se
+        # marca e se tranca sozinho no meio da célula onde está.
+        footprint_clearing_enabled: true
+        # Coluna de 0,80 m (16 × 0,05): cobre o Livox a 0,42 m e sobra. Subir
+        # isto só adiciona voxel vazio — o robô tem 0,23 m de caixa.
+        origin_z: 0.0
+        z_resolution: 0.05
+        z_voxels: 16
+        # 2 voxels marcados na coluna para a célula 2D virar obstáculo. 1 é o
+        # padrão do Nav2 e aqui seria arriscado: são 20 000 pontos por quadro
+        # com σ = 2 cm de ruído, e ponto solto é ruído — mesmo raciocínio do
+        # `min_points: 2` do reflexo.
+        mark_threshold: 2
+        # Max: a camada só ACRESCENTA ao mapa estático, nunca apaga parede
+        # conhecida porque o sensor não a viu naquele quadro.
+        combination_method: 1
+        # Depuração: é assim que se olha no RViz se a nuvem está virando
+        # obstáculo. Uma mensagem a 5 Hz num NUC x86 não pesa; se pesar no
+        # robô, este é o primeiro a desligar.
+        publish_voxel_map: true
+        observation_sources: livox
+        livox:
+          topic: /livox/pontos
+          data_type: "PointCloud2"
+          marking: true
+          clearing: true
+          # ⚠️ MESMA FAIXA do `collision_monitor.yaml`, e o
+          # `test_configs_coerentes.py` trava os dois juntos. Abaixo de
+          # ~0,05 m o próprio chão vira obstáculo (a nuvem erra até 3,8 cm em
+          # incidência rasante, medido 05-08); 0,10 dá 2,6x de margem. Acima
+          # de 0,50 o robô passa por baixo, e marcar aquilo o faria recusar
+          # porta e mesa.
+          min_obstacle_height: 0.10
+          max_obstacle_height: 0.50
+          # A janela é 4×4 m, então o raio útil é 2 m: marcar além disso é
+          # produzir célula que a janela joga fora no mesmo ciclo.
+          obstacle_max_range: 2.0
+          # Limpar pode ir mais longe do que marcar — e deve, senão o robô
+          # carrega obstáculo velho na borda da janela.
+          raytrace_max_range: 3.0
+          # ⚠️ 0,50 s, e este número é uma CORREÇÃO medida — 0,30 foi o primeiro
+          # palpite (10 Hz + 3 quadros de folga) e ele não sobrevive à máquina:
+          # na primeira corrida o log encheu de
+          #
+          #     The /livox/lidar observation buffer has not been updated for
+          #     0.43 seconds, and it should be updated every 0.30 seconds
+          #
+          # com a nuvem chegando certinha a 9,7 Hz e carimbo de 100,0 ms sem
+          # cauda nenhuma (medido, 281 quadros). O atraso é do CONSUMIDOR, não
+          # da fonte: são 20 000 pontos por quadro para transportar e
+          # transformar.
+          #
+          # E isto não é cosmético: buffer vencido deixa a camada NÃO-CURRENT,
+          # e costmap não-current é costmap que para. Errar para baixo aqui
+          # desliga a percepção com um aviso amarelo por sintoma.
+          expected_update_rate: 0.5
+      # ══════════════════════════════════════════════════════════════════
+
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+      # Inflação: a ALAVANCA que decide o que ele aceita, e não é medida —
+      # é escolha. 0,30 aqui, contra 0,45 da bancada, e a diferença é
+      # deliberada (ver `test_configs_coerentes.py`).
+      #
+      # MEDIDO em 29-07, alvo do outro lado da porta de 0,90 m:
+      #   0,45 -> o robô ATRAVESSA a porta e trava: o replanejamento a 1 Hz
+      #           falha com "Start occupied", porque com raio 0,36 e inflação
+      #           0,45 o vão inteiro fica inflado e a célula do próprio robô
+      #           conta como ocupada;
+      #   0,30 -> chega em 12,4 s, 5,57 m de caminho para 5,32 m de reta (1,05x).
+      #
+      # Subir de novo faz ele RECUSAR vãos apertados e dar a volta — o que pode
+      # ser a decisão certa num corredor de verdade. A launch expõe isto como
+      # argumento (`inflacao:=`) justamente para você comparar sem editar YAML.
+        # ⚠️ 0,40 desde 05-08, e ANTES era 0,30 — abaixo do raio inscrito
+        # (0,363). O Nav2 acusava isso como ERRO desde 01-08 (item 7 do
+        # ESTADO) e ninguém tinha medido o custo: sobrava uma faixa de 6 cm
+        # onde o CORPO do robô encosta no obstáculo e o costmap diz "livre".
+        # O planner roteava por ali e o robô raspava.
+        #
+        # MEDIDO com 0,30 (`tools/banco/folga.py`, 4 alvos): folga mínima de
+        # 0,308 m contra raio de 0,36 — 5 cm de corpo dentro da parede, 2509
+        # amostras invadindo. O pior ponto das quatro corridas caiu sempre no
+        # vão da porta, que é onde a margem é mais apertada.
+        #
+        # 0,40 fica ACIMA do inscrito e ABAIXO dos 0,45 que em 29-07 travaram
+        # o robô DENTRO da porta de 0,90 m ("Start occupied" no
+        # replanejamento, porque o vão inteiro ficava inflado).
+        # 🔴 13-08, NA SALA REAL: 0,50 -> 0,20. A sala do andar 3 tem 6,5 x 4,4 m
+        # e mobília; medido no mapa que o próprio robô desenhou hoje, 35,4% das
+        # células livres estão a menos do `robot_radius` (0,32 m) de alguma
+        # coisa. Com 0,50 quase toda a sala fica cara, e o efeito não é recusar
+        # plano — é plano TORTO: na corrida de hoje a referência de rumo
+        # passeou 83,8° (contra 14,7° em 12-08 sem mapa), o robô ficou parado
+        # 58% do tempo e andou 4,51 m para 2,46 m de reta. A inflação de 0,50
+        # foi escolhida em 05-08 para a porta de 0,90 m da pista SIMULADA.
+        inflation_radius: 0.90
+        # ⚠️ `cost_scaling_factor` baixo é o que CENTRA o robô no vão, e sem
+        # ele a inflação maior não adianta nada. O padrão do Nav2 (10) faz o
+        # custo despencar logo depois do inscrito: dentro da porta a paisagem
+        # fica PLANA, e planner que não vê diferença entre o meio e a quina
+        # escolhe o caminho mais curto — a quina. Foi o que 05-08 mediu:
+        # folga de 0,331 m onde centrar daria 0,45.
+        #
+        # Com 3,0 o custo decai devagar e as inflações das DUAS ombreiras se
+        # encontram no meio do vão, criando um mínimo exatamente no centro.
+        # É o gradiente que empurra o caminho para o meio.
+        cost_scaling_factor: 3.0
+
+# ---------------------------------------------------------------------------
+# O SUAVIZADOR — decisão 026
+#
+# O Theta* entrega poligonal de GRADE: pontos a 5 cm e quinas vivas. Medido no
+# plano da porta de 12-08, reamostrado a 0,20 m: 14 viradas acima de 2°, com
+# 23,0° a 0,46 m da porta e 15,7° a 0,23 m dela.
+#
+# O `lookahead` do seguidor é 0,37 m. Uma quina de 23° a 46 cm à frente está
+# DENTRO da mira, e a cenoura salta por cima dela — o robô não tem como seguir
+# o que o plano desenhou. Erro de trajeto medido na aproximação: p50 0,174 m,
+# máx 0,325 m, contra os 0,118 m de margem que o vão de 0,90 m concede.
+#
+# ⚠️ TRÊS PLUGINS NO AR AO MESMO TEMPO, e é de propósito — mesmo formato da
+# `bancada_planner.yaml`. Comparar suavizadores em corridas separadas é
+# comparar fotos de dias diferentes. Quem escolhe é `tools/banco/suavizador.py`,
+# que pede o MESMO plano aos três e mede quina, folga contra o mapa e
+# comprimento. A produção usa `suave` (ver a launch).
+smoother_server:
+  ros__parameters:
+    smoother_plugins: ["suave", "simples", "savgol"]
+
+    # --- ConstrainedSmoother: o único que olha o COSTMAP ---
+    # Otimiza contra o costmap e respeita raio de curva. É o favorito a priori
+    # justamente porque suavizar pode empurrar o caminho para DENTRO da
+    # ombreira, e num vão de 0,90 m para um robô de 0,63 m isso é o oposto do
+    # que se quer. Favorito a priori é o que a bancada existe para derrubar.
+    suave:
+      plugin: "nav2_constrained_smoother/ConstrainedSmoother"
+      reversing_enabled: false      # a ré é nossa, por gatilho (009)
+      path_downsampling_factor: 3
+      path_upsampling_factor: 1
+      keep_goal_orientation: false  # o rumo final não é requisito (023)
+      keep_start_orientation: true
+      minimum_turning_radius: 0.37  # o raio que a MÁQUINA fecha (29-07)
+      w_curve: 30.0                 # peso de não estourar o raio
+      w_dist: 0.0                   # não gruda no caminho original
+      w_smooth: 15000.0
+      w_cost: 0.015                 # afastar de célula cara
+      cost_check_points: [-0.185, 1.0, 0.0]
+
+    # --- SimpleSmoother: gradiente cego ao costmap ---
+    simples:
+      plugin: "nav2_smoother::SimpleSmoother"
+      tolerance: 1.0e-10
+      max_its: 1000
+      do_refinement: true
+
+    # --- Savitzky-Golay: filtro polinomial, também cego ao costmap ---
+    savgol:
+      plugin: "nav2_smoother::SavitzkyGolaySmoother"
+      do_refinement: true
+      refinement_num: 2

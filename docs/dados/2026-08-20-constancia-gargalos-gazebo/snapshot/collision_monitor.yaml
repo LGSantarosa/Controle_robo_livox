@@ -1,0 +1,276 @@
+# Reflexo de colisão do robô 2 — a última linha antes de bater.
+#
+# Portado do robô 1 (levantamento em `docs/decisoes/010-levantamento-2026-08-05.md`),
+# mas com TODOS os números re-derivados: lá eles vêm de um chassi 50×50 com LD06
+# planar; aqui, da trena de 29-07 e do atuador medido em 31-07/04-08.
+#
+# Onde ele entra na cadeia:
+#
+#     heading_controller ──/auto_vel_raw──▶ collision_monitor ──/auto_vel──▶
+#         twist_mux  ◀── /key_vel (humano, prio 90)
+#              │
+#              ▼  compensador_rumo ──▶ atuador
+#
+# Ele filtra SÓ a autonomia, e o humano entra DEPOIS: quem está com o teclado
+# atravessa o reflexo de propósito. É a única forma de tirar um robô que o
+# próprio reflexo prendeu contra uma parede.
+#
+# ══════════════════════════════════════════════════════════════════════════
+# ⚠️ O QUE ESTE REFLEXO **NÃO** VÊ, E É GEOMETRIA, NÃO SINTONIA
+#
+# O Mid-360 quase não olha para baixo (−7°). Montado a 0,27 m, o chão só
+# começa a aparecer a ~2,04 m (medido em 05-08, decisão 012). O polígono de
+# parada abaixo vive a menos de 0,5 m do robô — **inteiramente dentro da zona
+# cega**. Um obstáculo a 0,5 m só entra na nuvem se for mais alto que ~0,21 m:
+#
+#     a 0,5 m   precisa de mais de 0,21 m de altura
+#     a 1,0 m   precisa de mais de 0,15 m
+#     a 1,5 m   precisa de mais de 0,09 m
+#
+# Ou seja: **ele protege contra parede, pessoa em pé e móvel alto, e é CEGO
+# para caixa baixa, degrau e pé de mesa.** Não confie nele para isso. A saída
+# é memória (lembrar o que se viu de longe) ou outro sensor, e nenhuma das
+# duas existe ainda.
+# ══════════════════════════════════════════════════════════════════════════
+
+collision_monitor:
+  ros__parameters:
+    use_sim_time: false           # a launch sobrescreve no simulador
+    base_frame_id: "base_link"
+    odom_frame_id: "odom"
+    cmd_vel_in_topic: "auto_vel_raw"
+    cmd_vel_out_topic: "auto_vel"
+    state_topic: "collision_monitor_state"
+    # A cadeia inteira do robô 2 é TwistStamped (mesma razão do twist_mux).
+    enable_stamped_cmd_vel: true
+    transform_tolerance: 0.5
+    source_timeout: 1.0
+    base_shift_correction: True
+    stop_pub_timeout: 2.0
+
+    # ⚠️ UM POLÍGONO SÓ, e isto é uma diferença de FUNDO para o robô 1.
+    #
+    # Lá existe um `PolygonSlow` com `action_type: limit` (linear_limit 0,10).
+    # Aqui isso é IMPOSSÍVEL: a compensação de zona morta do driver entrega um
+    # patamar de ~0,30 m/s de borda e **não existe velocidade entre 0 e isso**
+    # (medido 31-07, confirmado 04-08). Pedir 0,10 vira "anda a 0,30" ou "não
+    # anda". Desacelerar não é uma ação que este atuador saiba executar — a
+    # única que ele sabe é PARAR.
+    # 🔴 DOIS POLÍGONOS DESDE 14-08 (decisão 033), e a razão é MEDIDA.
+    #
+    # Com um polígono estático só, o reflexo é CEGO PARA DIREÇÃO: ele pergunta
+    # "tem coisa na caixa à minha frente?" sem olhar para onde o robô vai. E
+    # como a decisão 023 tirou o pivô, **toda curva deste robô é arco** — o
+    # nariz varre para o lado enquanto o corpo contorna. Resultado, medido no
+    # Gazebo com o objetivo do dono (6,24 · 3,51):
+    #
+    #     amostras CORTADAS      n=549   |wz| mediano 0,51 rad/s   folga 0,45 m
+    #     amostras que passaram  n=853   |wz| mediano 0,25 rad/s   folga 0,55 m
+    #
+    # Ele é vetado JUSTAMENTE quando gira — o dobro de `wz` das que passam, com
+    # folga parecida. O seguidor não tem culpa: o erro de trajeto dele nessa
+    # mesma corrida foi p50 de 8 mm e p90 de 6 cm, ou seja, ele estava em cima
+    # do plano. Quem proíbe a manobra de contorno é o reflexo.
+    #
+    # O conserto é dar DIREÇÃO ao reflexo, mantendo uma trava dura de contato:
+    #
+    #   PolygonApproach  projeta o CORPO pela velocidade comandada (v, wz), e
+    #                    portanto ACOMPANHA O ARCO — parede da qual o robô está
+    #                    virando para longe deixa de ser motivo de parada
+    #   PolygonStop      caixa estática pequena, a trava de "vou encostar
+    #                    agora", que vale mesmo com comando estranho ou nulo
+    polygons: ["PolygonApproach", "PolygonStop"]
+
+    PolygonApproach:
+      type: "polygon"
+      # O CORPO medido com trena em 29-07 (0,433 × 0,455), e não uma caixa de
+      # frenagem: quem cria a distância de frenagem aqui é o TEMPO, não o
+      # tamanho. Projetar o corpo é o que torna a conta interpretável.
+      # 🔴 CORPO + 3 cm EM TODA A VOLTA (14-08, 2ª leva). Era o corpo cru, e o
+      # corpo cru não protege a QUINA: a meia-diagonal vale 0,314 m contra
+      # 0,2275 de meia-largura, então girando perto de parede a quina sai da
+      # região vigiada. Foi assim que ele bateu, com o dono olhando.
+      points: "[[0.2465, 0.2575], [0.2465, -0.2575], [-0.2465, -0.2575], [-0.2465, 0.2575]]"
+      action_type: "approach"
+      # ⚠️ AQUI MORA A OBJEÇÃO ANTIGA A ESTE MODO, e ela continua verdadeira: o
+      # `approach` projeta pela velocidade COMANDADA, e neste robô o comando não
+      # diz a velocidade (pede 0,50, anda 0,298 — a placa escolhe o módulo).
+      #
+      # O que mudou é que agora dá para escolher o tempo pelo PIOR CASO em vez
+      # de fingir que o comando é a verdade. O menor comando que a cadeia
+      # entrega é o piso da movimentação, `v_piso = 0,203 m/s`. Para a projeção
+      # cobrir a distância de parada real mesmo nesse pior caso:
+      #
+      #   distância de parada + margem   0,268 + 0,085 = 0,353 m
+      #   tempo necessário no pior caso  0,353 / 0,203 = 1,74 s
+      #
+      # ⚠️ 1,8 s foi tentado primeiro (14-08) e REPROVOU na medida, por excesso:
+      # no comando típico (0,47 m/s) a projeção vale 0,85 m, 2,4x a distância de
+      # parada real, e o robô ficou 30 s parado numa quina que ele atravessaria
+      # — vetado por uma colisão prevista a quase um metro. Errar para mais não
+      # é grátis: com um robô que só faz arco, projeção longa demais veta a
+      # própria curva, que é a lição da caixa estática de 0,57.
+      #
+      # 0,75 s calibra a projeção pela distância de parada no comando TÍPICO:
+      #
+      #   0,47 m/s x 0,75 s = 0,35 m ~= parada medida + margem (0,353 m)
+      #
+      # ⚠️ E abaixo de ~0,47 de comando a projeção fica curta, porque a placa
+      # entrega 0,298 m/s independentemente do que se pede (decisão 020: o
+      # comando escolhe o RAIO, a placa escolhe o módulo). Quem cobre esse
+      # buraco hoje é o `PolygonStop` estático, e ele cobre pouco — 8,3 cm.
+      # É dívida ABERTA e está registrada na decisão 033: o conserto certo é
+      # normalizar o comando para o patamar real antes do reflexo (preservando
+      # a razão v/wz, que é o que a placa obedece), e aí a projeção passa a ser
+      # constante em metros. Não foi feito hoje por ser nó novo na cadeia que
+      # dirige.
+      time_before_collision: 0.75
+      simulation_time_step: 0.05
+      min_points: 2
+      visualize: True
+      polygon_pub_topic: "polygon_approach"
+      enabled: True
+
+    PolygonStop:
+      type: "polygon"
+      # ⚠️ A caixa estática CONTINUA existindo, mas mudou de papel: ela deixou
+      # de ser a frenagem (isso é do `PolygonApproach` agora) e virou a trava de
+      # CONTATO IMINENTE — a que vale quando o comando é zero, quando a
+      # projeção não se aplica, ou quando alguma coisa apareceu colada.
+      #
+      # 🔴 O BICO DE 0,57 SAIU (era o de 13 h atrás, decisão 030) e a frente
+      # voltou para 0,30. Isto NÃO é afrouxar: a frenagem mudou de dono.
+      #
+      #   antes   uma caixa só, 0,57 à frente, cobrindo coast + freio + corpo
+      #   agora   o `PolygonApproach` cobre coast + freio (e acompanha o arco);
+      #           esta caixa cobre só o CONTATO IMINENTE
+      #
+      # Por que a frente estática tinha de encolher: 0,57 m de caixa reta com
+      # um robô que só faz curva por arco veta a própria manobra de contorno —
+      # 549 amostras cortadas no Gazebo, todas com o robô girando. Manter os
+      # 0,57 seria manter o robô preso para sempre entre "o plano manda" e "o
+      # reflexo não deixa", que é o impasse que o dono descreveu na tela.
+      #
+      #   frente 0,30  ->  gatilho a 0,30 − 0,2165 = 0,0835 m do para-choque
+      #
+      # 8,3 cm é pouco para FREAR — e é para ser: quem freia é a projeção. Esta
+      # é a última linha, a que responde por "apareceu coisa colada e o comando
+      # não previa".
+      #
+      # Lateral: meia largura da caixa (0,2275) + 3 cm. NÃO mais que isso — no
+      # robô 1 o lateral a ±0,45 prendia o robô a 30% da velocidade em todo
+      # corredor (29 desacelerações num log de campo) e tiveram de encolher.
+      # ⚠️ E aqui a lateral tem um segundo dono: ela TEM de caber dentro do que
+      # o planejador considera passável (`robot_radius` 0,30 desde a 032),
+      # senão o Nav2 planeja um vão que o reflexo veta e o robô trava parado.
+      # Traseira: meia caixa + folga, porque a ré existe.
+      # 🔴 DISTÂNCIA MÍNIMA EM TODOS OS LADOS (14-08, 2ª leva). Pedido do dono
+      # depois da batida: *"essa segurança é pra TODOS os lados, uns mais que os
+      # outros, como a frente e as quinas da frente, mas todos os lados devem
+      # parar o robô quando chega a uma distância mínima"*.
+      #
+      # A caixa anterior (frente 0,30 · lateral 0,26) tinha DOIS furos:
+      #
+      #   lateral 0,26 < 0,2275 + margem   -> parede de raspão passava
+      #   e a QUINA do corpo chega a 0,314 -> girando, ela saía da caixa
+      #
+      # Agora a caixa é o CORPO MEDIDO + margem, lado a lado:
+      #
+      #   frente     0,2165 + 0,133 = 0,35   (mais, como ele pediu; o resto da
+      #                                       frenagem é do PolygonApproach)
+      #   lateral    0,2275 + 0,050 = 0,2775
+      #   traseira   0,2165 + 0,050 = 0,2665 (a ré existe e olha para trás)
+      #
+      # Quina da frente: hipotenusa 0,447 m — é o ponto mais protegido, que é o
+      # que ele pediu explicitamente.
+      #
+      # ⚠️ E o `robot_radius` do planejador subiu junto (0,26 -> 0,28), senão
+      # volta o impasse: reflexo exigindo mais folga do que o planejador
+      # garante = robô parado entre os dois.
+      #
+      # ══════════════════════════════════════════════════════════════════════
+      # 🔴 14-08 (3ª leva): É ESTA CAIXA QUE TRAVA O ROBÔ NA PORTA, e a culpa
+      # é da QUINA DE TRÁS. Medido nas 10 corridas do A/B da histerese
+      # (`docs/dados/2026-08-14-porta-gazebo/ab_*`), decisão 041.
+      #
+      # Quem veta é o `PolygonStop`, não o `PolygonApproach` — o
+      # `/collision_monitor_state` dos bags é explícito: nas 4 travadas o STOP
+      # segura 61 a 64 s e o APPROACH aparece 0,0–0,1 s. A 040 acusou o
+      # `PolygonApproach`, e a 040 estava errada.
+      #
+      # Nas 4 poses de travada, com o robô a −23° a −27° cruzando o vão:
+      #
+      #     folga do CORPO até a jamba de cima    +0,049 a +0,069 m  (cabe)
+      #     folga desta CAIXA na mesma pose       −0,017 a +0,002 m  (veta)
+      #
+      # O corpo tinha 5 a 7 cm sobrando e a caixa não tinha nenhum. Nenhuma
+      # das 4 chegou a encostar em nada.
+      #
+      # 🔴 A RAZÃO É ARITMÉTICA, e é a armadilha de somar margem por FACE:
+      # somar 5 cm em cada face de um retângulo empurra a QUINA em 5·√2 ≈ 7,1
+      # cm. A caixa de cima anunciava "margem de 5 cm" e entregava 7,1 cm de
+      # margem na quina — justo o canto que sobra para a jamba quando o robô
+      # cruza torto. Num vão de 0,90 m com um corpo de 0,455, o orçamento
+      # inteiro por lado é 22,3 cm, e a 25° o corpo já gasta 17 cm dele.
+      #
+      # A margem passa a ser medida NA QUINA, 3 cm, que é a mesma do
+      # `PolygonApproach`:
+      #
+      #     por face 0,021 m  ->  na quina 0,021·√2 = 0,030 m
+      #     traseira  0,2165 + 0,021 = 0,2375
+      #     lateral   0,2275 + 0,020 = 0,2475
+      #     quina     0,3466 contra 0,3141 do corpo  =  +3,3 cm
+      #
+      # Pior folga nas mesmas 4 poses: **+0,022 m** (era −0,017).
+      #
+      # ⚠️ A FRENTE NÃO MUDA e isso é medida, não deferência: varrida de 0,35 a
+      # 0,2165, a folga na jamba não se move 1 mm — quem encosta é a quina de
+      # trás. O pedido do dono depois da batida ("mais na frente e nas quinas
+      # da frente") fica inteiro de pé.
+      #
+      # 🔴🔴 REVERTIDO NO MESMO DIA — O ROBÔ BATEU A TRASEIRA, COM O DONO
+      # OLHANDO. A caixa encolhida ficou no ar por três levas, NUNCA mudou o
+      # placar (3/5 antes, 3/5 depois), e na primeira corrida que o dono rodou
+      # à mão ele girou na garganta e encostou a quina de trás na ombreira.
+      #
+      # A medida do log dessa corrida (`seguidor_2026-08-14_161705.csv`):
+      #
+      #   pior folga do CORPO até a jamba      +0,025 m  (2,5 cm)
+      #   1º veto da caixa ENCOLHIDA           t = 53,0 s
+      #   1º veto desta caixa (a de baixo)     t = 52,2 s   <- 0,8 s ANTES
+      #
+      # A placa segura a saída cheia 0,52 s depois do corte (decisão 020).
+      # **0,8 s de antecedência é a diferença entre parar antes e parar em
+      # cima**, e foi exatamente essa margem que a 041 gastou.
+      #
+      # ⚠️ O ERRO DE MÉTODO, e ele é pior que o número: a 041 trocou margem de
+      # segurança por uma hipótese de passagem que ela mesma registrou como
+      # NÃO VERIFICADA, e depois de a verificação REPROVAR (3/5, sem mudança)
+      # a troca ficou no ar assim mesmo. Quem passou a caber na porta foi o
+      # plano suavizado (042), que não gastou segurança nenhuma.
+      #
+      # 🔵 O que a 041 achou de verdade e continua valendo como CONHECIMENTO:
+      # somar margem por FACE empurra a QUINA em margem·√2 (5 cm de face =
+      # 7,1 cm de quina). Isso é verdade e está medido. O que NÃO se segue
+      # dali é que os 7,1 cm sobrem — eles são o que para o robô a tempo.
+      # ══════════════════════════════════════════════════════════════════════
+      points: "[[0.35, 0.2775], [0.35, -0.2775], [-0.2665, -0.2775], [-0.2665, 0.2775]]"
+      action_type: "stop"
+      # 2 pontos, não 1: ponto solto é ruído. O Mid-360 entrega 20 000 pontos
+      # por quadro, então exigir 2 não atrasa nada real.
+      min_points: 2
+      visualize: True
+      polygon_pub_topic: "polygon_stop"
+      enabled: True
+
+    observation_sources: ["livox"]
+    livox:
+      type: "pointcloud"
+      topic: "/livox/pontos"
+      # Mesma faixa de altura do costmap, e pelo mesmo motivo medido: abaixo
+      # de ~0,05 m o próprio chão vira obstáculo (em 05-08 a nuvem mostrou
+      # retornos errando até 3,8 cm em incidência rasante). 0,10 dá 2,6x de
+      # margem. Acima de 0,50 o robô passa por baixo — ele tem 0,30 m de alto.
+      min_height: 0.10
+      max_height: 0.50
+      enabled: True

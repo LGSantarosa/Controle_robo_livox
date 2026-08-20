@@ -1,0 +1,25 @@
+/heading_controller:
+  ros__parameters:
+    a_dec: 0.3
+    bitola: 0.27
+    freio_ligado: true
+    freio_pico_min: 0.6
+    freio_solta_em: 0.8
+    freio_teto_s: 1.5
+    limiar_pivo: 1.4
+    margem_piso: 0.03
+    pivo_a_dec: 0.6
+    pivo_max_pulsos: 1
+    pivo_teto_tempo: 20.0
+    pivo_tolerancia: 0.105
+    plantao_s: 0.5
+    start_type_description_service: true
+    taxa: 20.0
+    timeout_alvo: 1.0
+    tolerancia_entra_rumo: 0.28
+    tolerancia_rumo: 0.087
+    use_sim_time: true
+    v_max: 0.5
+    wz_max: 1.0
+    zona_morta: 0.1
+

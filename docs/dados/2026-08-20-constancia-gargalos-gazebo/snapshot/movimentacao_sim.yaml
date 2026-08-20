@@ -1,0 +1,144 @@
+# Movimentação no SIMULADOR — os números verdadeiros DE LÁ.
+#
+# O Gazebo obedece qualquer comando; a placa real não. Por isso o simulador
+# ganhou uma placa FINGIDA (`robot_base/placa_simulada`) que engole comando de
+# roda pequeno demais — e estes números são a crença do controlador sobre ela.
+#
+# Mantenha `zona_morta` igual ao argumento `zona_morta` do `sim.launch.py`:
+# assim o controlador sabe exatamente o que o atuador faz. Deixá-los
+# DIFERENTES de propósito é um teste válido e interessante — é o caso "a
+# medição estava errada", e mostra o quanto o robô aguenta crença errada.
+
+heading_controller:
+  ros__parameters:
+    # 🔴 QUANTO corrigir de rumo (038). A lei é `wz = √(2·a_dec·|e|)`, e a raiz
+    # é íngreme perto de zero: com 0,3, um erro de 6° pedia 0,245 rad/s. Como a
+    # placa segura 0,52 s depois do corte, essa correção varre ~7° DEPOIS do
+    # comando zerar — passa do ponto sozinha e a correção seguinte vem para o
+    # outro lado. É o S que o dono viu na reta em 13-08, e ele só apareceu
+    # quando o ganho da cadeia (038) fez o robô OBEDECER: antes a planta
+    # engolia o excesso, com 26,9°/m de guinada desperdiçada contra 53,5°/m
+    # depois.
+    #
+    # ⏳ A PRÓXIMA TENTATIVA, E ELA NÃO FOI RODADA: baixar para 0,10 (6° pedem
+    # 0,11 rad/s em vez de 0,245; 57° ainda pedem 0,45, então a porta continua
+    # sendo corrigida). Fica em 0,3 porque 0,3 é o que a corrida BOA de 13-08
+    # usou — `corrida-com-ganho.csv`, 30,8 s, zero ré, zero reflexo — e valor
+    # não medido não entra na frente de valor medido.
+    a_dec: 0.3          # planta degradada de propósito (ver DIARIO 07-27)
+    wz_max: 1.0
+    v_max: 0.5
+
+    zona_morta: 0.10    # igual à da placa fingida no sim.launch.py
+    margem_piso: 0.03
+    bitola: 0.270       # MEDIDA COM TRENA 2026-07-29 (era 0.20 estimada)
+
+    # 🔴 ZONA MORTA DE RUMO — 0,02 rad (1,1°) era menor que o atuador (038).
+    #
+    # A menor virada que esta máquina EXECUTA é 14–28°, medido na 037 com o
+    # freio de giro ligado (63,8° sem ele). Perseguir 1,1° é perseguir um erro
+    # que o atuador não sabe resolver: cada tentativa passa do ponto e vira a
+    # correção seguinte. Com a cadeia entregando 45% do pedido isso ficava
+    # escondido — a planta filtrava o rabisco. Com o ganho corrigido (038) o
+    # robô passou a OBEDECER, e o zigue-zague apareceu na tela: o desperdício
+    # de guinada dobrou, de 26,9°/m para 53,5°/m, e o dono viu na hora
+    # ("não quero essa porra desse S nas retas").
+    #
+    # ⚠️ 0,12 rad (6,9°) FOI TENTADO EM 13-08 E FALHOU: o robô deixou de afinar
+    # o rumo na chegada da porta, entrou torto, e o reflexo cortou 77% das
+    # amostras — não chegou ao alvo (`corrida-zona-morta-012.csv`). Reta e
+    # porta puxam para lados opostos com um knob global: longe e rápido, a
+    # tolerância ajuda; perto e devagar, ela cega. O que sobrou como conserto
+    # do S foi `a_dec` — QUANTO corrigir, não QUANDO.
+    # 🔴 14-08 (3ª leva): A HISTERESE DO GIRO — o conserto do zigue-zague.
+    #
+    # `tolerancia_rumo` virou o limiar de SAÍDA e ganhou um par de ENTRADA.
+    # Com um limiar só, em 1,15°, a lei pedia correção 12 a 24× mais fina do
+    # que a placa sabe entregar (menor golpe 14–28°, medido na 037 com freio)
+    # e o robô entrava em ciclo-limite. O período disso é da PLANTA: relé com
+    # tempo morto de 0,52 s oscila em ~4L = 2,08 s, e as cinco corridas de hoje
+    # mediram 2,0–2,8 s **sem mudar** enquanto lei, ganho, mira, pivô e frame
+    # mudavam em volta.
+    #
+    #   entra a girar   > 16°   da ordem do menor golpe executável
+    #   só para         <  5°   aperta o alvo sem reengatar por ruído
+    #
+    # O robô 1 chegou em 16°/3° por experiência própria (*"63% dos giros eram
+    # VAI-E-VOLTA, +14/−14 que se cancelam"*). Os 16° daqui saíram da medida
+    # da NOSSA placa. As duas baterem por caminhos independentes é o que
+    # sustenta o número.
+    tolerancia_rumo: 0.087        # rad = 5°, a SAÍDA
+    tolerancia_entra_rumo: 0.28   # rad = 16°, a ENTRADA
+    taxa: 20.0
+    timeout_alvo: 1.0
+    plantao_s: 0.5
+
+    # Erro de rumo acima do qual ele PARA para virar no eixo, em vez de arcar.
+    #
+    # 🔴 12-08: era 0.26 (~15°), o default do nó, e isso TRAVAVA a navegação. A
+    # cenoura do seguidor fica a 0,37 m à frente, e com mira tão curta um erro
+    # de 15° é o estado NORMAL de quem segue um plano — não a exceção. O robô
+    # entrava em pivô, ficava com v=0 por ~15 s, fechava, andava alguns
+    # centímetros e repivotava: 11 pivôs em 75 s e 1 amostra de velocidade
+    # linear em 1500. Medido em docs/dados/2026-08-12-sim-meu-mapa/.
+    #
+    # 0.79 rad (45°) foi a tentativa seguinte, e ela FALHOU pelo mesmo motivo:
+    # os pivôs caíram de 11 para 10, e o robô continuou parado. A leitura de
+    # A leitura da 4ª leva mostrou por quê: o problema não era o limiar estar
+    # baixo, era a
+    # manobra não fechar em ângulo NENHUM contra esta placa (varredura de
+    # 93–101° depois do corte, contra 25–32° previstos). Os 28 disparos das
+    # quatro corridas tinham erro entre 35° e 81°: nenhum deles era executável.
+    #
+    # 🟢 3.20 rad DESDE a 4ª leva de 12-08 (decisão 023) — acima de π, NUNCA
+    # dispara. O racional completo está no default do `heading_controller.py`,
+    # que este arquivo agora só acompanha. Mantido explícito aqui de propósito:
+    # este é o perfil onde o número errado foi medido, e ele merece carregar a
+    # própria correção.
+    # 🔴 PIVÔ RELIGADO EM 14-08, E SÓ PARA ERRO GRANDE (decisão 036).
+    #
+    # Pedido do dono, vendo o robô fazer balão para seguir a linha: *"o pivô
+    # ainda faz falta, ele fica fazendo balão e se fudendo pra seguir a linha...
+    # caso o ângulo da linha comparado com o robô esteja a 80 graus de erro ele
+    # para e faz o pivô e acerta, pro balão poder arrumar"*.
+    #
+    # A decisão 023 tirou o pivô do caminho, e o argumento dela CONTINUA VÁLIDO:
+    # a placa entrega um módulo de giro só (2,204 rad/s, medido) e segura a
+    # saída cheia por 0,52 s depois do corte, varrendo 93–101° — número que NÃO
+    # depende do wz do corte. Os 28 disparos de 12-08 tinham erro entre 35° e
+    # 81°: nenhum era executável com um golpe de ~95°.
+    #
+    # O que muda agora é ONDE ele é usado. A manobra não ficou controlável —
+    # ela continua sendo um quantum grosso de ~95°. Só que para erro de 80°+ o
+    # quantum É a manobra certa, e o resto o arco fecha:
+    #
+    #   erro < 80°   lei contínua (arco), que assenta em 0,5–0,6° (medido 023)
+    #   erro > 80°   UM pulso de pivô, ~95°, e devolve para o arco
+    #
+    # `pivo_max_pulsos: 1` é o que impede a volta do ciclo-limite de 12-08
+    # (±50–60°, período 5,5 s): com 6 pulsos a lei fica caçando o alvo com um
+    # martelo de 95°. Um pulso é "vira grosso e sai da frente".
+    # 🔴 14-08: DUAS TENTATIVAS DE RELIGAR O PIVÔ, AS DUAS REPROVADAS.
+    #
+    # 2ª leva — baixei o gatilho para 34° com `pivo_a_dec: 6.6`, derivado da
+    # varredura freada da 037 (14–28°). Resultado medido na corrida G:
+    # 150–310° por pulso, p50 170°. O dono: *"ele ta metendo um monte de 180"*.
+    #
+    # 4ª leva — achei o mecanismo: o `heading_controller` dava `return` dentro
+    # do pivô ANTES do bloco do freio de giro. O pivô era o ÚNICO caminho da
+    # cadeia que girava sem freio. **Esse conserto ficou** (é correto e vale
+    # por si). Mas ele NÃO salvou a manobra — corrida H, já com freio:
+    #
+    #     varredura por pulso   91,2°  e  131,0°
+    #     a_dec real implícito  0,79 rad/s²   (contra os 6,6 que eu supus)
+    #     golpe mínimo          ~132°
+    #
+    # ➡️ O `pivo_a_dec: 0.6` original estava praticamente certo o tempo todo, e
+    # a decisão 023 fica de pé: **esta manobra não sabe fazer ângulo pequeno**,
+    # nem com o freio de giro por cima. Para servir à porta ela precisaria de
+    # freio PRÓPRIO dentro do pulso, não de outro valor de parâmetro.
+    #
+    # Fica em 80°, que é onde o dono a pediu na 036 e onde ela ao menos não
+    # dispara sozinha. Bancada para reabrir isto: `tools/banco/freio_de_giro.py`.
+    limiar_pivo: 1.40          # rad = 80°
+    pivo_max_pulsos: 1         # UM golpe grosso, nunca uma perseguição

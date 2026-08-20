@@ -1,0 +1,33 @@
+/compensador_rumo:
+  ros__parameters:
+    adapta: false
+    adapta_desvio_max: 0.5
+    adapta_t: 8.0
+    adapta_v_min: 0.05
+    curv_frente: -0.817
+    curv_medido_em: HERDADO
+    curv_re: -0.098
+    freio_linear: true
+    freio_pico_min: 0.12
+    freio_solta_em: 0.25
+    freio_teto_s: 1.0
+    freio_v_comando: 0.5
+    ganho_ff: 0.45
+    ganho_ff_passagem: 0.8
+    ganho_ff_passagem_timeout: 0.25
+    ganho_wz: 0.45
+    int_max: 0.6
+    ki: 0.12
+    kp: 0.25
+    limiar_curva: 0.05
+    preditor: false
+    preditor_atraso: 0.94
+    preditor_ganho: 1.0
+    preditor_max: 0.35
+    segura_rumo: false
+    start_type_description_service: true
+    use_sim_time: true
+    validade_pose: 0.5
+    wz_cmd_max: 2.2
+    wz_max: 0.6
+

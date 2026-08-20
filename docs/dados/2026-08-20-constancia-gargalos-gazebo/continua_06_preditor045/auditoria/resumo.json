@@ -1,0 +1,41 @@
+{
+  "inicio_utc": "2026-08-20T15:35:40.898535+00:00",
+  "ciclos_pedidos": 3,
+  "teto_por_perna_s": 120.0,
+  "ida": [
+    10.65,
+    6.6
+  ],
+  "volta": [
+    2.0,
+    5.0
+  ],
+  "pernas": [
+    {
+      "perna": 1,
+      "nome": "ida",
+      "alvo": [
+        10.65,
+        6.6
+      ],
+      "status": 4,
+      "sucesso": true,
+      "aprovada": false,
+      "duracao_s": 67.092,
+      "final": [
+        10.600575241571628,
+        6.402464278433631
+      ],
+      "dist_final_m": 0.20362506731846383,
+      "paradas_reflexo": 11,
+      "tempo_reflexo_stop_s": 14.425,
+      "res": 0,
+      "tempo_re_s": 0.0,
+      "amostras_odom": 3298,
+      "csv": "perna_01_ida.csv"
+    }
+  ],
+  "sucessos": 1,
+  "falhas": 0,
+  "aprovadas": 0
+}

@@ -1,0 +1,18 @@
+{
+  "inicio_utc": "2026-08-20T15:16:51.372744+00:00",
+  "ciclos_pedidos": 3,
+  "teto_por_perna_s": 120.0,
+  "ida": [
+    10.65,
+    6.6
+  ],
+  "volta": [
+    2.0,
+    5.0
+  ],
+  "pernas": [],
+  "interrompido": true,
+  "sucessos": 0,
+  "falhas": 0,
+  "aprovadas": 0
+}
