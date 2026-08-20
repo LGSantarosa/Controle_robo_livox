@@ -142,6 +142,50 @@ class PathFollower(Node):
             # A queixa dele ("mira curta em 97% da corrida") pode ser legítima
             # no corredor e continua registrada. Se for atacada, que seja com
             # A/B próprio, sozinha, e no robô — que é onde a porta importa.
+            #
+            # 🔴 20-08, MAPA REAL (`sala_andar3`): A BANDA DE 1 cm CHAVEIA, e o
+            # chaveamento é o S do corredor. Com `estica 0,07` e `encolhe 0,08`
+            # a histerese tem 1 cm, e o desvio lateral passeia por ela o tempo
+            # todo. Medido em `seguidor_2026-08-20_160451.csv`, corredor RETO
+            # (o plano mal se move: `alvo_y` de −0,04 a −0,18):
+            #
+            #     t=21,1  desvio  -2,1 cm   mira 1,00
+            #     t=22,4  desvio  -1,2 cm   mira 0,37   <- encolheu
+            #     t=23,7  desvio  +4,5 cm   mira 1,00   <- esticou
+            #     t=25,0  desvio +14,1 cm   mira 0,37   <- encolheu
+            #     t=26,3  desvio  +3,1 cm   mira 0,37   yaw -26,9°
+            #
+            # Cada troca move o alvo de 0,37 m para 1,00 m e o rumo pedido
+            # salta junto: 24 inversões de sentido de giro em 90 s, ±26° num
+            # corredor reto. O S não estava no plano desta vez — estava aqui.
+            #
+            # ⚠️ A QUEIXA DO CODEX ERA LEGÍTIMA e o conserto dele não: ele
+            # alargou OS DOIS limiares (0,15/0,20), o que mantém a banda
+            # estreita E enfraquece a proteção da quina da porta. O defeito não
+            # é o valor de encolher, é a BANDA.
+            #
+            # 🔴 0,03 FOI TESTADO E REPROVOU — e o diagnóstico acima estava
+            # ERRADO na peça central. Este limiar NÃO mede o erro do robô: o
+            # que ele compara é `desvio_da_corda(caminho, i0, longo)`, ou seja,
+            # o quanto O PLANO se afasta da reta no próximo metro. É medida de
+            # curvatura do plano, não de seguimento.
+            #
+            # Baixar para 0,03 passou a exigir plano quase perfeitamente reto,
+            # e no mapa real o plano tem o serrilhado de 5 cm do planner. Medido
+            # em `seguidor_2026-08-20_161019.csv`:
+            #
+            #     mira curta em 80% da corrida, mediana 0,37 m
+            #     inversões de giro 15,2/min  (com 0,07 eram 16,0/min)
+            #
+            # O S não melhorou, e a mira ficou presa no curto — que é ganho
+            # alto: 5 cm de desvio com alvo a 0,37 m pedem 7,7° de guinada.
+            #
+            # ⚠️ E ISTO EXPLICA A QUEIXA DO CODEX de outro jeito: "a mira ficou
+            # curta em 97% da corrida (...) o plano suave fazia um meandro
+            # largo, e a regra o confundia com manobra". Ele estava vendo o
+            # serrilhado do plano derrubar a mira. O conserto dele (alargar os
+            # dois limiares) tolerava o serrilhado às custas da proteção da
+            # porta; o conserto certo é ainda desconhecido e está na fila.
             ('mira_tol_estica', 0.07),
             ('mira_tol_encolhe', 0.08),
             ('mira_rumo_estica_deg', 3.0),
