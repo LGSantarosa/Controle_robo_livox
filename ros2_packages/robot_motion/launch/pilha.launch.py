@@ -462,6 +462,16 @@ def generate_launch_description():
         # Exposto em 14-08 para o A/B da histerese: sem argumento, comparar
         # com/sem exigia editar YAML entre corridas — e config editada à mão no
         # meio de um protocolo é como se perde a condição inicial idêntica.
+        # 🔴 20-08: a retencao da placa, para o rumo descontar o giro na fila.
+        # Vazio = usa o YAML (0,0 = desligado). No ROBO o valor medido e 0,52
+        # (decisao 020, confirmado em 20-08: 29,9 graus de sobra depois do erro
+        # zerar, contra 29,8 previstos por 1,0 rad/s x 0,52 s). No GAZEBO a
+        # retencao medida e 0,20 s — o simulador NAO reproduz a placa, e por
+        # isso este defeito nunca apareceu la.
+        DeclareLaunchArgument(
+            'retencao_giro_s', default_value='',
+            description='[s] retencao da placa descontada do erro de rumo. '
+                        'Vazio = YAML. Robo: 0.52. Gazebo: 0.20'),
         DeclareLaunchArgument(
             'tolerancia_entra_rumo', default_value='',
             description='[rad] limiar de ENTRADA do giro (histerese). Vazio = '
@@ -647,7 +657,11 @@ def generate_launch_description():
                          *([{'tolerancia_entra_rumo': ParameterValue(
                              LaunchConfiguration('tolerancia_entra_rumo'),
                              value_type=float)}]
-                           if _passou('tolerancia_entra_rumo') else [])],
+                           if _passou('tolerancia_entra_rumo') else []),
+                         *([{'retencao_giro_s': ParameterValue(
+                             LaunchConfiguration('retencao_giro_s'),
+                             value_type=float)}]
+                           if _passou('retencao_giro_s') else [])],
              remappings=[('/hoverboard_base_controller/cmd_vel',
                           '/auto_vel_raw')]),
 

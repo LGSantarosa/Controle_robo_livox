@@ -32,6 +32,7 @@ from std_msgs.msg import Float64
 from robot_motion.lei_de_freio import FreioDeGiro
 from robot_motion.lei_de_pivo import DESISTIU, PRONTO, PivoPorCorte
 from robot_motion.lei_de_rumo import GatilhoDeGiro
+from robot_motion.lei_de_rumo import erro_antecipado
 from robot_motion.lei_de_rumo import (
     comando,
     comando_de_re,
@@ -58,6 +59,31 @@ class HeadingController(Node):
             # Regra de ouro medida: errar pra BAIXO é de graça (sobrepasso
             # zero, 0,3 s a mais); errar pra cima traz o S de volta.
             ('a_dec', 0.3),
+            # 🔴 20-08: A RETENCAO DA PLACA ENTRA NA CONTA DO ERRO (decisão
+            # 020). Zerar o comando não para o giro: a placa segura a saída por
+            # ~0,52 s, e a lei de rumo via só o erro de AGORA — mandava girar
+            # até um alvo que a inércia já ia alcançar sozinha.
+            #
+            # Medido no robô, corredor depois da porta
+            # (`seguidor_2026-08-20_172828.csv`, 24 cruzamentos de zero):
+            #
+            #     varreu 29,9° DEPOIS que o erro de rumo ja tinha zerado
+            #     e a conta fecha: 1,0 rad/s x 0,52 s = 0,52 rad = 29,8°
+            #
+            # Cada correção deixava ~30° de sobra, que virava o erro seguinte,
+            # maior: o desvio lateral p90 foi 13 -> 30 -> 46 cm e o yaw chegou
+            # a varrer 356° numa janela de 10 s.
+            #
+            # ⚠️ NAO E O `FreioDeGiro`, e a diferença é o pedido do dono. O
+            # freio responde com contra-torque CHEIO e faz o robô dançar; aqui
+            # o erro previsto entra na `wz_de_frenagem` de sempre, que é
+            # contínua — o comando DECAI até zero e o contra-giro, se houver, é
+            # proporcional ao excesso.
+            #
+            # 0,0 DESLIGA e é o default: quem não mediu a retenção da própria
+            # máquina não deve descontar nada. No robô, 0,52 é o valor medido.
+            ('retencao_giro_s', 0.0),
+            ('retencao_teto_deg', 60.0),
             ('wz_max', 1.0),
             ('v_max', 0.5),
             # Zona morta da RODA. NÃO MEDIDA — ensaios `zona_morta_*`.
@@ -299,7 +325,12 @@ class HeadingController(Node):
             return self.para('alvo de rumo venceu')
 
         yaw = yaw_de(self.pose.pose.pose.orientation)
-        erro = norm_ang(self.rumo_alvo - yaw)
+        erro_cru = norm_ang(self.rumo_alvo - yaw)
+        # O erro que a lei enxerga já vem sem o giro que está na fila. Ver o
+        # bloco de `retencao_giro_s` acima; com ele em 0,0 isto é identidade.
+        erro = erro_antecipado(
+            erro_cru, self.wz_real, self.par['retencao_giro_s'],
+            teto=math.radians(self.par['retencao_teto_deg']))
 
         # ---- modo ré: reta, sem giro, e sem passar pela lei de rumo ----
         #

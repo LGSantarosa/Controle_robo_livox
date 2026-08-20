@@ -50,6 +50,16 @@ MUNDO_POSE="pose_x:=0.0 pose_y:=0.0 pose_yaw:=0.0"
 # o cutucão e não assentou — "a boba está mandando, INSTÁVEL". Isso não afeta o
 # feedforward, mas é o pano de fundo de qualquer coisa que sair torta hoje.
 CURV="curv_frente:=-0.8365 curv_medido_em:=2026-08-20"
+# 🔴 20-08: a retenção da placa entra no cálculo do erro de rumo. Zerar o
+# comando não para o giro — a placa segura a saída ~0,52 s (decisão 020), e a
+# lei de rumo via só o erro de agora. Medido nesta máquina, no corredor depois
+# da porta: 29,9° varridos DEPOIS do erro zerar, contra 29,8° previstos por
+# 1,0 rad/s × 0,52 s. Cada correção deixava essa sobra, que virava o erro
+# seguinte — o desvio lateral cresceu 13 → 30 → 46 cm e o yaw varreu 356°.
+#
+# ⚠️ É do ROBÔ, não do simulador: no Gazebo a retenção medida é 0,20 s, e foi
+# por isso que este defeito nunca apareceu lá.
+RETENCAO="retencao_giro_s:=0.52"
 
 export ROS_DOMAIN_ID=42
 mkdir -p "$LOGS"
@@ -153,7 +163,8 @@ echo "   ⚠️ a bateria do NUC é OUTRA e não tem telemetria — olhe nela."
 if [ "$MODO" = nav2 ]; then
   echo "== 2/5 Nav2 + seguidor =="
   setsid nohup ros2 launch robot_motion pilha.launch.py sim:=false gui:=false rviz:=false \
-      mapa:="$MAPA" localizacao:=amcl $MUNDO_POSE $CURV log_dir:="$HOME/logs_robo2" \
+      mapa:="$MAPA" localizacao:=amcl $MUNDO_POSE $CURV $RETENCAO \
+      log_dir:="$HOME/logs_robo2" \
       > "$LOGS/pilha.log" 2>&1 < /dev/null &
   for i in $(seq 1 45); do
     grep -q "Managed nodes are active" "$LOGS/pilha.log" && break

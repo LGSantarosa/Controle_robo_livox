@@ -15,6 +15,63 @@ def norm_ang(a):
     return math.atan2(math.sin(a), math.cos(a))
 
 
+def erro_antecipado(erro, wz_real, retencao, teto=math.radians(60.0)):
+    """Erro de rumo DESCONTANDO o giro que já está na fila [rad].
+
+    Esta máquina não para de girar quando o comando zera: a placa segura a
+    saída por `retencao` segundos (0,52 s, decisão 020). O que a lei de rumo
+    via era o erro de AGORA, e o robô ainda tinha um giro inteiro para varrer
+    depois — então ela mandava girar até um alvo que a inércia já ia alcançar
+    sozinha, e a sobra virava o erro do outro lado.
+
+    Medido no robô em 20-08, no corredor depois da porta
+    (`seguidor_2026-08-20_172828.csv`), sobre 24 cruzamentos de zero do erro:
+
+        varreu 29,9 graus DEPOIS que o erro de rumo ja tinha zerado
+        |wz| no trecho: p50 0,02 | p90 1,25 | pico 4,16 rad/s
+
+    E a conta fecha: 1,0 rad/s x 0,52 s = 0,52 rad = 29,8 graus. A sobra nao
+    e mistério nem atrito — e a retencao, e ela e previsível.
+
+    Cada correção deixava ~30 graus de sobra, que viravam o erro da correção
+    seguinte, maior que a anterior: realimentação positiva. Medido na mesma
+    corrida, por janela de 10 s, o desvio lateral p90 foi 13 -> 30 -> 46 cm e a
+    variação de yaw chegou a 356 graus — a volta completa que o dono viu.
+
+    ⚠️ POR QUE ISTO E NAO O `FreioDeGiro`. O freio (037) responde com
+    contra-torque CHEIO (`-sentido * wz_comando`), porque no pivô PARADO a
+    placa só entrega um módulo e não há o que modular. Aplicado ao giro
+    ANDANDO, esse pulso é o que faz o robô dançar — palavras do dono, que
+    vetou a ideia antes de qualquer linha ser escrita: *"ao invés de ele ir
+    baixando aos poucos, um freio, ele chegava no ponto, aí soltava um pulso
+    forte pro outro lado, aí o robô ficava dançando"*.
+
+    Aqui não há pulso: o erro previsto entra na `wz_de_frenagem` de sempre, que
+    é uma raiz contínua. O comando DECAI até zero conforme a inércia cobre o
+    que falta, e se o desconto passar do alvo o giro contrário que aparece é
+    proporcional ao excesso — nunca cheio. É o que o dono pediu: *"ir baixando
+    a velocidade pra alcançar o ângulo correto"*.
+
+    O `teto` limita o quanto a previsão pode valer. Sem ele, um pico de
+    `wz_real` (o p90 medido foi 1,25 rad/s, com pico de 4,16) descontaria mais
+    de 120 graus e a lei mandaria girar forte para o lado contrário — trocaria
+    uma instabilidade por outra. 60 graus cobre a sobra medida com o dobro de
+    folga.
+
+    `retencao = 0` devolve o erro intacto: é o comportamento anterior, e é o
+    default de quem não mediu a retenção da sua máquina.
+    """
+    erro = norm_ang(erro)
+    if retencao <= 0.0:
+        return erro
+    if not math.isfinite(wz_real):
+        return erro
+    previsao = wz_real * retencao
+    limite = max(0.0, teto)
+    previsao = max(-limite, min(limite, previsao))
+    return norm_ang(erro - previsao)
+
+
 def wz_de_frenagem(erro, a_dec, wz_max):
     """Giro que respeita a própria frenagem.
 

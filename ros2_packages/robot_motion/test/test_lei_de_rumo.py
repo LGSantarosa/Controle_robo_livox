@@ -12,6 +12,7 @@ from robot_motion.lei_de_rumo import (
     ajusta_para_zona_morta,
     comando,
     comando_de_re,
+    erro_antecipado,
     linear_de_avanco,
     norm_ang,
     piso_de_linear,
@@ -394,3 +395,60 @@ def test_sem_o_argumento_a_lei_ANTIGA_e_preservada():
                     zona_morta=0.02, bitola=0.27, margem_piso=0.05,
                     tolerancia=math.radians(1.15))
     assert wz == 0.0 and v == pytest.approx(0.4)
+
+
+# ── antecipação da retenção da placa (20-08, medido no robô) ─────────────────
+
+def test_retencao_zero_e_identidade():
+    """Quem não mediu a retenção não desconta nada — o default não muda a lei."""
+    for e in (0.0, 0.3, -1.2, 3.0):
+        assert erro_antecipado(e, 1.0, 0.0) == pytest.approx(norm_ang(e))
+
+
+def test_desconta_o_giro_que_ja_esta_na_fila():
+    """1,0 rad/s x 0,52 s = 0,52 rad: o erro que sobra é o de agora menos isso.
+
+    É a conta que fecha com o medido no robô — 29,9° de sobra depois do erro
+    zerar, contra 29,8° previstos.
+    """
+    assert erro_antecipado(0.52, 1.0, 0.52) == pytest.approx(0.0, abs=1e-9)
+    assert erro_antecipado(1.0, 1.0, 0.52) == pytest.approx(0.48, abs=1e-9)
+
+
+def test_girando_para_o_lado_certo_o_comando_CAI_a_zero():
+    """O ponto todo: o comando decai sozinho, sem pulso contrário.
+
+    Com o robô girando na direção do alvo, o erro previsto encolhe e a
+    `wz_de_frenagem` — que é contínua — vai junto até zero.
+    """
+    a_dec, wz_max = 0.3, 1.0
+    anterior = None
+    for wz_real in (0.0, 0.3, 0.6, 0.9, 1.0):
+        e = erro_antecipado(0.52, wz_real, 0.52)
+        wz = wz_de_frenagem(e, a_dec, wz_max)
+        if anterior is not None:
+            assert wz <= anterior + 1e-9, 'o comando tem de CAIR, nunca subir'
+        anterior = wz
+    assert wz == pytest.approx(0.0, abs=1e-9)
+
+
+def test_se_passar_do_alvo_o_contra_giro_e_PROPORCIONAL_nao_pulso():
+    """A diferença para o `FreioDeGiro`, e é o pedido do dono.
+
+    Girando muito mais do que o erro pede, o comando inverte — mas suave, e
+    bem abaixo do teto. Contra-torque cheio seria `wz_max`.
+    """
+    e = erro_antecipado(0.10, 1.0, 0.52)      # sobra ~0,42 rad para o outro lado
+    wz = wz_de_frenagem(e, 0.3, 1.0)
+    assert wz < 0.0, 'tem de inverter'
+    assert abs(wz) < 0.6, f'contra-giro alto demais ({abs(wz):.2f}) — virou pulso'
+
+
+def test_teto_impede_que_um_pico_de_wz_vire_instabilidade():
+    """O pico medido no robô foi 4,16 rad/s; sem teto isso descontaria 124°."""
+    e = erro_antecipado(0.0, 4.16, 0.52)
+    assert abs(e) <= math.radians(60.0) + 1e-9
+
+
+def test_wz_nao_finito_nao_envenena_a_lei():
+    assert erro_antecipado(0.4, float('nan'), 0.52) == pytest.approx(0.4)
