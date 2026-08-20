@@ -1,12 +1,171 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-08-20** (Gazebo, desfazendo a leva do codex).
+> Versionado na `main`. Atualizado em **2026-08-20** (sessão no ROBÔ — ver handoff no topo).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+---
+
+## 🔴 20-08 (NO ROBÔ, fim da sessão) — HANDOFF: O QUE ESTÁ MEDIDO E O QUE FALTA
+
+> Escrito para quem pegar o projeto a seguir. A sessão terminou com o dono
+> insatisfeito e com razão: o robô bateu de frente num batente, e boa parte do
+> meu esforço foi na camada errada. O que está abaixo é o que ficou PROVADO
+> com número, o que ficou em aberto, e os erros que custaram tempo — para não
+> serem repetidos.
+
+### 🔴 PRIMEIRO ITEM DA PRÓXIMA SESSÃO: ELE BATEU, E ISSO É INADMISSÍVEL
+
+Palavras do dono: **"é inadmissível ele bater"**. Não é preferência, é
+requisito.
+
+O robô bateu de frente no batente da porta 2. Ele NÃO estava cego — parou na
+mesma porta, no mesmo lugar, várias vezes. A causa é margem de parada, e está
+medida no CSV `seguidor_2026-08-20_183507.csv`:
+
+    aproximação   velocidade real   margem da caixa
+    t=161,1          0,29 m/s          +19,7 cm     parou
+    t=169,1          0,25 m/s          +22,1 cm     parou
+    t=185,1          0,25 m/s          +21,8 cm     parou
+    t=850,4          0,21 m/s          +24,1 cm     parou
+    t=854,4          0,55 m/s           +6,2 cm     <-- BATEU
+
+A conta: o `PolygonStop` avança 0,35 m à frente do centro; quando ele corta, a
+placa segura a saída por 0,52 s (decisão 020). A 0,55 m/s o robô anda 29 cm
+depois do corte e sobram 6 cm. Um quadro de nuvem perdido a 7 Hz custa 7 cm —
+**a margem inteira vale menos que um quadro**.
+
+Todas as paradas bem-sucedidas foram a 0,03–0,29 m/s. A única acima de 0,3 foi
+a que bateu.
+
+⚠️ E `0,55 m/s` está ACIMA do `v_max` de 0,50. **Por que ele acelerou a 0,55
+naquela aproximação, se nas outras chegou a 0,25, é a pergunta que ficou sem
+resposta** — e é por onde eu começaria.
+
+⚠️ A nuvem estava a **7–9 Hz**, não aos 10 nominais. Com 10 Hz o quadro custaria
+5 cm em vez de 7. Descobrir por que ela está lenta ajuda aqui E no LIO.
+
+O dono NÃO quer aumentar a caixa. As saídas são: não deixar o robô chegar
+rápido na porta, ou recuperar a taxa da nuvem.
+
+### O QUE FICOU PROVADO HOJE (com número)
+
+**1. A retenção da placa causava a dança do rumo — CORRIGIDO e funcionou.**
+Medido em `seguidor_2026-08-20_172828.csv`, 24 cruzamentos de zero do erro:
+o robô varria **29,9°** DEPOIS que o erro já tinha zerado. A conta fecha:
+1,0 rad/s × 0,52 s = 29,8°. Cada correção deixava essa sobra, que virava o erro
+seguinte, maior — desvio lateral p90 crescia 13 → 30 → 46 cm.
+
+`erro_antecipado()` em `lei_de_rumo.py` desconta `wz_real × retencao` antes da
+lei rodar. Ligado no robô por `retencao_giro_s: 0.52` (o `sobe-robo` passa).
+Resultado: sobra caiu para **7–16°** e o dono viu o freio de giro funcionando.
+
+⚠️ NÃO é o `FreioDeGiro` (037) — aquele é contra-torque CHEIO e faz o robô
+dançar; o dono vetou explicitamente. Aqui o comando DECAI (é a
+`wz_de_frenagem`, contínua) e o contra-giro é proporcional ao excesso.
+
+**2. O suavizador nunca rodava — CORRIGIDO, ganho modesto.**
+`/plan_smoothed` saía IDÊNTICO ao `/plan`, dígito por dígito. Causa:
+`max_smoothing_duration="0.2"` no BT, e o `simples` precisa de mais de 1 s num
+caminho de 19 m. O `SmoothPath` vive num `RecoveryNode` com `AlwaysSuccess`,
+então a falha passava em SILÊNCIO.
+
+Corrigido para 3,0 s. Ganho medido: quina máxima 24,0° → 19,8°. **É pouco** —
+não espere o S sumir.
+
+**3. `cost_check_points` era divisão por zero.**
+Era `[-0.185, 1.0, 0.0]`; o formato é `[x, y, peso]` e peso 0 faz o Nav2
+dividir por zero (`options.hpp:88-95`), o peso vira NaN e o Ceres falha 504 em
+TODO caminho. Corrigido para `[-0.185, 0.0, 1.0]`. O `suave` passou a
+convergir — mas foi testado no Gazebo e REPROVOU (bateu a traseira), então
+continua fora do BT.
+
+**4. Curvatura do dia: −0,8365** (era −0,9145, de 11-08). Medida com o
+compensador fora da cadeia, v=0,30, fonte LIO. n=1 (a decisão 013 pede três).
+
+### O QUE CONTINUA QUEBRADO
+
+**O S do corredor.** O dono localizou e eu NÃO consegui medir:
+
+> "eu CONSIGO ver o plan pelo web, dá pra ver ele seguindo bem o plan até ele
+> ter uma quebra, cada quebra o S piora, no ponto que ele não erra é o meio que
+> o plan não quebra"
+
+⚠️ A régua que usei (`raio_curva` do CSV) é CEGA para isso: em y=2 ela acusa
+raio de 0,38 m e o robô vai bem (3 cm de desvio); em y=14 ela não acusa nada e
+o desvio é 65 cm. Ela mede curvatura DENTRO da janela da mira, e uma
+descontinuidade do plano passa despercebida.
+
+Existe `/tmp/quebra2.py` no robô, que mede SALTO (descontinuidade) além de
+quina, lendo `/plan_smoothed` ao vivo. Nunca chegou a rodar.
+
+⚠️ NÃO é o `inflation_radius` — eu propus baixar de 0,90 para 0,20 (havia
+precedente medido, commit `d8216d1`) e o dono recusou com o argumento certo:
+inflação simétrica centra, não serpenteia. E o mapa confirma que ele estava
+certo por outro lado: o CENTRO do corredor varia **28,6 cm** (de x=6,01 a
+x=7,14) no `andar3todoalterado` — mas isso também não explica, porque o dono
+apontou que em UM trecho do corredor ele vai reto, e mapa torto seria uniforme.
+
+**As portas.** 2 rés na porta 1, 5 na porta 2. Nas travadas o erro de rumo é
+persistente (mediana 50,6° e 33,3°) e o `|wz|` real mediano é **0,00** — a lei
+pede giro e o robô não gira. O reflexo está INOCENTE: o monitor ao vivo
+registrou só 4 disparos, todos com o seguidor já pedindo `v=0,00`.
+**Por que ele não gira com 50° de erro continua sem resposta.**
+
+### ⚠️ ARMADILHAS QUE ME CUSTARAM A SESSÃO — não repita
+
+**1. NUNCA subir o bag `--all-topics` no NUC.** Ele grava 560 MB/min. Eu deixei
+DOIS rodando ao mesmo tempo: 97 GB, carga 14,09 em 12 núcleos, o FAST-LIO
+travou e a pose saltava **60 cm com o robô parado**. O dono teve que
+reposicionar o robô várias vezes por minha causa. Depois de matar: salto de
+0,6 cm e carga 2,80.
+
+O CSV do seguidor cobre travessia, S e desvio. Para `/plan` ou
+`/collision_monitor_state`, use os scripts ao vivo em `/tmp` do robô
+(`quebra2.py`, `reflexo.py`, `cmp.py`, `pose.py`) — eles imprimem e não gravam.
+
+**2. `movimentacao.yaml` é do ROBÔ; `movimentacao_sim.yaml` é do GAZEBO.**
+Passei o dia editando o do simulador achando que afetava o robô. O `a_dec: 0.1`
+do robô é MEDIDO nele em 12-08 e está certo — não é chute a corrigir.
+
+**3. Matar a pilha exige o padrão completo:** `/opt/ros/jazzy` +
+`Controle_robo_livox` + `gz sim` + `robot_state_publisher` + `parameter_bridge`
++ o `ros2 daemon`. Padrões parciais deixaram CINCO pilhas empilhadas no Gazebo
+(cinco `path_follower` publicando = robô andando sozinho). Conferir lista vazia.
+
+**4. `ros2 node list` mente** se o daemon travar; conferir por PROCESSO.
+E `--no-daemon` NÃO existe em `ros2 topic hz` (o comando falha e a saída vazia
+parece "sem dado").
+
+**5. Comparar `map` e `odom` só com o robô PARADO** ou pareado no tempo dentro
+do bag. Dois `tf2_echo` sequenciais com o robô a 0,5 m/s dão 1 m de
+"divergência" que é só o robô tendo andado — dei dois alarmes falsos assim e
+mandei parar uma corrida boa à toa.
+
+**6. Contar EPISÓDIOS, não amostras.** Reportei "57 rés" quando eram 2, e "148"
+quando eram 5. O CSV é a 20 Hz.
+
+**7. O robô não alcança o GitHub.** Deploy é
+`git push bara@<ip>:/home/bara/Controle_robo_livox main:main` da máquina de
+dev (com `receive.denyCurrentBranch updateInstead` já configurado lá).
+Usuário `bara`, não `robo`.
+
+**8. Timeout curto nas chamadas.** Nada de 300–500 s: o dono fica sem resposta
+e a bateria corre.
+
+### O ERRO DE MÉTODO QUE MAIS CUSTOU
+
+Fiz **três** correções na mira (`tol_estica` 0,03, `rumo_estica` 6°,
+`mira_rumo_passo` 0,40) — todas mexendo na régua que LÊ o plano — enquanto o
+plano nem estava sendo suavizado e o dono já tinha dito que o defeito era a
+quebra do plano. Duas foram reprovadas e revertidas; a terceira (`passo 0,40`)
+ficou, mas o mérito dela está em suspenso.
+
+Antes de mexer no seguidor, **verifique se o plano que chega até ele presta**.
 
 ---
 
