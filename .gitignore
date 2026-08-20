@@ -88,3 +88,10 @@ docs/dados/**/metadata.yaml
 # criaria um submódulo acidental. O que sai da comparação vira medida nossa
 # no DIARIO, não código copiado.
 ESTAGIO-2026/
+
+# Bags de corrida: ficam no disco da máquina que rodou, nunca no git.
+# Um bag `--all-topics` de 3 min passa de 2 GB e o repo inteiro tem 34 MB.
+# O CSV do seguidor e o dump de parâmetros VÃO para o git — são eles que
+# permitem reconstruir a corrida sem carregar a nuvem de pontos junto.
+docs/dados/**/*.mcap
+docs/dados/**/metadata.yaml
