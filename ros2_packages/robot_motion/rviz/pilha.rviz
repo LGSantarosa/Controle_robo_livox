@@ -53,10 +53,10 @@ Visualization Manager:
       Alpha: 0.6
       Color Scheme: costmap
     - Class: rviz_default_plugins/Path
-      Name: Plano do Nav2
+      Name: Plano aceito pelo robô
       Enabled: true
       Topic:
-        Value: /plan
+        Value: /path_follower/plano_aceito
         Depth: 5
         Durability Policy: Volatile
         Reliability Policy: Reliable

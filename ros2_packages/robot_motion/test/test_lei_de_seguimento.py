@@ -13,16 +13,21 @@ import pytest
 from robot_motion.lei_de_seguimento import (
     CorrecaoDeDesvio,
     MiraAdaptativa,
+    PassagemEstreita,
+    alvo_estavel_de_passagem,
     carrot,
     correcao_de_desvio,
     curvatura_adiante,
     desvio_da_corda,
     desvio_lateral,
+    folga_radial,
     indice_mais_proximo,
     lookahead_de,
     mudanca_de_rumo_adiante,
     orcamento_de_re,
+    passagens_estreitas,
     rumo_com_desvio,
+    rumo_local_do_caminho,
     rumo_para,
     vao_no_corredor_frontal,
     vao_no_corredor_traseiro,
@@ -38,6 +43,12 @@ A_LIN = 0.3
 
 def reta(n=20, passo=0.1):
     return [(i * passo, 0.0) for i in range(n)]
+
+
+def test_folga_radial_ignora_leitura_invalida_e_pega_a_quina_mais_perto():
+    assert folga_radial([None, float('nan'), float('inf'), -1.0,
+                         0.52, 0.341, 0.80], alcance_max=10.0) == 0.341
+    assert math.isinf(folga_radial([None, float('inf'), 0.0]))
 
 
 def arco(raio, total_deg=90.0, passo_deg=5.0):
@@ -113,6 +124,103 @@ def test_indice_mais_proximo_acha_onde_o_robo_esta():
 
 def test_rumo_para_o_carrot():
     assert rumo_para(0.0, 0.0, (1.0, 1.0)) == pytest.approx(math.pi / 4)
+
+
+# ------------------------------------- gargalo estável (20-08, repetibilidade)
+
+def _grade_com_porta(x_parede=3.0, y0=1.6, y1=2.4,
+                     largura_m=6.0, altura_m=4.0, res=0.05):
+    w, h = round(largura_m / res), round(altura_m / res)
+    dados = [0] * (w * h)
+    c0, c1 = round((x_parede - 0.10) / res), round((x_parede + 0.10) / res)
+    for lin in range(h):
+        y = (lin + 0.5) * res
+        if y0 <= y <= y1:
+            continue
+        for col in range(c0, c1):
+            dados[lin * w + col] = 100
+    return dados, w, h, res
+
+
+def test_detecta_a_porta_pelo_mapa_sem_coordenada_marcada():
+    dados, w, h, res = _grade_com_porta()
+    caminho = [(0.5 + 0.05 * i, 2.0) for i in range(101)]
+    portas = passagens_estreitas(caminho, dados, w, h, res,
+                                 largura_min=0.55, largura_max=1.10)
+    assert len(portas) == 1
+    p = portas[0]
+    assert caminho[p.centro][0] == pytest.approx(3.0, abs=0.10)
+    assert p.largura == pytest.approx(0.80, abs=0.08)
+    assert abs(rumo_local_do_caminho(caminho, p.centro)) < math.radians(1.0)
+
+
+def test_espaco_aberto_nao_inventa_porta():
+    w, h, res = 120, 80, 0.05
+    caminho = [(0.5 + 0.05 * i, 2.0) for i in range(101)]
+    assert passagens_estreitas(caminho, [0] * (w * h), w, h, res) == []
+
+
+def test_alvo_do_gargalo_primeiro_centraliza_se_o_atalho_nao_cabe():
+    caminho = [(0.1 * i, 0.0) for i in range(41)]
+    porta = PassagemEstreita(19, 20, 21, 0.80)
+    alvo, fase = alvo_estavel_de_passagem(
+        caminho, porta, x=1.0, y=0.50, rumo_atual=0.0, saida=0.60,
+        meia_largura=0.2275, margem=0.03)
+    assert fase == 'centro'
+    assert alvo == caminho[porta.centro]
+
+
+def test_alvo_do_gargalo_e_um_eixo_FIXO_quando_a_reta_cabe():
+    caminho = [(0.1 * i, 0.0) for i in range(41)]
+    porta = PassagemEstreita(19, 20, 21, 0.80)
+    alvo1, fase1 = alvo_estavel_de_passagem(
+        caminho, porta, x=1.0, y=0.05, rumo_atual=0.0, saida=0.60)
+    alvo2, fase2 = alvo_estavel_de_passagem(
+        caminho, porta, x=1.4, y=0.04, rumo_atual=math.radians(4.0),
+        saida=0.60)
+    assert fase1 == fase2 == 'eixo'
+    assert alvo1 == pytest.approx((2.60, 0.0))
+    assert alvo2 == pytest.approx(alvo1)  # pose mudou; referência não
+
+
+def test_alvo_estavel_funciona_na_volta_pela_mesma_porta():
+    caminho = [(4.0 - 0.1 * i, 0.0) for i in range(41)]
+    porta = PassagemEstreita(19, 20, 21, 0.80)
+    alvo, fase = alvo_estavel_de_passagem(
+        caminho, porta, x=3.0, y=0.05, rumo_atual=math.pi, saida=0.60)
+    assert fase == 'eixo'
+    assert alvo == pytest.approx((1.40, 0.0))
+
+
+def test_gargalo_nao_libera_eixo_com_rumo_fisico_ainda_torto():
+    caminho = [(0.1 * i, 0.0) for i in range(41)]
+    porta = PassagemEstreita(19, 20, 21, 0.80)
+    alvo, fase = alvo_estavel_de_passagem(
+        caminho, porta, x=1.3, y=0.03,
+        rumo_atual=math.radians(53.0), saida=1.0)
+    assert fase == 'centro'
+    assert alvo == caminho[porta.centro]
+
+
+def test_gargalo_libera_quando_posicao_e_rumo_estao_alinhados():
+    caminho = [(0.1 * i, 0.0) for i in range(41)]
+    porta = PassagemEstreita(19, 20, 21, 0.80)
+    alvo, fase = alvo_estavel_de_passagem(
+        caminho, porta, x=1.3, y=0.07,
+        rumo_atual=math.radians(9.0), saida=1.0)
+    assert fase == 'eixo'
+    assert alvo == pytest.approx((3.0, 0.0))
+
+
+def test_gargalo_nunca_volta_ao_centro_depois_de_comprometer_o_eixo():
+    caminho = [(0.1 * i, 0.0) for i in range(41)]
+    porta = PassagemEstreita(19, 20, 21, 0.80)
+    alvo, fase = alvo_estavel_de_passagem(
+        caminho, porta, x=1.5, y=0.20,
+        rumo_atual=math.radians(30.0), saida=1.0,
+        eixo_comprometido=True)
+    assert fase == 'eixo'
+    assert alvo == pytest.approx((3.0, 0.0))
 
 
 # ------------------------------------------- a MIRA ADAPTATIVA (040, 14-08)
@@ -209,6 +317,24 @@ def test_mira_longa_SO_QUANDO_o_proximo_metro_inteiro_e_reto():
     assert mudanca_de_rumo_adiante(caminho, 0, 1.0) > math.radians(40.0)
     m = MiraAdaptativa(CURTO, LONGO)
     assert m.passo(caminho, 0, vao_frente=2.0) == pytest.approx(CURTO)
+
+
+def test_meandro_suave_do_plano_nao_e_confundido_com_curva_da_porta():
+    """Regressão do S visto no corredor em 20-08.
+
+    Uma barriga suave de poucos graus é ruído de referência a filtrar. Já a
+    quina da porta precisa continuar impondo a mira curta.
+    """
+    m = MiraAdaptativa(CURTO, LONGO, tol_estica=0.15, tol_encolhe=0.20,
+                       rumo_estica=math.radians(15.0),
+                       rumo_encolhe=math.radians(20.0))
+    meandro = [(0.0, 0.0), (0.2, 0.00), (0.4, 0.02), (0.6, 0.04),
+               (0.8, 0.05), (1.0, 0.05)]
+    assert m.passo(meandro, 0, vao_frente=2.0) == pytest.approx(LONGO)
+
+    porta = [(0.0, 0.0), (0.2, 0.0), (0.4, 0.0), (0.6, 0.0),
+             (0.8, 0.0), (0.9, 0.1), (0.9, 0.3)]
+    assert m.passo(porta, 0, vao_frente=2.0) == pytest.approx(CURTO)
 
 
 def test_reta_de_um_metro_CONTINUA_com_mira_longa():

@@ -712,21 +712,17 @@ def generate_launch_description():
         # combinação que permitiu ler as oito corridas de 14-08; a diferença é
         # que agora ela não depende de eu lembrar de subir à mão.
         #
-        # ⚠️ SEM a nuvem (`/livox/pontos`) e sem os costmaps de propósito: são
-        # os dois que fariam o bag inviável no NUC. O que está aqui é leve —
-        # ~10 MB por 3 minutos de corrida.
+        # 🔴 20-08: O DONO PEDIU TODOS OS DADOS DOS TESTES. A lista seletiva
+        # deixou justamente `/scan`, a nuvem que acionou o reflexo, o plano
+        # realmente aceito e os costmaps fora das corridas em que a porta
+        # variou. Isso tornou impossível reconstruir depois o que o robô viu.
+        # Grava todos os tópicos descobertos, inclusive nuvem e parâmetros. O
+        # preset fastwrite evita gastar CPU comprimindo durante a própria prova;
+        # espaço em disco é uma consequência explícita e aceita deste protocolo.
         ExecuteProcess(
             cmd=['ros2', 'bag', 'record', '-o',
                  [LaunchConfiguration('log_dir'), f'/corrida_{CARIMBO}'],
-                 '/plan', '/plan_smoothed', '/received_global_plan',
-                 '/auto_vel_raw', '/auto_vel', '/unstuck_vel', '/key_vel',
-                 '/compensador_rumo/cmd_vel', '/cmd_vel_bruto',
-                 '/hoverboard_base_controller/cmd_vel',
-                 '/Odometry', '/amcl_pose', '/odom',
-                 '/collision_monitor_state', '/polygon_stop',
-                 '/heading_controller/rumo_alvo',
-                 '/heading_controller/velocidade_alvo',
-                 '/behavior_tree_log', '/rosout', '/tf', '/tf_static'],
+                 '--all-topics', '--storage-preset-profile', 'fastwrite'],
             output='log',
             condition=IfCondition(LaunchConfiguration('bag'))),
 

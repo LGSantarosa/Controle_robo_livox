@@ -30,12 +30,218 @@ Os três números que ela produz vêm de defeito medido, não de gosto:
    sessão de 28-07. A linear cede para a curva caber.
 """
 import math
+from typing import NamedTuple
 
 RETO = float('inf')
 
 
+class PassagemEstreita(NamedTuple):
+    """Trecho do caminho que cruza um gargalo conhecido no mapa.
+
+    Os índices pertencem ao caminho que foi analisado. ``inicio`` e ``fim``
+    cobrem as amostras que de fato ficam entre duas paredes; ``centro`` é uma
+    amostra no meio desse trecho e serve para congelar o eixo da travessia.
+    A largura é a distância entre as primeiras células ocupadas dos dois
+    lados, medida perpendicularmente ao caminho.
+    """
+    inicio: int
+    centro: int
+    fim: int
+    largura: float
+
+
 def norm_ang(a):
     return math.atan2(math.sin(a), math.cos(a))
+
+
+def rumo_local_do_caminho(caminho, i, janela=0.10):
+    """Tangente do caminho em ``i``, usando arco dos dois lados [rad].
+
+    Usar pontos vizinhos crus mede o serrilhado de 5 cm do planner. A pequena
+    janela bilateral preserva o eixo de uma porta de 20 cm de espessura sem
+    puxar para dentro dela a curva de aproximação que vem antes.
+    """
+    if len(caminho) < 2:
+        return 0.0
+    i = max(0, min(int(i), len(caminho) - 1))
+    a = i
+    andado = 0.0
+    while a > 0 and andado < janela:
+        andado += math.dist(caminho[a], caminho[a - 1])
+        a -= 1
+    b = i
+    andado = 0.0
+    while b < len(caminho) - 1 and andado < janela:
+        andado += math.dist(caminho[b], caminho[b + 1])
+        b += 1
+    if a == b:
+        return 0.0
+    return math.atan2(caminho[b][1] - caminho[a][1],
+                      caminho[b][0] - caminho[a][0])
+
+
+def passagens_estreitas(caminho, dados, largura_grade, altura_grade,
+                        resolucao, origem=(0.0, 0.0, 0.0),
+                        largura_min=0.55, largura_max=1.10,
+                        ocupado_min=65):
+    """Detecta gargalos que o *caminho aceito* cruza no mapa estático.
+
+    Para cada ponto, lança dois raios perpendiculares à tangente local. Duas
+    paredes, uma de cada lado, com distância total entre ``largura_min`` e
+    ``largura_max`` formam uma passagem. Amostras contíguas viram uma única
+    :class:`PassagemEstreita`.
+
+    A função não desloca o caminho para o centro calculado pelas células. O
+    mapa é rasterizado e pode ganhar/perder um pixel na borda; o plano
+    suavizado já escolheu a linha navegável. O mapa só responde *"aqui é
+    estreito"*, enquanto o próprio plano continua respondendo *"por onde"*.
+
+    Célula desconhecida e fora do mapa contam como ocupadas. Isso torna uma
+    ausência de mapa conservadora, nunca uma licença para inventar um vão.
+    """
+    if (len(caminho) < 2 or resolucao <= 0.0 or largura_grade <= 0
+            or altura_grade <= 0
+            or len(dados) != largura_grade * altura_grade
+            or not largura_max > largura_min > 0.0):
+        return []
+
+    ox, oy, oyaw = origem
+    co, so = math.cos(oyaw), math.sin(oyaw)
+
+    def ocupada(x, y):
+        # mundo -> referencial da grade (a origem de OccupancyGrid pode girar)
+        dx, dy = x - ox, y - oy
+        gx = co * dx + so * dy
+        gy = -so * dx + co * dy
+        col = math.floor(gx / resolucao)
+        lin = math.floor(gy / resolucao)
+        if not (0 <= col < largura_grade and 0 <= lin < altura_grade):
+            return True
+        valor = dados[lin * largura_grade + col]
+        return valor < 0 or valor >= ocupado_min
+
+    # Meio pixel evita pular uma parede fina situada entre duas amostras. O
+    # teto individual precisa ser ``largura_max`` (não a metade): caminho
+    # fora do centro ainda deve reconhecer a mesma porta.
+    passo = resolucao / 2.0
+
+    def primeiro_obstaculo(p, angulo):
+        d = passo
+        while d <= largura_max + 1e-9:
+            if ocupada(p[0] + d * math.cos(angulo),
+                       p[1] + d * math.sin(angulo)):
+                return d
+            d += passo
+        return None
+
+    candidatos = []
+    for i, p in enumerate(caminho):
+        if ocupada(*p):
+            continue
+        rumo = rumo_local_do_caminho(caminho, i)
+        esquerda = primeiro_obstaculo(p, rumo + math.pi / 2.0)
+        direita = primeiro_obstaculo(p, rumo - math.pi / 2.0)
+        if esquerda is None or direita is None:
+            continue
+        largura = esquerda + direita
+        if largura_min <= largura <= largura_max:
+            candidatos.append((i, largura))
+
+    if not candidatos:
+        return []
+
+    grupos = []
+    for candidato in candidatos:
+        # Um pixel de falha no encontro raio/parede não pode quebrar a mesma
+        # porta em duas. Três índices ainda são só ~15 cm no plano de 5 cm.
+        if not grupos or candidato[0] - grupos[-1][-1][0] > 3:
+            grupos.append([candidato])
+        else:
+            grupos[-1].append(candidato)
+
+    saida = []
+    for grupo in grupos:
+        inicio, fim = grupo[0][0], grupo[-1][0]
+        meio = (inicio + fim) / 2.0
+        # Escolhe a amostra central entre as de largura mínima. Isso põe o
+        # eixo no meio da espessura da parede, não na primeira face vista.
+        menor = min(x[1] for x in grupo)
+        quase_minimos = [x for x in grupo if x[1] <= menor + resolucao]
+        indice, largura = min(quase_minimos,
+                              key=lambda x: abs(x[0] - meio))
+        saida.append(PassagemEstreita(inicio, indice, fim, largura))
+    return saida
+
+
+def alvo_estavel_de_passagem(caminho, passagem, x, y, rumo_atual,
+                             saida=1.00, meia_largura=0.2275, margem=0.03,
+                             tolerancia_lateral=0.08,
+                             tolerancia_rumo=math.radians(10.0),
+                             eixo_comprometido=False):
+    """Alvo congelado para entrar no gargalo e atravessá-lo sem trocar de lado.
+
+    O eixo é a tangente do plano no centro detectado. O alvo normal é um ponto
+    fixo ``saida`` metros depois do vão. Antes de adotá-lo, exige três coisas:
+    a reta projetada cabe, o centro do robô já está perto do eixo E o rumo
+    físico já acompanha esse eixo. Até lá mira o centro da passagem. Isso é
+    importante nesta máquina: trocar a referência só porque a *reta virtual*
+    cabe deixou a placa executar por mais 0,52 s a curva anterior e entrar na
+    porta ainda a 53 graus.
+
+    Devolve ``(alvo, fase)`` onde fase é ``'centro'`` ou ``'eixo'``. Não há
+    ``eixo_comprometido`` é o latch explícito da cola ROS: depois que a fase
+    eixo começou, uma oscilação de pose nunca a devolve ao centro. Para a
+    mesma pose, passagem e latch a decisão continua determinística.
+    """
+    if not caminho:
+        raise ValueError('caminho vazio')
+    i = max(0, min(passagem.centro, len(caminho) - 1))
+    cx, cy = caminho[i]
+    rumo = rumo_local_do_caminho(caminho, i)
+    tx, ty = math.cos(rumo), math.sin(rumo)
+    nx, ny = -ty, tx
+    alvo_eixo = (cx + saida * tx, cy + saida * ty)
+
+    px, py = x - cx, y - cy
+    s = px * tx + py * ty
+    d = px * nx + py * ny
+    folga = passagem.largura / 2.0 - meia_largura - margem
+    if folga <= 0.0:
+        return (cx, cy), 'centro'
+
+    # Interseção da reta pose->alvo_eixo com s=0. Para s>=0 o ponto mais
+    # estreito já ficou para trás e mirar o centro faria o alvo ir para trás.
+    if eixo_comprometido or s >= 0.0:
+        return alvo_eixo, 'eixo'
+
+    if s < 0.0:
+        d_no_centro = d * saida / (saida - s)
+        if abs(d_no_centro) > folga:
+            return (cx, cy), 'centro'
+
+    alinhado_lateral = abs(d) <= max(0.0, tolerancia_lateral)
+    alinhado_rumo = abs(norm_ang(rumo_atual - rumo)) <= max(
+        0.0, tolerancia_rumo)
+    if not (alinhado_lateral and alinhado_rumo):
+        return (cx, cy), 'centro'
+    return alvo_eixo, 'eixo'
+
+
+def folga_radial(distancias, alcance_max=None):
+    """Menor distância válida do LiDAR ao redor inteiro do robô [m].
+
+    É a régua do pivô: transladar varre um retângulo, mas girar no lugar
+    varre o círculo da quina física. ``inf`` significa que nenhum retorno
+    válido foi visto; o chamador ainda precisa conferir frescor do scan.
+    """
+    melhor = RETO
+    for r in distancias:
+        if r is None or not math.isfinite(r) or r <= 0.0:
+            continue
+        if alcance_max is not None and r > alcance_max:
+            continue
+        melhor = min(melhor, r)
+    return melhor
 
 
 def lookahead_de(raio_min, fator=1.5, piso=0.30):

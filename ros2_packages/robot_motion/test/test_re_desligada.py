@@ -50,6 +50,7 @@ class SeguidorFalso:
         base = {
             're_habilitada': True,
             're_max_seguidas': 2,
+            'recuperacao_infinita_com_objetivo': True,
             're_scan_velho_s': 0.8,
             're_folga': 0.30,
             're_orcamento_cego': 0.30,
@@ -69,6 +70,8 @@ class SeguidorFalso:
         # que eles travam é OUTRO ramo: nasce com objetivo vivo para seguirem
         # medindo o que sempre mediram.
         self.objetivo_vivo = True
+        self.pivo_pedido = 0
+        self.pivo_cabe = False
 
     def get_logger(self):
         return self.logger
@@ -87,16 +90,31 @@ class SeguidorFalso:
         # testes antigos. Casos sem bloqueio sobrescrevem este método.
         return 0.0
 
+    def entra_no_pivo_escape(self, t, x, y, dist):
+        self.pivo_pedido += 1
+        return self.pivo_cabe
 
-def test_sem_bloqueio_frontal_nao_da_re_por_falta_de_progresso():
+
+def test_sem_bloqueio_frontal_escolhe_escape_reto_curto_e_nao_re():
     seg = SeguidorFalso()
     seg.vao_frente = lambda: 1.0
 
     PathFollower.entra_na_re(seg, t=1.0, x=0.0, y=0.0, dist=2.0)
 
+    assert seg.estado == 're'
+    assert seg.re_sentido == 1, 'frente livre nunca pode escolher marcha à ré'
+    assert seg.re_orcamento_atual == pytest.approx(0.20)
+    assert 'RETO' in seg.logger.avisos[-1]
+
+
+def test_sem_medida_frontal_nao_fura_o_reflexo_as_cegas():
+    seg = SeguidorFalso()
+    seg.vao_frente = lambda: None
+
+    PathFollower.entra_na_re(seg, t=1.0, x=0.0, y=0.0, dist=2.0)
+
     assert not hasattr(seg, 're_desde')
     assert seg.progresso.reiniciado == 1
-    assert 'mero sintoma' in seg.logger.avisos[-1]
 
 
 def test_teto_zero_nao_mata_o_seguidor():
@@ -123,7 +141,8 @@ def test_re_desligada_pelo_knob_proprio_tambem_avisa():
 
 def test_teto_atingido_com_distancia_conhecida_nao_estoura():
     """O caminho normal: teto 2, duas rés feitas, distância gravada."""
-    seg = SeguidorFalso(re_max_seguidas=2)
+    seg = SeguidorFalso(re_max_seguidas=2,
+                        recuperacao_infinita_com_objetivo=False)
     seg.res_seguidas = 2
     seg.dist_antes_da_re = 2.50
 
@@ -140,7 +159,8 @@ def test_teto_atingido_sem_distancia_gravada_nao_estoura():
     Não deveria acontecer (quem incrementa `res_seguidas` também grava a
     distância), mas formatar None mata o processo — e nó morto não dirige.
     """
-    seg = SeguidorFalso(re_max_seguidas=1)
+    seg = SeguidorFalso(re_max_seguidas=1,
+                        recuperacao_infinita_com_objetivo=False)
     seg.res_seguidas = 1
     seg.dist_antes_da_re = None
 
@@ -195,6 +215,33 @@ def test_com_objetivo_vivo_a_re_segue_o_caminho_normal():
     PathFollower.entra_na_re(seg, t=1.0, x=0.0, y=0.0, dist=2.0)
 
     assert seg.vao_pedido == 1, 'a ré com objetivo vivo tem de medir o vão'
+
+
+def test_frente_e_traseira_bloqueadas_escolhem_pivo_se_ele_cabe():
+    seg = SeguidorFalso()
+    seg.vao_traseiro = lambda: 0.10
+    seg.vao_frente = lambda: 0.0
+    seg.pivo_cabe = True
+
+    PathFollower.entra_na_re(seg, t=1.0, x=0.0, y=0.0, dist=2.0)
+
+    assert seg.pivo_pedido == 1
+    assert not seg.logger.avisos, (
+        'pivô aceito não pode cair no aviso de "sem saída" e ficar parado')
+
+
+def test_objetivo_vivo_nao_para_so_porque_esgotou_o_teto_de_res():
+    seg = SeguidorFalso(re_max_seguidas=2,
+                        recuperacao_infinita_com_objetivo=True)
+    seg.res_seguidas = 2
+    seg.dist_antes_da_re = 2.0
+    seg.vao_frente = lambda: 0.0
+
+    PathFollower.entra_na_re(seg, t=1.0, x=0.0, y=0.0, dist=3.0)
+
+    assert seg.estado == 're'
+    assert seg.re_sentido == -1
+    assert not seg.logger.erros
 
 
 def test_o_knob_permite_a_re_sem_objetivo_para_bancada():

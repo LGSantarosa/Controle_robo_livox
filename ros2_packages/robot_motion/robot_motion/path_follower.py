@@ -125,10 +125,27 @@ class PathFollower(Node):
             # S em vez de filtrá-lo. A quina da porta muda >40° no mesmo metro
             # (teste de regressão abaixo), portanto ela continua encolhendo a
             # mira com bastante margem.
-            ('mira_tol_estica', 0.15),
-            ('mira_tol_encolhe', 0.20),
-            ('mira_rumo_estica_deg', 15.0),
-            ('mira_rumo_encolhe_deg', 20.0),
+            #
+            # 🔴 20-08, ANTES DE IR AO ROBÔ: DEVOLVIDOS AOS VALORES DA 042.
+            # O afrouxamento acima (0,15/0,20 e 15°/20°) foi ao ar junto com
+            # outras cinco mudanças e NUNCA foi isolado — nem aprovado, nem
+            # reprovado; apenas esteve presente numa corrida boa. Os valores
+            # de baixo foram MEDIDOS no robô e são o que fez a porta caber
+            # lá (042). Indo para o robô, valor medido na porta real ganha de
+            # valor não medido — a regra do projeto e a lição da 041.
+            #
+            # ⚠️ A regra de RUMO já existia no baseline com 3°/5°; o que o
+            # codex fez foi expô-la como parâmetro E afrouxá-la 5x. A
+            # exposição FICA (permite A/B sem editar código); os números
+            # voltam.
+            #
+            # A queixa dele ("mira curta em 97% da corrida") pode ser legítima
+            # no corredor e continua registrada. Se for atacada, que seja com
+            # A/B próprio, sozinha, e no robô — que é onde a porta importa.
+            ('mira_tol_estica', 0.07),
+            ('mira_tol_encolhe', 0.08),
+            ('mira_rumo_estica_deg', 3.0),
+            ('mira_rumo_encolhe_deg', 5.0),
             # Só estica com este vão livre à frente, medido no corredor
             # retangular do corpo. `None` (scan velho ou ausente) = não estica.
             ('mira_folga_min', 0.60),
