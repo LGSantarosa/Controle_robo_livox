@@ -190,6 +190,16 @@ class PathFollower(Node):
             ('mira_tol_encolhe', 0.08),
             ('mira_rumo_estica_deg', 3.0),
             ('mira_rumo_encolhe_deg', 5.0),
+            # Passo de reamostragem da regra de rumo. 0,20 nao filtrava o
+            # serrilhado de 5 cm do planner, e era ELE que prendia a mira no
+            # curto — medido em 20-08 sobre 219 amostras de `/plan_smoothed`
+            # no `sala_andar3`: o desvio da corda aprovava 77,2% e a mudanca de
+            # rumo so 14,2%. Com 0,40 a mudanca mediana cai de 6,4 para 3,9
+            # graus e a mira estica em 39,3%, com TODOS os limiares intocados.
+            # ⚠️ Nao subir para 0,60: a janela de 1 m fica com uma amostra so,
+            # a medida degenera em zero e a mira esticaria em curva (o defeito
+            # de 19-08). A lei recusa isso na subida.
+            ('mira_rumo_passo', 0.20),
             # Só estica com este vão livre à frente, medido no corredor
             # retangular do corpo. `None` (scan velho ou ausente) = não estica.
             ('mira_folga_min', 0.60),
@@ -753,7 +763,8 @@ class PathFollower(Node):
             tol_encolhe=self.par['mira_tol_encolhe'],
             folga_min=self.par['mira_folga_min'],
             rumo_estica=math.radians(self.par['mira_rumo_estica_deg']),
-            rumo_encolhe=math.radians(self.par['mira_rumo_encolhe_deg']))
+            rumo_encolhe=math.radians(self.par['mira_rumo_encolhe_deg']),
+            rumo_passo=self.par['mira_rumo_passo'])
         self.create_timer(1.0 / self.par['taxa'], self.passo)
         # Caminho do CSV: explícito ganha; senão, carimbo de tempo no log_dir.
         if not self.par['csv'] and self.par['log_dir']:

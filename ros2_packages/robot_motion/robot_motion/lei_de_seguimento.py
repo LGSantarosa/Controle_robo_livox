@@ -361,7 +361,7 @@ class MiraAdaptativa:
 
     def __init__(self, curto, longo, tol_estica=0.07, tol_encolhe=0.08,
                  folga_min=0.60, rumo_estica=math.radians(3.0),
-                 rumo_encolhe=math.radians(5.0)):
+                 rumo_encolhe=math.radians(5.0), rumo_passo=0.20):
         if not longo > curto:
             raise ValueError('a mira longa tem de ser maior que a curta')
         if not tol_encolhe > tol_estica:
@@ -375,6 +375,15 @@ class MiraAdaptativa:
         self.folga_min = folga_min
         self.rumo_estica = rumo_estica
         self.rumo_encolhe = rumo_encolhe
+        if not rumo_passo > 0.0:
+            raise ValueError('rumo_passo tem de ser positivo')
+        # Menos de tres pontos na janela e a medida devolve 0,0 sempre — e um
+        # zero que vem de nao ter medido autoriza a mira longa em curva.
+        if longo / rumo_passo < 2.5:
+            raise ValueError(
+                'rumo_passo grosso demais para a mira longa: sobram menos de '
+                'tres pontos na janela e a medida degenera em zero')
+        self.rumo_passo = rumo_passo
         self.esticada = False
 
     def reset(self):
@@ -391,7 +400,8 @@ class MiraAdaptativa:
         # proxima manobra. O desvio da corda sozinho deixa uma curva no fim da
         # janela parecer suave e o carrot atravessa a quina. Qualquer mudanca
         # de direcao relevante no proximo metro obriga a cumprir o plano perto.
-        mudanca = mudanca_de_rumo_adiante(caminho, i0, self.longo)
+        mudanca = mudanca_de_rumo_adiante(caminho, i0, self.longo,
+                                          passo=self.rumo_passo)
         if self.esticada:
             if desvio > self.tol_encolhe or mudanca > self.rumo_encolhe:
                 self.esticada = False
@@ -430,9 +440,36 @@ def carrot(caminho, i0, lookahead):
 def mudanca_de_rumo_adiante(caminho, i0, distancia, passo=0.20):
     """Maior mudanca de direcao no caminho dentro da janela [rad].
 
-    Reamostra em trechos de aproximadamente 20 cm para ignorar o serrilhado de
-    5 cm do planner. Compara cada trecho com o primeiro: uma curva no fim do
-    proximo metro aparece mesmo quando o desvio da corda ainda e pequeno.
+    Reamostra em trechos de `passo` para ignorar o serrilhado de 5 cm do
+    planner. Compara cada trecho com o primeiro: uma curva no fim do proximo
+    metro aparece mesmo quando o desvio da corda ainda e pequeno.
+
+    ⚠️ 0,20 NAO FILTRAVA O BASTANTE, e era ESTA a regra que prendia a mira no
+    curto — nao o `tol_estica`, que eu culpei primeiro. Medido em 20-08 sobre
+    os planos reais de `/plan_smoothed` no `sala_andar3` (219 amostras):
+
+        criterio                       passa
+        desvio_da_corda <= 0,07         77,2%
+        mudanca_de_rumo <= 3,0 graus    14,2%   <- o gargalo
+
+    Com o serrilhado dentro da medida, a mudanca mediana no proximo metro dava
+    6,4 graus contra um limiar de 3,0. Varrendo o passo, com TODOS os limiares
+    intocados:
+
+        passo    p50 da mudanca    estica em
+        0,20 m       6,4 graus        14,2%
+        0,40 m       3,9 graus        39,3%
+        0,60 m       0,0 graus        77,2%   <- DEGENERADO, ver abaixo
+
+    ⚠️ 0,60 NAO E O MELHOR, e sim invalido: com janela de 1,0 m sobra uma unica
+    amostra intermediaria, `rumos` fica com menos de dois elementos e a funcao
+    devolve 0,0 SEMPRE. Ela deixaria de medir e passaria a autorizar a mira
+    longa em qualquer curva — exatamente o defeito de 19-08, que fez o carrot
+    cortar a porta. Um zero que vem de nao ter medido nao e um plano reto.
+
+    0,40 e o maior passo que ainda deixa tres pontos na janela. Ataca a MEDIDA
+    e nao a protecao: `tol_estica`, `rumo_estica` e o gate de folga frontal
+    seguem valendo com os numeros medidos da 042.
     """
     pontos = [caminho[i0]]
     d = passo
@@ -441,6 +478,16 @@ def mudanca_de_rumo_adiante(caminho, i0, distancia, passo=0.20):
         if math.dist(p, pontos[-1]) > 1e-6:
             pontos.append(p)
         d += passo
+    # ⚠️ O FIM DA JANELA ENTRA SEMPRE, e não só quando calha de ser múltiplo do
+    # passo. Com 0,20 em 1,0 m o último passo caía exatamente em 1,00 e isso
+    # escondia a dependência; com 0,40 a varredura para em 0,80 e a curva do
+    # último trecho sumia — a função devolvia 0,0 para um caminho que vira 90°
+    # em 0,9 m, que é o caso de regressão da porta (19-08). Amostrar o fim
+    # custa um ponto e é o que torna o passo uma escolha de FILTRO, não de
+    # horizonte.
+    _, fim_janela = carrot(caminho, i0, distancia)
+    if math.dist(fim_janela, pontos[-1]) > 1e-6:
+        pontos.append(fim_janela)
     if math.dist(pontos[-1], caminho[-1]) > 1e-6:
         # So inclui o fim se ele estiver dentro da janela; nao olha depois do
         # horizonte que esta decidindo a mira.
