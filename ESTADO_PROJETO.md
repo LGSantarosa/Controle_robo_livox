@@ -1,12 +1,88 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-08-19** (Gazebo, porta ida/volta).
+> Versionado na `main`. Atualizado em **2026-08-20** (Gazebo, desfazendo a leva do codex).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+---
+
+## 🟢 20-08 (GAZEBO) — ESTADO ATUAL, E ELE VAI PARA O ROBÔ
+
+> **É este o estado que sobe no robô.** Deploy: `git fetch && git reset --hard
+> origin/main`. A sessão de 20-08 foi inteira de desfazer uma leva automatizada
+> que piorou a porta, e de achar o que dela valia a pena.
+
+### Configuração que está valendo
+
+```
+passagem_v_max                    0,5    (teto NEUTRO — 0,25 era a causa da travada)
+passagem_estreita_habilitada      False  (o alvo no centro do vão é singularidade)
+desencalhe_pivo_habilitado        True   (decisão do dono: mostra onde ele erra)
+recuperacao_infinita_com_objetivo True   (idem)
+a_dec (sim)                       0,3
+mira_tol_estica / encolhe         0,07 / 0,08   (042, medido no robô)
+mira_rumo_estica / encolhe        3° / 5°       (baseline)
+mira_rumo_passo                   0,40   (a única mudança aprovada no mapa real)
+smoother do BT                    simples
+cost_check_points                 [-0.185, 0.0, 1.0]  (era divisão por zero)
+```
+
+### O que foi medido
+
+Pista, três corridas seguidas sem mexer em nada:
+
+```
+corrida_01   111,5 s   0 paradas   1 invasão da caixa   desvlat mediano 6 cm
+corrida_02   112,7 s   0 paradas   2 invasões           5 cm
+corrida_03   140,3 s   0 paradas   0 invasões           5 cm
+```
+
+Mapa real `sala_andar3`, com `mira_rumo_passo: 0,40` — aprovado a olho pelo
+dono (*"agora foi bom, gostei dessa"*), **sem repetição**.
+
+### 🔴 Critério de projeto que o dono estabeleceu em 20-08
+
+> *"O collision monitor não foi feito para ajeitar a posição e fazer manobra,
+> ele foi feito pra parar impactos inevitáveis, com obstáculo fora do mapa, não
+> obstáculo conhecido."*
+
+E, sobre como julgar corrida:
+
+> *"Parar não é um problema, problema é ir errado. Parar por precaução é
+> válido."*
+
+Métrica de corrida é **qualidade da aproximação** (yaw na soleira, desvio do
+centro do vão, folga do CORPO), não contagem de paradas.
+
+### Fila para a sessão NO ROBÔ
+
+1. **Medir a curvatura do dia** — `curv_frente: -0.817` está com
+   `curv_medido_em: HERDADO`, medido no robô em 04-08. O protocolo é três
+   corridas retas sem compensador, `medir.py --resumo curvatura`, e subir com o
+   valor do dia. Nunca foi feito no simulador; no robô é obrigatório.
+2. **Uma passagem de porta**, e ler antes de mexer em qualquer coisa.
+3. Se a porta falhar, o primeiro suspeito é a **mira** (`mira_rumo_passo 0,40`
+   foi validado só no Gazebo, e o `sala_andar3` não é a porta do prédio).
+
+### ⚠️ Riscos conhecidos
+
+- **`mira_rumo_passo: 0,40` não tem repetição.** Aprovado em n=1.
+- **O plano corta quinas**: no mapa real o robô travou com o corpo a 5 cm de
+  uma quina, numa área aberta, porque o plano passava rente. Mexe no costmap.
+- **CPU satura e estraga a corrida**: com `bag:=true --all-topics` o bag escreve
+  560 MB/min e o `/scan` cai para 6,2 Hz. Usar `bag:=false` por padrão.
+- **Matar a pilha exige o padrão completo**: `/opt/ros/jazzy` +
+  `Controle_robo_livox` + `gz sim`, e conferir lista vazia. Padrões parciais
+  deixaram 5 pilhas empilhadas em 20-08.
+
+### Preservado
+
+- Estado do codex: branch `backup/codex-2026-08-20` (não usar como base).
+- Dados das 14 corridas dele: `docs/dados/2026-08-20-constancia-gargalos-gazebo/`.
 
 ---
 

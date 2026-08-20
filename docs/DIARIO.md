@@ -4,6 +4,115 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-08-20 — DESFAZENDO UMA LEVA DE 12 MUDANÇAS, E O QUE SOBROU DELA
+
+Sessão inteira no Gazebo, sem robô. Começou com o dono relatando que uma leva
+automatizada da manhã (12 corridas, `constancia-gargalos-gazebo`) tinha PIORADO
+a passagem pela porta: *"ele passa, mas um lixo, tem que parar pra ajeitar"*.
+
+### O que os dados daquela leva mostraram
+
+Piora monotônica, medida nos resumos dela mesma (perna de ida):
+
+    continua_02    2 paradas    0,4 s parado    0 recuperações
+    continua_10   22 paradas   39,9 s parado    8 recuperações
+    continua_11   41 paradas   61,0 s parado   14 recuperações
+
+Doze mudanças, zero repetições — o `ESTADO_PROJETO.md` mandava repetir 3x sem
+mexer em nada antes de abrir qualquer mudança, e isso não foi feito.
+
+### A causa raiz: o teto de velocidade dentro da porta
+
+`passagem_v_max: 0.25` foi posto para "dar tempo de corrigir no vão". Faz o
+contrário. Ganho da movimentação e curvatura parasita, medidos no bag:
+
+    v = 0,40-0,60 m/s   ganho 0,16   curvatura  -0,12 1/m
+    v = 0,22-0,28 m/s   ganho 0,45   curvatura  +0,55 1/m
+
+4,6x maior e de sinal oposto. É o cuidado do robô 1 que o `CLAUDE.md` diz valer
+DOS DOIS LADOS: nunca escalar wz parcialmente sem conhecer a zona-morta do
+atuador. Aqui ela é por RODA, então baixar a linear aproxima as duas rodas do
+limiar e a movimentação passa a amplificar o giro. O yaw dispara no ciclo
+seguinte ao teto armar: `x=8,03 yaw +15°` → `x=8,40 yaw +46°`.
+
+### E a travada nunca foi risco de colisão
+
+Reconstruindo o polígono do reflexo e o corpo em toda travessia:
+
+    folga do CORPO até a jamba      +3 a +12 cm   cabia sempre
+    folga da CAIXA do reflexo       -2 a -13 cm   vetava
+
+Quem para é sempre o `PolygonStop`. Existe uma faixa de 7 a 16 cm de offset em
+que o reflexo veta e a física passa — e o robô vivia nela. **Palavras do dono,
+e viram critério de projeto:** *"o collision monitor não foi feito para ajeitar
+a posição e fazer manobra, ele foi feito pra parar impactos inevitáveis, com
+obstáculo fora do mapa, não obstáculo conhecido"*.
+
+### O outro defeito da leva: singularidade no alvo
+
+`alvo_estavel_de_passagem` mira o CENTRO do vão. Quando o robô chega nesse
+ponto a distância ao alvo vai a zero e o rumo pedido é `atan(desvio/distância)`:
+com alvo a 0,14 m e 10 cm de desvio, 36°. O robô girou atrás do próprio alvo,
+cruzou a soleira a +86° e ficou 55 s preso. E falha de forma INSTÁVEL: o mesmo
+código atravessou a +1,6° às 13:56 e girou 90° às 14:37.
+
+### Resultado na pista
+
+Com o teto neutro e a travessia de gargalo desligada, três corridas seguidas:
+
+    corrida_01   111,5 s   0 paradas   1 invasão   desvlat mediano 6 cm
+    corrida_02   112,7 s   0 paradas   2 invasões  5 cm
+    corrida_03   140,3 s   0 paradas   0 invasões  5 cm
+
+Primeira configuração do dia que repete.
+
+### No mapa real (`sala_andar3`), o S do corredor
+
+Três tentativas, duas reprovadas:
+
+    tol_estica 0,07 -> 0,03    reprovou: prendeu a mira no curto (80%), S igual
+    rumo_estica 3° -> 6°       reprovou: "piorou demais a curva"
+    mira_rumo_passo -> 0,40    APROVADO: "agora foi bom, gostei dessa"
+
+O achado por trás: os dois critérios da mira são inconsistentes. `tol_estica`
+0,07 aceita raio >= ~2 m; `rumo_estica` 3° aceita raio >= 15,3 m. O de rumo
+anula o de desvio sempre — 14,2% contra 77,2% em 219 amostras de plano real.
+A terceira tentativa mudou só a RÉGUA (filtra serrilhado antes de medir), sem
+tocar em limiar de proteção.
+
+### Erros meus, porque fracasso documentado é resultado
+
+1. **Cinco pilhas empilhadas.** Meus padrões de `kill` deixaram de fora
+   `robot_state_publisher`, `placa_simulada`, `parameter_bridge` e o
+   `ros2 daemon`. Cinco `path_follower` publicando comando = robô andando
+   sozinho; cinco relógios = "jump back in time". Já estava no `MEMORY.md` que
+   isso custa horas, e custou de novo.
+2. **Dois alarmes falsos por medida errada.** Comparei `map` e `odom` com dois
+   `tf2_echo` sequenciais, 8 s de intervalo, robô a 0,5 m/s — e chamei de "AMCL
+   1 m deslocado" o que era o robô tendo andado. Pareado no bag, o erro era de
+   4,6 cm. Mandei parar uma corrida boa por causa disso. Também usei
+   `--no-daemon` em `ros2 topic hz`, que não existe: o comando falhava e eu lia
+   como "sem dado".
+3. **Sobrescrevi `worlds/sala_andar3.sdf`**, versionado e com mesh `.obj`, com
+   um mundo gerado por mim. Restaurado do git.
+4. **Levei o `suave` ao robô com evidência de bancada.** A folga era medida
+   contra o MAPA, num plano parado. Ele bateu a traseira. É a lição da 041 pela
+   segunda vez: bancada promove candidato, quem aprova é a corrida.
+
+### Aberto para a próxima
+
+- **CPU satura e estraga a corrida**: carga 15,75 em 12 núcleos, com o
+  `ros2 bag record --all-topics` a 68% escrevendo 560 MB/min da nuvem e o
+  `/scan` caindo para 6,2 Hz. Usar `bag:=false` quando não precisar do `/plan`.
+- **O plano corta quinas**: na travada do mapa real o robô estava numa área
+  aberta e o plano passava a 5 cm da quina. Mexe no costmap.
+- **`curv_frente: -0.817` com `curv_medido_em: HERDADO`**: medido no robô real
+  em 04-08 e aplicado à planta simulada, que mede entre 0 e +0,2 1/m. No robô,
+  medir a curvatura do dia é o protocolo que o próprio `compensador_rumo.py`
+  manda seguir e que nunca rodou no simulador.
+- **`passo 0,40` não tem repetição.** As duas tentativas foram perdidas (uma
+  por eu matar o `gz sim` da própria pilha, outra por CPU).
+
 ## 2026-08-19 (última leva no Gazebo) — MELHOR BASELINE OBSERVADO ATÉ AGORA
 
 Veredito visual do dono ao encerrar: **“foi e voltou perfeitamente”** e
