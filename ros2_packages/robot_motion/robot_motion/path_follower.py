@@ -404,25 +404,30 @@ class PathFollower(Node):
             # Mede o círculo físico + 2 cm; nunca gira só porque os corredores
             # retangulares disseram zero.
             #
-            # 🔴 DESLIGADO EM 20-08, e a razão não é a conta acima — ela está
-            # certa. É o PAPEL. Palavras do dono: *"o collision monitor não foi
-            # feito para ajeitar a posição e fazer manobra, ele foi feito pra
-            # parar impactos inevitáveis, com obstáculo fora do mapa, não
-            # obstáculo conhecido"*. Girar no lugar dentro de um vão de 0,80 m
-            # é a manobra que ele não quer ver: o robô tem que passar de
-            # primeira. Enquanto a travessia depender de pivô, o defeito está
-            # na APROXIMAÇÃO e é lá que se conserta.
+            # ⚠️ O CUSTO EM FOLGA, que é o que torna esta manobra cara: girando,
+            # a quina varre 0,314 m de raio contra 0,2275 de meia-largura. Num
+            # vão de 0,80 m sobram 8,6 cm por lado, e a quina da caixa do
+            # reflexo (0,3466) não cabe de jeito nenhum. Foi assim que a
+            # `continua_11` acumulou 14 recuperações e 61 s parada.
             #
-            # E o pivô é o que mais gasta folga. Girando, a quina varre 0,314 m
-            # de raio contra 0,2275 de meia-largura: num vão de 0,80 sobram
-            # 8,6 cm por lado, e a caixa do reflexo (0,3466 de quina) não cabe
-            # de jeito nenhum. Foi assim que a `continua_11` acumulou 14
-            # recuperações e 61 s parada.
+            # Foi desligado em 20-08 por causa disso, e o dono REATIVOU no
+            # mesmo dia, com dois motivos que o número acima não cobre:
             #
-            # O código fica: é a saída correta quando o robô estiver mesmo
-            # encaixotado em obstáculo NOVO, que é o caso para o qual ele foi
-            # escrito. Religar exige medir a folga radial no local.
-            ('desencalhe_pivo_habilitado', False),
+            #   1. o pivô é legítimo em ENCALHE DE VERDADE, que é o caso para
+            #      o qual ele foi escrito. Tirá-lo por causa da porta seria
+            #      resolver um problema de aproximação removendo uma saída que
+            #      não tem nada a ver com ele;
+            #   2. travar de forma visível é INFORMAÇÃO. Palavras dele: *"eles
+            #      nos mostram onde ele erra, mesmo que ele trave lá"*. Um robô
+            #      que para na porta e insiste diz onde a aproximação falhou;
+            #      um robô com a manobra desligada só chega mais devagar.
+            #
+            # 🔴 O que continua valendo, e é o critério de leitura das corridas:
+            # pivô DENTRO de um vão do mapa é sintoma, nunca solução. A porta
+            # tem que passar de primeira, e enquanto ela depender de manobra o
+            # defeito está na APROXIMAÇÃO. Ver pivô num gargalo = ir consertar
+            # o que vem antes dele, não afinar o pivô.
+            ('desencalhe_pivo_habilitado', True),
             ('desencalhe_pivo_folga', 0.334),
             ('desencalhe_pivo_angulo_deg', 25.0),
             ('desencalhe_pivo_wz', 1.0),
@@ -442,25 +447,30 @@ class PathFollower(Node):
             # disponíveis para bancada com este knob em false; em produção a
             # recuperação repete, sempre limitada pelo scan em cada manobra.
             #
-            # 🔴 DESLIGADO EM 20-08. A regra do dono continua de pé — o robô
-            # não pode desistir com objetivo vivo — mas ela não se cumpre
-            # tirando o teto: sem teto, um erro que não é de encalhe passa a
-            # repetir para sempre, e foi exatamente isso que a série de 20-08
-            # mediu na perna de ida:
+            # ⚠️ O QUE ISTO CUSTA, medido na série de 20-08 (perna de ida):
             #
             #     continua_02   2 paradas    0,4 s parado    0 recuperações
             #     continua_10  22 paradas   39,9 s parado    8 recuperações
             #     continua_11  41 paradas   61,0 s parado   14 recuperações
             #
-            # Nenhuma dessas manobras estava desencalhando coisa nenhuma: o
-            # corpo tinha 3 a 12 cm de folga em todas elas. O contador não era
-            # o problema — era o único aviso de que a recuperação não servia.
-            # Com o teto, a falha aparece e dá para diagnosticar; sem ele, ela
-            # vira um robô dançando na porta, que é o sintoma reclamado.
+            # Nenhuma dessas manobras desencalhou coisa nenhuma: o corpo tinha
+            # 3 a 12 cm de folga em todas elas. Sem teto, um erro que NÃO é de
+            # encalhe repete para sempre.
             #
-            # Voltar a discutir SÓ depois de a travessia passar de primeira:
-            # aí um teto que estoura é sinal de verdade, e não de ruído.
-            ('recuperacao_infinita_com_objetivo', False),
+            # Foi desligado em 20-08 por causa disso e o dono REATIVOU no mesmo
+            # dia, e o argumento dele é de diagnóstico, não de desempenho: a
+            # repetição é justamente o que revela onde a aproximação falha.
+            # Um objetivo que morre no contador esconde o local do defeito
+            # atrás de um número; um robô que insiste marca o ponto exato,
+            # corrida após corrida, no CSV e no bag.
+            #
+            # 🔴 COMO LER, e vale para toda corrida daqui em diante: repetição
+            # aqui é SINTOMA, não recuperação. Onde aparecerem 8 ou 14
+            # recuperações, o que se conserta é a aproximação daquele ponto —
+            # nunca a recuperação em si, que já provou não estar desencalhando
+            # nada. O teto volta a ser discutido quando a travessia passar de
+            # primeira: aí um teto que estoura é sinal de verdade.
+            ('recuperacao_infinita_com_objetivo', True),
             # 🔴 RÉ SÓ COM OBJETIVO VIVO (14-08, decisão 031). Requisito do
             # dono, com as palavras dele: *"a ré é para desencalhar, mas quando
             # ele ENCALHA por conta de um erro, é pra desencalhar E IR ATÉ UM
