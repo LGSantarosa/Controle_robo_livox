@@ -1,0 +1,43 @@
+/twist_mux:
+  ros__parameters:
+    diagnostic_updater:
+      period: 1.0
+      use_fqn: false
+    qos_overrides:
+      /clock:
+        subscription:
+          depth: 1
+          durability: volatile
+          history: keep_last
+          reliability: best_effort
+      /parameter_events:
+        publisher:
+          depth: 1000
+          durability: volatile
+          history: keep_last
+          reliability: reliable
+    start_type_description_service: true
+    topics:
+      autonomia:
+        priority: 10
+        timeout: 0.5
+        topic: auto_vel
+      desencalhe:
+        priority: 30
+        timeout: 0.5
+        topic: unstuck_vel
+      joystick:
+        priority: 100
+        timeout: 0.5
+        topic: joy_vel
+      teclado:
+        priority: 90
+        timeout: 0.5
+        topic: key_vel
+      web:
+        priority: 50
+        timeout: 0.5
+        topic: web_vel
+    use_sim_time: true
+    use_stamped: true
+
