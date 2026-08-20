@@ -54,6 +54,9 @@ class SeguidorFalso:
             're_folga': 0.30,
             're_orcamento_cego': 0.30,
             're_exige_objetivo': True,
+            'desencalhe_frente_dist': 0.20,
+            'desencalhe_frente_folga': 0.10,
+            're_bloqueio_frente_max': 0.20,
         }
         base.update(par)
         self.par = base
@@ -78,6 +81,22 @@ class SeguidorFalso:
         # desligamento afirmam que não pode acontecer.
         self.vao_pedido += 1
         return 1.0
+
+    def vao_frente(self):
+        # Obstáculo frontal confirmado: mantém a ré legítima como padrão dos
+        # testes antigos. Casos sem bloqueio sobrescrevem este método.
+        return 0.0
+
+
+def test_sem_bloqueio_frontal_nao_da_re_por_falta_de_progresso():
+    seg = SeguidorFalso()
+    seg.vao_frente = lambda: 1.0
+
+    PathFollower.entra_na_re(seg, t=1.0, x=0.0, y=0.0, dist=2.0)
+
+    assert not hasattr(seg, 're_desde')
+    assert seg.progresso.reiniciado == 1
+    assert 'mero sintoma' in seg.logger.avisos[-1]
 
 
 def test_teto_zero_nao_mata_o_seguidor():

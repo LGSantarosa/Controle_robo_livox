@@ -39,10 +39,10 @@ amcl:
     # que odometria de roda — e a de roda deste robô é `open_loop` e mente.
     # Valores baixos, mas não zero: em 10-08 a planta derivou 19% em 5 min, e
     # zero desconfiança faz o filtro colapsar num ponto e nunca se recuperar.
-    alpha1: 0.1     # giro estimado a partir de giro
+    alpha1: 0.01    # pivô medido: não espalhar 10x o giro observado
     alpha2: 0.1     # giro a partir de translação
     alpha3: 0.1     # translação a partir de translação
-    alpha4: 0.1     # translação a partir de giro
+    alpha4: 0.001   # pivô no eixo não pode inventar salto de translação
     alpha5: 0.1     # só o modelo omni usa; fica declarado para não sumir
 
     min_particles: 500

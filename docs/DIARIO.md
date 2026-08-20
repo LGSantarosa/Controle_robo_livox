@@ -4,6 +4,76 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-08-19 (última leva no Gazebo) — MELHOR BASELINE OBSERVADO ATÉ AGORA
+
+Veredito visual do dono ao encerrar: **“foi e voltou perfeitamente”** e
+**“essa se torna a melhor até agora”**. O robô atravessou a porta corretamente
+na ida, tinha trajetória livre para terminar o objetivo 1 e depois retornou à
+sala pelo objetivo 2. Também fez o pivô necessário, sem substituir a manobra
+por um balão grande.
+
+O objetivo 1 não deve ser contabilizado como falha nem como chegada: ele foi
+**preemptado pelo envio do objetivo 2 antes de terminar**. Naquele momento o
+robô já havia passado pela porta e seguia normalmente. O objetivo 2 terminou
+com `Goal succeeded`.
+
+Evidência desta corrida:
+
+- CSV: `docs/dados/2026-08-19-sem-re-aleatoria/seguidor_2026-08-19_211353.csv`;
+- rosbag: `docs/dados/2026-08-19-sem-re-aleatoria/corrida_2026-08-19_211348/`;
+- início do retorno em aproximadamente `(6,04; 2,70)`;
+- pivô disparado com erro de rumo de `+166°`; após o pulso ainda faltavam
+  cerca de `20°`, e o seguidor retomou o plano e concluiu sem fazer o balão.
+
+Configuração que produziu o melhor resultado: `SmacPlanner2D`, multiplicador
+de custo 5, footprint orientado igual ao `PolygonStop`, replanejamento a
+0,2 Hz, timeout de plano de 7 s e mira curta de **0,37 m**. A mira de 1,0 m só
+é liberada quando o metro seguinte é essencialmente reto; se há curva próxima,
+o seguidor permanece olhando perto. A tentativa de mira curta de 0,15 m foi
+ruim, fez o robô se perder do plano e **não pertence a este baseline**.
+
+Este resultado ainda é uma observação manual `n=1`, não validação estatística.
+Na próxima sessão, preservar exatamente esta configuração e repetir primeiro
+o mesmo percurso várias vezes antes de qualquer nova alteração.
+
+## 2026-08-19 — A PORTA VOLTOU, A VOLTA FUNCIONOU E A “RÉ” DA IDA ERA O FREIO
+
+Depois de uma sequência de experiências com pivô, chegada e corte do plano que
+regrediram a travessia, o movimento/planejamento foi restaurado ao `HEAD`
+`cd016e8`. A versão restaurada voltou a atravessar a porta na ida e na volta.
+Ficou o ajuste do AMCL (`alpha1=0.01`, `alpha4=0.001`), que reduziu a perda de
+pose nos giros.
+
+O collision monitor foi comparado com o robô 1. A tentativa de retirar o
+`PolygonStop` aproximou demais o robô do obstáculo e foi revertida. Em vez
+disso, o `path_follower` recebeu a saída segura do robô 1: traseira bloqueada +
+frente livre permite um escape frontal limitado a 0,20 m, com o vão rechecado
+em cada ciclo. A ré ganhou uma condição adicional: falta de progresso não
+basta; deve existir bloqueio frontal medido em até 0,20 m e espaço atrás. Onze
+testes específicos passaram.
+
+Na corrida manual final (`docs/dados/2026-08-19-sem-re-aleatoria/`), os dois
+goals terminaram. A volta foi a melhor observada pelo dono. Ao restarem cerca
+de 22° após o pivô, havia 2,45 m livres à frente; a nova regra recusou a ré,
+o planejamento retomou e o robô terminou sozinho. Esse comportamento é o novo
+referencial.
+
+A análise do CSV separou o que visualmente parecia a mesma coisa: foram 49
+amostras de recuperação com velocidade positiva e zero com velocidade
+negativa. Não houve ré automática. Os dois movimentos de recuperação foram
+escapes frontais de ~0,20 m. As três “mini-rés” percebidas na ida coincidem com
+cortes do `PolygonStop`, após os quais o `compensador_rumo` pede contra-torque
+`-0.50` para cancelar a inércia. A ida, portanto, ainda sofre com a atuação do
+freio; a volta e a decisão de seguir em frente estão corretas.
+
+Próxima sessão: modificar uma causa só. O freio deve virar uma frenagem melhor
+fechada pela velocidade longitudinal medida, reduzindo/encerrando o
+contra-torque antes de produzir recuo perceptível. Não simplesmente desligar:
+sem ele a placa mantém movimento por ~0,52 s e acrescenta ~0,10 m depois do
+corte. Não mexer simultaneamente em Smac, pivô, AMCL, collision monitor ou
+desencalhe. Medir velocidade mínima e deslocamento em cada atuação e exigir
+três idas/voltas sem tranco, contato ou ré indevida, preservando a volta atual.
+
 ## 2026-08-14 (2ª leva) — DOIS DEFEITOS DE VERDADE, E QUATRO TENTATIVAS MINHAS QUE FALHARAM
 
 > Dev + Gazebo, o dono na tela até o almoço; o protocolo final rodado pelo

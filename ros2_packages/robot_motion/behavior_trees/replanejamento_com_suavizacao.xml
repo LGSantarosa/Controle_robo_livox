@@ -97,7 +97,10 @@
       <PipelineSequence name="NavigateWithReplanning">
         <ControllerSelector selected_controller="{selected_controller}" default_controller="FollowPath" topic_name="controller_selector"/>
         <PlannerSelector selected_planner="{selected_planner}" default_planner="GridBased" topic_name="planner_selector"/>
-        <RateController hz="1.0">
+        <!-- 19-08: plano a 1 Hz reintroduzia balanço mesmo quando a rota
+             anterior seguia válida. O reflexo continua imediato; a rota
+             global só é renovada a cada 5 s. -->
+        <RateController hz="0.2">
           <RecoveryNode number_of_retries="1" name="PlanejaESuavizaComRecuperacao">
             <Sequence name="PlanejaESuaviza">
               <ComputePathToPose goal="{goal}" path="{path}" planner_id="{selected_planner}" error_code_id="{compute_path_error_code}"/>

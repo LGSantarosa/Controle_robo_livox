@@ -1,12 +1,118 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-08-18** (2ª leva, no robô).
+> Versionado na `main`. Atualizado em **2026-08-19** (Gazebo, porta ida/volta).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+---
+
+## 🟢 19-08 (GAZEBO, última leva) — MELHOR CORRIDA OBSERVADA ATÉ AGORA
+
+> **Baseline atual a preservar.** Veredito do dono: o robô foi e voltou
+> perfeitamente, passou a porta, executou o pivô e esta foi a melhor execução
+> vista até agora.
+
+- Na ida, o objetivo 1 foi interrompido porque o objetivo 2 foi enviado antes
+  da chegada. Isso foi uma preempção, não uma falha: o robô já tinha passado
+  pela porta e seguia em condições de concluir.
+- Na volta, o objetivo 2 terminou com `Goal succeeded`.
+- O pivô foi acionado com erro de `+166°`. Mesmo encerrando o pulso com cerca
+  de `20°` restantes, o seguidor retomou o plano e completou a volta sem fazer
+  o balão grande que havia aparecido nas tentativas anteriores.
+- Evidências exatas: CSV
+  `docs/dados/2026-08-19-sem-re-aleatoria/seguidor_2026-08-19_211353.csv` e
+  rosbag
+  `docs/dados/2026-08-19-sem-re-aleatoria/corrida_2026-08-19_211348/`.
+
+### Configuração congelada como referência
+
+- planejador `nav2_smac_planner::SmacPlanner2D`, com
+  `cost_travel_multiplier: 5.0`;
+- footprint orientado igual ao `PolygonStop` nos dois costmaps;
+- replanejamento a `0.2 Hz` e `timeout_plano: 7.0 s`;
+- mira curta restaurada para `0.37 m` — os `0.15 m` foram reprovados;
+- mira longa de `1.0 m` somente quando o próximo metro é essencialmente reto;
+  havendo curva próxima, a mira fica curta para não antecipá-la.
+
+É o melhor **resultado observado**, ainda com amostra manual `n=1`. A próxima
+sessão deve começar repetindo o percurso ida/volta pelo menos três vezes sem
+mudar parâmetros. Só depois dessa repetição deve ser aberta uma nova mudança.
+
+## 🟡 19-08 (GAZEBO) — A VOLTA VIROU REFERÊNCIA; A IDA AINDA FREIA DEMAIS
+
+> **Estado atual e prioridade para a próxima sessão.** O robô atravessou a
+> porta, cumpriu os dois objetivos e voltou. A volta foi, nas palavras do
+> dono, a melhor corrida que ele fez sozinho até hoje. O avanço de hoje deve
+> ser preservado; o próximo trabalho é tirar as interrupções da ida sem tirar
+> a proteção contra colisão.
+
+### Baseline que está valendo
+
+- O código de movimento/planejamento foi devolvido ao `HEAD` `cd016e8`, que
+  voltou a atravessar a porta na ida e na volta. Os experimentos de pivô e de
+  corte antecipado do plano que regrediram a porta não fazem parte do baseline.
+- O Smac continua ativo. Não voltar ao Theta.
+- Foi preservado apenas o ajuste de localização que reduziu a perturbação do
+  AMCL durante giros: `alpha1: 0.01` e `alpha4: 0.001`.
+- O `PolygonApproach` e o `PolygonStop` continuam ativos. Desligar o stop quase
+  levou a contato e foi revertido.
+- O seguidor ganhou a saída inspirada no robô 1: se está emperrado, a traseira
+  está bloqueada e há frente medida livre, ele avança até 0,20 m, reavaliando
+  o vão em todo ciclo. Se a frente não está fisicamente bloqueada, falta de
+  progresso sozinha **não autoriza ré**.
+- A regra nova da ré está coberta por 11 testes em
+  `test/test_re_desligada.py`, todos verdes na última execução.
+
+### Última corrida manual — o que realmente aconteceu
+
+Dados: `docs/dados/2026-08-19-sem-re-aleatoria/`.
+
+```
+dois goals                         SUCCEEDED
+amostras no estado de desencalhe   49
+velocidade negativa nesse estado   0
+velocidade positiva nesse estado   49
+```
+
+Logo, **não houve ré automática na última corrida**. Houve dois escapes para
+frente de aproximadamente 0,20 m quando a traseira estava bloqueada. Na volta,
+quando o pivô encerrou com cerca de 22° restantes, o seguidor mediu 2,45 m
+livres à frente, recusou corretamente a ré por mero sintoma, voltou a seguir o
+plano e terminou. Esse é exatamente o comportamento desejado e deve ficar.
+
+O que pareceu serem três “mini-rés” na ida veio de outro nó: o
+`compensador_rumo` recebeu cortes do `PolygonStop` e publicou contra-torque
+linear de `-0.50` para cancelar a inércia. O freio está ligado no baseline.
+Ele existe porque, sem frenagem, a placa mantém movimento por cerca de 0,52 s
+e o robô já percorreu mais 0,10 m após um corte. Portanto, **não desligar o
+freio nem enfraquecer o `PolygonStop` às cegas**.
+
+### Próxima melhoria, uma causa por vez
+
+1. Trabalhar somente no freio linear, usando a velocidade longitudinal medida
+   como realimentação para encerrar/reduzir o contra-torque antes que ele seja
+   percebido como recuo. Não mexer junto em Smac, pivô, AMCL, footprint ou
+   lógica de desencalhe.
+2. Instrumentar cada atuação com velocidade antes, mínima durante, duração e
+   deslocamento longitudinal. Critérios simultâneos: nenhuma velocidade ou
+   distância negativa relevante e nenhum avanço residual que comprometa a
+   margem do `PolygonStop`.
+3. Corrigir o texto de log `fim da ré` quando o sentido for positivo para
+   `fim do escape para frente`; hoje o rótulo confunde a leitura, embora o CSV
+   mostre corretamente velocidade positiva.
+4. Repetir o mesmo percurso `(0,0) -> porta/corredor -> (0,0)` pelo menos três
+   vezes. Aceitação: ida sem trancos/mini-rés, volta preservada como está,
+   nenhuma colisão, nenhuma ré sem bloqueio frontal e ambos os goals concluídos.
+
+### Estado operacional ao encerrar este registro
+
+Uma simulação permanece aberta para os testes do dono, iniciada com dados em
+`docs/dados/2026-08-19-sem-re-aleatoria/`. Antes de uma nova subida, matar e
+confirmar a ausência de qualquer `pilha.launch.py`, `gz sim` e `rviz2` antigo.
 
 ---
 

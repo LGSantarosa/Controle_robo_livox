@@ -83,6 +83,10 @@ class PathFollower(Node):
             # longa para não oscilar. Este pivota (fatia 3 da 011) e tem o
             # compensador cancelando o arco: mira curta deixou de custar
             # oscilação. Com 1,0 o lookahead vira 0,37 m — cabe dentro do vão.
+            # 19-08: a tentativa de 0,15 m foi reprovada na tela — amplificou
+            # a irregularidade local e o robô passou a se perder do plano.
+            # Volta à mira curta comprovada de 0,37 m; a regra angular acima
+            # continua impedindo a mira LONGA de 1 m perto de curva.
             ('lookahead_fator', 1.0),
             ('lookahead_piso', 0.30),
             # --- MIRA ADAPTATIVA (decisão 040) ---
@@ -108,11 +112,12 @@ class PathFollower(Node):
             ('mira_longa', 1.00),
             # Limiares da geometria, não de varredura (`desvio_da_corda` sobre
             # 1,0 m): raio 2,0 m desvia 0,068; raio 1,0 m desvia 0,125.
-            # Estica em curva suave (>= ~2 m), encolhe em curva de verdade
-            # (<= ~1 m), e a banda entre os dois é a HISTERESE — sem ela o
-            # carrot pula na fronteira e o limite-ciclo volta por outra porta.
+            # Estica em curva suave (>= ~2 m). A corrida de 19-08 mostrou que
+            # manter a mira longa ate 0,12 m fazia o carrot atravessar uma
+            # curva logo depois da reta e cortar a porta. Encolhe em 0,08 m;
+            # sobra 1 cm de histerese contra ruido sem esconder a quina.
             ('mira_tol_estica', 0.07),
-            ('mira_tol_encolhe', 0.12),
+            ('mira_tol_encolhe', 0.08),
             # Só estica com este vão livre à frente, medido no corredor
             # retangular do corpo. `None` (scan velho ou ausente) = não estica.
             ('mira_folga_min', 0.60),
@@ -266,7 +271,10 @@ class PathFollower(Node):
             # 29-07 deu caixa 0,433 × 0,455; 0,50 dá 2 cm de folga por lado
             # sobre a maior dimensão. NÃO é o `robot_radius` do Nav2 (0,32,
             # que é raio) nem a bitola (0,270, que é entre-eixos de roda).
-            ('re_largura', 0.50),
+            # 19-08: acompanha o contorno do planner/reflexo (0,455 m de
+            # corpo + 3 cm de cada lado). A traseira nao pode varrer uma faixa
+            # mais larga do que aquela que a recuperacao mede.
+            ('re_largura', 0.555),
             # Do centro do robô ao para-choque traseiro [m]. Mesma referência
             # do polígono do reflexo, que vai a −0,28.
             ('re_recuo_para_choque', 0.28),
@@ -308,6 +316,15 @@ class PathFollower(Node):
             ('re_avanco_min', 0.05),
             ('re_orcamento_cego', 0.30),
             ('re_teto_s', 8.0),
+            # Mesmo plano B do robô 1: se a traseira está bloqueada mas a
+            # frente está livre, sair 20 cm para FRENTE pelo canal de
+            # desencalhe. O vão frontal é medido antes e durante a manobra.
+            ('desencalhe_frente_dist', 0.20),
+            ('desencalhe_frente_folga', 0.10),
+            # Ré só é recuperação quando existe bloqueio físico à frente.
+            # Rumo/pivô/replanejamento também podem ficar 4 s sem progresso e
+            # não autorizam andar para trás.
+            ('re_bloqueio_frente_max', 0.20),
             # Quantas rés SEGUIDAS sem melhorar o melhor. É o teto estrutural
             # contra a fuga, e ele não depende de sintonia: recuo que não
             # aproxima o robô do objetivo não é recuperação, e repeti-lo é
@@ -330,9 +347,10 @@ class PathFollower(Node):
             # nada na bancada, e o dono nomeou isso como defeito.
             ('re_exige_objetivo', True),
             ('taxa', 20.0),
-            # Sem plano novo por este tempo, para. Plano velho é plano perigoso
-            # — mesma regra do `timeout_alvo` da movimentação.
-            ('timeout_plano', 2.0),
+            # Sem plano novo por este tempo, para. Desde 19-08 o planejador
+            # roda a cada 5 s para nao balancar a referencia; 7 s tolera um
+            # ciclo atrasado sem manter plano morto indefinidamente.
+            ('timeout_plano', 7.0),
             # 🔴 O TÓPICO DO PLANO — o suavizado, não o cru (decisão 042). O
             # porquê, com número, está na assinatura lá embaixo. O cru fica
             # declarado porque ele é a QUEDA quando o suavizador recusa, e
@@ -440,6 +458,8 @@ class PathFollower(Node):
                                            self.par['re_avanco_min'])
         self.re_desde = None
         self.re_origem = None
+        self.re_sentido = -1
+        self.re_orcamento_atual = 0.0
         # Quantas rés já foram gastas SEM que um plano novo chegasse. Zera no
         # `cb_plano`: plano novo é a prova de que a recuperação serviu.
         self.res_sem_plano = 0
@@ -789,7 +809,8 @@ class PathFollower(Node):
         rumo_alvo = self.correcao.passo(rumo_para(x, y, alvo), e_lat, v,
                                         self.dt)
         self.publica(rumo_alvo, v)
-        self.registra(t, x, y, rumo, rumo_alvo, v, dist, raio, e_lat)
+        self.registra(t, x, y, rumo, rumo_alvo, v, dist, raio, e_lat,
+                      mira=la, alvo=alvo)
 
         # Progresso de verdade apaga a dívida: se o robô chegou mais perto do
         # que estava antes da última ré, aquela ré cumpriu o papel dela.
@@ -901,43 +922,77 @@ class PathFollower(Node):
                                         cego=self.par['re_orcamento_cego']),
                         self.par['re_orcamento_cego'])
         if orcamento <= 0.0:
-            self.get_logger().warn(
-                f'emperrado e sem vão para recuar — atrás há {vao:.2f} m e a '
-                'folga exigida é maior. Parado, e é a coisa certa.',
-                throttle_duration_sec=5.0)
-            return
+            frente = self.vao_frente()
+            margem = self.par['desencalhe_frente_folga']
+            alvo = self.par['desencalhe_frente_dist']
+            if frente is None or frente <= margem:
+                medido = ('sem medida' if frente is None else f'{frente:.2f} m')
+                self.get_logger().warn(
+                    f'emperrado sem saída segura: atrás há {vao:.2f} m e '
+                    f'na frente {medido}', throttle_duration_sec=5.0)
+                return
+            orcamento = min(alvo, frente - margem)
+            self.re_sentido = 1
+        else:
+            frente = self.vao_frente()
+            if (frente is None
+                    or frente > self.par['re_bloqueio_frente_max']):
+                medido = ('sem medida' if frente is None
+                          else ('livre' if math.isinf(frente)
+                                else f'{frente:.2f} m'))
+                self.get_logger().warn(
+                    f'sem progresso, mas sem bloqueio físico frontal '
+                    f'({medido}) — não dou ré por mero sintoma',
+                    throttle_duration_sec=5.0)
+                self.progresso.reinicia()
+                return
+            self.re_sentido = -1
         self.estado = 're'
         self.re_desde = t
         self.re_origem = (x, y)
+        self.re_orcamento_atual = orcamento
         self.res_seguidas += 1
         if self.dist_antes_da_re is None or dist < self.dist_antes_da_re:
             self.dist_antes_da_re = dist
-        self.get_logger().warn(
-            f'EMPERRADO a {dist:.2f} m do objetivo — ré de até '
-            f'{orcamento:.2f} m (vão medido atrás: {vao:.2f} m)')
+        if self.re_sentido < 0:
+            self.get_logger().warn(
+                f'EMPERRADO a {dist:.2f} m do objetivo — ré de até '
+                f'{orcamento:.2f} m (vão medido atrás: {vao:.2f} m)')
+        else:
+            self.get_logger().warn(
+                f'EMPERRADO com traseira bloqueada ({vao:.2f} m) — '
+                f'escape para FRENTE de até {orcamento:.2f} m')
 
     def passo_de_re(self, t, x, y, rumo, dist):
         recuado = math.hypot(x - self.re_origem[0], y - self.re_origem[1])
+        sentido = getattr(self, 're_sentido', -1)
 
         # ⚠️ O VÃO É REMEDIDO A CADA CICLO, e não só na largada da manobra.
         # Vão que some no MEIO da ré é o caso que o para-choque não perdoa: o
         # mundo tem gente andando, e uma medida de 8 s atrás não descreve o
         # que está atrás agora. Some ou não-medível -> PARA, na hora.
-        vao = self.vao_traseiro()
-        if vao is None or vao <= 0.0:
+        vao = self.vao_traseiro() if sentido < 0 else self.vao_frente()
+        margem = (0.0 if sentido < 0
+                  else self.par['desencalhe_frente_folga'])
+        if vao is None or vao <= margem:
             self.publica_desencalhe(0.0)
             self.get_logger().warn(
-                'ré ABORTADA no meio: ' + ('o vão traseiro sumiu'
-                                           if vao is not None
-                                           else 'perdi a medida do /scan'))
+                'desencalhe ABORTADO no meio: ' +
+                ('o vão escolhido fechou' if vao is not None
+                 else 'perdi a medida do /scan'))
             self.estado = 'seguindo'
             self.progresso.reinicia()
             return
 
-        orcamento = min(orcamento_de_re(vao_traseiro=vao,
-                                        folga=self.par['re_folga'],
-                                        cego=self.par['re_orcamento_cego']),
-                        self.par['re_orcamento_cego'])
+        if sentido < 0:
+            orcamento = min(orcamento_de_re(vao_traseiro=vao,
+                                            folga=self.par['re_folga'],
+                                            cego=self.par['re_orcamento_cego']),
+                            getattr(self, 're_orcamento_atual',
+                                    self.par['re_orcamento_cego']))
+        else:
+            orcamento = min(self.re_orcamento_atual,
+                            vao - self.par['desencalhe_frente_folga'])
         if re_esgotada(recuado, orcamento, t - self.re_desde,
                        self.par['re_teto_s']):
             # Zero EXPLÍCITO no canal: o mux segura o último comando até o
@@ -953,8 +1008,9 @@ class PathFollower(Node):
         # movimentação recebe ZERO enquanto isso, para não haver duas fontes
         # disputando a mesma roda.
         self.publica(rumo, 0.0)
-        self.publica_desencalhe(-self.par['v_piso'])
-        self.registra(t, x, y, rumo, rumo, -self.par['v_piso'], dist, float('inf'))
+        v_escape = sentido * self.par['v_piso']
+        self.publica_desencalhe(v_escape)
+        self.registra(t, x, y, rumo, rumo, v_escape, dist, float('inf'))
 
     def para(self, motivo):
         v, _ = comando_de_parada()
@@ -974,7 +1030,8 @@ class PathFollower(Node):
             self.correcao.reset()
 
     # ------------------------------------------------------------ registro
-    def registra(self, t, x, y, rumo, rumo_alvo, v, dist, raio, e_lat=0.0):
+    def registra(self, t, x, y, rumo, rumo_alvo, v, dist, raio, e_lat=0.0,
+                 mira=None, alvo=None):
         """CSV de diagnóstico — o dono só roda, os números vêm por ssh.
 
         `rumo_alvo` está aqui de propósito: o plano salta entre replanejamentos,
@@ -992,6 +1049,10 @@ class PathFollower(Node):
                                           math.cos(rumo_alvo - rumo)), 4),
             'v_alvo': round(v, 4), 'dist': round(dist, 4),
             'raio_curva': ('inf' if math.isinf(raio) else round(raio, 4)),
+            # 19-08: prova se a mira ficou curta diante de uma curva futura.
+            'mira': '' if mira is None else round(mira, 4),
+            'alvo_x': '' if alvo is None else round(alvo[0], 4),
+            'alvo_y': '' if alvo is None else round(alvo[1], 4),
             # 039: com sinal (+ à esquerda). É a régua do conserto da porta —
             # sem ele o desvio só aparecia medindo o bag contra o mapa depois.
             'desvio_lateral': round(e_lat, 4),

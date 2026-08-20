@@ -61,71 +61,43 @@ bt_navigator:
 
 planner_server:
   ros__parameters:
-    expected_planner_frequency: 1.0
+    # 19-08: 1 Hz fazia um plano novo puxar o rumo a cada segundo mesmo com a
+    # rota anterior valida. 0,2 Hz preserva a rota por 5 s; surpresa continua
+    # sendo parada imediatamente pelo collision_monitor.
+    expected_planner_frequency: 0.2
     planner_plugins: ["GridBased"]
 
-    # ⚠️ THETA* desde 05-08, e isto REVISA A DECISÃO 008 pela mesma razão
-    # que derrubou a ré: a premissa era "este robô não pivota".
+    # 🔴 SMAC 2D EM 19-08. O Theta* foi medido no corredor reto:
+    # meandro de 29 cm, emendas p50 de 11,3 graus e curvas que em 41% dos
+    # planos exigiam mais que o raio da maquina. O SimpleSmoother arredondava
+    # as emendas, mas preservava o meandro. Na porta, o caminho voltou a passar
+    # perto da ombreira mesmo quando o seguidor o cumpriu corretamente.
     #
-    # A 008 escolheu o Smac Hybrid-A* porque ele respeita raio de curva, e
-    # descartou o Theta* com estas palavras (varredura de 29-07): "desenha
-    # reta lateral, que só serve para robô que pivota" e "os dois zeros do
-    # Theta* nos casos de lado não são virtude — é reta lateral para um robô
-    # que TERIA de pivotar".
-    #
-    # O robô agora pivota (fatia 3 da 011: 7 manobras, 7 fechadas, resíduo
-    # mediano 5°). Então a "reta lateral" deixou de ser defeito e virou o
-    # caminho certo: ir reto até o ponto e acertar o ângulo lá, em vez de
-    # descrever um arco de carro para chegar já apontado. A mesma varredura
-    # mediu o preço do arco: o Smac cobra 1,50x a 2,12x mais caminho nos
-    # alvos "de lado".
-    #
-    # O Smac continua sendo a escolha certa para um robô que NÃO pivota, e
-    # a bancada (`robot_planning`) segue comparando os dois. Se o pivô
-    # regredir no robô real (fatia 4), esta linha volta atrás.
+    # A primeira troca usou Hybrid-A* com DUBIN e foi reprovada na tela: para
+    # voltar 180 graus ele desenhou um balao enorme, porque Dubin nao pivota.
+    # Smac 2D e o modelo certo aqui: A* de custo para base diferencial que pode
+    # girar no lugar. A mudanca brusca de rumo chega ao heading_controller, que
+    # ja tem o pivo por corte medido, em vez de virar arco de carro.
     GridBased:
-      plugin: "nav2_theta_star_planner::ThetaStarPlanner"
-      how_many_corners: 8
-      w_euc_cost: 1.0
-      # ⚠️ 5,0 desde 05-08, era 2,0 (o valor da bancada, nunca julgado em
-      # execução). É o peso de FUGIR de célula cara contra o de andar menos.
-      # Medido: com 2,0 o robô atravessava a porta de 0,90 m COLADO numa
-      # ombreira — folga de 0,32 m onde o vão centrado daria 0,45 — e o pior
-      # ponto das quatro corridas caía sempre ali. O caminho mais curto pela
-      # porta passa pela quina; o mais seguro passa pelo meio, e num vão de
-      # 0,90 m para um robô de 0,63 m a diferença é tudo.
-      w_traversal_cost: 5.0
-      # false: o rumo de chegada é problema do PIVÔ, não do plano. É esta
-      # linha que materializa "vai reto e ajeita o ângulo lá".
-      use_final_approach_orientation: false
-
-    _smac_aposentado_em_05_08:
-      plugin: "nav2_smac_planner::SmacPlannerHybrid"
+      plugin: "nav2_smac_planner::SmacPlanner2D"
       tolerance: 0.25
       downsample_costmap: false
+      downsampling_factor: 1
       allow_unknown: false
       max_iterations: 1000000
       max_on_approach_iterations: 1000
       max_planning_time: 5.0
-
-      # MEDIDO em 29-07 (`tools/banco/corrida_gazebo.py`): raio realizado (p5)
-      # de 0,370 m com zona morta 0,10 e 0,463 m com 0,15. O valor definitivo
-      # depende da zona morta, que é o item nº 1 da bancada com o robô.
-      minimum_turning_radius: 0.37
-
-      # DUBIN = o plano NUNCA dá ré (decisão 009). O custo está medido e
-      # aceito; quem cobre os casos que o Dubins não resolve é a ré POR
-      # GATILHO, no `path_follower`.
-      motion_model_for_search: "DUBIN"
-      angle_quantization_bins: 72
-      reverse_penalty: 2.0     # inerte com DUBIN
-      change_penalty: 0.0
-      non_straight_penalty: 1.2
-      cost_penalty: 2.0
-      retrospective_penalty: 0.015
-      analytic_expansion_ratio: 3.5
-      analytic_expansion_max_length: 3.0
-      smooth_path: true
+      angle_quantization_bins: 1
+      # Alto dentro da faixa recomendada do Smac: o corredor/porta precisam
+      # preferir o centro, nao apenas o caminho geometricamente mais curto.
+      cost_travel_multiplier: 5.0
+      use_final_approach_orientation: false
+      smoother:
+        max_iterations: 1000
+        w_smooth: 0.3
+        w_data: 0.2
+        tolerance: 1.0e-10
+        do_refinement: true
 
 controller_server:
   ros__parameters:
@@ -265,7 +237,10 @@ global_costmap:
       # circunscrito (0,314), que só manda quando o robô gira parado. E girar
       # perto de parede é justamente o caso que o reflexo cobre (0,26 lateral,
       # 0,28 atrás).
-      robot_radius: 0.28
+      # Smac checa o contorno ORIENTADO. Corpo medido (0,433 x 0,455 m) mais
+      # 3 cm em toda volta, igual ao PolygonApproach. Diferente do circulo de
+      # 0,28 m, isto inclui a varredura das quinas/traseira durante a curva.
+      footprint: "[[0.35, 0.2775], [0.35, -0.2775], [-0.2665, -0.2775], [-0.2665, 0.2775]]"
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
@@ -406,7 +381,7 @@ local_costmap:
       height: 4
       resolution: 0.05
       # Mesmo número do global, e pelo mesmo motivo — ver lá (decisão 032).
-      robot_radius: 0.28
+      footprint: "[[0.35, 0.2775], [0.35, -0.2775], [-0.2665, -0.2775], [-0.2665, 0.2775]]"
       # ⚠️ A ordem importa: a inflação é sempre a ÚLTIMA, senão ela infla um
       # mapa que ainda não tem o obstáculo que acabou de chegar.
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]

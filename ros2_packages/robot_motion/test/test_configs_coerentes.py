@@ -74,11 +74,13 @@ def test_geometria_igual_na_bancada_e_na_producao(chave):
 
 
 def test_o_modelo_de_movimento_e_o_mesmo_nos_dois():
-    """Decisão 009: o plano não dá ré. Se a bancada julgar em Reeds-Shepp e o
-    robô rodar em Dubins, o que foi aprovado não é o que anda."""
-    p, b = texto(PRODUCAO, 'motion_model_for_search'), texto(
-        BANCADA, 'motion_model_for_search')
-    assert p == b == 'DUBIN', f'produção {p} × bancada {b}'
+    """19-08: produção precisa permitir pivô, não impor Dubin/Hybrid."""
+    import yaml
+    planner = yaml.safe_load(open(PRODUCAO))['planner_server'][
+        'ros__parameters']['GridBased']
+    assert planner['plugin'] == 'nav2_smac_planner::SmacPlanner2D'
+    assert 'motion_model_for_search' not in planner, (
+        'modelo de carro voltou ao planner e vai transformar o pivô em balão')
 
 
 def test_o_raio_de_chegada_do_nav2_bate_com_o_do_seguidor():
@@ -281,10 +283,13 @@ def test_a_lateral_do_reflexo_cabe_no_que_o_PLANEJADOR_permite():
     que o dono previu e o que aconteceu em 14-08."""
     import yaml
     lateral = max(abs(y) for _, y in eval(_cm()['PolygonStop']['points']))  # noqa: S307
-    raio = yaml.safe_load(open(PRODUCAO))['global_costmap']['global_costmap'][
-        'ros__parameters']['robot_radius']
-    assert lateral <= raio, (
-        f'reflexo pede {lateral} de lado e o planejador só garante {raio}')
+    nav = yaml.safe_load(open(PRODUCAO))['global_costmap']['global_costmap'][
+        'ros__parameters']
+    footprint = eval(nav['footprint'])  # noqa: S307
+    lateral_planner = max(abs(y) for _, y in footprint)
+    assert lateral <= lateral_planner, (
+        f'reflexo pede {lateral} de lado e o planejador só garante '
+        f'{lateral_planner}')
 
 
 # 🔴 O TÓPICO QUE A PERCEPÇÃO CONSOME, e ele NÃO é o do driver (decisão 017).
@@ -1305,10 +1310,14 @@ def test_o_corredor_da_re_cobre_o_CORPO_e_nao_o_raio():
     falhar do setor angular, com outra roupa.
     """
     largura = _default_do_seguidor('re_largura')
-    raio_nav2 = valor(PRODUCAO, 'robot_radius')
-    assert largura > raio_nav2, (
-        f'corredor de {largura} m contra robot_radius {raio_nav2} — a largura '
-        'do corredor não pode ser menor que o diâmetro efetivo do corpo')
+    import yaml
+    nav = yaml.safe_load(open(PRODUCAO))['global_costmap']['global_costmap'][
+        'ros__parameters']
+    footprint = eval(nav['footprint'])  # noqa: S307
+    largura_planner = 2.0 * max(abs(y) for _, y in footprint)
+    assert largura >= largura_planner, (
+        f'corredor de {largura} m contra footprint de {largura_planner} m — '
+        'a medição traseira não pode ser mais estreita que o planner')
     recuo = _default_do_seguidor('re_recuo_para_choque')
     assert 0.0 < recuo < largura, f'recuo do para-choque implausível: {recuo}'
 
@@ -1463,23 +1472,15 @@ def test_a_launch_usa_a_arvore_PROPRIA_e_nao_a_de_fabrica():
 
 
 @pytest.mark.parametrize('qual', ['local_costmap', 'global_costmap'])
-def test_o_raio_do_planejador_fica_na_faixa_util(qual):
-    """O raio que o Theta* obedece tem de caber entre o reflexo e o corpo.
-
-    Os dois lados foram medidos com o robô travado, em 14-08:
-
-        < 0,26   o planejador manda por onde o polígono do reflexo VETA, e o
-                 robô fica entre os dois — foi o impasse que o dono previu:
-                 *"um fala que passa e o outro não deixa"*;
-        > 0,314  (o circunscrito da caixa) o Theta* proíbe 15,1% das células
-                 livres da sala, inclusive aquela onde o robô está, e devolve
-                 `Could not generate path`.
-    """
+def test_o_planejador_usa_o_CONTORNO_orientado_do_reflexo(qual):
+    """Smac deve checar a traseira/quinas que o reflexo protege."""
     import yaml
     d = yaml.safe_load(open(PRODUCAO))[qual][qual]['ros__parameters']
-    raio = d['robot_radius']
-    assert 0.26 <= raio <= 0.314, (
-        f'{qual}: raio {raio} fora da faixa útil [0,26 ; 0,314]')
+    assert 'robot_radius' not in d
+    footprint = eval(d['footprint'])  # noqa: S307
+    stop = eval(_cm()['PolygonStop']['points'])  # noqa: S307
+    assert footprint == stop, (
+        f'{qual}: planner e reflexo discordam sobre o corpo orientado')
 
 
 @pytest.mark.parametrize('qual', ['local_costmap', 'global_costmap'])
@@ -1496,7 +1497,10 @@ def test_a_inflacao_TEM_de_passar_do_raio_senao_nao_HA_gradiente(qual):
     """
     import yaml
     d = yaml.safe_load(open(PRODUCAO))[qual][qual]['ros__parameters']
-    raio = d['robot_radius']
+    footprint = eval(d['footprint'])  # noqa: S307
+    # Para o retângulo centrado, o raio inscrito é o menor semi-eixo.
+    raio = min(max(abs(x) for x, _ in footprint),
+               max(abs(y) for _, y in footprint))
     inflacao = d['inflation_layer']['inflation_radius']
     assert inflacao > raio + 0.05, (
         f'{qual}: inflação {inflacao} não abre faixa graduada sobre o raio '

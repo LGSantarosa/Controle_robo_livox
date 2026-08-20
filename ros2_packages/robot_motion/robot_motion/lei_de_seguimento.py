@@ -147,21 +147,28 @@ class MiraAdaptativa:
         reta                                                   0,000
 
     `tol_estica = 0,07` = estica só em curva de raio >= ~2 m (suave de
-    verdade); `tol_encolhe = 0,12` = encolhe em raio <= ~1 m (curva de
-    verdade). A banda entre os dois é a histerese, e ela vale 1,7x.
+    verdade); `tol_encolhe = 0,08` = ao aparecer curva logo depois da reta,
+    encolhe antes que o carrot de 1 m atravesse a quina. A banda estreita de
+    1 cm ainda impede comutacao por ruido, sem sustentar a mira longa nos
+    8--11 cm que fizeram o robo cortar a porta em 19-08.
     """
 
-    def __init__(self, curto, longo, tol_estica=0.07, tol_encolhe=0.12,
-                 folga_min=0.60):
+    def __init__(self, curto, longo, tol_estica=0.07, tol_encolhe=0.08,
+                 folga_min=0.60, rumo_estica=math.radians(3.0),
+                 rumo_encolhe=math.radians(5.0)):
         if not longo > curto:
             raise ValueError('a mira longa tem de ser maior que a curta')
         if not tol_encolhe > tol_estica:
             raise ValueError('sem histerese: tol_encolhe tem de ser > tol_estica')
+        if not rumo_encolhe > rumo_estica >= 0.0:
+            raise ValueError('limiares de rumo precisam de histerese valida')
         self.curto = curto
         self.longo = longo
         self.tol_estica = tol_estica
         self.tol_encolhe = tol_encolhe
         self.folga_min = folga_min
+        self.rumo_estica = rumo_estica
+        self.rumo_encolhe = rumo_encolhe
         self.esticada = False
 
     def reset(self):
@@ -174,10 +181,15 @@ class MiraAdaptativa:
             self.esticada = False
             return self.curto
         desvio = desvio_da_corda(caminho, i0, self.longo)
+        # A mira longa serve para filtrar ruido de uma RETA, nao para prever a
+        # proxima manobra. O desvio da corda sozinho deixa uma curva no fim da
+        # janela parecer suave e o carrot atravessa a quina. Qualquer mudanca
+        # de direcao relevante no proximo metro obriga a cumprir o plano perto.
+        mudanca = mudanca_de_rumo_adiante(caminho, i0, self.longo)
         if self.esticada:
-            if desvio > self.tol_encolhe:
+            if desvio > self.tol_encolhe or mudanca > self.rumo_encolhe:
                 self.esticada = False
-        elif desvio <= self.tol_estica:
+        elif desvio <= self.tol_estica and mudanca <= self.rumo_estica:
             self.esticada = True
         return self.longo if self.esticada else self.curto
 
@@ -207,6 +219,39 @@ def carrot(caminho, i0, lookahead):
         if andado >= lookahead:
             return k + 1, caminho[k + 1]
     return len(caminho) - 1, caminho[-1]
+
+
+def mudanca_de_rumo_adiante(caminho, i0, distancia, passo=0.20):
+    """Maior mudanca de direcao no caminho dentro da janela [rad].
+
+    Reamostra em trechos de aproximadamente 20 cm para ignorar o serrilhado de
+    5 cm do planner. Compara cada trecho com o primeiro: uma curva no fim do
+    proximo metro aparece mesmo quando o desvio da corda ainda e pequeno.
+    """
+    pontos = [caminho[i0]]
+    d = passo
+    while d <= distancia + 1e-9:
+        _, p = carrot(caminho, i0, d)
+        if math.dist(p, pontos[-1]) > 1e-6:
+            pontos.append(p)
+        d += passo
+    if math.dist(pontos[-1], caminho[-1]) > 1e-6:
+        # So inclui o fim se ele estiver dentro da janela; nao olha depois do
+        # horizonte que esta decidindo a mira.
+        comprimento = 0.0
+        for a, b in zip(caminho[i0:], caminho[i0 + 1:]):
+            comprimento += math.dist(a, b)
+            if comprimento > distancia:
+                break
+        if comprimento <= distancia:
+            pontos.append(caminho[-1])
+    rumos = [math.atan2(b[1] - a[1], b[0] - a[0])
+             for a, b in zip(pontos, pontos[1:])
+             if math.dist(a, b) > 1e-6]
+    if len(rumos) < 2:
+        return 0.0
+    inicial = rumos[0]
+    return max(abs(norm_ang(r - inicial)) for r in rumos[1:])
 
 
 def rumo_para(x, y, alvo):
@@ -365,16 +410,60 @@ def curvatura_adiante(caminho, i0, janela):
     planner: o caminho do Smac vem com pontos a ~5 cm, e três pontos vizinhos
     assim descrevem o passo, não a curva.
     """
-    ralos = [caminho[i0]]
+    # Primeiro recorta a polilinha EXATAMENTE na janela. A implementacao
+    # anterior simplesmente descartava o segmento que cruzava o limite. Com a
+    # mira curta de 0,37 m e a reamostragem de 0,20 m isso deixava apenas dois
+    # pontos; como curvatura precisa de tres, uma quina de 90 graus virava
+    # `inf` (reta) e o seguidor entrava nela a v_max.
+    trecho = [caminho[i0]]
     andado = 0.0
     for k in range(i0, len(caminho) - 1):
-        andado += math.hypot(caminho[k + 1][0] - caminho[k][0],
-                             caminho[k + 1][1] - caminho[k][1])
-        if andado > janela:
+        a, b = caminho[k], caminho[k + 1]
+        ds = math.hypot(b[0] - a[0], b[1] - a[1])
+        if ds <= 1e-9:
+            continue
+        restante = janela - andado
+        if restante <= 0.0:
             break
-        p = caminho[k + 1]
-        if math.hypot(p[0] - ralos[-1][0], p[1] - ralos[-1][1]) >= 0.20:
-            ralos.append(p)
+        if ds >= restante:
+            f = restante / ds
+            trecho.append((a[0] + f * (b[0] - a[0]),
+                           a[1] + f * (b[1] - a[1])))
+            andado = janela
+            break
+        trecho.append(b)
+        andado += ds
+
+    if andado <= 1e-9:
+        return RETO
+
+    # Reamostra a 20 cm para nao medir o serrilhado de 5 cm do planner. Em
+    # janelas menores que 40 cm, reduz o passo apenas o suficiente para ainda
+    # haver as tres amostras que a geometria exige.
+    passo_amostra = min(0.20, andado / 2.0)
+    distancias = []
+    d = 0.0
+    while d < andado - 1e-9:
+        distancias.append(d)
+        d += passo_amostra
+    distancias.append(andado)
+
+    ralos = []
+    seg = 0
+    inicio_seg = 0.0
+    for alvo in distancias:
+        while seg < len(trecho) - 2:
+            ds = math.dist(trecho[seg], trecho[seg + 1])
+            if inicio_seg + ds >= alvo - 1e-9:
+                break
+            inicio_seg += ds
+            seg += 1
+        a, b = trecho[seg], trecho[seg + 1]
+        ds = math.dist(a, b)
+        f = 0.0 if ds <= 1e-9 else max(0.0, min(1.0,
+                                                (alvo - inicio_seg) / ds))
+        ralos.append((a[0] + f * (b[0] - a[0]),
+                      a[1] + f * (b[1] - a[1])))
 
     raio = RETO
     for a, b, c in zip(ralos, ralos[1:], ralos[2:]):

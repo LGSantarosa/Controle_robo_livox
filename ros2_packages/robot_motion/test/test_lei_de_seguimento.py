@@ -20,6 +20,7 @@ from robot_motion.lei_de_seguimento import (
     desvio_lateral,
     indice_mais_proximo,
     lookahead_de,
+    mudanca_de_rumo_adiante,
     orcamento_de_re,
     rumo_com_desvio,
     rumo_para,
@@ -170,17 +171,51 @@ def test_a_mira_longa_derruba_a_amplificacao_do_ruido():
 def test_HISTERESE_o_carrot_nao_fica_pulando_na_fronteira():
     """Sem isto o limite-ciclo do robô 1 volta por outra porta.
 
-    Caminho cujo desvio cai ENTRE os dois limiares: quem já esticou continua
-    esticado, quem não esticou continua curto. O mesmo caminho, dois estados.
+    Caminho cuja mudanca de rumo cai ENTRE 3 e 5 graus: quem ja esticou
+    continua esticado, quem nao esticou continua curto. O mesmo caminho, dois
+    estados, sem piscar por ruido angular do planner.
     """
-    m = MiraAdaptativa(CURTO, LONGO, tol_estica=0.07, tol_encolhe=0.12)
-    meio = arco(1.20, 180.0, 2.0)                   # desvio na faixa do meio
-    d = desvio_da_corda(meio, 0, LONGO)
-    assert 0.07 < d < 0.12, f'o caminho de teste saiu da faixa (desvio {d:.3f})'
+    m = MiraAdaptativa(CURTO, LONGO, tol_estica=0.07, tol_encolhe=0.08)
+    a = math.radians(4.0)
+    meio = [(0.0, 0.0), (0.2, 0.0), (0.4, 0.0), (0.6, 0.0),
+            (0.8, 0.2 * math.sin(a)),
+            (1.0, 0.4 * math.sin(a))]
+    mudanca = mudanca_de_rumo_adiante(meio, 0, LONGO)
+    assert math.radians(3.0) < mudanca < math.radians(5.0)
 
     assert m.passo(meio, 0) == pytest.approx(CURTO)  # não estica
     m.passo(reta(40, 0.1), 0)                        # estica numa reta
     assert m.passo(meio, 0) == pytest.approx(LONGO)  # e AGUENTA no mesmo trecho
+
+
+def test_curva_logo_depois_da_reta_ENCOLHE_antes_do_carrot_cortar_a_quina():
+    """Regressao visual da porta em 19-08.
+
+    Mesmo ja esticada, a mira nao pode atravessar a quina que aparece no fim
+    do proximo metro. Os ~8 cm de desvio ficavam abaixo do limiar antigo de
+    12 cm e o robo virava cedo para o carrot, em vez de cumprir a reta.
+    """
+    m = MiraAdaptativa(CURTO, LONGO)
+    assert m.passo(reta(20, 0.1), 0) == pytest.approx(LONGO)
+    reta_e_quina = [(0.0, 0.0), (0.91, 0.0), (0.91, 0.09), (0.91, 0.30)]
+    assert desvio_da_corda(reta_e_quina, 0, LONGO) >= 0.08
+    assert m.passo(reta_e_quina, 0) == pytest.approx(CURTO)
+
+
+def test_mira_longa_SO_QUANDO_o_proximo_metro_inteiro_e_reto():
+    """A curva futura nao pode puxar o robo enquanto ele cruza a porta."""
+    caminho = [(0.0, 0.0), (0.2, 0.0), (0.4, 0.0), (0.6, 0.0),
+               (0.8, 0.0), (0.9, 0.1), (0.9, 0.3)]
+    assert mudanca_de_rumo_adiante(caminho, 0, 1.0) > math.radians(40.0)
+    m = MiraAdaptativa(CURTO, LONGO)
+    assert m.passo(caminho, 0, vao_frente=2.0) == pytest.approx(CURTO)
+
+
+def test_reta_de_um_metro_CONTINUA_com_mira_longa():
+    caminho = reta(20, 0.1)
+    assert mudanca_de_rumo_adiante(caminho, 0, 1.0) == pytest.approx(0.0)
+    assert MiraAdaptativa(CURTO, LONGO).passo(caminho, 0, 2.0) == \
+        pytest.approx(LONGO)
 
 
 def test_o_gate_do_scan_encolhe_SEM_histerese():
@@ -456,6 +491,19 @@ def test_curvatura_adiante_ve_a_curva_ANTES_de_entrar_nela():
 
 def test_curvatura_adiante_em_reta_e_infinita():
     assert math.isinf(curvatura_adiante(reta(20, 0.1), 0, janela=1.0))
+
+
+def test_curvatura_curta_na_porta_NAO_vira_reta_por_falta_de_amostras():
+    """Regressao de 19-08: mira de 0,37 m via a quina como `inf`.
+
+    A reamostragem antiga era fixa em 20 cm e descartava o segmento que
+    cruzava o fim da janela. Sobravam dois pontos, insuficientes para medir a
+    curva, e o robo atacava a porta a 0,5 m/s enquanto ja pedia a guinada.
+    """
+    quina = [(0.0, 0.0), (0.20, 0.0), (0.20, 0.40)]
+    raio = curvatura_adiante(quina, 0, janela=0.37)
+    assert not math.isinf(raio)
+    assert raio < 0.30
 
 
 # ------------------------------------------------ fatia B: a ré por gatilho
