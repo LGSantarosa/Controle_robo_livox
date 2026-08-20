@@ -208,7 +208,42 @@ class PathFollower(Node):
             # fornece um eixo que fica travado até a saída. A velocidade cai
             # apenas nessa janela, para a mudança de giro caber antes do
             # batente. Sem /map, o comportamento anterior permanece inteiro.
-            ('passagem_estreita_habilitada', True),
+            #
+            # 🔴 DESLIGADO EM 20-08: O ALVO NO CENTRO DO VÃO É UMA
+            # SINGULARIDADE, e é ela que gira o robô dentro da porta.
+            #
+            # Na fase `centro`, `alvo_estavel_de_passagem` mira o ponto central
+            # da passagem. Conforme o robô chega nesse ponto, a distância até o
+            # alvo vai a zero — e o rumo pedido é `atan(desvio / distância)`.
+            # Medido na porta 1 (`seguidor_2026-08-20_143729.csv`):
+            #
+            #     t=49,0  x=3,67  mira 0,29  desvio -12,6 cm  yaw +10°
+            #     t=49,7  x=3,84  mira 0,14  desvio -10,3 cm  yaw +28°
+            #     t=50,5  x=3,99  mira 0,94  desvio  -2,0 cm  yaw +53°
+            #     t=51,2  x=4,06  mira 0,89  desvio  +1,7 cm  yaw +86°
+            #
+            # Com o alvo a 0,14 m e 10 cm de desvio, o rumo pedido é 36°. O
+            # robô girou atrás do próprio alvo, atravessou a soleira a +86° e
+            # depois ficou 55 s preso na porta 2 (t=80 a 135, seis ciclos de
+            # avança-trava-ré). O dono, vendo: *"girou todo fodido, veio rápido
+            # pra caralho na porta, bateu e arrastou na parede"*.
+            #
+            # ⚠️ O AUTOR PROTEGEU A FASE ERRADA. O comentário de
+            # `passagem_saida` diz "o alvo fica bem adiante para nunca virar
+            # uma singularidade ao lado do robô" — isso blinda a fase `eixo` e
+            # deixa a fase `centro` com exatamente o defeito descrito.
+            #
+            # ⚠️ E É INSTÁVEL, não sempre-ruim, que é o pior modo de falhar:
+            # o MESMO código atravessou a porta 1 com yaw +1,6° às 13:56 e
+            # girou 90° às 14:37. A diferença é só quão centrado o robô chega.
+            # Diagnóstico que depende de sorte não sustenta decisão.
+            #
+            # Desligado, o seguidor volta à mira adaptativa + realimentação do
+            # desvio lateral (039), que é o que atravessava as portas antes
+            # desta máquina existir. A DETECÇÃO (`passagens_estreitas`) fica no
+            # código e continua correta — ela não comanda nada; o que sai da
+            # cadeia de direção é o alvo fixo.
+            ('passagem_estreita_habilitada', False),
             ('passagem_largura_min', 0.55),
             ('passagem_largura_max', 1.10),
             ('passagem_antecipacao', 1.00),
