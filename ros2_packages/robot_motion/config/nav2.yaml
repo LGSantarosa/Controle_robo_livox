@@ -560,7 +560,40 @@ smoother_server:
       w_dist: 0.0                   # não gruda no caminho original
       w_smooth: 15000.0
       w_cost: 0.015                 # afastar de célula cara
-      cost_check_points: [-0.185, 1.0, 0.0]
+      # 🔴 20-08: ERA `[-0.185, 1.0, 0.0]` E ISSO O QUEBRAVA INTEIRO. O formato
+      # do Nav2 é `[x1, y1, peso1, x2, y2, peso2, ...]`, então aquilo declarava
+      # um ponto em (−0,185 · 1,00) com peso ZERO — e peso zero não é "ignora",
+      # é divisão por zero em `options.hpp:88-95`:
+      #
+      #     double check_point_weights_sum = 0.0;
+      #     for (i = 2; i < size; i += 3) check_point_weights_sum += pts[i];
+      #     for (i = 2; i < size; i += 3) pts[i] /= check_point_weights_sum;
+      #
+      # A soma dá 0, o peso vira NaN, e o Ceres falha na primeira iteração. Não
+      # há proteção no Nav2. Medido na bancada em 20-08 — `error_code=504`
+      # (FAILED_TO_SMOOTH_PATH) em TODO caminho real, e o único que "passou"
+      # foi um de comprimento zero:
+      #
+      #     volta inteira (10,65 · 6,60) -> (2,00 · 5,00)   504
+      #     (2 · 5) -> (6,0 · 3,0)                          504
+      #     (2 · 5) -> (8,0 · 3,2)                          504
+      #     (2 · 5) -> (10,0 · 3,5)                         504
+      #
+      # E não muda com peso nenhum: varri `w_smooth` (15000 e 100), `w_dist`
+      # (0 e 5), `w_cost` (0,015 e 0), `optimizer.max_iterations` (500) e o
+      # orçamento de tempo (1, 3 e 8 s). O otimizador nunca chegou a rodar.
+      #
+      # ⚠️ É POR ISTO QUE O `suave` ESTAVA FORA DO BT, e o motivo registrado lá
+      # ("falhou nas quatro (...) está fora por não ter funcionado") descrevia o
+      # sintoma certo pela causa errada. Ele nunca teve chance: o ÚNICO
+      # suavizador que conhece `minimum_turning_radius` estava desarmado por
+      # ordem de campo trocada, e quem sobrou (`simples`) é cego a raio de
+      # curva — daí a quina de 37° e o raio de 0,067 m que o plano da volta
+      # pediu em 20-08, contra os 0,37 m que a máquina fecha.
+      #
+      # A ordem correta põe o ponto 18,5 cm ATRÁS do centro: é a quina traseira,
+      # a mesma que a 041 mediu como sendo a que não cabe na porta.
+      cost_check_points: [-0.185, 0.0, 1.0]
 
     # --- SimpleSmoother: gradiente cego ao costmap ---
     simples:

@@ -107,6 +107,27 @@
               <!-- Falha do suavizador NÃO derruba o ciclo: o RecoveryNode devolve
                    sucesso deixando `{path}` como o planner o entregou. -->
               <RecoveryNode number_of_retries="1" name="SuavizaSePuder">
+                <!-- 🔴 20-08: O `suave` FOI TESTADO NO ROBÔ E REPROVOU — ele
+                     errou o plano e BATEU A TRASEIRA, com o dono olhando.
+                     Volta para `simples` na mesma hora.
+
+                     O que a bancada dizia, e continua verdadeiro, é que o
+                     `suave` CONVERGE desde que o `cost_check_points` foi
+                     corrigido (era [x,y,peso] com peso 0 = divisão por zero,
+                     Ceres falhava 504 em todo caminho), e que ele entregava
+                     folga 0,395 m contra 0,373 do `simples`. Aquilo era
+                     medida de MAPA, em caminho parado. Não sobreviveu ao
+                     robô andando.
+
+                     ⚠️ É a mesma lição da 041, e ela custou uma batida das
+                     duas vezes: folga medida contra o mapa num plano estático
+                     não prevê o que a máquina faz seguindo esse plano. A
+                     bancada promove candidato; quem aprova é a corrida.
+
+                     A correção do `cost_check_points` FICA — divisão por zero
+                     é defeito em qualquer cenário, e sem ela ninguém consegue
+                     nem avaliar o `suave`. Ele volta a ser candidato, não
+                     titular. -->
                 <SmoothPath unsmoothed_path="{path}" smoothed_path="{path}" smoother_id="simples" max_smoothing_duration="0.2" error_code_id="{smoother_error_code}"/>
                 <AlwaysSuccess/>
               </RecoveryNode>
