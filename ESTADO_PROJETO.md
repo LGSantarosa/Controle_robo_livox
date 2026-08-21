@@ -1,13 +1,86 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-08-20** (2ª leva, dev — o handoff
-> do robô está CORRIGIDO logo abaixo; leia a correção antes dele).
+> Versionado na `main`. Atualizado em **2026-08-20** (3ª leva, dev — a conta da
+> porta 2 está no topo e vem antes de qualquer sintonia).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+---
+
+## 🔴 20-08 (3ª leva, dev) — A PORTA 2 TEM 70 cm E O ROBÔ 55,5 cm
+
+> **Leia isto antes de qualquer sintonia.** Enquanto esta conta estiver de pé,
+> nenhum ajuste de seguidor resolve a porta de forma repetível.
+
+```
+vao da porta 2 (medido no mapa, y=19,0)      0,700 m
+footprint do nav2.yaml (decisao 032)         0,555 larg x 0,617 compr
+
+largura que o robo ocupa entrando torto por θ:  0,555·cos θ + 0,617·sin θ
+
+   θ =  0°   folga +7,2 cm/lado      θ = 12,4°  +1,3 cm  <- LIMITE
+   θ =  5°         +4,7 cm/lado      θ = 13,9°  +0,7 cm
+   θ = 10°         +2,3 cm/lado      θ = 23,6°  -2,8 cm  NAO CABE
+```
+
+**O que o robô fez em 20-08**: travessia 1 com erro de rumo p50 **23,6°** (não
+cabia) e travessia 2 com p50 **13,9°** (0,7 cm por lado). Nenhuma passou. É a
+explicação do *"passou 1 vez e depois nunca mais"*: com 1 cm de folga por lado,
+passar é sorte.
+
+⚠️ **O vão de 0,70 m está nos DOIS mapas** (`andar3todo` e o `alterado`) — não
+é parede desenhada na edição. **Falta medir a porta física com trena**: se ela
+tiver 0,80–0,90 m, o mapa está engordando a parede e o problema vira
+mapeamento, não controle.
+
+### 🟢 E o corredor do andar 3 agora roda no Gazebo
+
+```
+ros2 launch robot_motion pilha.launch.py sim:=true gui:=false rviz:=false \
+  bag:=false \
+  mundo:=$PWD/worlds/andar3todoalterado.sdf \
+  mapa:=$PWD/maps/andar3todoalterado/andar3todoalterado.yaml \
+  pose_x:=6.14 pose_y:=10.0 pose_yaw:=1.5708
+```
+
+Objetivo em `(6,80 · 20,30)`, do outro lado da porta 2. Primeira corrida: subiu
+8,7 m do corredor, **não passou a porta**, 7 rés, erro de rumo na aproximação
+**p50 14,6°** — contra 13,9° e 23,6° do robô. O defeito aparece fora do robô.
+
+⚠️ **É por isto que o Gazebo "não era eficaz"**: as provas rodavam no
+`pista_obstaculos`, de portas **0,90 m**, onde cabe até 32° de erro. Estava
+testando um problema três vezes mais folgado. Isso também recontextualiza o
+teste que desligou o gargalo em 20-08 — foi reprovado num cenário em que
+alinhar não era necessário, e não decide nada sobre a porta de 70 cm.
+
+### 🔎 A cadeia de comando (044) respondeu na estreia
+
+Dos 147 s parados com objetivo vivo nessa corrida:
+
+```
+movimentacao_muda[STOP:PolygonStop]   45,6 s
+collision                             34,4 s
+```
+
+**80 s com o reflexo em STOP dentro da porta.** O handoff registrou o reflexo
+como "inocentado" a partir de 4 disparos vistos ao vivo; com registro contínuo
+ele é o ator principal da travada.
+
+### As saídas, para decidir juntos
+
+1. **trena na porta real** — decide se é controle ou mapeamento (o mais barato);
+2. **alinhar antes de entrar** — o modo `passagem` já existe no código, com
+   `passagem_alinha_rumo_deg: 10,0` (o número certo pela conta acima) e hoje
+   **desligado** (`passagem_estreita_habilitada: False`);
+3. **desviar dessa porta**, se houver outra rota.
+
+⚠️ A gangorra "porta × S" (a mira é um knob só para duas tarefas opostas, e
+fica curta **87% do tempo**) continua de pé, mas vem DEPOIS: com 12° de
+exigência, sintonia nenhuma entrega repetibilidade.
 
 ---
 

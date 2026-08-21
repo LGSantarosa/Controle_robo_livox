@@ -7814,3 +7814,117 @@ bin/pause_budget.py ~/logs_robo2/freeze_capture.csv
 
 ⚠️ Custa alguns kB/s. O bag `--all-topics` custa 560 MB/min e foi ele que
 travou o LIO em 20-08. Esta cadeia sobrevive com o bag desligado.
+
+## 📐 2026-08-20 (3ª leva, dev) — A PORTA 2 TEM 70 cm E O ROBÔ 55,5 cm: A CONTA QUE FALTAVA
+
+O dono, cansado: *"ele melhora, vai melhor nas portas, mas o S fica ruim ainda,
+aí tenta arrumar o S, ele não passa mais na porta, não sei mais o que fazer"*.
+
+Fui atrás do mecanismo dessa gangorra e achei **outra coisa, maior**.
+
+### 🔴 A medida da porta, direto do mapa
+
+Varrendo o `andar3todoalterado.pgm` na altura em que o robô sempre para:
+
+```
+y = 18,0   livre de 5,54 a 9,44   (3,95 m — area aberta)
+y = 19,0   livre de 6,64 a 7,29   (0,70 m)   <- A PORTA
+y = 19,5   livre de 6,19 a 7,34   (1,20 m)
+```
+
+⚠️ **Está nos DOIS mapas** (`andar3todo` e o `alterado`), com a mesma medida —
+não é parede que alguém desenhou à mão na edição.
+
+E o footprint do `nav2.yaml` (decisão 032, o contorno real):
+**0,555 m de largura × 0,617 m de comprimento**. A largura que o robô ocupa
+quando entra torto por θ:
+
+```
+projecao = 0,555·cos θ + 0,617·sin θ          vao = 0,700 m
+
+    θ = 0°     0,555 m    folga  +7,2 cm por lado
+    θ = 5°     0,607 m           +4,7 cm
+    θ = 10°    0,654 m           +2,3 cm
+    θ = 12,4°  0,674 m           +1,3 cm   <- LIMITE
+    θ = 13,9°  0,687 m           +0,7 cm
+    θ = 23,6°  0,755 m           -2,8 cm   NAO CABE
+```
+
+Agora o erro de rumo MEDIDO nas duas travessias do robô em 20-08:
+
+```
+travessia 1   |erro| p50 23,6°   ->  NAO CABIA. Nao passou.
+travessia 2   |erro| p50 13,9°   ->  0,7 cm por lado. Quase. Nao passou.
+```
+
+➡️ **Ele não passa na porta porque não cabe com o alinhamento que tem.** Não é
+o S, não é a lei de rumo mal sintonizada, não é a velocidade. Para passar, o
+erro de rumo na soleira tem de ficar abaixo de ~12°, e com margem de verdade
+abaixo de 5°. E isso explica o *"passou 1 vez, depois nunca mais"*: com 1 cm de
+folga por lado, passar é sorte, não repetibilidade.
+
+### 🔴 E POR QUE O GAZEBO "NÃO ERA EFICAZ"
+
+Porque todas as provas rodavam no `pista_obstaculos`, cujas portas têm
+**0,90 m**. O mesmo cálculo:
+
+```
+porta de 0,90 m   cabe ate θ ≈ 32°
+porta de 0,70 m   cabe ate θ ≈ 12,4°
+```
+
+**O simulador vinha testando um problema quase três vezes mais folgado que o
+real.** Não é que o Gazebo seja fraco — é que ele estava com a porta errada.
+
+⚠️ Isso recontextualiza o teste de 20-08 que DESLIGOU o gargalo
+(`docs/dados/2026-08-20-gargalo-desligado`): ele foi reprovado num cenário em
+que o alinhamento não era necessário. O veredito continua válido para aquele
+mundo, e não decide nada sobre a porta de 70 cm.
+
+### 🟢 O corredor do andar 3 agora roda no Gazebo
+
+`bin/map2world.py` sobre `andar3todoalterado` → `worlds/andar3todoalterado.sdf`
+(1314 caixas). Mapa na convenção do repo em `maps/andar3todoalterado/`. Spawn
+no corredor, objetivo do outro lado da porta 2. Primeira corrida
+(`docs/dados/2026-08-20-andar3-no-gazebo`):
+
+```
+subiu o corredor de y=10,0 ate y=18,79    8,7 m seguindo o plano
+NAO passou a porta                        7 rés
+|erro de rumo| na aproximacao   p50 14,6°   p90 59,5°   max 83,7°
+```
+
+**O defeito do robô apareceu na primeira corrida fora dele.** p50 14,6° contra
+13,9° e 23,6° medidos no robô.
+
+### 🔎 E a cadeia de comando (044) já respondeu na estreia
+
+`bin/pause_budget.py` sobre o `freeze_capture.csv` desta corrida, dos 147 s
+parados com objetivo vivo:
+
+```
+movimentacao_muda[STOP:PolygonStop]   45,6 s   reflexo em STOP e a lei muda
+collision                             34,4 s   o reflexo cortou comando vivo
+movimentacao_muda[-]                  51,6 s   (antes do 1o estado chegar)
+```
+
+➡️ **80 s com o reflexo em STOP na porta.** O handoff de 20-08 registrou o
+reflexo como "INOCENTADO por medida", com base em 4 disparos vistos num monitor
+ao vivo. Com o registro contínuo, ele é o ator principal da travada — o que era
+de esperar quando a caixa tem de caber num vão que o corpo mal atravessa.
+
+### O que isto muda no plano de trabalho
+
+A gangorra "porta × S" tinha uma explicação de segunda ordem (a mira é um knob
+só para duas tarefas opostas, e fica curta 87% do tempo). Ela continua de pé,
+**mas vem depois**: enquanto a exigência for entrar num vão de 70 cm com menos
+de 12° de erro, nenhuma sintonia de seguidor entrega isso de forma repetível.
+
+As saídas, em ordem de custo, ficam para decidir COM o dono:
+
+1. **medir a porta real com trena** — se o vão físico for 0,80-0,90 m, o mapa
+   está engordando a parede e o problema muda de lugar (é mapeamento);
+2. **alinhar antes de entrar** — é o modo `passagem` que já existe no código,
+   com `passagem_alinha_rumo_deg: 10,0` (o número certo, pela conta acima) e
+   hoje DESLIGADO (`passagem_estreita_habilitada: False`);
+3. **não passar por essa porta** — se houver outra rota, é a mais barata.
