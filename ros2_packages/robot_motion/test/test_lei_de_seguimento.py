@@ -212,11 +212,20 @@ def test_gargalo_libera_quando_posicao_e_rumo_estao_alinhados():
     assert alvo == pytest.approx((3.0, 0.0))
 
 
-def test_gargalo_nunca_volta_ao_centro_depois_de_comprometer_o_eixo():
+def test_gargalo_nao_volta_ao_centro_so_porque_o_rumo_oscilou():
+    """RUMO torto no meio da travessia não desfaz o latch — só desvio desfaz.
+
+    ⚠️ Este teste EXIGIA `y=0,20` e fase `eixo` até 20-08, quando o latch era
+    permanente. A medida derrubou aquela versão: com 0,20 m de desvio o corpo
+    invade a ombreira (a folga desta porta é 0,1425 m), e foi assim que o robô
+    chegou à soleira em `x=7,20` num vão que termina em 7,29. O que continua
+    valendo, e é o que este teste guarda, é a razão pela qual o latch existe:
+    oscilação de RUMO no meio do vão não pode devolver a referência ao centro.
+    """
     caminho = [(0.1 * i, 0.0) for i in range(41)]
     porta = PassagemEstreita(19, 20, 21, 0.80)
     alvo, fase = alvo_estavel_de_passagem(
-        caminho, porta, x=1.5, y=0.20,
+        caminho, porta, x=1.5, y=0.10,
         rumo_atual=math.radians(30.0), saida=1.0,
         eixo_comprometido=True)
     assert fase == 'eixo'
@@ -949,3 +958,39 @@ def test_feixe_invalido_nao_vira_vao_livre():
     v = vao_no_corredor_traseiro(ranges, math.radians(-180.0),
                                  math.radians(1.0), 0.50, 0.28)
     assert math.isinf(v), 'feixe inválido virou obstáculo ou virou vão medido'
+
+
+def test_gargalo_volta_a_centrar_se_derivou_para_fora_da_folga():
+    """O latch do eixo tem saída — e ela é medida (20-08).
+
+    Sem isto o robô congelava o primeiro instante em que ficou alinhado e
+    seguia derivando: na corrida do corredor real ele chegou à soleira com
+    0,195 m de desvio (p50) e a borda do corpo invadiu 14 cm da ombreira,
+    apesar de o erro de RUMO estar em 4,1°.
+    """
+    caminho = [(0.1 * i, 0.0) for i in range(41)]
+    porta = PassagemEstreita(19, 20, 21, 0.80)   # folga = 0,40-0,2275-0,03
+    alvo, fase = alvo_estavel_de_passagem(
+        caminho, porta, x=1.0, y=0.22, rumo_atual=0.0, saida=1.0,
+        eixo_comprometido=True)
+    assert fase == 'centro'
+    assert alvo == caminho[porta.centro]
+
+
+def test_gargalo_nao_larga_o_eixo_por_ruido_de_pose():
+    """A saída do latch é mais larga que a entrada — senão vira o pulinho.
+
+    Entra em eixo com |d| <= 0,08 e só sai acima da folga (0,1425 nesta porta).
+    Um desvio de 0,10 m está na banda: já não autorizaria ENTRAR, e não é
+    motivo para SAIR de uma travessia em curso.
+    """
+    caminho = [(0.1 * i, 0.0) for i in range(41)]
+    porta = PassagemEstreita(19, 20, 21, 0.80)
+    _, fase_com_latch = alvo_estavel_de_passagem(
+        caminho, porta, x=1.0, y=0.10, rumo_atual=0.0, saida=1.0,
+        eixo_comprometido=True)
+    assert fase_com_latch == 'eixo'
+    _, fase_sem_latch = alvo_estavel_de_passagem(
+        caminho, porta, x=1.0, y=0.10, rumo_atual=0.0, saida=1.0,
+        eixo_comprometido=False)
+    assert fase_sem_latch == 'centro'

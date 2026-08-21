@@ -190,8 +190,10 @@ def alvo_estavel_de_passagem(caminho, passagem, x, y, rumo_atual,
 
     Devolve ``(alvo, fase)`` onde fase é ``'centro'`` ou ``'eixo'``. Não há
     ``eixo_comprometido`` é o latch explícito da cola ROS: depois que a fase
-    eixo começou, uma oscilação de pose nunca a devolve ao centro. Para a
-    mesma pose, passagem e latch a decisão continua determinística.
+    eixo começou, uma oscilação de pose não a devolve ao centro — mas uma
+    DERIVA devolve, se o desvio passar da folga que o vão ainda oferece
+    (20-08; ver o bloco comentado abaixo). Para a mesma pose, passagem e latch
+    a decisão continua determinística.
     """
     if not caminho:
         raise ValueError('caminho vazio')
@@ -211,8 +213,30 @@ def alvo_estavel_de_passagem(caminho, passagem, x, y, rumo_atual,
 
     # Interseção da reta pose->alvo_eixo com s=0. Para s>=0 o ponto mais
     # estreito já ficou para trás e mirar o centro faria o alvo ir para trás.
-    if eixo_comprometido or s >= 0.0:
+    if s >= 0.0:
         return alvo_eixo, 'eixo'
+
+    # 🔴 20-08: O LATCH GANHA SAÍDA, e é por medida. Na primeira corrida do
+    # corredor real no Gazebo (`docs/dados/2026-08-20-andar3-gargalo-ligado`) o
+    # rumo ficou ótimo — |erro| p50 4,1° contra 14,6° sem o modo — e mesmo
+    # assim ele não passou: chegou à soleira em `x = 7,20` num vão que termina
+    # em 7,29, com a borda do corpo invadindo **14 cm**. O desvio p50 era
+    # 0,195 m contra uma tolerância de entrada de 0,08.
+    #
+    # O que aconteceu: a fase `centro` durou 27 amostras e a `eixo` 2161. Ele
+    # entrou em eixo num instante em que estava alinhado e DERIVOU depois, e o
+    # latch — permanente até aqui — não tinha como devolvê-lo ao centro. Um
+    # latch que nunca solta não protege de oscilação: ele congela o primeiro
+    # acerto e ignora todo o resto da aproximação.
+    #
+    # A saída é o CORPO, não a pose: sai do eixo só quando o desvio passa da
+    # folga que sobra no vão (`largura/2 - meia_largura - margem`), ou seja
+    # quando seguir reto deixa de caber. Isso já é histerese: entra com
+    # `|d| <= tolerancia_lateral` (0,08) e só sai acima de `folga` (0,1075 no
+    # vão de 0,73 m) — banda de 2,7 cm, larga o bastante para ruído de pose e
+    # estreita o bastante para pegar deriva de 22 cm.
+    if eixo_comprometido:
+        return (alvo_eixo, 'eixo') if abs(d) <= folga else ((cx, cy), 'centro')
 
     if s < 0.0:
         d_no_centro = d * saida / (saida - s)
