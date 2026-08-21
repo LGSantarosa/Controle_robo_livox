@@ -46,3 +46,22 @@ na porta, travessia 2 (16 s)     rumo p50 81°, 2,3 s parado com v_alvo +0,50
 - **Os trechos a 1,3 m/s não são salto de LIO** — são 19 m contínuos em 15 s:
   o robô no colo do dono, voltando ao início.
 - **Conte EPISÓDIOS, não amostras** (o CSV é a 20 Hz).
+
+## 🔴 CORREÇÃO da conta da porta (mesma sessão)
+
+A tabela de "cabe/não cabe" acima nasceu do `footprint` do `nav2.yaml`
+(0,555 × 0,6165), que é o **corpo mais ~5 cm de margem por lado**. O corpo real
+é **0,455 × 0,433** (decisão 032, medido).
+
+```
+ θ       corpo real   folga/lado    footprint   folga/lado
+  0°      0,455 m      +12,2 cm      0,555 m     +7,2 cm
+ 15°      0,552 m       +7,4 cm      0,696 m     +0,2 cm
+ 20°      0,576 m       +6,2 cm      0,732 m     NÃO CABE
+ 43,6°    0,628 m       +3,6 cm   <- maximo do corpo
+```
+
+➡️ **O corpo cabe em qualquer ângulo.** Quem não cabe acima de 15° é o
+footprint do costmap, e a caixa do reflexo é maior ainda. A porta é
+fisicamente passável; quem a veta é a camada de segurança — o que confirma o
+dono: *"é a navegação"*.

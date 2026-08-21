@@ -27,6 +27,27 @@ largura que o robo ocupa entrando torto por θ:  0,555·cos θ + 0,617·sin θ
    θ = 10°         +2,3 cm/lado      θ = 23,6°  -2,8 cm  NAO CABE
 ```
 
+> 🔴 **CORREÇÃO (mesma sessão, 3ª leva)**: a conta acima usou o `footprint` do
+> `nav2.yaml` (0,555 × 0,6165), que é o **corpo + ~5 cm de margem por lado**.
+> O corpo REAL é **0,455 × 0,433** (decisão 032, medido). Refazendo:
+>
+> ```
+>  θ      corpo real   folga/lado      footprint do costmap   folga/lado
+>   0°     0,455 m      +12,2 cm        0,555 m                +7,2 cm
+>  15°     0,552 m       +7,4 cm        0,696 m                +0,2 cm
+>  20°     0,576 m       +6,2 cm        0,732 m                NÃO CABE
+>  43,6°   0,628 m       +3,6 cm  <- projecao MAXIMA do corpo
+> ```
+>
+> ➡️ **O CORPO CABE NO VÃO EM QUALQUER ÂNGULO** (máximo 0,628 m contra 0,700).
+> O que não cabe acima de ~15° é o footprint do costmap, e a caixa do reflexo é
+> maior ainda. **O dono estava certo: é navegação.** A porta é fisicamente
+> passável sempre; quem veta é a camada de segurança.
+>
+> O que NÃO muda: a descentragem medida. Com `x = 7,20` e o vão indo até 7,29,
+> a borda direita do **corpo real** fica em 7,43 — **invade 14 cm**. Centrar
+> continua sendo o item nº 1.
+
 **O que o robô fez em 20-08**: travessia 1 com erro de rumo p50 **23,6°** (não
 cabia) e travessia 2 com p50 **13,9°** (0,7 cm por lado). Nenhuma passou. É a
 explicação do *"passou 1 vez e depois nunca mais"*: com 1 cm de folga por lado,

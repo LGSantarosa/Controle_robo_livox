@@ -7850,6 +7850,27 @@ projecao = 0,555·cos θ + 0,617·sin θ          vao = 0,700 m
     θ = 23,6°  0,755 m           -2,8 cm   NAO CABE
 ```
 
+> 🔴 **CORREÇÃO (mesma sessão, 3ª leva)**: a conta acima usou o `footprint` do
+> `nav2.yaml` (0,555 × 0,6165), que é o **corpo + ~5 cm de margem por lado**.
+> O corpo REAL é **0,455 × 0,433** (decisão 032, medido). Refazendo:
+>
+> ```
+>  θ      corpo real   folga/lado      footprint do costmap   folga/lado
+>   0°     0,455 m      +12,2 cm        0,555 m                +7,2 cm
+>  15°     0,552 m       +7,4 cm        0,696 m                +0,2 cm
+>  20°     0,576 m       +6,2 cm        0,732 m                NÃO CABE
+>  43,6°   0,628 m       +3,6 cm  <- projecao MAXIMA do corpo
+> ```
+>
+> ➡️ **O CORPO CABE NO VÃO EM QUALQUER ÂNGULO** (máximo 0,628 m contra 0,700).
+> O que não cabe acima de ~15° é o footprint do costmap, e a caixa do reflexo é
+> maior ainda. **O dono estava certo: é navegação.** A porta é fisicamente
+> passável sempre; quem veta é a camada de segurança.
+>
+> O que NÃO muda: a descentragem medida. Com `x = 7,20` e o vão indo até 7,29,
+> a borda direita do **corpo real** fica em 7,43 — **invade 14 cm**. Centrar
+> continua sendo o item nº 1.
+
 Agora o erro de rumo MEDIDO nas duas travessias do robô em 20-08:
 
 ```
