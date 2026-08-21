@@ -573,6 +573,9 @@ def generate_launch_description():
             launch_arguments={'mundo': LaunchConfiguration('mundo'),
                               'x': LaunchConfiguration('pose_x'),
                               'y': LaunchConfiguration('pose_y'),
+                              # Sem isto o `pose_yaw` só chegava ao AMCL e o
+                              # robô nascia de lado (20-08).
+                              'yaw': LaunchConfiguration('pose_yaw'),
                               'planta': LaunchConfiguration('planta'),
                               'placa': placa,
                               'gui': LaunchConfiguration('gui')}.items(),

@@ -205,6 +205,67 @@ def rects_to_obj(rects, meta, w, h, wall_height, obj_path):
         f.write("\n".join(out) + "\n")
 
 
+def walls_model_boxes(rects, meta, w, h, wall_height):
+    """As mesmas caixas, mas como `<box>` PRIMITIVAS de colisão.
+
+    🔴 20-08 — POR QUE ISTO EXISTE, e é defeito medido, não preferência. O
+    mesh único economiza CPU (ver `rects_to_obj`) e **não segura o robô**:
+    colisão de malha triangular côncava no gz-sim deixa o robô ESCALAR a
+    parede. Na prova do corredor do andar 3 ele emperrou na garganta da porta
+    com `z = 0,068` — 7 cm acima do chão, montado em cima da parede — e o
+    sintoma na navegação era idêntico ao defeito real que se queria estudar:
+    chega na porta, não passa, dá ré, repete. Quatro corridas foram gastas
+    acreditando nisso.
+
+    Primitiva é o que o `pista_obstaculos.sdf` (o mundo que sempre funcionou)
+    usa: 22 `<box>`. Cada caixa vira um `<collision>` no mesmo link, e o custo
+    por shape do DART é real — por isso o par natural desta opção é o
+    `--recorte`, que reduz o mundo à região sob prova.
+    """
+    res = float(meta["resolution"])
+    ox, oy = float(meta["origin"][0]), float(meta["origin"][1])
+    partes = []
+    for i, (y0, y1, x0, x1) in enumerate(rects):
+        xa, xb = ox + x0 * res, ox + (x1 + 1) * res
+        ya, yb = oy + (h - 1 - y1) * res, oy + (h - y0) * res
+        cx, cy = (xa + xb) / 2.0, (ya + yb) / 2.0
+        sx, sy = xb - xa, yb - ya
+        geom = (f"<geometry><box><size>{sx:.3f} {sy:.3f} "
+                f"{wall_height:.3f}</size></box></geometry>")
+        pose = f"<pose>{cx:.3f} {cy:.3f} {wall_height / 2.0:.3f} 0 0 0</pose>"
+        partes.append(f'<collision name="c{i}">{pose}{geom}</collision>'
+                      f'<visual name="v{i}">{pose}{geom}'
+                      '<material><ambient>0.6 0.55 0.5 1</ambient>'
+                      '<diffuse>0.6 0.55 0.5 1</diffuse></material></visual>')
+    return ("\n    <model name=\"walls\">\n      <static>true</static>\n"
+            "      <link name=\"link\">\n        " + "\n        ".join(partes) +
+            "\n      </link>\n    </model>")
+
+
+def recorta(grid, w, h, meta, caixa):
+    """Zera tudo fora do retângulo `xmin ymin xmax ymax` (metros do mapa).
+
+    Mundo menor = menos shapes, que é o que torna a colisão primitiva viável.
+    Não mexe na origem nem na resolução: as coordenadas continuam as do mapa,
+    então mapa e mundo seguem casados célula a célula.
+    """
+    res = float(meta["resolution"])
+    ox, oy = float(meta["origin"][0]), float(meta["origin"][1])
+    xmin, ymin, xmax, ymax = caixa
+    mantidas = 0
+    for y in range(h):
+        ymundo = oy + (h - 1 - y) * res
+        for x in range(w):
+            if not grid[y][x]:
+                continue
+            xmundo = ox + x * res
+            if xmin <= xmundo <= xmax and ymin <= ymundo <= ymax:
+                mantidas += 1
+            else:
+                grid[y][x] = False
+    return mantidas
+
+
 def walls_model_sdf(obj_name):
     geom = f"<geometry><mesh><uri>{obj_name}</uri></mesh></geometry>"
     return f"""
@@ -257,6 +318,14 @@ def main():
     ap.add_argument("--downsample", type=int, default=1,
                     help="engrossa a célula por esse fator (5cm→15cm com 3); "
                          "menos caixas, paredes engordam até 1 célula")
+    ap.add_argument("--caixas", action="store_true",
+                    help="colisão por <box> PRIMITIVAS em vez de mesh único. "
+                         "Mesh não segura o robô (ele escala a parede); use "
+                         "isto para qualquer mundo em que o robô vá encostar")
+    ap.add_argument("--recorte", nargs=4, type=float,
+                    metavar=("XMIN", "YMIN", "XMAX", "YMAX"),
+                    help="mantém só as paredes dentro deste retângulo [m], nas "
+                         "coordenadas do mapa. Par natural do --caixas")
     args = ap.parse_args()
 
     meta, w, h, maxval, data = load_map(args.map_yaml)
@@ -268,16 +337,26 @@ def main():
         grid, w, h = downsample(grid, w, h, args.downsample)
         meta = dict(meta, resolution=float(meta["resolution"]) * args.downsample)
         print(f"downsample {args.downsample}x: célula {meta['resolution'] * 100:.0f}cm, grade {w}x{h}")
+    if args.recorte:
+        mantidas = recorta(grid, w, h, meta, args.recorte)
+        print(f"recorte {args.recorte}: {mantidas} células ocupadas mantidas")
     rects = merge_rects(grid, w, h)
     n_occ = sum(sum(r) for r in grid)
-    obj_path = os.path.splitext(args.out_sdf)[0] + ".obj"
-    rects_to_obj(rects, meta, w, h, args.height, obj_path)
     name = os.path.splitext(os.path.basename(args.out_sdf))[0]
+    if args.caixas:
+        walls = walls_model_boxes(rects, meta, w, h, args.height)
+        extra = f"{len(rects)} caixas PRIMITIVAS (colisão confiável)"
+    else:
+        obj_path = os.path.splitext(args.out_sdf)[0] + ".obj"
+        rects_to_obj(rects, meta, w, h, args.height, obj_path)
+        walls = walls_model_sdf(os.path.basename(obj_path))
+        extra = (f"{len(rects)} caixas num mesh único "
+                 f"({os.path.basename(obj_path)}) — ⚠️ mesh NÃO segura o robô "
+                 f"em contato; veja --caixas")
     with open(args.out_sdf, "w") as f:
-        f.write(SDF_TEMPLATE.format(name=name,
-                                    walls=walls_model_sdf(os.path.basename(obj_path))))
-    print(f"{args.out_sdf} + {obj_path}: {w}x{h} @{meta['resolution']}m, "
-          f"{n_occ} células ocupadas → {len(rects)} caixas num mesh único")
+        f.write(SDF_TEMPLATE.format(name=name, walls=walls))
+    print(f"{args.out_sdf}: {w}x{h} @{meta['resolution']}m, "
+          f"{n_occ} células ocupadas → {extra}")
 
 
 if __name__ == "__main__":
