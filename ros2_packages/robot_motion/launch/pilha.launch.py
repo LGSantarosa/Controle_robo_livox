@@ -237,6 +237,17 @@ def generate_launch_description():
             LaunchConfiguration('re_max_seguidas'), value_type=int)},
         {'re_exige_objetivo': ParameterValue(
             LaunchConfiguration('re_exige_objetivo'), value_type=bool)},
+        # 🔴 20-08 (3ª leva) — O ALINHAMENTO DE PASSAGEM VIRA KNOB DE LAUNCH.
+        # Ele existe no nó desde a 033 e está DESLIGADO no default. Foi
+        # reprovado em 20-08 (`docs/dados/2026-08-20-gargalo-desligado`), mas
+        # naquele teste o mundo era o `pista_obstaculos`, de portas 0,90 m —
+        # onde o robô cabe entrando com até 32° de erro e alinhar não decide
+        # nada. A porta 2 REAL tem 0,70 m: ali o limite é 12,4°, e é
+        # exatamente o que `passagem_alinha_rumo_deg: 10,0` protege.
+        # Sem este argumento, testar as duas hipóteses exige editar YAML no
+        # meio do protocolo — que é como se troca duas coisas sem perceber.
+        {'passagem_estreita_habilitada': ParameterValue(
+            LaunchConfiguration('gargalo'), value_type=bool)},
     ]
     mapa = LaunchConfiguration('mapa')
     rviz = LaunchConfiguration('rviz')
@@ -335,6 +346,13 @@ def generate_launch_description():
         # (o padrão, os dois saem de `gera_pista.py`) o robô poderia estar
         # desviando de memória e ninguém saberia.
         DeclareLaunchArgument('mundo', default_value=MUNDO_PADRAO),
+        DeclareLaunchArgument(
+            'gargalo', default_value='false',
+            description='liga o alinhamento de passagem estreita do seguidor '
+                        '(033). false = o default do nó, reprovado em 20-08 '
+                        'num mundo de portas 0,90 m. A porta real tem 0,70 m, '
+                        'onde o limite geométrico de erro de rumo é 12,4° — '
+                        'ver a conta no ESTADO_PROJETO'),
 
         # ---------------------------------- localização contra mapa (021/022)
         #
