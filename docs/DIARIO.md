@@ -7692,3 +7692,125 @@ traseira e disse que o robô melhorou depois do meio do corredor. O `y` da
 corrida é monótono — ele subiu uma vez, sem voltar — então "onde" e "quando"
 são a mesma coluna e não dá para separar *o peso saiu* de *aquele trecho é mais
 difícil*. O teste que decidiria é o mesmo trecho duas vezes, com e sem peso.
+
+## 🔬 2026-08-20 (2ª leva, dev) — A BATIDA NÃO FOI POR VELOCIDADE, E O DADO QUE FALTA NUNCA FOI GRAVADO
+
+Sessão sem robô. Peguei o primeiro item do handoff — *"por que ele acelerou a
+0,55 m/s acima do `v_max` de 0,50"* — e a primeira coisa que a medida fez foi
+**derrubar a pergunta**.
+
+### 🔴 Não houve 0,55 m/s para frente
+
+O `v_alvo` do CSV não pode passar de 0,50 por construção:
+`velocidade_de_seguimento()` recebe `v_max` e devolve `min()`. Então os 0,55 só
+podiam ser velocidade derivada da pose — e derivada errado. Em `t=854,4` o robô
+estava em **RÉ**: `estado=re`, `v_alvo=−0,20`, pose recuando a 0,36 m/s. O
+número saiu de tomar módulo na virada ré→frente.
+
+A velocidade real com `v_alvo` cravado em 0,50, na corrida inteira, fora dos
+trechos em que o robô foi carregado (n=2247 amostras de pose):
+
+```
+p10 0,00    p50 0,26    p90 0,32 m/s
+```
+
+➡️ **A máquina nunca entregou o `v_max`.** Ela anda a 0,26 quando pedem 0,50.
+A saída "não deixar o robô chegar rápido na porta", que o handoff propunha,
+ataca um problema que não existe.
+
+### 🔴 E o segundo alarme falso: a pose não saltou, o robô foi carregado
+
+O handoff registrou saltos de 1,5 m/s como suspeita de LIO. São dois trechos:
+
+```
+t= 193,7   15,4 s   (6,51 · 18,33) -> (0,09 · 0,11)   19,3 m
+t= 859,4   15,0 s   (6,62 · 17,95) -> (0,04 · 0,06)   19,1 m
+```
+
+Quinze segundos, trajetória contínua e coerente, da porta 2 até a origem, a
+1,3 m/s — que é passo de gente andando. São as duas vezes em que o dono pegou o
+robô e o levou de volta. **Salto de pose é descontínuo; isto é uma viagem.**
+
+### O que a corrida realmente foi: DUAS travessias, NENHUMA passou
+
+```
+t=  57-208   y máximo 19,02 em x=6,94     5 rés na porta 2, e volta no colo
+t= 762-874   y máximo 18,92 em x=6,99     3 rés na porta 2, e volta no colo
+t=2101-2117  não saiu da origem
+```
+
+`dist` (ao fim do plano) **nunca desceu de 4,94 m**. O objetivo estava 5 m além
+da porta e a porta nunca foi vencida nesta corrida. O dono confirmou por fora o
+que o dado sugeria: *"depois de tentar muito passou 1 vez, que foi quando pela
+primeira vez chegou no objetivo. Depois nunca mais"* — a passagem única está em
+outro CSV, no robô.
+
+E o que ele faz na porta não é chegar rápido demais. É **travar**:
+
+```
+travessia 1 na porta (32 s)   v real p50  +0,01 m/s   com v_alvo 0,50
+                              |erro rumo| p50 23,6°   max 51,5°
+                              |wz| real   p50  2,9 °/s
+                              rumo p50 69°  (o corredor é 90°)
+travessia 2 na porta (16 s)   v real p50  +0,21 m/s   rumo p50 81°
+                              2,3 s PARADO com v_alvo +0,50 e rumo travado
+                              em 98,4° — isso é empurrar o batente
+```
+
+Dois rumos de chegada bem diferentes (69° e 81°), **mesmo ponto de bloqueio**.
+
+### ⚠️ Minha hipótese, testada e MORTA no mesmo dia
+
+Achei que a mira fosse a culpada: dentro da porta ela trava em 0,37 m, porque o
+gate de espaço (`folga_min = 0,60`) encolhe o carrot quando há parede perto —
+e com o alvo a 37 cm de um robô de 32 cm de raio, o `rumo_alvo` varia de +62° a
++114° com o alvo praticamente parado. Parecia fechar.
+
+Fui medir a taxa de variação do `rumo_alvo`:
+
+```
+corredor livre   p90  38,4 e 40,0 °/s      (a mira estica 20% do tempo)
+PORTA 2          p90  40,5 e 37,0 °/s      (a mira NUNCA estica: 0%)
+```
+
+➡️ **Igual.** A mira curta não é o diferencial da porta. Hipótese enterrada
+antes de virar mudança — que é o único jeito barato de enterrar hipótese.
+
+### 🔴 O limite do dado, que é o achado da sessão
+
+O CSV do seguidor grava o que ele **PEDE**. A cadeia é
+
+```
+path_follower ──(rumo_alvo, velocidade_alvo)──▶ heading_controller
+   ──/auto_vel_raw──▶ collision_monitor ──/auto_vel──▶ twist_mux
+   ──/compensador_rumo/cmd_vel──▶ compensador ──▶ atuador
+```
+
+e **nenhum** desses elos estava sendo gravado. Por isso "a lei pede 50° de giro
+e o `wz` real é 0,00" não tinha resposta possível: cabem três explicações
+incompatíveis (a lei não converteu · o comando ficou sob a zona morta · o
+reflexo cortou) e o dado não separa nenhuma.
+
+### O conserto: ligar o que já existia (decisão 044)
+
+`freeze_capture` e `bin/pause_budget.py` já faziam exatamente isso — desde o
+robô 1. Chegaram aqui **mudos, e em silêncio**: assinavam `Twist` numa cadeia
+`TwistStamped` (casamento não acontece, CSV nasce só com cabeçalho), metade dos
+tópicos era do outro robô, o nó não estava na `pilha.launch.py`, e os limiares
+do orçamento eram os do skid-steer (`CMD_WZ = 0,50` num robô de `wz_max = 1,0`).
+
+Prova no Gazebo, pilha inteira, bag desligado: os seis elos gravando,
+`collision_state` gravando as transições (`APPROACH:PolygonApproach` …
+`STOP:PolygonStop`), e o `pause_budget` acertando o diagnóstico da corrida
+sozinho — 296,7 s de `movimentacao_muda`, que é o que houve de verdade (o
+planner respondeu `no valid path found` ao alvo que pedi).
+
+⚠️ Isto é prova de **fiação**, não da porta. O Gazebo não tem o batente. A
+resposta vem da primeira corrida no robô — e agora ela cabe num comando:
+
+```
+bin/pause_budget.py ~/logs_robo2/freeze_capture.csv
+```
+
+⚠️ Custa alguns kB/s. O bag `--all-topics` custa 560 MB/min e foi ele que
+travou o LIO em 20-08. Esta cadeia sobrevive com o bag desligado.

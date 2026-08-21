@@ -14,7 +14,13 @@ parado-com-goal a UMA causa, por precedência (a mais a jusante que explica):
   vx_zona_morta cmd_vel manda 0<vx<0.20 e o robô não anda (comando fraco)
   vx_sem_efeito cmd_vel manda vx>=0.20 e o robô não anda (encalhe físico)
   unstuck       unstuck_vel comandando (manobra em curso) com robô parado
-  mux_gap       follow_vel comandava e auto_vel_pre ~0 (mux não repassa)
+  humano        joy/key/web comandando (o dono assumiu — não é defeito)
+  compensador_gap  o mux repassou e o atuador não recebeu (robô 2)
+  mux_gap       o elo anterior comandava e o seguinte saiu ~0 (mux não repassa)
+  movimentacao_muda  NINGUÉM cortou: `auto_vel_raw` saiu ~0. A lei de rumo não
+                converteu erro em comando (ou saiu abaixo da zona morta). É a
+                categoria da PORTA — ver 20-08. O estado do reflexo no momento
+                vai entre colchetes, para provar que ele estava inocente
   follower_off  follow_vel ~0 (o driver decidiu não comandar: replan/alvo/
                 chegando) — inclui follow_state na quebra fina
   outro         parado sem nenhuma assinatura acima
@@ -29,13 +35,50 @@ import math
 import sys
 from collections import defaultdict
 
-# limiares (casados com o robô: zona-morta giro 1.7, min_speed 0.22)
+# 🔴 LIMIARES DO ROBÔ 2 — os do robô 1 estavam AQUI e mentiam neste chassi.
+# O `CLAUDE.md` avisa em letras grandes: "os knobs anti-skid (zona-morta 1.7,
+# autoridade de giro 6.0) eram do atrito do skid-steer 4 rodas; o diferencial
+# gira fácil, calibrar do zero". Herdados, eles classificavam errado no lado
+# perigoso: com `CMD_WZ = 0.50` um pedido de giro de 0,3 rad/s — que neste robô
+# é comando de verdade — contava como "ninguém pediu nada", e a culpa caía na
+# camada errada.
+#
+#   zona morta da roda   0,0178 m/s  MEDIDA 31-07 (decisão 020)
+#   piso da movimentação 0,068 m/s   = zona_morta + margem_piso (0,05)
+#   tetos                v_max 0,50 m/s · wz_max 1,00 rad/s (movimentacao.yaml)
 STOP_VX = 0.05      # |vx| odom abaixo disso = não translada
 STOP_WZ = 0.15      # |wz| odom abaixo disso = não gira
-CMD_VX = 0.05       # comando linear "existe"
-CMD_WZ = 0.50       # comando de giro "existe"
-WZ_STRONG = 1.0     # comando de giro pra valer (deveria mexer o robô)
+CMD_VX = 0.02       # comando linear "existe" (acima da zona morta medida)
+CMD_WZ = 0.10       # comando de giro "existe" (wz_max daqui é 1,0, não 6,0)
+PISO_VX = 0.068     # abaixo disto a movimentação não deveria nem mandar
+WZ_STRONG = 0.50    # metade do wz_max: giro que TEM de mexer o robô
 STALE = 0.6         # s sem msg num tópico -> valor considerado zerado
+
+
+# 🔴 20-08 — O ROBÔ 2 TEM OUTRA CADEIA, e este script nasceu lendo a do robô 1.
+# Sem esta tabela ele lia o CSV novo inteiro e classificava tudo como `outro`,
+# que é pior do que não rodar: parece resposta. Os nomes à esquerda são os que
+# o `freeze_capture` grava neste robô; à direita, o papel que a classificação
+# já conhecia. O que não aparece aqui passa com o próprio nome.
+#
+#   robô 1                        robô 2
+#   follow_vel                    (não existe: o seguidor fala Float64)
+#   auto_vel_pre (mux autonomia)  (não existe: mux único)
+#   auto_vel_raw (pós-guard)      auto_vel_raw (o heading_controller pediu)
+#   auto_vel                      auto_vel
+#   cmd_vel (pós-mux final)       compensador_rumo/cmd_vel
+#   -                             hoverboard_base_controller/cmd_vel = ATUADOR
+ALIAS = {
+    'Odometry': 'odom',
+    'compensador_rumo/cmd_vel': 'mux_out',
+    'hoverboard_base_controller/cmd_vel': 'cmd_vel',   # o ATUADOR, nos dois
+    'cmd_vel_bruto': 'placa_in',         # só no sim: entrada da placa fingida
+}
+HUMANO = ('joy_vel', 'key_vel', 'web_vel')
+
+
+def _norm_topic(t):
+    return ALIAS.get(t.lstrip('/'), t.lstrip('/'))
 
 
 def _f(x):
@@ -72,13 +115,36 @@ def classify(tr, states, t):
 
     if abs(cv_w) >= WZ_STRONG:
         return 'wz_engolido'
-    if CMD_VX < abs(cv_x) < 0.20:
+    if CMD_VX < abs(cv_x) < PISO_VX:
         return 'vx_zona_morta'
-    if abs(cv_x) >= 0.20:
+    if abs(cv_x) >= PISO_VX:
         return 'vx_sem_efeito'     # comando cheio e o robô não anda: encalhe
                                    # físico/rodas (não é decisão de ninguém)
     if abs(us_x) > 0.03 or abs(us_w) > 0.3:
         return 'unstuck'
+    # Humano no comando é explicação suficiente e vem cedo: robô parado com
+    # alguém segurando o controle não é defeito da autonomia.
+    for h in HUMANO:
+        hx, hw = tr[h].at(t)
+        if abs(hx) > CMD_VX or abs(hw) > CMD_WZ:
+            return 'humano'
+    # Robô 2: entre o mux e o atuador há o compensador de curvatura. Se o mux
+    # repassou e o atuador não recebeu, o elo perdido é ELE — e isso nenhuma
+    # categoria do robô 1 nomeava.
+    mo_x, mo_w = tr['mux_out'].at(t)
+    # ⚠️ No SIMULADOR há um elo a mais: o compensador entrega em
+    # `/cmd_vel_bruto` e a placa fingida é que publica no controlador. Mapear
+    # os dois para o mesmo nome apagaria exatamente o degrau que a placa
+    # introduz (patamar de borda, latência, assimetria) — que é a razão de ela
+    # existir no sim. No robô `placa_in` não existe e fica zerado, sem efeito.
+    pi_x, pi_w = tr['placa_in'].at(t)
+    if (abs(pi_x) > CMD_VX or abs(pi_w) > CMD_WZ) and \
+            abs(cv_x) <= CMD_VX and abs(cv_w) <= CMD_WZ:
+        return 'placa_engoliu'
+    if (abs(mo_x) > CMD_VX or abs(mo_w) > CMD_WZ) and \
+            abs(cv_x) <= CMD_VX and abs(cv_w) <= CMD_WZ and \
+            abs(pi_x) <= CMD_VX and abs(pi_w) <= CMD_WZ:
+        return 'compensador_gap'
     if states.get('guard_state') in ('blocked', 'slowing') and \
             (abs(pre_x) > CMD_VX or abs(pre_w) > CMD_WZ) and \
             abs(raw_x) <= CMD_VX and abs(raw_w) <= CMD_WZ:
@@ -89,6 +155,19 @@ def classify(tr, states, t):
     if (abs(fv_x) > CMD_VX or abs(fv_w) > CMD_WZ) and \
             abs(pre_x) <= CMD_VX and abs(pre_w) <= CMD_WZ:
         return 'mux_gap'
+    if (abs(av_x) > CMD_VX or abs(av_w) > CMD_WZ) and \
+            abs(mo_x) <= CMD_VX and abs(mo_w) <= CMD_WZ:
+        return 'mux_gap'
+    # 🔴 A categoria que responde a pergunta de 20-08. Chegar aqui com o robô
+    # parado significa: NINGUÉM cortou nada — a movimentação simplesmente não
+    # pediu. É o caso da porta, onde a lei de rumo tem 50° de erro na mão e o
+    # `|wz|` real é 0,00: ou a lei não converteu o erro em comando, ou o
+    # comando saiu abaixo da zona-morta do atuador. Os dois se separam olhando
+    # `auto_vel_raw` no CSV: zerado é o primeiro, pequeno é o segundo.
+    if abs(raw_x) <= CMD_VX and abs(raw_w) <= CMD_WZ:
+        if states.get('follow_state') is not None:
+            return 'follower_off[%s]' % states.get('follow_state', '?')
+        return 'movimentacao_muda[%s]' % states.get('collision_state', '-')
     if abs(fv_x) <= CMD_VX and abs(fv_w) <= CMD_WZ:
         return 'follower_off[%s]' % states.get('follow_state', '?')
     return 'outro'
@@ -116,9 +195,9 @@ def main(path):
                 continue
             if t0 is None:
                 t0 = t
-            topic = row[1]
+            topic = _norm_topic(row[1])
             extra = row[6] if len(row) > 6 else ''
-            if topic in ('follow_state', 'guard_state'):
+            if topic in ('follow_state', 'guard_state', 'collision_state'):
                 states[topic] = extra
                 continue
             if topic == 'goal_active':
@@ -163,7 +242,7 @@ def main(path):
           % (tot_stop, 100 * tot_stop / total_goal if total_goal else 0))
     print('\n== ORÇAMENTO (quem segura o robô) ==')
     for cause, s in sorted(budget.items(), key=lambda kv: -kv[1]):
-        print('  %-28s %6.1fs  (%4.1f%%)'
+        print('  %-34s %6.1fs  (%4.1f%%)'
               % (cause, s, 100 * s / tot_stop if tot_stop else 0))
     print('\n== EPISÓDIOS >= 3s (os vilões) ==')
     big = [e for e in sorted(episodes, key=lambda e: -e[1]) if e[1] >= 3.0]

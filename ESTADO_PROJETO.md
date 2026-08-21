@@ -1,7 +1,8 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-08-20** (sessão no ROBÔ — ver handoff no topo).
+> Versionado na `main`. Atualizado em **2026-08-20** (2ª leva, dev — o handoff
+> do robô está CORRIGIDO logo abaixo; leia a correção antes dele).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
@@ -10,7 +11,75 @@
 
 ---
 
+## ⚠️ 20-08 (2ª leva, dev) — CORREÇÃO DO HANDOFF ABAIXO: DUAS AFIRMAÇÕES CAÍRAM
+
+> O handoff da seção seguinte continua valendo quase inteiro, mas **duas
+> afirmações dele estão erradas e mandariam a próxima sessão para o lugar
+> errado**. Refiz a conta sobre o mesmo arquivo
+> (`seguidor_2026-08-20_183507.csv`). Registro completo no `docs/DIARIO.md`
+> (2ª leva de 20-08) e na decisão **044**.
+
+**1. ❌ "ele bateu porque chegou a 0,55 m/s, acima do `v_max`" — NÃO HOUVE.**
+Em `t=854,4` o robô estava em **RÉ** (`estado=re`, `v_alvo=−0,20`), recuando a
+0,36 m/s; os 0,55 vieram de tomar módulo na virada ré→frente. E o `v_alvo` não
+pode passar de 0,50 por construção (`velocidade_de_seguimento` devolve um
+`min()` com `v_max`). Com `v_alvo` cravado em 0,50, a velocidade real da
+corrida inteira dá **p50 0,26 · p90 0,32 m/s** (n=2247): **a máquina nunca
+entrega o `v_max`**. A saída proposta no handoff — "não deixar o robô chegar
+rápido na porta" — ataca um problema que não existe.
+
+**2. ❌ "a pose saltou a 1,5 m/s" — é o robô sendo CARREGADO.** Dois trechos,
+`t=193,7` e `t=859,4`, de 15 s cada, cobrindo 19 m contínuos da porta 2 até a
+origem a 1,3 m/s. Trajetória contínua e coerente = passo de gente andando. Salto
+de pose é descontínuo; isto é uma viagem. São as duas vezes em que o dono pegou
+o robô e o levou de volta.
+
+**✅ O que fica no lugar.** Ele não chega rápido na porta: ele **trava** nela.
+
+```
+travessia 1 (t=160-192)  32 s na porta, v real p50 +0,01 m/s com v_alvo 0,50
+                         |erro rumo| p50 23,6° · |wz| real p50 2,9 °/s
+                         rumo p50 69° (o corredor é 90°)
+travessia 2 (t=843-859)  16 s, rumo p50 81°, e 2,3 s PARADO com v_alvo +0,50
+                         e rumo travado em 98,4° — empurrando o batente
+```
+
+Duas travessias, rumos de chegada bem diferentes, **mesmo ponto de bloqueio**
+(y = 19,02 e 18,92). `dist` ao fim do plano **nunca desceu de 4,94 m** — nesta
+corrida a porta nunca foi vencida. O dono confirmou por fora: *"depois de tentar
+muito passou 1 vez, que foi quando pela primeira vez chegou no objetivo. Depois
+nunca mais"* — essa passagem única está em outro CSV, no robô.
+
+**⚠️ Hipótese minha testada e MORTA**: a mira travando em 0,37 m dentro da porta
+(gate de espaço `folga_min = 0,60`) NÃO é o diferencial. Variação do `rumo_alvo`
+p90 **40°/s no corredor livre** contra **37-40°/s na porta**. Igual.
+
+**🔧 O que mudou de fato (decisão 044)**: a cadeia de comando passou a ser
+gravada. `freeze_capture` + `bin/pause_budget.py` já existiam desde o robô 1 e
+chegavam **mudos** aqui (assinavam `Twist` numa cadeia `TwistStamped`, com
+tópicos do outro robô, sem entrar na `pilha.launch.py`, e com limiares de
+skid-steer). Agora sobem na pilha e gravam
+`auto_vel_raw → auto_vel → mux → compensador → atuador → odom` mais o
+`collision_monitor_state`. **A primeira corrida da próxima sessão no robô
+responde, num comando, a pergunta que ficou aberta:**
+
+```
+bin/pause_budget.py ~/logs_robo2/freeze_capture.csv
+
+  collision[...]        o reflexo cortou      -> a caixa é o assunto
+  movimentacao_muda     ninguém cortou        -> a lei de rumo é o assunto
+  vx_zona_morta         comando fraco demais  -> o piso da movimentação é
+```
+
+Custa alguns kB/s — contra os 560 MB/min do bag `--all-topics` que travou o LIO.
+Vale com o bag DESLIGADO.
+
+---
+
 ## 🔴 20-08 (NO ROBÔ, fim da sessão) — HANDOFF: O QUE ESTÁ MEDIDO E O QUE FALTA
+
+> ⚠️ **LEIA A CORREÇÃO ACIMA ANTES**: os itens "0,55 m/s" e "salto de pose de
+> 60 cm" desta seção caíram na medida de 20-08 (2ª leva).
 
 > Escrito para quem pegar o projeto a seguir. A sessão terminou com o dono
 > insatisfeito e com razão: o robô bateu de frente num batente, e boa parte do

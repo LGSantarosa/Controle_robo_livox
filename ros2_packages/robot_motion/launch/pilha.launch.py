@@ -713,6 +713,31 @@ def generate_launch_description():
                          ('/path_follower/velocidade_alvo',
                           '/heading_controller/velocidade_alvo')]),
 
+        # ------------------------------------ a cadeia de comando (20-08)
+        # 🔴 POR QUE ENTRA AGORA: a sessão de 20-08 no robô terminou com duas
+        # perguntas sem resposta possível — na porta a lei pede giro com 50° de
+        # erro e o `|wz|` real é 0,00, e o robô passa 32 s com `v_alvo` em 0,50
+        # andando 0,01 m/s. O CSV do seguidor não pode responder nenhuma das
+        # duas: ele grava o que o seguidor PEDE, e o pedido some em algum ponto
+        # entre a lei de rumo e a roda. Este nó grava os elos que faltam
+        # (`auto_vel_raw` → `auto_vel` → mux → atuador → odom, mais o estado do
+        # reflexo), e `bin/pause_budget.py` atribui cada segundo parado a UMA
+        # camada.
+        #
+        # ⚠️ Não substitui o bag, mas é o registro que sobrevive a ele: são
+        # alguns kB/s contra os 560 MB/min do `--all-topics` que travou o LIO
+        # em 20-08. Corrida com o bag desligado continua tendo esta cadeia.
+        Node(package='robot_nav', executable='freeze_capture',
+             name='freeze_capture', output='log',
+             parameters=[{'use_sim_time': sim,
+                          'out_dir': ParameterValue(
+                              LaunchConfiguration('log_dir'), value_type=str),
+                          # No simulador quem entrega ao "atuador" é a placa
+                          # fingida; no robô, o controlador da hoverboard. Os
+                          # dois estão na lista: o que não existe fica mudo e
+                          # não custa nada.
+                          'stamped': True}]),
+
         Node(package='rviz2', executable='rviz2', name='rviz2', output='log',
              arguments=['-d', rviz_config],
              parameters=[{'use_sim_time': sim}],

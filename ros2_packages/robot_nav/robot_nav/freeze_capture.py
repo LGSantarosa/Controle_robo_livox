@@ -6,18 +6,21 @@ mesmo com o planner mandando contornar, gira só no lugar, e só para porque o
 collision manda. Grava DOIS CSVs (controle_web/logs/) pra eu (assistente) ler
 DEPOIS — nunca ao vivo:
 
+⚠️ 20-08: OS TÓPICOS E O TIPO SÃO PARÂMETROS, e o default é a cadeia do ROBÔ 2.
+Este nó veio do robô 1 e chegava mudo aqui (tipo `Twist` numa cadeia
+`TwistStamped`, metade dos tópicos inexistente) — o porquê está no `__init__`.
+
 1) freeze_capture.csv — a CADEIA de velocidade + odom + estados, 1 linha por msg:
      t_wall, topic, vx, wz, px, py, extra
-     cmd_vel_nav  : o que o controller (DWB/RotationShim) QUER (pré-smoother)
-     nav_vel      : saída do smoother (entra no mux de autonomia)
-     follow_vel   : o que o path_follower (driver atual) QUER
-     auto_vel_pre : nav+seguidor+porta arbitrados pelo mux de autonomia (PRÉ-guard)
-     auto_vel_raw : depois do motion_guard (PRÉ-collision)
-     auto_vel     : o que SOBRA depois do collision_monitor (autonomia gated)
-     unstuck_vel  : manobra do unstuck (fura o collision no mux final)
-     cmd_vel      : o que vai pro motor (pós twist_mux FINAL / modelo de giro no sim)
-     odom         : o que o robô FAZ (twist) + pose (px,py)
-     follow_state / guard_state / goal_active : transições (valor na col. extra)
+     auto_vel_raw    : o que o heading_controller PEDIU (pré-reflexo)
+     auto_vel        : o que SOBROU do collision_monitor
+     compensador_rumo/cmd_vel : o que o twist_mux repassou (pós-humano)
+     hoverboard_base_controller/cmd_vel : o que foi ao ATUADOR (robô)
+     cmd_vel_bruto   : idem, no simulador (a placa fingida)
+     joy_vel/key_vel/web_vel : o humano, se ele interferiu
+     odom            : o que o robô FAZ (twist) + pose (px,py) — `/Odometry`
+     collision_state : transições do reflexo, `AÇÃO:polígono` na col. extra
+     goal_active     : transições (valor na col. extra)
    → orçamento do tempo parado (07-03): `bin/pause_budget.py freeze_capture.csv`
      atribui cada segundo parado-com-goal a uma causa (guard, collision, giro
      engolido, zona-morta, unstuck, follower quieto...) pra achar o vilão.
@@ -43,7 +46,8 @@ from rclpy.node import Node
 from rclpy.qos import (QoSProfile, ReliabilityPolicy, HistoryPolicy,
                        QoSDurabilityPolicy)
 from action_msgs.msg import GoalStatusArray
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Twist, TwistStamped
+from nav2_msgs.msg import CollisionMonitorState
 from nav_msgs.msg import Odometry, Path
 from sensor_msgs.msg import LaserScan
 from std_msgs.msg import String
@@ -72,14 +76,66 @@ class FreezeCapture(Node):
         self.front_sector_deg = self.declare_parameter('front_sector_deg', 15.0).value
         p_chain, p_diag = self._open_csvs(out_dir)
 
+        # 🔴 20-08 (robô 2) — ESTE NÓ NASCEU NO ROBÔ 1 E CHEGAVA MUDO AQUI.
+        # Dois desencontros, os dois falhando em SILÊNCIO (nó vivo, CSV com
+        # cabeçalho e nenhuma linha, que se lê como "não aconteceu nada"):
+        #
+        #   (a) a cadeia do robô 2 é `TwistStamped` inteira — `twist_mux.yaml`
+        #       roda com `use_stamped: true` e o `collision_monitor` com
+        #       `enable_stamped_cmd_vel: true`. Assinar `Twist` num publisher
+        #       `TwistStamped` não é erro de DDS: é tipo diferente, e o
+        #       casamento simplesmente não acontece. Zero mensagem, zero aviso;
+        #   (b) metade dos tópicos do robô 1 não existe aqui: `follow_vel`,
+        #       `auto_vel_pre`, `unstuck_vel`, `motion_guard/state`. Neste robô
+        #       o seguidor fala rumo+velocidade em `Float64` para o
+        #       `heading_controller`, e é ELE quem abre a cadeia de twist.
+        #
+        # A cadeia real, e o default dos parâmetros abaixo:
+        #
+        #     path_follower ──(rumo_alvo, velocidade_alvo)──▶ heading_controller
+        #        ──/auto_vel_raw──▶ collision_monitor ──/auto_vel──▶ twist_mux
+        #        ──/compensador_rumo/cmd_vel──▶ compensador ──▶ atuador
+        #
+        # 🔴 A PERGUNTA QUE ELE EXISTE PARA RESPONDER, aberta desde 20-08: na
+        # porta a lei pede giro com 50° de erro e o robô não gira; e ele fica
+        # 32 s com `v_alvo` em 0,50 andando 0,01 m/s. O CSV do seguidor grava o
+        # que ele PEDE, nunca o que sai — então não havia como separar "a
+        # movimentação não converteu" de "o reflexo cortou" de "a placa não
+        # obedeceu". Com esta cadeia gravada, `bin/pause_budget.py` atribui
+        # cada segundo parado a UMA camada.
+        stamped = self.declare_parameter('stamped', True).value
+        tipo = TwistStamped if stamped else Twist
+        topicos = self.declare_parameter('topicos', [
+            '/auto_vel_raw',                     # o que o heading_controller pediu
+            '/auto_vel',                         # o que SOBROU do reflexo
+            '/compensador_rumo/cmd_vel',         # o que o mux repassou
+            '/hoverboard_base_controller/cmd_vel',   # o que foi ao atuador
+            '/cmd_vel_bruto',                    # idem, no simulador
+            '/joy_vel', '/key_vel', '/web_vel',  # o humano, se interferiu
+        ]).value
+
         qos = QoSProfile(reliability=ReliabilityPolicy.BEST_EFFORT,
                          history=HistoryPolicy.KEEP_LAST, depth=20)
-        for topic in ('cmd_vel_nav', 'nav_vel', 'follow_vel', 'auto_vel_pre',
-                      'auto_vel_raw', 'auto_vel', 'unstuck_vel', 'cmd_vel'):
-            self.create_subscription(Twist, topic, self._mk_twist(topic), qos)
-        self.create_subscription(Odometry, 'odom', self._on_odom, qos)
-        self.create_subscription(Path, 'plan', self._on_plan, qos)
-        self.create_subscription(LaserScan, 'scan', self._on_scan, qos)
+        for topic in topicos:
+            self.create_subscription(tipo, topic, self._mk_twist(topic), qos)
+        self.create_subscription(
+            Odometry, self.declare_parameter('odom_topic', '/Odometry').value,
+            self._on_odom, qos)
+        self.create_subscription(
+            Path, self.declare_parameter('plan_topic', '/plan').value,
+            self._on_plan, qos)
+        self.create_subscription(
+            LaserScan, self.declare_parameter('scan_topic', '/scan').value,
+            self._on_scan, qos)
+        # O estado do reflexo é a testemunha direta: `polygon_name` diz QUAL
+        # caixa disparou e `action_type` o que ela mandou fazer. Sem isto,
+        # `auto_vel` zerado é indistinguível de `auto_vel_raw` já ter vindo
+        # zerado num ciclo em que ninguém publicou.
+        self.create_subscription(
+            CollisionMonitorState,
+            self.declare_parameter('estado_colisao_topic',
+                                   '/collision_monitor_state').value,
+            self._on_collision_state, qos)
         # estados (latched nos publishers) + goal ativo -> col. extra
         latched = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE,
                              durability=QoSDurabilityPolicy.TRANSIENT_LOCAL)
@@ -127,12 +183,27 @@ class FreezeCapture(Node):
     # ---- cadeia de velocidade (CSV 1) ----
     def _mk_twist(self, topic):
         def cb(m):
+            t = m.twist if hasattr(m, 'twist') else m      # stamped ou cru
             if topic == 'cmd_vel_nav':
-                self._cmd_nav = (m.linear.x, m.angular.z)
+                self._cmd_nav = (t.linear.x, t.angular.z)
             self._w.writerow([f'{time.time():.3f}', topic,
-                              f'{m.linear.x:.4f}', f'{m.angular.z:.4f}',
+                              f'{t.linear.x:.4f}', f'{t.angular.z:.4f}',
                               '', '', ''])
         return cb
+
+    # Só as TRANSIÇÕES: o collision_monitor publica o estado a cada ciclo, e
+    # gravar 20 linhas por segundo de "DO_NOTHING" afogaria o CSV justamente
+    # nos trechos em que nada acontece.
+    _ACOES = {0: 'DO_NOTHING', 1: 'STOP', 2: 'SLOWDOWN', 3: 'APPROACH',
+              4: 'LIMIT'}
+
+    def _on_collision_state(self, m):
+        estado = (f'{self._ACOES.get(m.action_type, m.action_type)}'
+                  f':{m.polygon_name or "-"}')
+        if estado == getattr(self, '_estado_colisao', None):
+            return
+        self._estado_colisao = estado
+        self._log_extra('collision_state', estado)
 
     def _on_odom(self, m):
         t = m.twist.twist
