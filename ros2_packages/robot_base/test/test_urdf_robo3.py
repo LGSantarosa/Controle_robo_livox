@@ -183,7 +183,7 @@ def test_a_LARGURA_vem_do_PNEU_e_nao_da_caixa(urdf):
     """No robô 2 as rodas ficavam DENTRO da largura da caixa; aqui não.
 
     Caixa de 24 cm contra envelope de 37,25 — as motrizes são a parte mais larga,
-    com 6,6 cm saindo de cada lado. Construir footprint a partir de `caixa_y` é
+    com 7,0 cm saindo de cada lado. Construir footprint a partir de `caixa_y` é
     o erro fácil deste robô, e ele daria um footprint 13 cm mais estreito que o
     robô. Ver §5.9.
     """
@@ -192,7 +192,7 @@ def test_a_LARGURA_vem_do_PNEU_e_nao_da_caixa(urdf):
     y_roda = _xyz(_junta(urdf, 'left_wheel_joint'))[1]
     envelope = 2 * y_roda + larg_roda
     assert envelope > cy, 'a roda tem de ser mais larga que a caixa'
-    assert abs(envelope - 0.3725) < 1e-3, 'externo 37,5 e interno 27,0 medidos'
+    assert abs(envelope - 0.3805) < 1e-3, 'bitola medida 32,25 + roda de catálogo 5,8'
 
 
 def test_o_COMPRIMENTO_vem_da_CAIXA_com_a_roda_passando(urdf):

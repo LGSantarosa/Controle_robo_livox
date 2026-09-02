@@ -42,7 +42,7 @@ from launch_ros.actions import Node
 # conferidos em par por `test_urdf_robo3.py` — mudar um sozinho quebra o teste
 # de propósito.
 BITOLA = 0.3225  # fechada olhando o Gazebo, §5.9
-RAIO = 0.0835    # provisório, §5.4.1
+RAIO = 0.0825    # catálogo do hub motor 6,5" (165 mm OD)
 
 
 def generate_launch_description():

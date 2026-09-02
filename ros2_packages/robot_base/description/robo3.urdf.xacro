@@ -85,14 +85,25 @@
        Duas rotas independentes concordam em 2,5 mm: a média das duas medidas
        diretas dá 32,25, e a construção "caixa + cubo + meio pneu" dá 32,00.
 
-       🟢 Raio: diâmetro medido 16,5 cm = 6,5 POLEGADAS EXATAS (6,5 × 2,54 =
-       16,51), a roda de hoverboard de catálogo — confirmação independente da
-       trena. O perímetro medido (53 cm) implicaria 16,87, e a diferença de
-       2,2% entre os dois é erro de fita.
-       ⚠️ 0,0835 é o MEIO dos dois, e é PROVISÓRIO: fecha com uma corrida reta
-       de 5 m contra o LIO, onde 2,2% viram 11 cm e ficam óbvios. -->
-  <xacro:property name="roda_raio"      value="0.0835"/>
-  <xacro:property name="roda_largura"   value="0.050"/>
+       🟢 RODA = PEÇA DE CATÁLOGO, e não há o que medir. São hoverboards
+       genéricos de 6,5", as MESMAS rodas dos robôs 1 e 2. Especificação do
+       hub motor de 6,5" (Parallax e fornecedores de peça):
+
+           diâmetro externo   165 mm   (6,5" = 165,1 mm exatas)
+           largura             58 mm
+           eixo             45 × 10 mm
+           massa              3,1 kg por roda
+
+       Os 165 mm batem com o 16,5 cm medido no robô 3. O perímetro medido
+       (53 cm) daria 16,87 — 2% a mais, que é a fita passando por FORA do
+       relevo do pneu, não o raio de rolagem.
+
+       ⚠️ O robô 2 tem 0,080 e 0,045 no URDF dele, medidos com trena em 29-07
+       nas MESMAS rodas. Ficam como estão: aquele modelo está calibrado contra
+       CSV histórico e mexer nele invalidaria a comparação. Se a diferença
+       importar, ela vira uma linha no DIÁRIO, não uma edição retroativa. -->
+  <xacro:property name="roda_raio"      value="0.0825"/>
+  <xacro:property name="roda_largura"   value="0.058"/>
   <!-- O cubo de metal da roda, 15 mm, virado para DENTRO. Não é decoração: é
        ele que vence o vão entre a lateral da caixa (y=0,120) e a face interna
        do pneu (y=0,135), e foi vê-lo faltando no Gazebo que resolveu a D5. -->
@@ -145,7 +156,11 @@
        Enquanto estiverem assim, ⛔ NÃO TIRE CONCLUSÃO DE INÉRCIA DE GUINADA,
        de transferência de peso, nem de tombamento deste modelo. -->
   <xacro:property name="massa_chassi" value="3.0"/>
-  <xacro:property name="massa_roda"   value="2.0"/>
+  <!-- 🟢 3,1 kg é de catálogo (Parallax, hub motor 6,5"), não estimativa: o
+       motor mora dentro da roda. O robô 2 usa 2,0 nas MESMAS rodas, e aquilo
+       era chute — aqui as duas rodas sozinhas pesam 6,2 kg, quase o dobro do
+       chassi. É massa longe do eixo de guinada e ela conta. -->
+  <xacro:property name="massa_roda"   value="3.1"/>
   <xacro:property name="massa_garfo"  value="0.05"/>
   <xacro:property name="massa_boba"   value="0.05"/>
 

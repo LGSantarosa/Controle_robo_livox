@@ -37,13 +37,13 @@ hoverboard_base_controller:
     # 37,5 é o EXTERNO (a etiqueta estava trocada), e o cubo de 1,5 cm é o que
     # preenche o vão entre a caixa e o pneu. Centro a centro = (37,5+27)/2.
     #
-    # O raio é PROVISÓRIO: o diâmetro medido (16,5 cm, que são 6,5" exatas) e o
-    # perímetro medido (53 cm, que implica 16,87) divergem 2,2%. 0,0835 é o meio
-    # dos dois, e fecha com uma corrida reta de 5 m contra o LIO — 2,2% em 5 m
-    # são 11 cm, que o LIO enxerga sem esforço. ATÉ LÁ, toda distância percorrida
-    # que sair daqui carrega 2,2% de incerteza de escala.
+    # O raio é DE CATÁLOGO: são hoverboards genéricos de 6,5", as mesmas rodas
+    # dos robôs 1 e 2, e o hub motor de 6,5" tem 165 mm de diâmetro externo por
+    # 58 mm de largura. Não é número para medir com fita — os 165 mm batem com
+    # o 16,5 cm lido no robô, e o perímetro de 53 cm que daria 16,87 é a fita
+    # passando por fora do relevo do pneu.
     wheel_separation: 0.3225
-    wheel_radius: 0.0835
+    wheel_radius: 0.0825
 
     wheel_separation_multiplier: 1.0
     left_wheel_radius_multiplier: 1.0
@@ -81,10 +81,10 @@ hoverboard_base_controller:
     #
     #     roda:  100 unidades × 0,0372 rad/s/un = 3,72 rad/s
     #     robô 2: v = 3,72 × 0,0800 = 0,2976 m/s -> wz = 2v/0,2700 = 2,204 rad/s
-    #     robô 3: v = 3,72 × 0,0835 = 0,3106 m/s -> wz = 2v/0,3225 = 1,927 rad/s
+    #     robô 3: v = 3,72 × 0,0825 = 0,3069 m/s -> wz = 2v/0,3225 = 1,903 rad/s
     #
     # A mesma placa gira o robô 3 MAIS DEVAGAR, porque a roda tem 19% mais braço
-    # para vencer. 2,5 deixa folga sobre 1,927 sem virar teto solto.
+    # para vencer. 2,5 deixa folga sobre 1,903 sem virar teto solto.
     #
     # ⚠️ Este número inteiro depende de a placa ser a do robô 2 (§5.1). Placa
     # diferente = `escala_real` diferente = este teto tem de ser refeito.
