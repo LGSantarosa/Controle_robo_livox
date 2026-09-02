@@ -628,6 +628,127 @@ Livox e do NUC subirem são de outro robô.
 
 ---
 
+## 5.6 Quarta leva — e a largura piorou (2026-09-02)
+
+Veio: **do lado interno das rodas hover até o lado interno da outra = 37,5 cm**,
+**as bobas não têm mola**, e **cada uma fica na ponta da frente da caixa, uma em
+cada extremidade**.
+
+### 5.6.1 🔴 D5 agora tem TRÊS medidas de largura, e uma é impossível
+
+```
+27,0  dito "centro a centro"    (2ª leva)
+37,5  dito "interno a interno"  (4ª leva)
+39,0  dito "largura total"      (1ª leva)
+```
+
+⚠️ **27 e 37,5 não podem coexistir como foram ditos**: centro a centro é sempre
+MAIOR que interno a interno, nunca menor. Uma das duas etiquetas está trocada.
+
+**História A — o "27" era o interno, e o "37,5" é o externo:**
+
+```
+centro a centro = (37,5 + 27)/2 = 32,25 cm
+largura da roda = (37,5 − 27)/2 =  5,25 cm   <- a espessura medida foi 5,0  ✅
+largura total   = 37,5 + cubos 1,5 = 39,0    <- a 1ª leva disse 39,0        ✅
+```
+
+**As três medidas caem dentro de 1,5 cm uma da outra, e a largura da roda cai
+sozinha em cima do valor que foi medido em separado.** Não forcei nada: a
+espessura de 5 cm nunca entrou nessa conta, ela saiu dela.
+
+**História B — o "37,5" é interno ao pé da letra:**
+
+```
+roda 5,0 -> centro a centro 42,50 | largura total 47,5 cm
+roda 6,5 -> centro a centro 44,00 | largura total 50,5 cm
+```
+
+Exige **jogar fora o 27 E o 39**, e ainda deixa o robô com 47-50 cm de largura.
+
+**Claude fica com a história A** — mas fica **como hipótese**, não como fato,
+porque duas coisas grandes dependem dela:
+
+```
+wz:     separação 32,25 (A) contra 42,50 (B) = 32% de erro em todo giro
+porta:  envelope 39,0 x 33,1 -> diagonal 51,2 -> pior caso +9,4 cm/lado   (A)
+        envelope 47,5 x 33,1 -> diagonal 57,9 -> pior caso +6,1 cm/lado   (B)
+```
+
+🔴 **Na história B o robô 3 tem 47,5 cm de largura contra os 45,5 do robô 2 — ou
+seja, seria MAIS LARGO que o robô que não passava na porta.** O C6, que é a
+melhor notícia do projeto até agora, está pendurado nesta etiqueta.
+
+➡️ **Uma medida só encerra:** com o robô de frente, **a largura no ponto mais
+largo dele — de fora do pneu de um lado até fora do pneu do outro.** Um número,
+sem ambiguidade de "onde é o centro" nem de "interno de quê". Se der ~39 → A;
+se der ~47 → B.
+
+### 5.6.2 🔴 C3 CONFIRMADO — quatro apoios rígidos, e as bobas nas quinas
+
+*"Não tem mola"* + *"cada uma na ponta da frente da caixa, uma em cada
+extremidade"*. O C3 deixa de ser preocupação genérica e vira geometria:
+
+```
+bobas   em x = +15,55 (ponta da caixa), y = ±12,0 (meia-largura da caixa)
+motoras em x =  −9,30              , y = ±16,1 (história A)
+entre-eixos 24,9 cm | braço do balanço na diagonal 15,9 cm
+```
+
+**Quatro pontos rígidos num chassi rígido é hiperestático**: em piso irregular
+uma boba sai do chão e o corpo balança entre as duas diagonais. O braço de
+15,9 cm converte irregularidade de piso direto em inclinação do corpo:
+
+```
+degrau de  3 mm sob uma boba -> 1,1° de balanço
+degrau de  5 mm               -> 1,8°
+degrau de 10 mm               -> 3,6°
+```
+
+⚠️ **E o Livox vai em cima disso.** No robô 2 o sensor estava a 0,42 m, com
+apoio isostático de 3 pontos que não balança por definição. Aqui, 3 mm de junta
+de piso viram mais de 1° de *pitch/roll* no sensor — e o corredor do andar 3 é
+piso de prédio, com junta.
+
+➡️ **Isto é decisão de projeto do dono, não medida:** ou entra complacência (uma
+boba com mola, ou um balancim que devolva o apoio a 3 pontos), ou o LIO vai
+receber esse balanço como movimento real. **Vale registrar a pergunta antes de o
+Livox subir, porque depois o conserto é mecânico.**
+
+Nota lateral: a bitola das bobas (24,0, nas quinas da caixa) é **mais estreita
+que a das motoras** (32,25 na história A). Para tombamento lateral quem manda é
+a parte estreita, e ela está na frente.
+
+### 5.6.3 🟢 C7 sai da faixa e vira número
+
+Com as bobas na ponta da caixa (`x = +15,55`), o entre-eixos fecha em
+**24,85 cm**, e o limite geométrico do escorregão de ré:
+
+```
+robô 3 (trail 2,0, duas bobas, escorregão 4,0 cm) -> até 9,1°
+robô 2 (trail 1,0, uma boba,   escorregão 2,0 cm) -> até 4,6°
+```
+
+**Exatamente 2×**, e agora sem depender de chute de posição. O C7 fica pronto
+para o teste de bancada da §5.5.2.
+
+### 5.6.4 Placar depois da 4ª leva
+
+| Item | Estado |
+|---|---|
+| Caixa, envelope em comprimento e altura | 🟢 firme |
+| Raio da roda motora | 🟢 0,0835 provisório, fecha por corrida reta |
+| `roda_x` = −9,3 cm | 🟢 ±0,2 cm |
+| Bobas: posição (+15,55, ±12,0) e trail 2,0 | 🟢 firme |
+| Bobas: sem mola | 🟢 respondido — e é o que **confirma o C3** |
+| `altura_solo` 7,0 vs boba 6,0 (1,8° de caimento) | 🟡 D4 aberta |
+| Diâmetro da boba | 🟡 adotado 5,0, fora do caminho crítico |
+| **Largura: `wheel_separation` e envelope** | 🔴 **A ou B — trava o giro E a conta da porta (D5)** |
+| Peso, centro de massa, baterias | 🔴 pendente, e prematuro até o Livox subir |
+| **Livox: onde monta** | 🔴 **decisão do dono, agora com o C3 junto** |
+
+---
+
 ## 6. Plano proposto por Claude (aguardando ok do dono)
 
 1. `docs/decisoes/045-troca-para-o-robo-3.md` — medidas, motivo da troca, e o
@@ -649,16 +770,16 @@ Livox e do NUC subirem são de outro robô.
 |---|---|---|---|
 | C1 | Codex | | |
 | C2 | Codex | | |
-| C3 | Codex | | |
+| C3 | Codex | | ← CONFIRMADO na 4ª leva: sem mola, 4 apoios rígidos (§5.6.2) |
 | C4 | Codex | | |
 | C5 | Codex | | ← derivado em §5.2.4, não medido |
 | C6 | Codex | | ← conta da porta em §5.2.5 |
-| C7 | Codex | | ← 🔴 trail dobrou e duplicou: a ré custa rumo, §5.5.2 |
+| C7 | Codex | | ← 🔴 fechado em 9,1° contra 4,6° do robô 2 (§5.6.3) |
 | D1 | Codex | | |
 | D2 | Codex | | ← RESOLVIDA na 2ª leva (§5.4.1): "15" descartado, sobra 2,2% |
 | D3 | Codex | | ← empate 2×2, mas saiu do caminho crítico (§5.5.1) |
 | D4 | Codex | | ← virou desnível de 1 cm / 1,8° de pitch, §5.4.5 |
-| D5 | Codex | | ← 🔴 27 cm não cabem nos 39 cm, §5.4.2 |
+| D5 | Codex | | ← 🔴 piorou: 3 medidas de largura, uma impossível (§5.6.1) |
 | D6 | Codex | | ← "1,5" era vertical, não longitudinal, §5.4.3 |
 | D7 | Codex | | ← Livox não está montado, §5.4.6 |
 
