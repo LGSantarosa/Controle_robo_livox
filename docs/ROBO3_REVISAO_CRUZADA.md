@@ -749,6 +749,105 @@ para o teste de bancada da §5.5.2.
 
 ---
 
+## 5.7 🔨 DECISÃO DO DONO — vale só o 37,5 (2026-09-02)
+
+*"Só leva em consideração o 37,5."*
+
+Claude tinha recomendado a **história A** (o 27 seria o interno, o 37,5 o
+externo). **O dono decidiu a B**: o 37,5 é interno a interno, como foi dito, e o
+27 e o 39 saem da conta. A decisão tem sustentação — **o 37,5 foi a única
+largura medida DEPOIS de a pergunta ser feita sem ambiguidade** ("de dentro a
+dentro"), enquanto o 27 e o 39 vieram de perguntas mais frouxas.
+
+**D5 encerrada. A largura passa a ser:**
+
+```
+interno a interno              37,5 cm   (medido)
+centro a centro (linha do pneu) 42,50 cm  = 37,5 + 5,0   <- wheel_separation
+envelope, só os pneus           47,5 cm  = 37,5 + 2×5,0
+envelope, com os cubos          50,5 cm  = 37,5 + 2×6,5
+```
+
+E uma confirmação que caiu do céu: **16,5 cm = 6,5 polegadas exatas**
+(6,5 × 2,54 = 16,51). A roda é a de hoverboard padrão de 6,5", o que fecha a D2
+por um caminho independente da trena.
+
+### 5.7.1 🔴 CORREÇÃO — o C6 encolhe, e eu tinha dado a notícia boa demais
+
+A conta da porta que Claude reportou (**+9,4 cm/lado no pior caso**) usava os
+39 cm. Com a largura decidida ela muda:
+
+```
+                                larg × compr   diagonal   folga 0°   pior caso
+o que eu tinha dito (39,0)       39,0 × 33,1     51,2      +15,5      +9,4 cm/lado
+agora, só pneus     (47,5)       47,5 × 33,1     57,9      +11,2      +6,1 cm/lado
+agora, com cubos    (50,5)       50,5 × 33,1     60,4       +9,8      +4,8 cm/lado
+robô 2, corpo real  (45,5)       45,5 × 43,3     62,8      +12,2      +3,6 cm/lado
+```
+
+**O que sobrevive:** o robô 3 continua passando na porta de 70 cm **em qualquer
+ângulo** (60,4 < 70), e continua melhor que o robô 2 (+4,8 contra +3,6).
+
+**O que caiu:** a folga do pior caso quase pela metade. **O robô 3 é mais largo
+que o robô 2** (47,5-50,5 contra 45,5) e ganha na porta só porque é **muito mais
+curto** (33,1 contra 43,3) — a diagonal é que manda, e o comprimento é que
+encolheu de verdade.
+
+⚠️ Consequência prática: a margem de manobra do footprint ficou **menor do que a
+§5.2.5 anunciava**. A D1 (os 13,4 cm de proa sem justificativa no planejador)
+deixa de ser oportunidade e vira **necessidade** — com 4,8 cm de folga de corpo,
+não há de onde tirar margem inventada.
+
+### 5.7.2 A forma do robô mudou de categoria
+
+```
+bitola motora  42,50 cm
+entre-eixos    24,85 cm      ->  largura/comprimento = 1,71
+bitola das bobas 24,0 (quinas da caixa) contra 42,5 atrás
+```
+
+**O robô 3 é quase duas vezes mais largo que comprido, e a base é muito
+trapezoidal** — estreita na frente, larga atrás. Três leituras:
+
+- 🟢 **Bom para o giro:** bitola 42,5 contra 27,0 do robô 2 é **57% mais braço**
+  para o par de motoras impor *yaw*. O limite geométrico do C7 (9,1°) não muda,
+  mas **a resistência ao escorregão cresce 1,57×** — o erro realizado deve ficar
+  bem abaixo do limite. O C7 continua valendo como teste, com essa ressalva.
+- 🟡 **A caixa não abraça as rodas:** com o interno em 37,5 e a caixa com 24, há
+  **6,75 cm de vão entre a lateral da caixa e cada roda**. As motoras estão em
+  balanço, fora do corpo. Isso é estrutura, e é onde uma pancada lateral entra.
+- 🔴 **Tombamento manda na frente:** a base é 24,0 na dianteira contra 42,5
+  atrás. Quem decide tombamento lateral é a parte estreita — e ela está onde o
+  robô não tem tração para corrigir.
+
+### 5.7.3 C3 recalculado
+
+Com as motoras em ±21,25 o braço do balanço cai de 15,89 para **14,37 cm**, e o
+balanço **piora um pouco**:
+
+```
+degrau de 3 mm sob uma boba -> 1,20°   (era 1,08°)
+degrau de 5 mm               -> 1,99°   (era 1,80°)
+```
+
+O C3 segue confirmado e a decisão de complacência segue pendente.
+
+### 5.7.4 A última pergunta de largura
+
+Sobra **uma** ambiguidade, e ela vale 1,3 cm de folga na porta: **os cubos de
+metal (1,5 cm) ficam para FORA dos pneus ou para DENTRO?**
+
+```
+cubos para fora   -> envelope 50,5 -> pior caso +4,8 cm/lado
+cubos para dentro -> envelope 47,5 -> pior caso +6,1 cm/lado
+```
+
+Até responder, **Claude adota 50,5 no footprint** (o conservador — footprint
+menor que o robô é o erro que bate), e **47,5 fica como o alvo** se a resposta
+liberar.
+
+---
+
 ## 6. Plano proposto por Claude (aguardando ok do dono)
 
 1. `docs/decisoes/045-troca-para-o-robo-3.md` — medidas, motivo da troca, e o
@@ -773,13 +872,13 @@ para o teste de bancada da §5.5.2.
 | C3 | Codex | | ← CONFIRMADO na 4ª leva: sem mola, 4 apoios rígidos (§5.6.2) |
 | C4 | Codex | | |
 | C5 | Codex | | ← derivado em §5.2.4, não medido |
-| C6 | Codex | | ← conta da porta em §5.2.5 |
+| C6 | Claude | **CORRIGIDO** | folga do pior caso caiu de +9,4 para +4,8 cm/lado (§5.7.1) |
 | C7 | Codex | | ← 🔴 fechado em 9,1° contra 4,6° do robô 2 (§5.6.3) |
 | D1 | Codex | | |
 | D2 | Codex | | ← RESOLVIDA na 2ª leva (§5.4.1): "15" descartado, sobra 2,2% |
 | D3 | Codex | | ← empate 2×2, mas saiu do caminho crítico (§5.5.1) |
 | D4 | Codex | | ← virou desnível de 1 cm / 1,8° de pitch, §5.4.5 |
-| D5 | Codex | | ← 🔴 piorou: 3 medidas de largura, uma impossível (§5.6.1) |
+| D5 | ~~Codex~~ | **ENCERRADA PELO DONO** | vale só o 37,5 → separação 0,425 (§5.7) |
 | D6 | Codex | | ← "1,5" era vertical, não longitudinal, §5.4.3 |
 | D7 | Codex | | ← Livox não está montado, §5.4.6 |
 
