@@ -130,13 +130,24 @@ def test_motrizes_ATRAS_e_bobas_na_FRENTE(urdf):
         'os 2 cm de roda passando atrás foram medidos — ver C5'
 
 
-def test_bobas_nas_QUINAS_da_frente(urdf):
-    """Medido: "cada uma na ponta da frente da caixa, uma em cada extremidade"."""
+def test_bobas_nas_quinas_mas_DEBAIXO_da_caixa(urdf):
+    """Medido: "cada uma na ponta da frente da caixa, uma em cada extremidade".
+
+    Ao pé da letra isso põe o PIVÔ em cima da quina — e aí meia rodinha fica
+    para fora da lateral, que foi o que o dono viu no Gazebo. A regra que ele
+    deu é sobre a SUPERFÍCIE, não sobre o pivô: "as pontas com as pontas".
+
+    Então o que este teste trava é o alinhamento das FACES, e não uma distância
+    escolhida a olho — recuo escolhido a olho já errou nos dois sentidos.
+    """
     (cx, cy, _cz), (ox, _oy, _oz) = _caixa(urdf)
+    _r, larg_boba = _cilindro(urdf, 'left_caster_wheel')
     for lado, sinal in (('left', 1), ('right', -1)):
         bx, by, _bz = _xyz(_junta(urdf, f'{lado}_caster_swivel_joint'))
-        assert abs(bx - (ox + cx / 2)) < TOL, 'a boba fica na ponta da frente'
-        assert abs(by - sinal * cy / 2) < TOL, 'a boba fica na quina lateral'
+        assert abs(bx - (ox + cx / 2)) < TOL, 'a frente do garfo é a frente da caixa'
+        assert abs((abs(by) + larg_boba / 2) - cy / 2) < TOL, \
+            'a face externa da rodinha é a lateral da caixa'
+        assert by * sinal > 0, 'uma de cada lado'
 
 
 @pytest.mark.parametrize('lado', ['left', 'right'])
@@ -171,17 +182,17 @@ def test_caixa_nao_raspa_o_chao(urdf):
 def test_a_LARGURA_vem_do_PNEU_e_nao_da_caixa(urdf):
     """No robô 2 as rodas ficavam DENTRO da largura da caixa; aqui não.
 
-    Caixa de 24 cm contra envelope de 47,5 — as motrizes são a parte mais larga,
-    com 11,75 cm saindo de cada lado. Construir footprint a partir de `caixa_y`
-    é o erro fácil deste robô, e ele daria um footprint 23 cm mais estreito que
-    o robô. Ver §5.8.2.
+    Caixa de 24 cm contra envelope de 37,25 — as motrizes são a parte mais larga,
+    com 6,6 cm saindo de cada lado. Construir footprint a partir de `caixa_y` é
+    o erro fácil deste robô, e ele daria um footprint 13 cm mais estreito que o
+    robô. Ver §5.9.
     """
     (_cx, cy, _cz), _o = _caixa(urdf)
     _r, larg_roda = _cilindro(urdf, 'left_wheel')
     y_roda = _xyz(_junta(urdf, 'left_wheel_joint'))[1]
     envelope = 2 * y_roda + larg_roda
     assert envelope > cy, 'a roda tem de ser mais larga que a caixa'
-    assert abs(envelope - 0.475) < 1e-3, 'envelope medido: 37,5 interno + 2×5,0'
+    assert abs(envelope - 0.3725) < 1e-3, 'externo 37,5 e interno 27,0 medidos'
 
 
 def test_o_COMPRIMENTO_vem_da_CAIXA_com_a_roda_passando(urdf):
@@ -208,7 +219,7 @@ def test_passa_na_porta_de_70_cm_em_QUALQUER_angulo(urdf):
     comp = (ox + cx / 2) - (eixo_x - r)
     diagonal = math.hypot(larg, comp)
     assert diagonal < 0.70, 'não caberia na porta 2 nem de frente'
-    assert (0.70 - diagonal) / 2 > 0.05, 'folga do pior caso: 6,1 cm por lado'
+    assert (0.70 - diagonal) / 2 > 0.09, 'folga do pior caso: 10,0 cm por lado'
 
 
 # ------------------------------------------------- URDF e controlador em par

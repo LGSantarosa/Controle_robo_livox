@@ -929,6 +929,161 @@ do mesmo lugar que vinha no robô 2, e é o erro fácil de cometer aqui.
 
 ---
 
+## 5.9 🔨 A D5 FECHOU OLHANDO O GAZEBO — e nenhuma medida era lixo
+
+O modelo subiu no Gazebo com a bitola de 0,425 (§5.7) e o dono olhou:
+*"as rodas estão soltas do corpo, não está junto do corpo"*, e depois
+*"o corpo tem que encostar nas rodas, pq ele é estreito mesmo esse robô"*.
+
+**Essa frase é a medida que faltava**, e ela não estava em nenhuma leva: com o
+corpo encostando nas rodas, TODAS as larguras medidas se encaixam:
+
+```
+lateral da caixa                 y = 12,00
++ cubo de metal (para dentro)  1,5 -> face interna do pneu = 13,50
++ pneu                         5,0 -> face externa do pneu = 18,50
+
+interno a interno = 27,0   <- a 2ª leva mediu 27,0   ✅ exato
+externo a externo = 37,5   <- a 4ª leva mediu 37,5   ✅ exato
+1ª leva chutou 39,0 de largura total   -> 1,5 cm de folga de fita
+```
+
+🔴 **A etiqueta do 37,5 é que estava trocada: ele é o EXTERNO, não o interno.**
+E o cubo de 1,5 cm, cuja resposta ("pra dentro do robô") parecia detalhe de
+footprint, é exatamente o que preenche o vão entre a caixa e o pneu.
+
+```
+centro a centro = (37,5 + 27,0)/2 = 32,25 cm    <- wheel_separation
+envelope        = 32,25 + 5,0     = 37,25 cm
+```
+
+Duas rotas independentes concordam em **2,5 mm**: a média das duas medidas
+diretas dá 32,25, e a construção "caixa + cubo + meio pneu" dá 32,00.
+
+### 5.9.1 O que isso corrige, e o que ensina
+
+| | §5.7 (decidido no papel) | §5.9 (fechado no Gazebo) |
+|---|---|---|
+| `wheel_separation` | 0,425 | **0,3225** |
+| envelope | 0,475 | **0,3725** |
+| porta de 70, folga a 0° | +11,2 cm/lado | **+16,4** |
+| porta de 70, pior caso | +6,1 cm/lado | **+10,1** |
+| teto de giro (patamar 2v/bitola) | 1,46 rad/s | **1,93** |
+
+**O C6 volta a ser a boa notícia que era**, e desta vez com todas as medidas
+usadas em vez de duas descartadas.
+
+⚠️ **A lição de método, e ela é do PIBIT:** a §5.7 escolheu entre duas
+histórias por argumento — *"o 37,5 foi medido depois da pergunta sem
+ambiguidade"* — e escolheu a errada. O que decidiu não foi mais discussão: foi
+**desenhar e olhar**. Nenhuma das duas histórias tinha previsto que o corpo
+encosta nas rodas, porque ninguém tinha perguntado isso; o desenho perguntou
+sozinho.
+
+➡️ Fica como regra: **medida de geometria que sobrevive a duas leituras vai
+para o Gazebo antes de virar decisão.** Renderizar custa minutos e responde o
+que a trena não perguntou.
+
+### 5.9.2 As bobas também vieram do olho, e em duas rodadas
+
+*"as rodinhas estão com o centro alinhado com as pontas, devem ficar conectadas
+certinhas"* → recuei o pivô 3 cm → *"tem que encostar nas laterais ainda, as
+pontas com as pontas"*.
+
+O erro de Claude nas duas foi posicionar **o pivô**, quando a regra é sobre a
+**superfície**:
+
+```
+face externa da rodinha  y = 0,1200 = lateral da caixa   (recuo = meia largura da rodinha)
+frente do garfo          x = 0,2475 = frente da caixa    (recuo = ZERO)
+```
+
+O recuo longitudinal é zero porque **o garfo cresce para trás do pivô** — é o
+trail —, então a ponta da frente do conjunto *é* o pivô. O teste
+`test_bobas_nas_quinas_mas_DEBAIXO_da_caixa` passou a travar **alinhamento de
+faces**, não uma distância escolhida a olho: recuo a olho já errou nos dois
+sentidos.
+
+### 5.9.3 A roda parece enorme, e está certa
+
+Dono: *"visualmente essa roda está enorme, mas pode ser pq o robô é pequeno
+mesmo"*. É isso, e dá para pôr número:
+
+```
+                     roda ÷ altura da caixa   roda ÷ comprimento   roda ÷ largura
+robô 2 (16,0 cm)            1,10×                   37%                35%
+robô 3 (16,5 cm)            1,22×                   53%                69%
+```
+
+A roda é da mesma classe (6,5" de hoverboard); o corpo é que encolheu de 43×45
+para 31×24. Ela ficou **mais alta que a lateral da caixa** (16,5 contra 13,5).
+
+➡️ Conferência de 2 segundos, sem trena: **de lado, a roda passa por cima da
+lateral da caixa?** Se passa, 16,5 está certo.
+
+---
+
+## 5.10 Remedição do dono — o que pedir (para amanhã)
+
+O dono vai remedir ele mesmo. Como ele conhece o robô, a lista abaixo é densa
+de propósito, e está ordenada por **quanto trava** se vier errado.
+
+⚠️ **A regra que teria evitado quatro levas:** para qualquer distância entre as
+duas rodas, **nunca dizer "centro a centro"**. Medir SEMPRE as duas faces e
+dizer qual é qual — o centro se calcula, a face se mede.
+
+### 🔴 Travam a odometria (erram TODA corrida, para sempre)
+
+1. **Rodas motrizes, quatro números na mesma passada:** externo a externo dos
+   pneus · interno a interno dos pneus · espessura do pneu · espessura do cubo.
+   *(Conferir contra: 37,5 · 27,0 · 5,0 · 1,5.)*
+2. **Perímetro de rolagem, pelo método bom:** marcar um ponto na roda, empurrar
+   o robô em linha reta **5 voltas completas** e medir a distância percorrida.
+   `perímetro = distância/5`. Isso já sai com o peso do robô em cima e mata os
+   2,2% que sobraram entre o diâmetro (16,5) e a fita (53). É a medida que a
+   odometria realmente usa.
+3. **Do eixo da roda até a FRENTE da caixa** (longitudinal). Hoje o `roda_x`
+   está DERIVADO dos "2 cm de roda passando atrás"; esta medida o fecha direto.
+
+### 🟡 Travam a geometria do corpo e o footprint
+
+4. **Caixa:** comprimento · largura · altura. *(31,1 · 24,0 · 13,5.)*
+5. **Do chão até o fundo da caixa, medido ATRÁS e medido NA FRENTE.** Dois
+   números, mesma fita — é o que encerra a **D4**: se forem diferentes, o robô
+   é caído para a frente e o caimento vai para o URDF; se forem iguais, ele é
+   nivelado e uma das medidas antigas estava errada.
+6. **Nível em cima da caixa** (o do celular serve): confirma o item 5 sem
+   depender de fita.
+7. **Alguma coisa passa do contorno da caixa?** Conector, chave, alça,
+   suporte — o footprint tem de cobrir o que sobressai, não a caixa ideal.
+
+### 🟡 Bobas
+
+8. Diâmetro da rodinha · largura da rodinha · trail (recuo horizontal entre o
+   parafuso vertical e o eixo). *(Conferir: ~5,0 · 3,0 · 2,0.)*
+9. **Tamanho da chapa** que parafusa na caixa, e **a que distância o pivô fica
+   da frente e da lateral** da caixa. O modelo hoje assume as faces rentes.
+10. Altura do conjunto todo, do chão até a face que encosta na caixa.
+    *(Conferir: 6,0 — e ele briga com o fundo de caixa a 7,0, ver item 5.)*
+
+### 🔴 Decisões, não medidas — e são do dono
+
+11. **Onde o Livox monta:** altura do chão ao centro do sensor, x, y, e se fica
+    torto em yaw. Lembrando o que a §5.8.1 achou: **montar baixo encolhe a zona
+    cega** (raio cego = 8,1 × altura → 3,40 m no robô 2 a 0,42; 1,95 m a 0,24).
+12. **Complacência do chassi (C3):** quatro apoios rígidos sem mola balançam em
+    piso irregular, e 3 mm de junta viram 1,2° no sensor. Decidir **antes** de
+    furar para o Livox — depois o conserto é mecânico.
+13. **A placa é a mesma?** (§5.1) Enquanto isto estiver aberto, o
+    `MODELO_ROBO2.md` não vale e a sintonia inteira fica pendurada.
+
+### 🟢 Depois que o Livox e o NUC subirem, não antes
+
+14. Peso total · peso do chassi sem as rodas, se der · onde ficam as baterias ·
+    centro de massa (apoiar em dois pontos numa balança).
+
+---
+
 ## 6. Plano proposto por Claude (aguardando ok do dono)
 
 1. `docs/decisoes/045-troca-para-o-robo-3.md` — medidas, motivo da troca, e o
@@ -953,14 +1108,14 @@ do mesmo lugar que vinha no robô 2, e é o erro fácil de cometer aqui.
 | C3 | Codex | | ← CONFIRMADO na 4ª leva: sem mola, 4 apoios rígidos (§5.6.2) |
 | C4 | Codex | | |
 | C5 | Codex | | ← derivado em §5.2.4, não medido |
-| C6 | Claude | **CORRIGIDO** | folga do pior caso caiu de +9,4 para +4,8 cm/lado (§5.7.1) |
+| C6 | Claude | **RECORRIGIDO** | +10,1 cm/lado no pior caso, com todas as medidas usadas (§5.9.1) |
 | C7 | Codex | | ← 🔴 fechado em 9,1° contra 4,6° do robô 2 (§5.6.3) |
 | C8 | Codex | | ← proposta: `base_link` no eixo traseiro (§5.8.1) |
 | D1 | Codex | | |
 | D2 | Codex | | ← RESOLVIDA na 2ª leva (§5.4.1): "15" descartado, sobra 2,2% |
 | D3 | Codex | | ← empate 2×2, mas saiu do caminho crítico (§5.5.1) |
 | D4 | Codex | | ← virou desnível de 1 cm / 1,8° de pitch, §5.4.5 |
-| D5 | ~~Codex~~ | **ENCERRADA PELO DONO** | vale só o 37,5 → separação 0,425 (§5.7) |
+| D5 | Claude+dono | **FECHADA NO GAZEBO** | o 37,5 é o EXTERNO; separação 0,3225, nada descartado (§5.9) |
 | D6 | Codex | | ← "1,5" era vertical, não longitudinal, §5.4.3 |
 | D7 | Codex | | ← Livox não está montado, §5.4.6 |
 

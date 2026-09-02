@@ -60,14 +60,30 @@
   <xacro:property name="altura_solo" value="0.070"/>
 
   <!-- Motrizes (hoverboard 6,5"). A separação é o divisor do `wz`: errar aqui
-       erra TODO comando de giro, e foi o parâmetro que mais custou a fechar.
+       erra TODO comando de giro, e foi o parâmetro que mais custou a fechar —
+       quatro levas de medida e uma etiqueta trocada.
 
-       🟢 DECIDIDO PELO DONO (§5.7): vale a medida de dentro a dentro, 37,5 cm.
-            centro a centro = 37,5 + 5,0 (o pneu) = 42,5 cm
-            envelope        = 37,5 + 2×5,0        = 47,5 cm
-       Os cubos de metal (15 mm) ficam para DENTRO, então quem define a largura
-       do robô é o pneu. Duas outras medidas de largura (27 e 39) foram
-       descartadas por ele; o registro de por quê está na §5.6.1.
+       🟢 FECHADO OLHANDO O MODELO NO GAZEBO (§5.9). O dono viu as rodas
+       flutuando longe da caixa e disse o óbvio que nenhuma trena tinha dito:
+       **o corpo encosta nas rodas**. Com essa restrição, TODAS as medidas se
+       encaixam e nenhuma precisa ser descartada:
+
+           lateral da caixa                 y = 12,00
+           + cubo de metal (para dentro)  1,5 -> face interna do pneu = 13,50
+           + pneu                         5,0 -> face externa do pneu = 18,50
+
+           interno a interno = 27,0   <- a 2ª leva mediu 27,0    ✅
+           externo a externo = 37,5   <- a 4ª leva mediu 37,5    ✅
+           1ª leva chutou 39,0 de largura total -> 1,5 cm de folga de fita
+
+       **O CUBO É EXATAMENTE O QUE FECHA O VÃO.** A etiqueta do 37,5 é que
+       estava trocada: ele é o EXTERNO, não o interno. Então:
+
+           centro a centro = (37,5 + 27,0)/2 = 32,25 cm   <- o valor abaixo
+           envelope        = 32,25 + 5,0     = 37,25 cm
+
+       Duas rotas independentes concordam em 2,5 mm: a média das duas medidas
+       diretas dá 32,25, e a construção "caixa + cubo + meio pneu" dá 32,00.
 
        🟢 Raio: diâmetro medido 16,5 cm = 6,5 POLEGADAS EXATAS (6,5 × 2,54 =
        16,51), a roda de hoverboard de catálogo — confirmação independente da
@@ -77,7 +93,11 @@
        de 5 m contra o LIO, onde 2,2% viram 11 cm e ficam óbvios. -->
   <xacro:property name="roda_raio"      value="0.0835"/>
   <xacro:property name="roda_largura"   value="0.050"/>
-  <xacro:property name="roda_separacao" value="0.425"/>
+  <!-- O cubo de metal da roda, 15 mm, virado para DENTRO. Não é decoração: é
+       ele que vence o vão entre a lateral da caixa (y=0,120) e a face interna
+       do pneu (y=0,135), e foi vê-lo faltando no Gazebo que resolveu a D5. -->
+  <xacro:property name="roda_cubo"      value="0.015"/>
+  <xacro:property name="roda_separacao" value="0.3225"/>
 
   <!-- Onde a caixa fica em relação ao eixo. 🟢 DERIVADO (C5, §5.4.4): dos
        33,1 cm de comprimento total contra 31,1 da caixa sobram 2,0 cm de roda
@@ -102,8 +122,20 @@
        contra 4,6° — e o robô 2 dava SETE rés numa aproximação de porta. -->
   <xacro:property name="boba_raio"  value="0.025"/>
   <xacro:property name="boba_trail" value="0.020"/>
+  <!-- ONDE A BOBA FICA — "as pontas com as pontas" (dono, olhando o Gazebo).
+       A regra NÃO é sobre o pivô, é sobre a SUPERFÍCIE do conjunto: a face
+       externa da rodinha fica rente à lateral da caixa, e a frente do garfo
+       rente à frente da caixa. Duas tentativas erradas antes desta:
+
+         pivô EM CIMA da quina  -> meia rodinha para fora da lateral
+         pivô recuado 3 cm      -> conjunto boiando longe da borda
+
+       Então o recuo lateral é meia largura da rodinha, e o longitudinal é
+       ZERO: o garfo cresce para TRÁS do pivô (é o trail), logo a ponta da
+       frente do conjunto É o pivô. -->
+  <xacro:property name="boba_largura" value="0.03"/>
   <xacro:property name="boba_x"     value="${caixa_cx + caixa_x/2}"/>
-  <xacro:property name="boba_y"     value="${caixa_y/2}"/>
+  <xacro:property name="boba_y"     value="${caixa_y/2 - boba_largura/2}"/>
 
   <!-- ⚠️ MASSAS PROVISÓRIAS — NÃO MEDIDAS.
        O robô ainda não tem Livox nem NUC em cima (D7, §5.4.6), então pesá-lo
@@ -181,10 +213,10 @@
   </link>
 
   <!-- ==================== MOTRIZES (ATRÁS) ====================
-       Ficam na origem em x, por definição da convenção C8. E ficam FORA da
-       caixa: com o interno em 37,5 e a caixa com 24,0 há 5,25 cm de vão entre
-       a lateral da caixa e cada roda (depois de descontar o cubo). As motrizes
-       estão em balanço, e é por ali que entra pancada lateral. -->
+       Ficam na origem em x, por definição da convenção C8. E ficam ENCOSTADAS
+       na caixa pelo cubo: lateral da caixa em 0,120, cubo até 0,135, pneu de
+       0,135 a 0,185. Zero vão — foi o vão desenhado por engano que denunciou
+       a etiqueta trocada do 37,5. -->
 
   <xacro:macro name="roda_motriz" params="lado reflect">
     <link name="${lado}_wheel">
@@ -197,6 +229,13 @@
         <origin rpy="${pi/2} 0 0"/>
         <geometry><cylinder radius="${roda_raio}" length="${roda_largura}"/></geometry>
       </collision>
+      <!-- O cubo: liga a roda à lateral da caixa. Só visual — quem toca o chão
+           é o pneu, e dar colisão a ele criaria contato lateral que não existe. -->
+      <visual>
+        <origin xyz="0 ${-reflect*(roda_largura+roda_cubo)/2} 0" rpy="${pi/2} 0 0"/>
+        <geometry><cylinder radius="${roda_raio/2}" length="${roda_cubo}"/></geometry>
+        <material name="metal"><color rgba="0.5 0.5 0.55 1"/></material>
+      </visual>
       <xacro:inercia_roda m="${massa_roda}" r="${roda_raio}" h="${roda_largura}"/>
     </link>
 
@@ -231,10 +270,10 @@
     <link name="${lado}_caster_fork">
       <visual>
         <origin xyz="${-boba_trail/2} 0 ${-boba_raio/2}"/>
-        <geometry><box size="${boba_trail} 0.03 ${boba_raio}"/></geometry>
+        <geometry><box size="${boba_trail} ${boba_largura} ${boba_raio}"/></geometry>
         <material name="metal"><color rgba="0.5 0.5 0.55 1"/></material>
       </visual>
-      <xacro:inercia_caixa m="${massa_garfo}" x="${boba_trail}" y="0.03" z="${boba_raio}"
+      <xacro:inercia_caixa m="${massa_garfo}" x="${boba_trail}" y="${boba_largura}" z="${boba_raio}"
                            ox="${-boba_trail/2}" oz="${-boba_raio/2}"/>
     </link>
 
@@ -249,14 +288,14 @@
     <link name="${lado}_caster_wheel">
       <visual>
         <origin rpy="${pi/2} 0 0"/>
-        <geometry><cylinder radius="${boba_raio}" length="0.03"/></geometry>
+        <geometry><cylinder radius="${boba_raio}" length="${boba_largura}"/></geometry>
         <material name="borracha"><color rgba="0.15 0.15 0.15 1"/></material>
       </visual>
       <collision>
         <origin rpy="${pi/2} 0 0"/>
-        <geometry><cylinder radius="${boba_raio}" length="0.03"/></geometry>
+        <geometry><cylinder radius="${boba_raio}" length="${boba_largura}"/></geometry>
       </collision>
-      <xacro:inercia_roda m="${massa_boba}" r="${boba_raio}" h="0.03"/>
+      <xacro:inercia_roda m="${massa_boba}" r="${boba_raio}" h="${boba_largura}"/>
     </link>
 
     <joint name="${lado}_caster_wheel_joint" type="continuous">

@@ -29,18 +29,20 @@ hoverboard_base_controller:
     left_wheel_names: ["left_wheel_joint"]
     right_wheel_names: ["right_wheel_joint"]
 
-    # 🔴 A BITOLA CRESCEU 57% (0,270 -> 0,425) e o raio 4% (0,080 -> 0,0835).
+    # 🔴 A BITOLA CRESCEU 19% (0,270 -> 0,3225) e o raio 4% (0,080 -> 0,0835).
     #
-    # A bitola é decisão do dono sobre qual medida vale (§5.7): das três larguras
-    # que vieram do robô — 27, 37,5 e 39 — vale a de dentro a dentro, 37,5, mais
-    # os 5,0 do pneu. As outras duas foram descartadas por ele.
+    # A bitola fechou olhando o modelo no Gazebo (§5.9): o dono viu as rodas
+    # flutuando longe da caixa e disse que o corpo encosta nelas. Com isso as
+    # três larguras medidas se encaixam sem descartar nenhuma — 27 é o interno,
+    # 37,5 é o EXTERNO (a etiqueta estava trocada), e o cubo de 1,5 cm é o que
+    # preenche o vão entre a caixa e o pneu. Centro a centro = (37,5+27)/2.
     #
     # O raio é PROVISÓRIO: o diâmetro medido (16,5 cm, que são 6,5" exatas) e o
     # perímetro medido (53 cm, que implica 16,87) divergem 2,2%. 0,0835 é o meio
     # dos dois, e fecha com uma corrida reta de 5 m contra o LIO — 2,2% em 5 m
     # são 11 cm, que o LIO enxerga sem esforço. ATÉ LÁ, toda distância percorrida
     # que sair daqui carrega 2,2% de incerteza de escala.
-    wheel_separation: 0.425
+    wheel_separation: 0.3225
     wheel_radius: 0.0835
 
     wheel_separation_multiplier: 1.0
@@ -78,19 +80,19 @@ hoverboard_base_controller:
     # Só que o patamar em `wz` depende da bitola:
     #
     #     roda:  100 unidades × 0,0372 rad/s/un = 3,72 rad/s
-    #     robô 2: v = 3,72 × 0,0800 = 0,2976 m/s -> wz = 2v/0,270 = 2,204 rad/s
-    #     robô 3: v = 3,72 × 0,0835 = 0,3106 m/s -> wz = 2v/0,425 = 1,462 rad/s
+    #     robô 2: v = 3,72 × 0,0800 = 0,2976 m/s -> wz = 2v/0,2700 = 2,204 rad/s
+    #     robô 3: v = 3,72 × 0,0835 = 0,3106 m/s -> wz = 2v/0,3225 = 1,927 rad/s
     #
-    # A mesma placa gira o robô 3 MAIS DEVAGAR, porque a roda tem 57% mais braço
-    # para vencer. 2,0 deixa folga sobre 1,462 sem virar teto solto.
+    # A mesma placa gira o robô 3 MAIS DEVAGAR, porque a roda tem 19% mais braço
+    # para vencer. 2,5 deixa folga sobre 1,927 sem virar teto solto.
     #
     # ⚠️ Este número inteiro depende de a placa ser a do robô 2 (§5.1). Placa
     # diferente = `escala_real` diferente = este teto tem de ser refeito.
     angular.z.has_velocity_limits: true
     angular.z.has_acceleration_limits: true
     angular.z.has_jerk_limits: false
-    angular.z.max_velocity: 2.0
-    angular.z.min_velocity: -2.0
+    angular.z.max_velocity: 2.5
+    angular.z.min_velocity: -2.5
     angular.z.max_acceleration: 1.5
     angular.z.min_acceleration: -1.5
     angular.z.max_jerk: 0.0
