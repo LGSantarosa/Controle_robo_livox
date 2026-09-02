@@ -390,6 +390,165 @@ a §5.2 vale como *primeira leva*, não como modelo.
 
 ---
 
+## 5.4 Segunda leva — a remedição voltou (2026-09-02)
+
+Veio isto:
+
+```
+distancia centro a centro           27 cm
+espessura da roda traseira           5 cm + 1,5 cm de cubo ("a partezinha de metal")
+diametro                          16,5 cm
+perimetro                           53 cm
+altura                        16,5~17 cm
+do chao ate o fundo da caixa         7 cm
+do eixo ate a caixa                1,5 cm
+altura total                        20 cm   -- E NAO TEM CILINDRO EM CIMA
+os 2 cm de roda passam PARA TRAS
+```
+
+### 5.4.1 🟢 D2 RESOLVIDA — o "diâmetro 15" era erro de leitura
+
+```
+perímetro 53      -> diâmetro 16,87  (raio 0,08435)
+diâmetro medido   -> 16,5            (perímetro seria 51,8)
+altura no chão    -> 16,5 a 17
+```
+
+A divergência caiu de **12,5% para 2,2%**, que é erro de trena. O "15" da 1ª
+leva está descartado. **Fica em aberto só qual dos dois adotar**, e há um
+argumento físico de cada lado:
+
+- **0,0844 (perímetro)** — é a distância por volta, exatamente o que a odometria
+  integra. Mas foi medido com a fita **por fora do pneu**, que anda um pouco mais
+  que o raio de rolagem.
+- **0,0825 (altura no chão)** — a altura da roda apoiada **já é o diâmetro
+  comprimido pelo peso**, que é o que de fato rola.
+
+**Recomendação de Claude:** entrar com **0,0835** (o meio) e **fechar por
+corrida reta**: 5 m em linha, `odom` contra o LIO, e o fator sai medido. 2,2% em
+5 m é 11 cm — o LIO enxerga isso sem esforço. É calibração que a gente ia fazer
+de qualquer jeito.
+
+### 5.4.2 🔴 D5 — os 27 cm NÃO CABEM nos 39 cm de largura total
+
+O achado grave desta leva, e ele derruba o parâmetro mais importante de todos.
+
+```
+separação 27 + pneu 5                      = 32,0 cm de largura total
+separação 27 + pneu 5 + cubo 1,5           = 33,5 cm
+separação 27 + pneu + cubo dos dois lados  = 35,0 cm
+                                    medido = 39,0 cm    <- faltam 5,5 cm
+```
+
+Nenhuma combinação fecha. Mas uma leitura alternativa fecha **exata**:
+
+```
+SE os 27 forem de FACE INTERNA a FACE INTERNA, com roda de 6,0 cm:
+   centro a centro = 27 + 6,0 = 33,0 cm
+   largura total   = 27 + 12,0 = 39,0 cm   <- o número medido, na mosca
+```
+
+⚠️ **E há uma coincidência que aumenta a suspeita: 27,0 cm é exatamente o
+`wheel_separation` do robô 2** (`hoverboard_controllers.yaml:19`). Pode ser
+reaproveitamento real do mesmo eixo hover — ou um número que veio de outro
+lugar que não a trena. Não dá para distinguir daqui.
+
+**Por que isto é o pior de todos:** `wheel_separation` é o divisor do `wz`.
+Errar 27 contra 33 é **22% de erro em todo giro do robô, para sempre** — e giro
+é justamente onde o robô 2 já apanhava na porta.
+
+➡️ **Nada de giro se escreve até isto fechar.** E fecha com uma medida que não
+depende de achar centro nenhum:
+
+```
+A = de FORA a FORA dos dois pneus        (é a própria largura total)
+B = de DENTRO a DENTRO dos dois pneus
+    centro a centro = (A + B) / 2        largura da roda = (A − B) / 2
+```
+
+Duas medidas de fita, sem ambiguidade, e ainda conferem uma à outra.
+
+### 5.4.3 🟡 D6 — "do eixo até a caixa: 1,5" responde outra pergunta
+
+Foi pedida a distância **longitudinal** do eixo traseiro até a traseira da
+caixa. O 1,5 não pode ser essa:
+
+```
+leitura LONGITUDINAL: eixo a 1,5 da traseira -> a roda sobraria 6,75 cm atrás
+                      mas ele confirmou que sobram 2,0 cm            ❌
+leitura VERTICAL    : eixo a 8,25 do chão − fundo da caixa 7,0 = 1,25 ≈ 1,5  ✅
+```
+
+Ou seja: ele mediu do **eixo até o fundo da caixa**, na vertical. O número é
+bom e é consistente — só não é o que trava o `roda_x`.
+
+### 5.4.4 🟢 C5 confirmado — o eixo está em −9,3 cm
+
+Com "os 2 cm passam **para trás**" confirmado pelo próprio medidor, a derivação
+da §5.2.4 fica firme e apertada:
+
+```
+raio 8,25  -> eixo em x = −9,30 cm do centro da caixa  (−30% do comprimento)
+raio 8,44  -> eixo em x = −9,12 cm                     (−29%)
+robô 2     -> eixo em x = +8,15 cm                     (+19%)
+```
+
+**±0,2 cm de incerteza.** O centro de rotação sai de +19% para −30% do
+comprimento: atravessa o corpo inteiro, e a dianteira vira balanço puro.
+
+### 5.4.5 🟡 D4 mudou de sinal, e apareceu um desnível de 1 cm
+
+```
+1ª leva: total 20,0 − caixa 13,5 − boba 6,0 =  +0,5 cm sobrando
+2ª leva: fundo 7,0 + caixa 13,5             =  20,5 contra total 20,0
+                                               -> 0,5 cm FALTANDO agora
+```
+
+Mais interessante que os 0,5: **a boba com estrutura tem 6,0 cm e o fundo da
+caixa está a 7,0 cm do chão**. Se a boba é o que sustenta a frente, a frente
+está **1 cm mais baixa que a traseira** — o robô inclina ~**1,8°** para a
+frente ao longo dos 31,1 cm.
+
+Isso não é decoração: 1,8° de *pitch* fixo entra no LIO e nas normais do
+`scan_sanitizer`. **Ou o chassi está mesmo inclinado — e aí vai para o URDF —
+ou uma das três medidas está errada.**
+
+### 5.4.6 🔴 D7 — "não tem cilindro em cima": o Livox não está montado
+
+Perguntei a altura do chão até o sensor e a resposta foi que **não existe
+cilindro em cima**. Conclusão de Claude: **o robô 3 ainda não recebeu o Livox**
+(nem, provavelmente, o NUC).
+
+Consequências, e são grandes:
+
+1. **Não há TF do sensor.** `livox_z_solo`, `livox_x` e o *yaw* de montagem não
+   existem ainda — e sem eles não há LIO, não há `/scan`, não há navegação.
+2. **A massa medida vai estar errada.** Livox + NUC + bateria deles são
+   carga que ainda vai subir no robô, e mexe no peso **e no centro de massa** —
+   que é o que decide o C3 (uma boba no ar) e o tombamento.
+3. **Onde ele vai ser montado é decisão de projeto, não medida.** No robô 2 ficou
+   a 0,42 m do solo, mais que o dobro da altura total do robô 3 (0,20 m). Não dá
+   para herdar: a altura do Livox muda o horizonte que ele enxerga.
+
+➡️ **Item novo para o dono, não para quem mediu:** onde o Livox vai, e quando.
+Remedir massa e CoM **depois** de montar — medir agora é medir outro robô.
+
+### 5.4.7 Placar depois da 2ª leva
+
+| Item | Estado |
+|---|---|
+| Caixa 31,1 × 24 × 13,5 | 🟢 firme |
+| Envelope 39 × 33,1 × 20 | 🟡 a largura depende da D5 |
+| Raio da roda | 🟢 0,0825-0,0844; fecha por corrida reta |
+| `roda_x` = −9,3 cm | 🟢 derivado, ±0,2 cm |
+| `altura_solo` = 7,0 cm | 🟡 briga com a boba de 6,0 (D4) |
+| **`wheel_separation`** | 🔴 **27 ou 33 — bloqueia todo o giro (D5)** |
+| Bobas: posição, trail, mola | 🔴 não respondido |
+| Peso, centro de massa, baterias | 🔴 não respondido — e prematuro (D7) |
+| Livox: altura, x/y, yaw | 🔴 **nem montado (D7)** |
+
+---
+
 ## 6. Plano proposto por Claude (aguardando ok do dono)
 
 1. `docs/decisoes/045-troca-para-o-robo-3.md` — medidas, motivo da troca, e o
@@ -416,9 +575,12 @@ a §5.2 vale como *primeira leva*, não como modelo.
 | C5 | Codex | | ← derivado em §5.2.4, não medido |
 | C6 | Codex | | ← conta da porta em §5.2.5 |
 | D1 | Codex | | |
-| D2 | Codex | | ← três diâmetros da roda hover, §5.2.1 |
+| D2 | Codex | | ← RESOLVIDA na 2ª leva (§5.4.1): "15" descartado, sobra 2,2% |
 | D3 | Codex | | ← boba: 4 cm × 5 cm, §5.2.2 |
-| D4 | Codex | | ← 0,5 cm na altura, §5.2.3 |
+| D4 | Codex | | ← virou desnível de 1 cm / 1,8° de pitch, §5.4.5 |
+| D5 | Codex | | ← 🔴 27 cm não cabem nos 39 cm, §5.4.2 |
+| D6 | Codex | | ← "1,5" era vertical, não longitudinal, §5.4.3 |
+| D7 | Codex | | ← Livox não está montado, §5.4.6 |
 
 ### Afirmações do Codex (a preencher)
 
