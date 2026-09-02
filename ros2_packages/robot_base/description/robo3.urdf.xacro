@@ -1,0 +1,342 @@
+<?xml version="1.0"?>
+<!--
+  Robô 3 — caixa menor, 2 rodas de hoverboard ATRÁS, 2 rodas bobas NA FRENTE.
+
+  Irmão do `robo2.urdf.xacro` e NÃO substituto: o robô 2 continua de pé porque é
+  a linha de base contra a qual todo CSV histórico foi medido. Aqui muda a
+  máquina inteira — a geometria inverteu, a bitola cresceu 57% e o apoio passou
+  de 3 para 4 pontos.
+
+  ⚠️ TODA MEDIDA VEIO DE `docs/ROBO3_REVISAO_CRUZADA.md`, seção 5.8.2, e as que
+  ainda não foram medidas estão marcadas caso a caso. Quem mediu não foi o dono:
+  as divergências entre levas estão registradas lá (D2 a D8), e o que aqui está
+  como "medido" é o que sobreviveu à conferência cruzada.
+
+  ⛔ O QUE ESTE MODELO AINDA NÃO SABE (não tire conclusão de dinâmica dele):
+     - massa e centro de massa: PROVISÓRIOS. O Livox e o NUC nem subiram no
+       robô, então medir agora seria medir outro robô (D7).
+     - onde o Livox monta: DECISÃO DO DONO pendente. O valor daqui é um chute
+       documentado, e a altura do sensor manda na zona cega.
+     - a placa: pode ser outra (§5.1). O modelo de atuador herdado é o do
+       robô 2, e cai inteiro se a placa mudar.
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="robo3">
+
+  <xacro:arg name="sim" default="false"/>
+  <xacro:arg name="controllers_yaml" default=""/>
+
+  <!-- ==================== ONDE FICA A ORIGEM ====================
+
+       🔴 MUDANÇA DE CONVENÇÃO EM RELAÇÃO AO ROBÔ 2 (proposta C8, §5.8.1).
+
+       No robô 2 o `base_link` fica no centro da CAIXA e o eixo motor 8,15 cm à
+       frente dele. Mas quem gira é o EIXO: o robô 2 gira em torno de um ponto
+       8 cm à frente da própria origem, e todo `wz` puro sai acompanhado de
+       deslocamento lateral na origem — um acoplamento que ninguém escolheu e
+       que esteve embaixo da lei de rumo o tempo todo.
+
+       Aqui o `base_link` vai no CENTRO DO EIXO TRASEIRO, no nível do chão:
+
+           x = 0 no eixo das motrizes      x cresce para a FRENTE
+           y = 0 no plano de simetria      z = 0 no chão
+
+       Com isso o centro de rotação É a origem, e `wz` puro não desloca nada.
+       O preço: o contorno do robô deixa de ser simétrico em x (a traseira tem
+       8,35 cm e a frente 24,85), e comparar CSV com o robô 2 exige saber disso.
+  -->
+
+  <!-- ==================== NÚMEROS AJUSTÁVEIS ==================== -->
+
+  <!-- Caixa. 🟢 MEDIDA: 311 × 240 × 135 mm, fundo a 70 mm do chão.
+       ⚠️ D4 ABERTA: a boba com estrutura mede 60 mm e o fundo da caixa está a
+       70 mm. Se os dois estiverem certos, o robô fica 2,3° caído para a frente
+       ao longo do entre-eixos. Aqui o modelo assume NIVELADO (a boba sobe num
+       suporte de 10 mm), porque inclinação permanente é afirmação forte para
+       sair de uma diferença de 1 cm entre duas medidas de fita. Se a medida
+       com nível confirmar o caimento, ele entra aqui e não em outro lugar. -->
+  <xacro:property name="caixa_x"     value="0.311"/>
+  <xacro:property name="caixa_y"     value="0.240"/>
+  <xacro:property name="caixa_z"     value="0.135"/>
+  <xacro:property name="altura_solo" value="0.070"/>
+
+  <!-- Motrizes (hoverboard 6,5"). A separação é o divisor do `wz`: errar aqui
+       erra TODO comando de giro, e foi o parâmetro que mais custou a fechar.
+
+       🟢 DECIDIDO PELO DONO (§5.7): vale a medida de dentro a dentro, 37,5 cm.
+            centro a centro = 37,5 + 5,0 (o pneu) = 42,5 cm
+            envelope        = 37,5 + 2×5,0        = 47,5 cm
+       Os cubos de metal (15 mm) ficam para DENTRO, então quem define a largura
+       do robô é o pneu. Duas outras medidas de largura (27 e 39) foram
+       descartadas por ele; o registro de por quê está na §5.6.1.
+
+       🟢 Raio: diâmetro medido 16,5 cm = 6,5 POLEGADAS EXATAS (6,5 × 2,54 =
+       16,51), a roda de hoverboard de catálogo — confirmação independente da
+       trena. O perímetro medido (53 cm) implicaria 16,87, e a diferença de
+       2,2% entre os dois é erro de fita.
+       ⚠️ 0,0835 é o MEIO dos dois, e é PROVISÓRIO: fecha com uma corrida reta
+       de 5 m contra o LIO, onde 2,2% viram 11 cm e ficam óbvios. -->
+  <xacro:property name="roda_raio"      value="0.0835"/>
+  <xacro:property name="roda_largura"   value="0.050"/>
+  <xacro:property name="roda_separacao" value="0.425"/>
+
+  <!-- Onde a caixa fica em relação ao eixo. 🟢 DERIVADO (C5, §5.4.4): dos
+       33,1 cm de comprimento total contra 31,1 da caixa sobram 2,0 cm de roda
+       passando ATRÁS (confirmado por quem mediu). Então:
+            traseira da caixa = −roda_raio + 0,020 = −0,0625
+            centro da caixa   = −0,0625 + 0,311/2 = +0,093
+       Incerteza ±0,2 cm, vinda só do raio. -->
+  <xacro:property name="caixa_cx" value="${-roda_raio + 0.020 + caixa_x/2}"/>
+
+  <!-- Rodas bobas — DUAS, uma em cada quina da frente da caixa.
+       🟢 MEDIDO: trail 20 mm, e elas ficam "cada uma na ponta da frente da
+       caixa, uma em cada extremidade".
+       🟡 Raio 25 mm ADOTADO: as medidas empataram 2 a 2 entre 40 e 50 mm de
+       diâmetro (§5.5.1). Ficou 50 mm por ser tamanho de catálogo, e o empate
+       é irrelevante porque a altura da frente vem do CONJUNTO (60 mm medidos),
+       não do diâmetro da roda.
+
+       🔴 O TRAIL DOBROU E DUPLICOU (C7, §5.6.3): o robô 2 tinha 10 mm em UMA
+       boba, este tem 20 mm em DUAS. Numa inversão de marcha cada boba gira
+       180° e arrasta o contato por 2×trail = 40 mm, contra 20 mm do robô 2.
+       Com o entre-eixos de 24,85 cm isso é até 9,1° de perturbação de rumo
+       contra 4,6° — e o robô 2 dava SETE rés numa aproximação de porta. -->
+  <xacro:property name="boba_raio"  value="0.025"/>
+  <xacro:property name="boba_trail" value="0.020"/>
+  <xacro:property name="boba_x"     value="${caixa_cx + caixa_x/2}"/>
+  <xacro:property name="boba_y"     value="${caixa_y/2}"/>
+
+  <!-- ⚠️ MASSAS PROVISÓRIAS — NÃO MEDIDAS.
+       O robô ainda não tem Livox nem NUC em cima (D7, §5.4.6), então pesá-lo
+       hoje mediria outro robô. As motrizes são as mesmas do robô 2 (mesma roda
+       de 6,5"), então 2,0 kg cada continua valendo; o chassi caiu de 5,8 para
+       3,0 porque a caixa encolheu de 433×455 para 311×240.
+       Enquanto estiverem assim, ⛔ NÃO TIRE CONCLUSÃO DE INÉRCIA DE GUINADA,
+       de transferência de peso, nem de tombamento deste modelo. -->
+  <xacro:property name="massa_chassi" value="3.0"/>
+  <xacro:property name="massa_roda"   value="2.0"/>
+  <xacro:property name="massa_garfo"  value="0.05"/>
+  <xacro:property name="massa_boba"   value="0.05"/>
+
+  <!-- Atrito do pivô das bobas. ⚠️ HERDADO do robô 2 e não medido aqui — e lá
+       o comentário dizia que é "o parâmetro mais importante para casar o
+       simulador com o robô". Com duas bobas ele conta em dobro. -->
+  <xacro:property name="boba_pivo_atrito"    value="0.05"/>
+  <xacro:property name="boba_pivo_damping"   value="0.02"/>
+
+  <!-- 🔴 LIVOX: POSIÇÃO CHUTADA, DECISÃO DO DONO PENDENTE (D7).
+       O robô 3 não tem o sensor montado ("não tem cilindro em cima"). Este
+       valor é um provisório para o modelo existir: em cima da caixa (topo a
+       0,205) mais meia altura do sensor.
+
+       ⚠️ E a escolha tem consequência forte, porque o Mid-360 só olha até −7°
+       para baixo: o chão só começa a ~8,1× a altura do sensor.
+
+           robô 2, a 0,42 m  ->  raio cego 3,40 m
+           aqui,   a 0,24 m  ->  raio cego 1,95 m
+
+       Ou seja: montar baixo ENCOLHE a zona cega em 1,4 m, e isso é ganho de
+       graça que o robô 3 tem por ser baixo. O contra é enxergar menos por
+       cima de obstáculo e pegar mais móvel perto. Decidir antes de furar. -->
+  <xacro:property name="livox_z_solo" value="0.24"/>
+  <xacro:property name="livox_x"      value="${caixa_cx}"/>
+
+  <!-- ==================== DERIVADOS (não editar) ==================== -->
+  <xacro:property name="caixa_cz"    value="${altura_solo + caixa_z/2}"/>
+  <xacro:property name="boba_pivo_z" value="${altura_solo}"/>
+  <xacro:property name="livox_z"     value="${livox_z_solo}"/>
+
+  <xacro:macro name="inercia_caixa" params="m x y z ox:=0 oy:=0 oz:=0">
+    <inertial>
+      <origin xyz="${ox} ${oy} ${oz}"/>
+      <mass value="${m}"/>
+      <inertia ixx="${m*(y*y+z*z)/12}" iyy="${m*(x*x+z*z)/12}" izz="${m*(x*x+y*y)/12}"
+               ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="inercia_roda" params="m r h">
+    <inertial>
+      <mass value="${m}"/>
+      <inertia ixx="${m*(3*r*r+h*h)/12}" iyy="${m*r*r/2}" izz="${m*(3*r*r+h*h)/12}"
+               ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </xacro:macro>
+
+  <!-- ==================== CHASSI ====================
+       A caixa não está centrada na origem: ela fica ADIANTE do eixo, porque a
+       origem é o eixo (C8). `caixa_cx` = +0,093. -->
+
+  <link name="base_link">
+    <visual>
+      <origin xyz="${caixa_cx} 0 ${caixa_cz}"/>
+      <geometry><box size="${caixa_x} ${caixa_y} ${caixa_z}"/></geometry>
+      <material name="madeira"><color rgba="0.72 0.53 0.30 1"/></material>
+    </visual>
+    <collision>
+      <origin xyz="${caixa_cx} 0 ${caixa_cz}"/>
+      <geometry><box size="${caixa_x} ${caixa_y} ${caixa_z}"/></geometry>
+    </collision>
+    <xacro:inercia_caixa m="${massa_chassi}" x="${caixa_x}" y="${caixa_y}" z="${caixa_z}"
+                         ox="${caixa_cx}" oz="${caixa_cz}"/>
+  </link>
+
+  <!-- ==================== MOTRIZES (ATRÁS) ====================
+       Ficam na origem em x, por definição da convenção C8. E ficam FORA da
+       caixa: com o interno em 37,5 e a caixa com 24,0 há 5,25 cm de vão entre
+       a lateral da caixa e cada roda (depois de descontar o cubo). As motrizes
+       estão em balanço, e é por ali que entra pancada lateral. -->
+
+  <xacro:macro name="roda_motriz" params="lado reflect">
+    <link name="${lado}_wheel">
+      <visual>
+        <origin rpy="${pi/2} 0 0"/>
+        <geometry><cylinder radius="${roda_raio}" length="${roda_largura}"/></geometry>
+        <material name="borracha"><color rgba="0.15 0.15 0.15 1"/></material>
+      </visual>
+      <collision>
+        <origin rpy="${pi/2} 0 0"/>
+        <geometry><cylinder radius="${roda_raio}" length="${roda_largura}"/></geometry>
+      </collision>
+      <xacro:inercia_roda m="${massa_roda}" r="${roda_raio}" h="${roda_largura}"/>
+    </link>
+
+    <joint name="${lado}_wheel_joint" type="continuous">
+      <parent link="base_link"/>
+      <child link="${lado}_wheel"/>
+      <origin xyz="0 ${reflect*roda_separacao/2} ${roda_raio}"/>
+      <axis xyz="0 1 0"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:roda_motriz lado="left"  reflect="1"/>
+  <xacro:roda_motriz lado="right" reflect="-1"/>
+
+  <!-- ==================== BOBAS (DUAS, NA FRENTE) ====================
+
+       🔴 QUATRO APOIOS RÍGIDOS, SEM MOLA (C3 confirmado, §5.6.2). O robô 2
+       tinha 3 pontos, que por definição não balançam; este tem 4 num chassi
+       rígido, o que é hiperestático: em piso irregular uma boba sai do chão e
+       o corpo balança entre as duas diagonais. Com o braço de 14,4 cm, 3 mm de
+       junta de piso viram 1,2° de inclinação — e o Livox vai em cima disso.
+
+       O Gazebo REPRODUZ esse balanço (contato rígido, 4 pontos), então o
+       modelo serve para vê-lo. O que ele não decide é o conserto: complacência
+       numa boba, ou balancim que devolva o apoio a 3 pontos, é escolha
+       mecânica do dono, e é mais barata antes de o Livox subir.
+
+       Cada boba é pivô vertical + roda deslocada `boba_trail` ATRÁS do pivô.
+       Trail zero = boba ideal = simulador que mente. -->
+
+  <xacro:macro name="roda_boba" params="lado reflect">
+    <link name="${lado}_caster_fork">
+      <visual>
+        <origin xyz="${-boba_trail/2} 0 ${-boba_raio/2}"/>
+        <geometry><box size="${boba_trail} 0.03 ${boba_raio}"/></geometry>
+        <material name="metal"><color rgba="0.5 0.5 0.55 1"/></material>
+      </visual>
+      <xacro:inercia_caixa m="${massa_garfo}" x="${boba_trail}" y="0.03" z="${boba_raio}"
+                           ox="${-boba_trail/2}" oz="${-boba_raio/2}"/>
+    </link>
+
+    <joint name="${lado}_caster_swivel_joint" type="continuous">
+      <parent link="base_link"/>
+      <child link="${lado}_caster_fork"/>
+      <origin xyz="${boba_x} ${reflect*boba_y} ${boba_pivo_z}"/>
+      <axis xyz="0 0 1"/>
+      <dynamics damping="${boba_pivo_damping}" friction="${boba_pivo_atrito}"/>
+    </joint>
+
+    <link name="${lado}_caster_wheel">
+      <visual>
+        <origin rpy="${pi/2} 0 0"/>
+        <geometry><cylinder radius="${boba_raio}" length="0.03"/></geometry>
+        <material name="borracha"><color rgba="0.15 0.15 0.15 1"/></material>
+      </visual>
+      <collision>
+        <origin rpy="${pi/2} 0 0"/>
+        <geometry><cylinder radius="${boba_raio}" length="0.03"/></geometry>
+      </collision>
+      <xacro:inercia_roda m="${massa_boba}" r="${boba_raio}" h="0.03"/>
+    </link>
+
+    <joint name="${lado}_caster_wheel_joint" type="continuous">
+      <parent link="${lado}_caster_fork"/>
+      <child link="${lado}_caster_wheel"/>
+      <origin xyz="${-boba_trail} 0 ${-(boba_pivo_z - boba_raio)}"/>
+      <axis xyz="0 1 0"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:roda_boba lado="left"  reflect="1"/>
+  <xacro:roda_boba lado="right" reflect="-1"/>
+
+  <!-- ==================== Livox Mid-360 ==================== -->
+  <link name="livox_frame">
+    <visual>
+      <geometry><cylinder radius="0.0325" length="0.065"/></geometry>
+      <material name="livox_preto"><color rgba="0.10 0.10 0.12 1"/></material>
+    </visual>
+    <xacro:inercia_roda m="0.265" r="0.0325" h="0.065"/>
+  </link>
+
+  <joint name="livox_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="livox_frame"/>
+    <origin xyz="${livox_x} 0 ${livox_z}"/>
+  </joint>
+
+  <!-- ==================== ros2_control ==================== -->
+
+  <xacro:if value="$(arg sim)">
+    <ros2_control name="GazeboSimSystem" type="system">
+      <hardware>
+        <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+      </hardware>
+      <joint name="left_wheel_joint">
+        <command_interface name="velocity"/>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+      </joint>
+      <joint name="right_wheel_joint">
+        <command_interface name="velocity"/>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+      </joint>
+    </ros2_control>
+  </xacro:if>
+
+  <!-- ⚠️ O BLOCO DO ROBÔ REAL É HERDADO DO ROBÔ 2 E PODE CAIR INTEIRO.
+       A placa do robô 3 pode ser outra — o dono ia testar (§5.1). Se for outra,
+       `deadband_speed`, os sinais de realimentação e o `device` são de outra
+       máquina e nada disto vale. Se for a mesma, vale tudo. Até saber, este
+       bloco NÃO deve ir para o robô. -->
+  <xacro:unless value="$(arg sim)">
+    <ros2_control name="HoverboardSystem" type="system">
+      <hardware>
+        <plugin>hoverboard_driver/hoverboard_driver</plugin>
+        <param name="wheel_radius">${roda_raio}</param>
+        <param name="max_velocity">1.0</param>
+        <param name="device">/dev/ttyUSB0</param>
+        <param name="feedback_sign_left">1.0</param>
+        <param name="feedback_sign_right">-1.0</param>
+        <param name="deadband_enable">true</param>
+        <param name="deadband_speed">100.0</param>
+      </hardware>
+      <joint name="left_wheel_joint">
+        <command_interface name="velocity"/>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+      </joint>
+      <joint name="right_wheel_joint">
+        <command_interface name="velocity"/>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+      </joint>
+    </ros2_control>
+  </xacro:unless>
+
+  <xacro:if value="$(arg sim)">
+    <xacro:include filename="$(find robot_base)/description/robo3.gazebo.xacro"/>
+  </xacro:if>
+
+</robot>

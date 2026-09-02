@@ -1,0 +1,97 @@
+# Controlador diferencial do ROBÔ 3 no SIMULADOR.
+#
+# Irmão do `hoverboard_controllers_sim.yaml` (robô 2), que fica de pé porque é a
+# linha de base histórica. Aqui só a máquina mudou; a estrutura e os motivos de
+# cada bloco são os mesmos, e estão comentados lá.
+#
+# ⚠️ AS DUAS LINHAS QUE MUDAM DE VERDADE ESTÃO ABAIXO, e as duas são o motivo de
+# este arquivo existir em separado.
+
+controller_manager:
+  ros__parameters:
+    # 10 Hz, igual ao robô — o quantum de comando da placa é real e o simulador
+    # tem de ter o mesmo. Ver o racional inteiro no arquivo do robô 2.
+    # ⚠️ Isto assume a placa do robô 2. Se a placa do robô 3 for outra (§5.1 da
+    # ROBO3_REVISAO_CRUZADA), a taxa é a primeira coisa a remedir.
+    update_rate: 10
+    use_sim_time: true
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    hoverboard_base_controller:
+      type: diff_drive_controller/DiffDriveController
+
+hoverboard_base_controller:
+  ros__parameters:
+    use_sim_time: true
+
+    left_wheel_names: ["left_wheel_joint"]
+    right_wheel_names: ["right_wheel_joint"]
+
+    # 🔴 A BITOLA CRESCEU 57% (0,270 -> 0,425) e o raio 4% (0,080 -> 0,0835).
+    #
+    # A bitola é decisão do dono sobre qual medida vale (§5.7): das três larguras
+    # que vieram do robô — 27, 37,5 e 39 — vale a de dentro a dentro, 37,5, mais
+    # os 5,0 do pneu. As outras duas foram descartadas por ele.
+    #
+    # O raio é PROVISÓRIO: o diâmetro medido (16,5 cm, que são 6,5" exatas) e o
+    # perímetro medido (53 cm, que implica 16,87) divergem 2,2%. 0,0835 é o meio
+    # dos dois, e fecha com uma corrida reta de 5 m contra o LIO — 2,2% em 5 m
+    # são 11 cm, que o LIO enxerga sem esforço. ATÉ LÁ, toda distância percorrida
+    # que sair daqui carrega 2,2% de incerteza de escala.
+    wheel_separation: 0.425
+    wheel_radius: 0.0835
+
+    wheel_separation_multiplier: 1.0
+    left_wheel_radius_multiplier: 1.0
+    right_wheel_radius_multiplier: 1.0
+
+    publish_rate: 50.0
+    odom_frame_id: odom
+    base_frame_id: base_link
+    pose_covariance_diagonal: [0.001, 0.001, 0.001, 0.001, 0.001, 0.01]
+    twist_covariance_diagonal: [0.001, 0.001, 0.001, 0.001, 0.001, 0.01]
+
+    # Quem localiza é /Odometry (pose verdadeira do Gazebo, papel do LIO). Esta
+    # odometria fica publicada só para comparação: a diferença entre as duas É a
+    # derrapada. ⚠️ E aqui ela mede a pose do EIXO TRASEIRO, não do centro da
+    # caixa — o `base_link` mudou de lugar no robô 3 (C8).
+    open_loop: false
+    enable_odom_tf: false
+
+    cmd_vel_timeout: 0.5
+
+    linear.x.has_velocity_limits: true
+    linear.x.has_acceleration_limits: true
+    linear.x.has_jerk_limits: false
+    linear.x.max_velocity: 0.7
+    linear.x.min_velocity: -0.7
+    linear.x.max_acceleration: 0.8
+    linear.x.max_jerk: 0.0
+    linear.x.min_jerk: 0.0
+
+    # 🔴 O TETO DE GIRO CAIU, E NÃO É ESCOLHA — É A BITOLA.
+    #
+    # Mesmo racional do robô 2: o corte tem de ficar ACIMA do patamar que a
+    # placa fingida entrega, senão ele desfaz justamente o que a placa modela.
+    # Só que o patamar em `wz` depende da bitola:
+    #
+    #     roda:  100 unidades × 0,0372 rad/s/un = 3,72 rad/s
+    #     robô 2: v = 3,72 × 0,0800 = 0,2976 m/s -> wz = 2v/0,270 = 2,204 rad/s
+    #     robô 3: v = 3,72 × 0,0835 = 0,3106 m/s -> wz = 2v/0,425 = 1,462 rad/s
+    #
+    # A mesma placa gira o robô 3 MAIS DEVAGAR, porque a roda tem 57% mais braço
+    # para vencer. 2,0 deixa folga sobre 1,462 sem virar teto solto.
+    #
+    # ⚠️ Este número inteiro depende de a placa ser a do robô 2 (§5.1). Placa
+    # diferente = `escala_real` diferente = este teto tem de ser refeito.
+    angular.z.has_velocity_limits: true
+    angular.z.has_acceleration_limits: true
+    angular.z.has_jerk_limits: false
+    angular.z.max_velocity: 2.0
+    angular.z.min_velocity: -2.0
+    angular.z.max_acceleration: 1.5
+    angular.z.min_acceleration: -1.5
+    angular.z.max_jerk: 0.0
+    angular.z.min_jerk: 0.0

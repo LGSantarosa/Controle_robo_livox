@@ -1,0 +1,113 @@
+<?xml version="1.0"?>
+<!--
+  Parte só-Gazebo do robô 3. Mesmas duas decisões do robô 2, pelos mesmos
+  motivos (atrito diferenciado e pose vinda do chão), com o que muda aqui
+  marcado.
+
+  O que muda: são DUAS bobas, e é de propósito que elas tenham o mesmo atrito
+  baixo de lado. Com quatro apoios rígidos e sem mola (C3), o Gazebo é onde o
+  balanço entre as diagonais aparece antes de o robô existir montado.
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="atrito_motriz" params="link">
+    <gazebo reference="${link}">
+      <mu1>1.0</mu1>
+      <mu2>1.0</mu2>
+      <kp>1e6</kp>
+      <kd>100.0</kd>
+    </gazebo>
+  </xacro:macro>
+  <xacro:atrito_motriz link="left_wheel"/>
+  <xacro:atrito_motriz link="right_wheel"/>
+
+  <!-- Bobas: rolam fácil e escorregam de lado. `mu2` (transversal) baixo é o
+       que permite o contato ser arrastado ANTES de o pivô alinhar — é esse
+       arrasto que o C7 prevê ter dobrado, e é aqui que ele se mede. -->
+  <xacro:macro name="atrito_boba" params="link">
+    <gazebo reference="${link}">
+      <mu1>0.3</mu1>
+      <mu2>0.05</mu2>
+      <kp>1e6</kp>
+      <kd>100.0</kd>
+    </gazebo>
+  </xacro:macro>
+  <xacro:atrito_boba link="left_caster_wheel"/>
+  <xacro:atrito_boba link="right_caster_wheel"/>
+
+  <gazebo reference="base_link">
+    <mu1>0.3</mu1>
+    <mu2>0.3</mu2>
+  </gazebo>
+
+  <gazebo>
+    <plugin filename="gz_ros2_control-system"
+            name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+      <parameters>$(arg controllers_yaml)</parameters>
+    </plugin>
+  </gazebo>
+
+  <!-- Pose verdadeira como /Odometry — o papel do LIO no robô real.
+       ⚠️ Agora ela é a pose do EIXO TRASEIRO, não do centro da caixa (C8).
+       Comparar com CSV do robô 2 exige saber disso. -->
+  <gazebo>
+    <plugin filename="gz-sim-odometry-publisher-system"
+            name="gz::sim::systems::OdometryPublisher">
+      <odom_frame>odom</odom_frame>
+      <robot_base_frame>base_link</robot_base_frame>
+      <odom_topic>Odometry</odom_topic>
+      <tf_topic>tf_odom</tf_topic>
+      <dimensions>3</dimensions>
+      <odom_publish_frequency>50</odom_publish_frequency>
+    </plugin>
+  </gazebo>
+
+  <!-- Livox Mid-360 fingido. Mesmo raster do robô 2, com as MESMAS ressalvas
+       (decisão 012): é grade uniforme, o sensor real é roseta não repetitiva,
+       então aqui ele enxerga melhor que o robô num quadro só.
+
+       ⚠️ E aqui o sensor está a 0,24 m, altura CHUTADA (o robô 3 não tem o
+       Livox montado). A zona cega escala com a altura — 8,1×h — então mudar
+       `livox_z_solo` no URDF muda o que este sensor enxerga perto. -->
+  <gazebo reference="livox_joint">
+    <preserveFixedJoint>true</preserveFixedJoint>
+    <disableFixedJointLumping>true</disableFixedJointLumping>
+  </gazebo>
+
+  <gazebo reference="livox_frame">
+    <sensor name="livox_mid360" type="gpu_lidar">
+      <topic>livox/lidar</topic>
+      <gz_frame_id>livox_frame</gz_frame_id>
+      <update_rate>10</update_rate>
+      <always_on>1</always_on>
+      <visualize>true</visualize>
+      <lidar>
+        <scan>
+          <horizontal>
+            <samples>400</samples>
+            <resolution>1</resolution>
+            <min_angle>-3.141593</min_angle>
+            <max_angle>3.141593</max_angle>
+          </horizontal>
+          <vertical>
+            <samples>50</samples>
+            <resolution>1</resolution>
+            <min_angle>-0.122173</min_angle>  <!-- −7°  -->
+            <max_angle>0.907571</max_angle>   <!-- +52° -->
+          </vertical>
+        </scan>
+        <range>
+          <min>0.1</min>
+          <max>40.0</max>
+          <resolution>0.01</resolution>
+        </range>
+        <noise>
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.02</stddev>
+        </noise>
+      </lidar>
+    </sensor>
+  </gazebo>
+
+</robot>
