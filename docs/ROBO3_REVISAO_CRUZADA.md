@@ -206,6 +206,154 @@ medida física (itens 1-11) — nada de sintonia.
 
 ---
 
+## 5.2 Primeira leva de medidas — robô 3, 2026-09-02
+
+Números como o dono passou, em **cm**, sem arredondar nem interpretar:
+
+| Peça | Medidas dadas |
+|---|---|
+| Caixa | comprimento **31,1** · largura **24** · altura **13,5** |
+| Roda hover | diâmetro **15** · perímetro **53** · altura **16,5** |
+| Roda boba (frontal) | altura **4** (6 com a estrutura) · diâmetro **5** · perímetro **~15** |
+| Envelope total | altura **20** (com rodas) · comprimento **33,1** (2 cm de roda passando) · largura **39** |
+
+### 5.2.1 🔴 D2 — a roda hover tem TRÊS diâmetros, e eles não são o mesmo
+
+Este é o número mais caro da leva: o raio da roda entra **linearmente** na
+odometria. Errar 12% no raio é o robô achar que andou 12% a mais do que andou,
+em toda corrida, para sempre.
+
+```
+diâmetro declarado   15,00 cm  ->  perímetro seria 47,12   (medido: 53)
+"altura" da roda     16,50 cm  ->  perímetro seria 51,84   (medido: 53)
+perímetro medido     53,00 cm  ->  diâmetro é      16,87
+```
+
+Duas das três medidas apontam para **16,5-16,9 cm**; só o "diâmetro: 15" destoa,
+e ele é o que erra o perímetro em 6 cm. Diferença de escala entre usar 15 e usar
+16,87: **12,5%**.
+
+**Recomendação de Claude:** ficar com o **perímetro**, não com o diâmetro. Fita
+métrica em volta do pneu é a medida mais confiável das três *e é literalmente a
+grandeza que a odometria integra* — distância por volta. Daria
+`wheel_radius = 53/(2π) = 0,0844 m` (o robô 2 usava 0,080).
+
+⚠️ Com uma ressalva que muda o número: **medir o perímetro com o robô no peso
+dele**. Pneu comprimido roda num raio menor que o raio livre, e é o raio de
+rolagem que a odometria vê.
+
+➡️ **Pendência:** remedir diâmetro e perímetro da hover, com peso em cima.
+
+### 5.2.2 🟡 D3 — a boba: altura 4 cm com diâmetro 5 cm não fecha
+
+Uma roda de 5 cm de diâmetro apoiada no chão tem 5 cm de altura, não 4. O
+perímetro (~15) confirma o diâmetro: `15/π = 4,77`. Suspeita de Claude: os 4 cm
+são a roda **sem** o pneu, ou a medida saiu do eixo e não do chão. Pequeno em
+valor absoluto, mas é a altura da boba que **nivela a frente do chassi** — 1 cm
+aqui inclina o robô inteiro, e o Livox está no topo.
+
+### 5.2.3 🟡 D4 — 0,5 cm sobrando na altura
+
+```
+altura total 20,0 − caixa 13,5 = 6,5 cm de vão livre implicado
+altura da boba com a estrutura  = 6,0 cm
+                                  ------
+                                  0,5 cm sem dono
+```
+
+Ou o fundo da caixa não encosta na estrutura da boba, ou há algo em cima da
+caixa entrando nos 20 cm, ou é arredondamento. **Medir direto o fundo da caixa
+até o chão** resolve (item 2 do checklist) e entrega o `altura_solo`.
+
+### 5.2.4 🟢 C5 — o eixo motor está DERIVADO em ~ −9 cm, e isso confirma o C1
+
+Dos 33,1 cm totais contra 31,1 da caixa sobram 2 cm de roda passando. **Assumindo
+que passam atrás** (é onde estão as motoras — confirmar), o eixo cai em:
+
+```
+raio 7,50  ->  eixo em x = −10,05 cm do centro da caixa
+raio 8,25  ->  eixo em x =  −9,30 cm
+raio 8,44  ->  eixo em x =  −9,12 cm     <- o do perímetro
+```
+
+Comparando com o robô 2, em fração do próprio comprimento:
+
+```
+robô 2:  eixo em +8,15 cm de 43,3  =  +19% -> à FRENTE do centro
+robô 3:  eixo em  −9,1  cm de 31,1  =  −29% -> ATRÁS do centro
+```
+
+**O C1 deixa de ser dedução e vira número: o centro de rotação atravessa o corpo
+de ponta a ponta**, de +19% para −29% do comprimento. Toda a dianteira passa a
+ser balanço. É a confirmação de que a lei de rumo recalibra do zero (C2).
+
+*Status: DERIVADO, não medido. O item 5 do checklist (distância do eixo ao centro
+da caixa, com sinal) continua obrigatório — a derivação depende de o "2 cm de
+roda passando" ser atrás, e do raio que a D2 ainda não fechou.*
+
+### 5.2.5 🟢 C6 — a porta de 70 cm deixa de ser problema de CORPO
+
+Refazendo a conta do `ESTADO_PROJETO.md` com o envelope novo (39,0 × 33,1):
+
+```
+                                       larg × compr   diagonal   folga a 0°   pior caso
+robô 2  corpo real                      45,5 × 43,3      62,8      +12,2       +3,6 cm/lado
+robô 2  footprint do costmap            55,5 × 61,6      83,0       +7,2       NÃO CABE (9,5°-74,4°)
+robô 3  corpo real                      39,0 × 33,1      51,2      +15,5       +9,4 cm/lado
+```
+
+**O robô 3 atravessa a porta de 70 cm em QUALQUER ângulo com 9,4 cm de folga por
+lado no pior caso** — contra 3,6 cm do robô 2. O aperto de 1 cm que fazia a
+travessia virar sorte (20-08) desaparece do corpo.
+
+🔴 **Mas só do corpo.** Se as margens forem copiadas do robô 2, o vício volta:
+
+```
+robô 3 + margem approach (+3 cm/lado)   45,0 × 39,1      59,6      +12,5      +5,2 cm/lado   ok
+robô 3 + margem stop/footprint          49,0 × 51,5      71,1      +10,5      NÃO CABE (33,5°-53,6°)
+```
+
+A janela proibida sai de **9,5°-74,4° (robô 2) para 33,5°-53,6°** — muito melhor,
+mas ainda existe, e nasce inteira dos 13,4 cm de proa que a **D1** apontou como
+sem justificativa no planejador. **A D1 deixou de ser dívida técnica e virou
+requisito**: com o robô novo dá para pagá-la sem gastar segurança.
+
+### 5.2.6 ⚠️ Armadilha: a caixa não é o que passa na porta
+
+No robô 2 as rodas ficavam **dentro** da largura da caixa (rodas em 27+4,5 ≈ 31,5
+contra caixa de 45,5), então footprint = caixa + margem estava certo. **No robô 3
+inverteu**: caixa 24 cm, envelope 39 cm — **as rodas são agora a parte mais
+larga, com 7,5 cm saindo de cada lado**.
+
+➡️ O footprint e os polígonos do reflexo têm de ser construídos sobre o
+**envelope total (39 × 33,1)**, nunca sobre `caixa_y`. No URDF a caixa continua
+24 (é o colisor do chassi), mas quem vai para o `nav2.yaml` e o
+`collision_monitor.yaml` é o envelope.
+
+### 5.2.7 O que ainda falta — sem isto não se escreve YAML nenhum
+
+| # | Falta | Por que trava |
+|---|---|---|
+| 4 | **Separação das motoras (centro a centro)** | 🔴 **o mais grave.** É o parâmetro do `wz`: sem ele a odometria de giro não existe. Dá para cercar por `39,0 − largura da roda`, mas cercar não serve: **medir direto**. |
+| 3 | Largura da roda hover | fecha a conta acima e o URDF |
+| 6 | Bobas: x/y de cada uma, raio, largura, *trail* | posição do apoio, e o C3 |
+| 7 | As bobas têm mola? | decide se o C3 (4 apoios, uma roda no ar) é problema real |
+| 8 | Livox: altura ao solo, x/y, e se está torto | TF e LIO — no robô 2 estava a 0,42 m |
+| 9-11 | Massa total, massa por parte, centro de massa, baterias | inércia do URDF e tombamento |
+
+Referência do que a separação significa (**cercada, NÃO medida**):
+
+```
+largura da roda 4,5 -> separação 34,5 cm      largura 5,5 -> separação 33,5
+largura da roda 5,0 -> separação 34,0 cm      largura 6,0 -> separação 33,0
+(robô 2: separação 27,0 com roda de 4,5)
+```
+
+Ou seja: o robô encolheu no corpo mas a **bitola aumentou** (~27 → ~33-34 cm).
+Robô mais estreito e ao mesmo tempo mais estável lateralmente.
+
+---
+
 ## 6. Plano proposto por Claude (aguardando ok do dono)
 
 1. `docs/decisoes/045-troca-para-o-robo-3.md` — medidas, motivo da troca, e o
@@ -229,7 +377,12 @@ medida física (itens 1-11) — nada de sintonia.
 | C2 | Codex | | |
 | C3 | Codex | | |
 | C4 | Codex | | |
+| C5 | Codex | | ← derivado em §5.2.4, não medido |
+| C6 | Codex | | ← conta da porta em §5.2.5 |
 | D1 | Codex | | |
+| D2 | Codex | | ← três diâmetros da roda hover, §5.2.1 |
+| D3 | Codex | | ← boba: 4 cm × 5 cm, §5.2.2 |
+| D4 | Codex | | ← 0,5 cm na altura, §5.2.3 |
 
 ### Afirmações do Codex (a preencher)
 
