@@ -354,6 +354,42 @@ Robô mais estreito e ao mesmo tempo mais estável lateralmente.
 
 ---
 
+## 5.3 Pedido de remedição enviado (2026-09-02)
+
+⚠️ **Quem mediu não foi o dono** — as medidas da §5.2 vieram de outra pessoa. Ou
+seja: as três divergências (D2, D3, D4) não podem ser resolvidas por
+interpretação nossa, e nenhum dos dois assistentes deve "escolher" o diâmetro
+que prefere. Foi enviado o pedido abaixo, escrito para leigo, com o *como* e o
+*porquê* de cada item.
+
+**Bloqueiam qualquer YAML:**
+
+1. Separação das rodas de trás, **centro a centro** (ou faces internas +
+   espessura da roda) — o parâmetro do `wz`.
+2. Espessura (largura) da roda de trás.
+3. Do chão até o **fundo da caixa** → `altura_solo`.
+4. Do **eixo traseiro até a traseira da caixa** → fecha o `roda_x` que a §5.2.4
+   só derivou.
+5. Bobas: distância até a frente da caixa, distância entre elas, **e se têm
+   mola** → resolve o C3.
+6. Os 2 cm de roda passando: **atrás ou à frente?** → a derivação do C5 assume
+   atrás.
+7. Livox: altura do chão ao sensor, e se está centrado.
+8. Peso total com baterias, e onde ficam as baterias.
+
+**Remedição das divergências:**
+
+9. **D2** — refazer diâmetro E perímetro da roda de trás, o perímetro com fita
+   em volta do pneu e **o robô apoiado no próprio peso**.
+10. **D3** — diâmetro da rodinha da frente, e separado a altura do chão até o
+    ponto onde ela parafusa na estrutura.
+11. **D4** — altura total do ponto mais alto até o chão.
+
+Pedidas **fotos com a trena aparecendo** em cada medida. Enquanto não voltar,
+a §5.2 vale como *primeira leva*, não como modelo.
+
+---
+
 ## 6. Plano proposto por Claude (aguardando ok do dono)
 
 1. `docs/decisoes/045-troca-para-o-robo-3.md` — medidas, motivo da troca, e o
