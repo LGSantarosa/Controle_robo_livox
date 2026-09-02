@@ -848,6 +848,87 @@ liberar.
 
 ---
 
+## 5.8 Cubos para dentro — a geometria fecha
+
+*"Pra dentro do robô."* Então **os pneus são o ponto mais largo** e o envelope é
+**47,5 cm**, não 50,5. A folga do pior caso na porta volta para **+6,1 cm/lado**
+(§5.7.1), e o footprint conservador de 50,5 sai de cena antes de entrar.
+
+Os cubos ocupam 1,5 cm de cada lado do vão interno: sobram **34,5 cm entre as
+faces internas de metal**, com a caixa de 24,0 no meio — ou seja, **5,25 cm
+livres de cada lado da caixa**, não 6,75.
+
+### 5.8.1 🟢 C8 (novo) — `base_link` vai no EIXO, não no centro da caixa
+
+Proposta de Claude, e é de graça: o robô 2 põe o `base_link` no centro da caixa
+e o eixo motor em `x = +0,0815` (`robo2.urdf.xacro:55`). **O robô gira em torno
+do eixo, não do `base_link`** — então o robô 2 gira em torno de um ponto 8 cm à
+frente da própria origem, e todo giro vira giro **mais** deslocamento lateral na
+origem.
+
+No robô 3 o descasamento seria ainda maior (−9,3 cm) e do lado contrário. Mas
+não precisa existir:
+
+➡️ **Pôr `base_link` no centro do eixo traseiro.** Aí o centro de rotação **é** a
+origem, `wz` puro não desloca `x` nem `y`, e a lei de rumo deixa de carregar um
+termo de acoplamento que nunca foi de propósito.
+
+⚠️ **Isto não é cosmético e muda quem lê o quê:** o LIO passa a estimar a pose do
+eixo, o footprint deixa de ser simétrico em `x`, e a comparação com os CSV do
+robô 2 precisa saber disso. Mas é a convenção normal de diferencial, e o robô 3
+é a única chance de entrar com ela sem quebrar dado histórico.
+
+*Status: proposta. Depende de ok do dono e da revisão do Codex.*
+
+### 5.8.2 Modelo geométrico consolidado — robô 3
+
+Origem no **centro do eixo traseiro** (C8). `x` para a frente, `y` para a
+esquerda, tudo em metros.
+
+| Parâmetro | Valor | Origem do número |
+|---|---|---|
+| `caixa_x` (comprimento) | 0,311 | 🟢 medido |
+| `caixa_y` (largura) | 0,240 | 🟢 medido |
+| `caixa_z` (altura) | 0,135 | 🟢 medido |
+| `caixa_cx` (centro da caixa) | **+0,093** | 🟢 derivado do C5 |
+| `altura_solo` | 0,070 | 🟡 medido, mas briga com a boba (D4) |
+| `roda_raio` | **0,0835** | 🟡 provisório: fecha por corrida reta (§5.4.1) |
+| `roda_largura` | 0,050 | 🟢 medido (+0,015 de cubo, para dentro) |
+| `roda_separacao` | **0,425** | 🟢 decisão do dono (§5.7) |
+| `roda_x` | **0,000** | 🟢 é a origem, por definição (C8) |
+| `boba_raio` | 0,025 | 🟡 adotado, empate irrelevante (§5.5.1) |
+| `boba_x` | **+0,2485** | 🟢 ponta da frente da caixa |
+| `boba_y` | **±0,120** | 🟢 quinas da caixa |
+| `boba_trail` | 0,020 | 🟢 medido |
+| Bobas têm mola? | **não** | 🔴 é o que confirma o C3 |
+| Envelope (larg × compr × alt) | 0,475 × 0,332 × 0,200 | 🟢 |
+| Massas, centro de massa | — | 🔴 pendente, e prematuro (D7) |
+| Livox: altura, x, y, yaw | — | 🔴 nem montado (D7) |
+
+**Contorno do corpo, em `base_link` do C8** — é isto que vai para o `nav2.yaml`
+e para os polígonos do reflexo, e note que **não é simétrico em `x`**:
+
+```
+traseira: x = −0,0835   (o pneu, que passa 2 cm da caixa)
+frente:   x = +0,2485   (a ponta da caixa, onde estão as bobas)
+laterais: y = ±0,2375   (o pneu — a caixa, de 24 cm, não chega perto)
+```
+
+⚠️ **A largura vem do PNEU e o comprimento vem da CAIXA.** Nenhum dos dois vem
+do mesmo lugar que vinha no robô 2, e é o erro fácil de cometer aqui.
+
+### 5.8.3 O que ainda falta, e agora é curto
+
+1. 🔴 **Onde o Livox monta** — decisão do dono, e o C3 entra junto: **antes** de
+   montar, decidir se o chassi ganha complacência.
+2. 🔴 **Peso e centro de massa**, medidos **depois** do Livox e do NUC subirem.
+3. 🟡 **D4** — o 1 cm entre `altura_solo` 7,0 e a boba de 6,0: o robô está
+   inclinado 1,8° para a frente, ou uma das medidas está errada? Resolve com o
+   robô na mão e um nível.
+4. 🟡 **`roda_raio`** — corrida reta de 5 m contra o LIO fecha os 2,2%.
+
+---
+
 ## 6. Plano proposto por Claude (aguardando ok do dono)
 
 1. `docs/decisoes/045-troca-para-o-robo-3.md` — medidas, motivo da troca, e o
@@ -874,6 +955,7 @@ liberar.
 | C5 | Codex | | ← derivado em §5.2.4, não medido |
 | C6 | Claude | **CORRIGIDO** | folga do pior caso caiu de +9,4 para +4,8 cm/lado (§5.7.1) |
 | C7 | Codex | | ← 🔴 fechado em 9,1° contra 4,6° do robô 2 (§5.6.3) |
+| C8 | Codex | | ← proposta: `base_link` no eixo traseiro (§5.8.1) |
 | D1 | Codex | | |
 | D2 | Codex | | ← RESOLVIDA na 2ª leva (§5.4.1): "15" descartado, sobra 2,2% |
 | D3 | Codex | | ← empate 2×2, mas saiu do caminho crítico (§5.5.1) |
