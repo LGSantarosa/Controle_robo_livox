@@ -181,11 +181,28 @@ Trena + balança. A coluna da direita diz quem consome o número.
 ⚠️ Lembrete que já custou tempo antes: **são duas baterias independentes**
 (rodas e NUC+Livox) — anotar as duas.
 
-**Além das medidas, uma pergunta de projeto:** é a **mesma placa hoverboard**
-e o mesmo firmware? Se sim, a zona morta e o patamar de saída do
-`MODELO_ROBO2.md` (§1 e §2) continuam valendo e não precisam remedir. Se a
-placa mudou, **todo o `MODELO_ROBO2.md` cai** e o levantamento de atuador
-recomeça.
+### 5.1 🔶 A PLACA AINDA NÃO ESTÁ DECIDIDA — item de maior alavancagem
+
+**Status em 2026-09-02, palavra do dono:** *"é uma diferente talvez, irei testar
+se ela funciona hoje, se não funcionar será a mesma, mas aviso."*
+
+É a pergunta que mais muda o tamanho do trabalho, e ela tem **duas saídas**:
+
+| Se… | O que acontece com o `MODELO_ROBO2.md` |
+|---|---|
+| **a placa nova funcionar** (placa diferente) | 🔴 **o modelo inteiro cai.** A zona morta (§2), o patamar de saída (§1) e a latência de 0,35 s para destravar são propriedades **daquele** firmware, não do robô. Levantamento de atuador recomeça do zero, e o `placa_simulada.py` junto. |
+| **a placa nova não funcionar** (fica a mesma) | 🟢 §1 e §2 do modelo **sobrevivem à troca**: a zona morta e o patamar são da placa, e a placa não mudou. Só a geometria remede. |
+
+⚠️ **Nenhum dos dois assistentes deve tratar o `MODELO_ROBO2.md` como válido
+enquanto esta linha estiver aberta.** Vale para a sintonia inteira: os ganhos de
+rumo foram medidos **em cima** daquela zona morta.
+
+Também não se confunda o que cada saída preserva: a placa decide o **atuador**;
+a inversão das rodas mexe na **geometria**. Placa igual **não** salva a lei de
+rumo — C2 continua de pé nos dois cenários.
+
+**Fica aguardando o aviso do dono.** Enquanto não vier, o trabalho de hoje é só
+medida física (itens 1-11) — nada de sintonia.
 
 ---
 
