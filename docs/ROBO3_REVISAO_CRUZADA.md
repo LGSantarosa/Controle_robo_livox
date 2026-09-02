@@ -549,6 +549,85 @@ Remedir massa e CoM **depois** de montar — medir agora é medir outro robô.
 
 ---
 
+## 5.5 Terceira leva — as bobas (2026-09-02)
+
+Dono: *"as rodinhas são rodas bobas padrão, ela vai tentar pegar o diâmetro
+delas, mas tem a estrutura delas em volta"*. Foi pedido então o que não depende
+de brigar com o garfo — **do chão até o centro do eixinho** (= o raio) e **o
+recuo horizontal entre o parafuso vertical e o eixo da roda** (= o *trail*).
+Resposta: **2 cm os dois**.
+
+### 5.5.1 🟡 D3 continua empatada, mas virou irrelevante
+
+```
+chão até o eixo 2,0  -> diâmetro 4,0  -> perímetro seria 12,6
+1ª leva: altura 4,0     BATE com d = 4,0
+1ª leva: diâmetro 5,0   \ apontam para d ≈ 4,8-5,0
+1ª leva: perímetro ~15  /  (50 mm é tamanho de prateleira; 40 mm é menos comum)
+```
+
+**2 a 2, e o empate não se desfaz daqui.** Mas ele deixou de importar, e a razão
+é geométrica: **a altura da frente do robô é o conjunto de 6,0 cm com a
+estrutura, medido direto.** O diâmetro da roda não entra na altura de rodagem —
+entra só na inércia da rodinha, que é desprezível perto dos 3 kg por hover.
+
+➡️ **Adotar 5,0 cm** (tamanho padrão, duas medidas apontando) e seguir. Se
+aparecer contradição depois, custa uma linha de URDF. **D3 sai do caminho
+crítico.**
+
+### 5.5.2 🔴 C7 (novo) — o trail dobrou E duplicou: a ré vai custar rumo
+
+Este é o achado da leva, e é uma **previsão falseável**:
+
+```
+robô 2:  boba_trail 1,0 cm, UMA boba      (robo2.urdf.xacro:71)
+robô 3:  trail       2,0 cm, DUAS bobas
+```
+
+Numa inversão de marcha a boba tem de girar 180° em torno do pivô, e o contato
+varre um círculo de raio igual ao trail:
+
+```
+robô 3: contato desloca 2 × 2,0 = 4,0 cm lateralmente, em DOIS pontos
+robô 2: contato desloca 2 × 1,0 = 2,0 cm, em UM ponto
+```
+
+Com o eixo motor em −9,3 cm e as bobas em algum ponto da dianteira, o
+entre-eixos fica em ~19-23 cm. O escorregão, **como limite geométrico**:
+
+```
+bobas em x = +10 -> entre-eixos 19,3 cm -> até 11,7°   (robô 2: 5,9°)
+bobas em x = +12 -> entre-eixos 21,3 cm -> até 10,6°   (robô 2: 5,4°)
+bobas em x = +14 -> entre-eixos 23,3 cm -> até  9,7°   (robô 2: 4,9°)
+```
+
+⚠️ **Isso é o limite geométrico, não o erro realizado** — as motoras resistem ao
+escorregão. Mas a razão entre os dois robôs (**~2×**) não depende dessa
+resistência, e um trail de 2,0 cm num pneu de ~5,0 é **40% do diâmetro**: boba de
+balanço longo.
+
+**Por que isto importa exatamente aqui:** o robô 2 deu **7 rés** numa única
+aproximação de porta (`ESTADO_PROJETO.md`, 20-08). Se cada inversão de marcha
+passa a cobrar o dobro de perturbação de rumo, **a manobra de recuperação que
+salvava o robô 2 vira a que estraga o robô 3.**
+
+➡️ **Previsão para verificar em bancada, antes de sintonizar:** comandar
+frente → parada → ré e medir o transitório de *yaw* nos primeiros 30 cm. Se o
+robô 3 der ~2× o desvio do robô 2 na mesma manobra, o C7 está confirmado e a
+política de ré precisa mudar junto com a lei de rumo (C2).
+
+*Status: previsão geométrica, NÃO medida. Depende ainda da posição das bobas.*
+
+### 5.5.3 O que a terceira leva não trouxe
+
+Ainda pendente, e a dona das medidas disse que manda: **posição das bobas**
+(distância até a frente da caixa e distância entre elas — o C7 acima precisa
+dela para sair de faixa e virar número), **se têm mola** (C3), **peso** e **onde
+ficam as baterias**. Lembrando a D7: peso e centro de massa medidos **antes** do
+Livox e do NUC subirem são de outro robô.
+
+---
+
 ## 6. Plano proposto por Claude (aguardando ok do dono)
 
 1. `docs/decisoes/045-troca-para-o-robo-3.md` — medidas, motivo da troca, e o
@@ -574,9 +653,10 @@ Remedir massa e CoM **depois** de montar — medir agora é medir outro robô.
 | C4 | Codex | | |
 | C5 | Codex | | ← derivado em §5.2.4, não medido |
 | C6 | Codex | | ← conta da porta em §5.2.5 |
+| C7 | Codex | | ← 🔴 trail dobrou e duplicou: a ré custa rumo, §5.5.2 |
 | D1 | Codex | | |
 | D2 | Codex | | ← RESOLVIDA na 2ª leva (§5.4.1): "15" descartado, sobra 2,2% |
-| D3 | Codex | | ← boba: 4 cm × 5 cm, §5.2.2 |
+| D3 | Codex | | ← empate 2×2, mas saiu do caminho crítico (§5.5.1) |
 | D4 | Codex | | ← virou desnível de 1 cm / 1,8° de pitch, §5.4.5 |
 | D5 | Codex | | ← 🔴 27 cm não cabem nos 39 cm, §5.4.2 |
 | D6 | Codex | | ← "1,5" era vertical, não longitudinal, §5.4.3 |
