@@ -1032,17 +1032,30 @@ de propósito, e está ordenada por **quanto trava** se vier errado.
 duas rodas, **nunca dizer "centro a centro"**. Medir SEMPRE as duas faces e
 dizer qual é qual — o centro se calcula, a face se mede.
 
+### ⛔ O QUE SAIU DA LISTA: a roda inteira
+
+Dono, 02-09: *"tudo relacionado a roda pode pegar na internet, são rodas
+genéricas de hoverboard, só medirei como elas estão no robô, são as mesmas
+rodas que estão nos outros, no robô 1 e no 2."*
+
+Ele está certo e isso corta uma linha de trabalho: **peça de catálogo tem folha
+de dados, não se mede com fita.** Hub motor de 6,5":
+
+```
+diâmetro externo 165 mm (= 6,5" exatas)   largura 58 mm
+eixo 45 × 10 mm                           massa 3,1 kg por roda
+```
+
+Some daqui: diâmetro, perímetro, espessura da roda e a corrida das 5 voltas. E
+o achado de brinde foi a **massa** — 3,1 kg contra os 2,0 que o robô 2 chutou,
+ou seja 6,2 kg só de rodas, quase o dobro do chassi, e longe do eixo de guinada.
+
 ### 🔴 Travam a odometria (erram TODA corrida, para sempre)
 
-1. **Rodas motrizes, quatro números na mesma passada:** externo a externo dos
-   pneus · interno a interno dos pneus · espessura do pneu · espessura do cubo.
-   *(Conferir contra: 37,5 · 27,0 · 5,0 · 1,5.)*
-2. **Perímetro de rolagem, pelo método bom:** marcar um ponto na roda, empurrar
-   o robô em linha reta **5 voltas completas** e medir a distância percorrida.
-   `perímetro = distância/5`. Isso já sai com o peso do robô em cima e mata os
-   2,2% que sobraram entre o diâmetro (16,5) e a fita (53). É a medida que a
-   odometria realmente usa.
-3. **Do eixo da roda até a FRENTE da caixa** (longitudinal). Hoje o `roda_x`
+1. **Como as rodas estão MONTADAS:** externo a externo dos pneus · interno a
+   interno dos pneus. Só isso — a roda é catálogo, a montagem é deste robô.
+   *(Conferir contra: 37,5 e 27,0.)*
+2. **Do eixo da roda até a FRENTE da caixa** (longitudinal). Hoje o `roda_x`
    está DERIVADO dos "2 cm de roda passando atrás"; esta medida o fecha direto.
 
 ### 🟡 Travam a geometria do corpo e o footprint
@@ -1060,7 +1073,9 @@ dizer qual é qual — o centro se calcula, a face se mede.
 ### 🟡 Bobas
 
 8. Diâmetro da rodinha · largura da rodinha · trail (recuo horizontal entre o
-   parafuso vertical e o eixo). *(Conferir: ~5,0 · 3,0 · 2,0.)*
+   parafuso vertical e o eixo). *(Conferir: ~5,0 · 3,0 · 2,0.)* — se forem
+   bobas de catálogo também, mesma regra da roda motriz: o modelo delas
+   resolve, e sobra só a montagem.
 9. **Tamanho da chapa** que parafusa na caixa, e **a que distância o pivô fica
    da frente e da lateral** da caixa. O modelo hoje assume as faces rentes.
 10. Altura do conjunto todo, do chão até a face que encosta na caixa.
