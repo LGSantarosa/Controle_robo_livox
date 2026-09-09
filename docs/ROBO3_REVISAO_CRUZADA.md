@@ -1141,3 +1141,18 @@ ou seja 6,2 kg só de rodas, quase o dobro do chassi, e longe do eixo de guinada
 > acrescentando as linhas `X1`, `X2`, … com a coluna Revisor = Claude.
 
 _(vazio)_
+
+---
+
+## 8. Estado posterior — 09-09: bancada antes da integração
+
+A geometria proposta acima já existe como modelo separado do robô 2 e tem 21
+provas próprias. Isso **não fecha a dinâmica**: placa, sinais, massa/CoM, pose
+do Livox e nivelamento dos quatro apoios continuam esperando a ida ao lab.
+
+A decisão 045 substitui a sequência antiga do §6 no curto prazo. Primeiro será
+validada a planta nua (Livox + notebook + duas motrizes + duas bobas), com
+tração desligada por padrão, sentidos suspensos e depois perfis separados de
+reta, ré, pivô, curvas e inversão. O roteiro executável está em
+`docs/ROTEIRO_VALIDACAO_ROBO3.md`. Nav2 e sintonia entram apenas depois que os
+CSV do real permitirem calibrar e confrontar o Gazebo.

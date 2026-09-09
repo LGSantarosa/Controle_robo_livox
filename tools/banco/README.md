@@ -1,4 +1,25 @@
-# Banco de ensaios — descobrir os limites do robô 2
+# Banco de ensaios — descobrir os limites da máquina
+
+## Robô 3: validação da planta nua
+
+O robô 3 tem um condutor próprio porque sua geometria, placa e quatro apoios
+não podem herdar as hipóteses do robô 2. O roteiro seguro e os comandos estão
+em [`docs/ROTEIRO_VALIDACAO_ROBO3.md`](../../docs/ROTEIRO_VALIDACAO_ROBO3.md).
+
+```bash
+python3 tools/banco/sessao_robo3.py --listar
+python3 tools/banco/sessao_robo3.py --so 0  # LIO imóvel, tração desligada
+python3 tools/banco/sessao_robo3.py --so 1  # somente com rodas suspensas
+```
+
+`perfil_robo3.py` grava comando, LIO, odometria de roda, encoders, correntes,
+bateria e temperatura no mesmo relógio. `mede_robo3.py` extrai latência,
+retenção, parada, curvatura, assimetria e razão entre giro do LIO e das rodas.
+Sem opção, `sessao_robo3.py` executa **apenas o passo imóvel**.
+
+---
+
+## Robô 2
 
 Protocolo de caracterização. **Antes de escrever qualquer controlador**, medir
 o que a máquina consegue fazer. Todos os números que a movimentação precisa

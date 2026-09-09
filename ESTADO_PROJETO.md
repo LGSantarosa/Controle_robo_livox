@@ -1,13 +1,44 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-08-20** (3ª leva, dev — a conta da
-> porta 2 está no topo e vem antes de qualquer sintonia).
+> Versionado na `main`. Atualizado em **2026-09-09** (robô 3 — validação da
+> planta nua preparada; medidas e ensaios físicos ainda pendentes).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+---
+
+## 🟡 09-09 — Robô 3 pronto para a primeira bancada, não validado fisicamente
+
+O caminho novo está isolado do robô 2 na branch
+`robo3-bancada-validacao`. A primeira subida nasce **sem tração**:
+
+```bash
+ros2 launch robot_base base_robo3.launch.py
+python3 tools/banco/sessao_robo3.py --so 0
+```
+
+Depois de fechar medidas e LIO, a tração é opt-in e o primeiro comando só pode
+ser dado com as quatro rodas suspensas:
+
+```bash
+ros2 launch robot_base base_robo3.launch.py tracao:=true
+python3 tools/banco/sessao_robo3.py --so 1
+```
+
+O roteiro completo está em `docs/ROTEIRO_VALIDACAO_ROBO3.md` e a folha para
+as últimas dimensões em `docs/FICHA_MEDIDAS_ROBO3.md`. Há passos separados para
+pulsos baixos, reta/ré curta e longa, pivô, curvas curtas/longas nos dois
+sentidos e inversões filmadas das duas bobas. Todos geram CSV + JSON e são
+analisados automaticamente.
+
+**O que ainda impede dizer “100%”:** placa e sinais não foram vistos;
+geometria final, massa/CoM e pose do Livox não foram remedidas; nenhuma dinâmica
+real foi coletada. Até isso voltar do laboratório, o Gazebo do robô 3 é
+geometricamente testado, mas sua dinâmica continua hipótese.
 
 ---
 

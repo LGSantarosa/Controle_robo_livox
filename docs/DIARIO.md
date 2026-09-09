@@ -4,6 +4,43 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-09-09 — ROBÔ 3: A BANCADA DA PLANTA NUA FICA PRONTA
+
+O pedido foi preparar uma ida ao laboratório em que só entram Livox, notebook,
+duas motrizes e duas bobas. A pergunta ainda não é “ele navega?”, mas “qual é
+a máquina que o Gazebo precisa reproduzir?”: reta, ré, pivô, arco curto, arco
+longo e inversão.
+
+Foi criada uma subida exclusiva do robô 3. Ela nasce com `tracao:=false` e,
+mesmo assim, publica a descrição/TF necessária ao FAST-LIO. Quando a tração é
+explicitamente habilitada, carrega controlador próprio com bitola `0,3225`,
+raio `0,0825` e `open_loop=false`; o robô 2 não foi alterado.
+
+A revisão do driver encontrou a compensação herdada do robô 2: abaixo de 100
+RPM ela escala as duas rodas até o patamar, destruindo a comparação dos pulsos
+baixos e aumentando o primeiro salto no chão. No robô 3 de bancada ficou
+`deadband_enable=false`. Se um pulso não vencer o atrito, isso é medida.
+
+O banco novo não trata `cmd_vel` como verdade. Ele grava simultaneamente
+comando, LIO, odometria diferencial, velocidades/posições/comandos crus das
+rodas, correntes, bateria e temperatura. Há corte por perda de pose, distância,
+trajeto, velocidade, giro e rotação de roda, mais vinte zeros na saída. O
+condutor divide o trabalho em nove passos separados e não avança depois de
+falha. Sem argumento, ele só tenta o passo imóvel — não há caminho acidental
+de um ENTER até uma roda energizada.
+
+O analisador já calcula deriva, ruído, latência, retenção, parada, curvatura,
+assimetria de roda e razão giro-LIO/giro-encoder, e agrega as repetições. Sete
+testes novos do banco e duas travas novas no URDF passaram: linha do tempo
+suspensa, pausa da inversão, matriz de movimentos, curva sintética, coerência
+do launch/YAML, compensação desligada e porta serial configurável.
+
+**Nada físico foi validado hoje ainda.** Massa, centro de massa, montagem do
+Livox, placa, nivelamento dos quatro apoios e os valores finais de geometria
+continuam pendentes da ficha/fotos do laboratório. O roteiro está em
+`docs/ROTEIRO_VALIDACAO_ROBO3.md`; a escolha de validar a planta nua está na
+decisão 045.
+
 ## 2026-08-20 — DESFAZENDO UMA LEVA DE 12 MUDANÇAS, E O QUE SOBROU DELA
 
 Sessão inteira no Gazebo, sem robô. Começou com o dono relatando que uma leva
