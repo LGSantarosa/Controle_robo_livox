@@ -1,0 +1,66 @@
+# Controlador diferencial do ROBÔ 3 REAL.
+#
+# Este arquivo fica separado do robô 2 porque bitola, raio, origem e limites
+# pertencem à máquina. A placa ainda não foi identificada: só usar depois do
+# teste com as rodas suspensas descrito em docs/ROTEIRO_VALIDACAO_ROBO3.md.
+
+controller_manager:
+  ros__parameters:
+    update_rate: 10
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    hoverboard_base_controller:
+      type: diff_drive_controller/DiffDriveController
+
+hoverboard_base_controller:
+  ros__parameters:
+    left_wheel_names: ["left_wheel_joint"]
+    right_wheel_names: ["right_wheel_joint"]
+
+    # Fechado desenhando e conferindo o robô no Gazebo em 02-09-2026.
+    # Centro a centro = média entre 0,270 m interno e 0,375 m externo.
+    wheel_separation: 0.3225
+    # Hub motor genérico de hoverboard 6,5": diâmetro externo 165 mm.
+    wheel_radius: 0.0825
+
+    wheel_separation_multiplier: 1.0
+    left_wheel_radius_multiplier: 1.0
+    right_wheel_radius_multiplier: 1.0
+
+    publish_rate: 50.0
+    odom_frame_id: odom
+    base_frame_id: base_link
+    pose_covariance_diagonal: [0.001, 0.001, 0.001, 0.001, 0.001, 0.01]
+    twist_covariance_diagonal: [0.001, 0.001, 0.001, 0.001, 0.001, 0.01]
+
+    # Na bancada precisamos comparar encoder e LIO. open_loop=true apenas
+    # ecoaria o comando e fabricaria uma testemunha que nunca mediu a roda.
+    open_loop: false
+    enable_odom_tf: false
+
+    cmd_vel_timeout: 0.5
+    use_stamped_vel: false
+
+    # Limites conservadores para a primeira caracterização. O banco começa
+    # abaixo deles e cresce só depois de cada etapa aprovada.
+    linear.x.has_velocity_limits: true
+    linear.x.has_acceleration_limits: true
+    linear.x.has_jerk_limits: false
+    linear.x.max_velocity: 0.5
+    linear.x.min_velocity: -0.5
+    linear.x.max_acceleration: 0.5
+    linear.x.min_acceleration: -0.5
+    linear.x.max_jerk: 0.0
+    linear.x.min_jerk: 0.0
+
+    angular.z.has_velocity_limits: true
+    angular.z.has_acceleration_limits: true
+    angular.z.has_jerk_limits: false
+    angular.z.max_velocity: 1.5
+    angular.z.min_velocity: -1.5
+    angular.z.max_acceleration: 1.0
+    angular.z.min_acceleration: -1.0
+    angular.z.max_jerk: 0.0
+    angular.z.min_jerk: 0.0

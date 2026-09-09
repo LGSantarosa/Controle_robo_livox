@@ -24,6 +24,7 @@
 
   <xacro:arg name="sim" default="false"/>
   <xacro:arg name="controllers_yaml" default=""/>
+  <xacro:arg name="device" default="/dev/ttyUSB0"/>
 
   <!-- ==================== ONDE FICA A ORIGEM ====================
 
@@ -363,17 +364,19 @@
        A placa do robô 3 pode ser outra — o dono ia testar (§5.1). Se for outra,
        `deadband_speed`, os sinais de realimentação e o `device` são de outra
        máquina e nada disto vale. Se for a mesma, vale tudo. Até saber, este
-       bloco NÃO deve ir para o robô. -->
+       bloco só vai para a prova com rodas suspensas. A caracterização desliga
+       a compensação: com ela ligada, qualquer comando baixo é promovido a
+       100 RPM e a bancada mede o artifício do driver, não a planta. -->
   <xacro:unless value="$(arg sim)">
     <ros2_control name="HoverboardSystem" type="system">
       <hardware>
         <plugin>hoverboard_driver/hoverboard_driver</plugin>
         <param name="wheel_radius">${roda_raio}</param>
         <param name="max_velocity">1.0</param>
-        <param name="device">/dev/ttyUSB0</param>
+        <param name="device">$(arg device)</param>
         <param name="feedback_sign_left">1.0</param>
         <param name="feedback_sign_right">-1.0</param>
-        <param name="deadband_enable">true</param>
+        <param name="deadband_enable">false</param>
         <param name="deadband_speed">100.0</param>
       </hardware>
       <joint name="left_wheel_joint">

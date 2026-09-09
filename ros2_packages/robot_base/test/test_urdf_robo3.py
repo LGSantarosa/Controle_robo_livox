@@ -72,6 +72,12 @@ def _caixa(urdf, link_nome='base_link'):
     raise AssertionError('base_link sem caixa')
 
 
+def _param_hardware(urdf, nome):
+    p = urdf.find(f'./ros2_control/hardware/param[@name="{nome}"]')
+    assert p is not None, f'parâmetro de hardware {nome} não existe'
+    return (p.text or '').strip()
+
+
 # ---------------------------------------------------------------- apoio no chão
 
 @pytest.mark.parametrize('lado', ['left', 'right'])
@@ -223,6 +229,16 @@ def test_passa_na_porta_de_70_cm_em_QUALQUER_angulo(urdf):
 
 
 # ------------------------------------------------- URDF e controlador em par
+
+def test_bancada_real_nao_mascara_a_zona_morta(urdf):
+    """Com compensação, todo pulso baixo vira 100 RPM e deixa de ser medida."""
+    assert _param_hardware(urdf, 'deadband_enable') == 'false'
+
+
+def test_porta_serial_pode_ser_escolhida_sem_editar_o_urdf():
+    arvore = ET.fromstring(xacro.process_file(
+        XACRO, mappings={'sim': 'false', 'device': '/dev/serial/robo3'}).toxml())
+    assert _param_hardware(arvore, 'device') == '/dev/serial/robo3'
 
 def test_separacao_bate_com_o_controlador(urdf, params):
     """Divergir aqui é o controlador comandar um giro e o robô fazer outro.
