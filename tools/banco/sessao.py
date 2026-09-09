@@ -218,11 +218,11 @@ class GiroAcumulado:
 TRENA = {'wheel_separation': 0.270, 'wheel_radius': 0.080}
 
 CONTROLADOR = 'hoverboard_base_controller'
-PARAMS = ['wheel_separation', 'wheel_radius',
+PARAMS = ['wheel_separation', 'wheel_radius', 'open_loop',
           'left_wheel_names', 'right_wheel_names']
 
 
-def calibracao_viva(no, timeout=5.0):
+def calibracao_viva(no, timeout=5.0, esperado=None):
     """Pergunta ao controlador QUE ROBÔ ele acha que está dirigindo.
 
     Existe porque o `ambiente.txt` gravava o **commit**, e commit descreve o
@@ -268,7 +268,7 @@ def calibracao_viva(no, timeout=5.0):
         except Exception:
             calib[nome] = None
 
-    return linhas + laudo_calibracao(calib), calib
+    return linhas + laudo_calibracao(calib, esperado), calib
 
 
 def swap_aplicado(calib):
@@ -281,20 +281,22 @@ def swap_aplicado(calib):
     return 'right' in str(esq[0]) and 'left' in str(dir_[0])
 
 
-def laudo_calibracao(calib):
+def laudo_calibracao(calib, esperado=None):
     """Compara o que a base carregou com a trena. Parte pura, para poder ser
     testada sem subir ROS — a lógica é o que erra, não o transporte."""
     linhas = []
-    for nome, esperado in TRENA.items():
+    referencia = esperado or TRENA
+    for nome, valor_esperado in referencia.items():
         v = calib.get(nome)
         if v is None:
             linhas.append(f'  [aviso] {nome} não veio do controlador')
-        elif abs(v - esperado) < 1e-6:
+        elif abs(v - valor_esperado) < 1e-6:
             linhas.append(f'  [ok] {nome} = {v:.4f}  (bate com a trena)')
         else:
             linhas.append(f'  [ATENÇÃO] {nome} = {v:.4f}, e a trena mediu '
-                          f'{esperado:.4f}')
-            linhas.append(f'            desvio de {100 * (v - esperado) / esperado:+.1f}% '
+                          f'{valor_esperado:.4f}')
+            linhas.append(f'            desvio de '
+                          f'{100 * (v - valor_esperado) / valor_esperado:+.1f}% '
                           f'— ou o build faltou, ou alguém mudou de propósito.')
             linhas.append(f'            Não estou parando a sessão: fica '
                           f'gravado no ambiente.txt e o')
@@ -316,7 +318,7 @@ def laudo_calibracao(calib):
     return linhas
 
 
-def confere(sim=False, mexer=False):
+def confere(sim=False, mexer=False, esperado=None):
     """Prova que a base está de pé ANTES de qualquer medida.
 
     Devolve (ok, linhas). Bloqueia a sessão quando falha: um CSV gravado sem
@@ -405,7 +407,7 @@ def confere(sim=False, mexer=False):
     # antemão um giro invertido, em vez de virar mistério com o robô andando.
     linhas.append('')
     linhas.append('  --- calibração viva (o que o controlador carregou) ---')
-    l_calib, calib = calibracao_viva(no)
+    l_calib, calib = calibracao_viva(no, esperado=esperado)
     linhas += l_calib
 
     if ok and mexer:
