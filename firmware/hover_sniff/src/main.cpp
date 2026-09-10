@@ -11,7 +11,7 @@
 //   eco   bytes que batem com o frame que a MEGA acabou de mandar
 //
 // Leitura: rx=0 em todos os bauds -> ninguém fala no 19 (cabo, GND, conector,
-// placa desligada). rx>0 só num baud com cdab>0 -> placa viva nesse baud.
+// placa desligada ou sem transmitir nesse conector). rx>0 só num baud com cdab>0 -> placa viva nesse baud.
 // rx grande com eco≈rx -> curto/loopback TX↔RX, não é a placa.
 
 #include <Arduino.h>
@@ -34,6 +34,11 @@ static Command zero() {
 static void janela(uint32_t baud) {
     Serial1.end();
     Serial1.begin(baud);
+    // Pull-up no RX1: sem ele o 19 flutua quando a placa não fala, e capta por
+    // indução as bordas do fio do 18 que corre no mesmo cabo — um "eco" parcial
+    // que se confunde com curto (medido com o cabo solto da placa, 2026-09-10).
+    // Com a linha presa em HIGH, rx>0 só se alguém de fato transmitir.
+    pinMode(19, INPUT_PULLUP);
     while (Serial1.available()) Serial1.read();
 
     const Command c = zero();
