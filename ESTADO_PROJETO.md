@@ -27,8 +27,16 @@ chave de GitHub de lá é de outra conta). O `.bashrc` e a udev são do robô 1 
 | volta da placa (azul → 19) | ❓ nunca lida; PL2303 tem RX com defeito |
 | `setup_livox.sh` em máquina limpa | 🔴 falha (compila `robot_base` sem `hoverboard_driver`) |
 | driver ROS pela MEGA | ⬜ falta `device:=/dev/ttyACM0` e a geometria do robô 3 |
+| teclado de demonstração (`tools/teclado_placa.py`, v1) | 🔴 **não confiável**: às vezes perfeito, às vezes atrasa ou não anda, sem nada mudar |
 
-Detalhe e custo do diagnóstico: `docs/DIARIO.md`, 2026-09-10.
+> 🔴 **Veredito do dono em 10-09: "um lixo" o que estamos testando.** O PC manda
+> certo (20 ms cravados em todos os CSVs); a placa responde de forma
+> intermitente e **nenhum frame de resposta dela chegou**. Próximo passo
+> obrigatório: fazer a volta da placa chegar (bateria, cmd aceito, rpm) antes de
+> mexer em qualquer outra coisa. Cinco versões de teclado sem esse instrumento
+> foram chute.
+
+Detalhe, as cinco versões e o custo do diagnóstico: `docs/DIARIO.md`, 2026-09-10.
 
 ---
 

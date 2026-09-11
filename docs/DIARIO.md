@@ -8010,3 +8010,49 @@ driver pela MEGA —, mas o diagnóstico de "GND ruim" e "placa muda" caiu.
   malha aberta: odometria de roda zerada.
 - A geometria do robô 3 (bitola 0,425, raio 0,0835) ainda não está no caminho do
   robô real — o `tracao.launch.py` carrega o `robo2.urdf.xacro`.
+
+### 🔴 Depois: o teclado para demonstração — e o veredito do dono é "um lixo"
+
+O dono quis dirigir no teclado para mostrar aos amigos. `tools/teclado_placa.py`
+fala o 0xABCD pela ponte da MEGA, 50 Hz sempre (zero sem tecla), CSV por sessão
+em `~/bancada_robo3/` no notebook. Cinco versões na mesma noite:
+
+| commit | como lê a tecla | o que o dono disse |
+|---|---|---|
+| `637274b` v1 | terminal, segura anda, 0,6 s sem tecla zera | w andou para trás; "não está constante", dá pulsos |
+| `147d5a3` v2 | terminal, um toque anda até espaço | "não tá constante"; roda seguia sem tecla |
+| `e1a235a`/`d79ee8f` v3 | janela Tk (KeyPress/KeyRelease), a/d pivô | "pior que antes, só aceita às vezes, w e s não fazem nada"; **andou para a frente sozinho** e parou sozinho |
+| `ef3e002` v4 | `/dev/input` do kernel (sudo) | "resposta super atrasada" |
+| `69e4add` v5 | v4 + compensação de zona morta copiada do `hoverboard_driver` | "um lixo" |
+| `5625853` | **volta à v1** (só o sinal da frente em -1) | "também está um lixo"… e depois "foi uma beleza, às vezes ativa o modo flow e aceita tudo na hora" — **sem ninguém mexer em nada** |
+
+**O que os CSVs mostram, em todas as versões:** o notebook mandou a 20,0 ms
+(máx 26), sem buraco, e a tecla virou comando no mesmo ciclo. Na v1 o repeat do
+terminal funcionou (teclas seguradas viraram trechos contínuos de 1 a 3,8 s) — o
+meu diagnóstico de "o terminal não repete" estava errado, porque a v1 só gravava
+a tecla quando ela caía no ciclo de envio. O arranque da v1 e da v4 foi idêntico
+ciclo a ciclo (15, 30, 45…) e o dono sentiu diferente. No arranque "sozinho" da
+v3 o CSV não tem alvo ≠ 0 sem tecla; não dá para dizer se foi a janela perdendo o
+"soltou" (w registrado 7,1 s) ou a placa agindo sozinha.
+
+**Conclusão honesta: o que testamos hoje não é confiável.** O mesmo comando,
+mandado igual, às vezes vai perfeito, às vezes demora, às vezes não vai — e isso
+mudou sem nada mudar do lado do PC nem da fiação. A causa está depois da MEGA e
+eu não tenho como vê-la: **nenhum frame de resposta da placa chegou a noite
+inteira**, nem com o azul no pino 19. Cada versão nova do teclado foi chute sem
+instrumento, e o dono pagou em bateria e paciência.
+
+Hipóteses em aberto, nenhuma medida: (1) a placa alternando entre travada e armada
+(a trava de 01-09); (2) bateria das rodas fraca — o primeiro tranco de 300
+**desligou a placa**; (3) o azul no 19 trazendo ruído que a ponte repassa e
+entope a MEGA, atrasando os comandos (proposta mas **não testada**: o dono não
+tirou o fio e mesmo assim oscilou entre bom e ruim, o que enfraquece essa).
+
+### Pendências para a próxima sessão
+
+1. **Fazer a resposta da placa chegar** (bateria, cmd aceito, rpm) — antes de
+   qualquer outra mudança; sem ela não há diagnóstico, só palpite.
+2. Medir a bateria das rodas sob carga.
+3. Ponte que não repassa ruído (só frames 0xABCD válidos) — se (3) se confirmar.
+4. Corrigir o `setup_livox.sh` para máquina limpa.
+5. Driver ROS pela MEGA (`device:=/dev/ttyACM0`) e geometria do robô 3.
