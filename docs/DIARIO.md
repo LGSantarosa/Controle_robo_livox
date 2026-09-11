@@ -7949,3 +7949,64 @@ As saídas, em ordem de custo, ficam para decidir COM o dono:
    com `passagem_alinha_rumo_deg: 10,0` (o número certo, pela conta acima) e
    hoje DESLIGADO (`passagem_estreita_habilitada: False`);
 3. **não passar por essa porta** — se houver outra rota, é a mais barata.
+
+---
+
+## 🔌 2026-09-10 (BANCADA, notebook novo) — A MEGA GIROU AS RODAS, E O DEFEITO ERA MEU
+
+**Máquina nova para o robô 3**: Dell Latitude 3490, `ubuntu@10.127.116.150`,
+Ubuntu 24.04 + Jazzy. Já tinha o `Controle_robo_web` do robô 1 no `.bashrc` e
+a regra udev dele (`/dev/mega` por porta 1-2) — **nenhum dos dois foi tocado**.
+Repo em `~/Workspace/Controle_robo_livox`, chegando por `git push` para um bare
+no notebook (`~/Workspace/Controle_robo_livox.git`, remoto `notebook`), porque a
+chave de GitHub dele é de outra conta e o repo é privado. Faltavam
+`ros2-control`, `controller-manager`, `ros2-controllers`, `twist-mux`,
+`pointcloud-to-laserscan` e `rosbridge-server` (apt). Build: 8 pacotes.
+
+⚠️ **Bug achado no caminho: `setup_livox.sh` falha em máquina limpa.** Ele
+compila `--packages-select livox_ros_driver2 fast_lio robot_base`, e o
+`robot_base` depende do `hoverboard_driver`, que numa máquina nova não existe.
+Nas máquinas antigas nunca apareceu porque o driver já estava compilado.
+Contornado com um build completo. Correção no script: pendente.
+
+### A placa: o que se mediu, na ordem
+
+```
+USB-TTL PL2303 direto na placa      beep muda, rodas GIRAM (3 pulsos, 1 desligou a placa)
+  volta da placa                     NADA: loopback com jumper RX-TX = 1 de 256 bytes
+                                     -> o RX do adaptador está com defeito, não a placa
+MEGA, loopback 18<->19 pela ponte    256 de 256 idênticos -> MEGA, UART e ponte bons
+MEGA -> placa, pulsos avulsos        nada, nem beep (4 tentativas)
+MEGA -> placa, 30 s de zero a 50 Hz
+  + dono religa/gira até o beep      GIROU
+```
+
+### A causa, que estava escrita desde 01-09
+
+`Controle_robo_web_hover/BANCADA_HOVER_2026-09-01.md` §5: *"Se a placa ficar um
+tempo sem receber comando, ela cai em timeout e volta a travar; zeros mandados
+depois não recuperam."* Cada teste meu pela MEGA abria a porta (reset de ~2 s
+calado), mandava 1 s de zero e o pulso — **sempre numa placa já travada**, porque
+entre um teste e outro o dono trocava fio com a placa sem comando. Pelo PL2303
+girou porque a placa tinha acabado de ser religada (tinha desligado no tranco).
+Nas corridas avulsas o ritmo ainda caía para ~33 frames/s; a que girou manteve 50
+cravados. As duas coisas mudaram juntas, então a separação não está medida — mas
+a trava é a que o documento de 01-09 já descrevia.
+
+**O custo:** ~uma hora caçando GND, curto, indução e placa muda, com três sketches
+de diagnóstico (`hover_sniff`, `hover_escuta`, `hover_ponte`). O dono afirmou
+desde o início que Mega, fios e placa tinham funcionado na semana anterior; era
+dado, e eu tratei como hipótese. Os sketches ficam — a ponte é o caminho do
+driver pela MEGA —, mas o diagnóstico de "GND ruim" e "placa muda" caiu.
+
+### O que isto vira para o driver
+
+- A ponte (`firmware/hover_ponte`) deixa o `hoverboard_driver` falar com a placa
+  pela MEGA trocando só o `device` para `/dev/ttyACM0`.
+- **Arme é ritual**: com o comando fluindo sem buraco, religar a placa ou girar
+  as rodas até o beep mudar. Qualquer silêncio longo trava de novo.
+- A volta da placa segue sem medir: o azul nunca chegou legível (adaptador com
+  RX ruim; na MEGA os testes foram com a placa travada). Sem ela o driver roda em
+  malha aberta: odometria de roda zerada.
+- A geometria do robô 3 (bitola 0,425, raio 0,0835) ainda não está no caminho do
+  robô real — o `tracao.launch.py` carrega o `robo2.urdf.xacro`.

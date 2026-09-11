@@ -11,6 +11,27 @@
 
 ---
 
+## 🔌 10-09 (BANCADA) — ROBÔ 3: A MEGA GIRA AS RODAS NO NOTEBOOK NOVO
+
+Notebook `ubuntu@10.127.116.150` (Latitude 3490, 24.04 + Jazzy) com o repo em
+`~/Workspace/Controle_robo_livox`, compilado. Deploy: `git push` para o bare
+`~/Workspace/Controle_robo_livox.git` e `fetch/reset` do remoto `notebook` (a
+chave de GitHub de lá é de outra conta). O `.bashrc` e a udev são do robô 1 e
+**não foram tocados**: carregar à mão `source install/setup.bash`.
+
+| o quê | estado |
+|---|---|
+| MEGA com `firmware/hover_ponte` (USB↔Serial1, 115200) | ✅ gravada, loopback 256/256 |
+| MEGA → placa (18→verde, GND) | ✅ **girou** as rodas |
+| arme da placa | ⚠️ comando SEM buraco + religar/girar até o beep mudar; silêncio trava |
+| volta da placa (azul → 19) | ❓ nunca lida; PL2303 tem RX com defeito |
+| `setup_livox.sh` em máquina limpa | 🔴 falha (compila `robot_base` sem `hoverboard_driver`) |
+| driver ROS pela MEGA | ⬜ falta `device:=/dev/ttyACM0` e a geometria do robô 3 |
+
+Detalhe e custo do diagnóstico: `docs/DIARIO.md`, 2026-09-10.
+
+---
+
 ## 🔴 20-08 (3ª leva, dev) — A PORTA 2 TEM 70 cm E O ROBÔ 55,5 cm
 
 > **Leia isto antes de qualquer sintonia.** Enquanto esta conta estiver de pé,
