@@ -1,54 +1,59 @@
 #!/usr/bin/env python3
 """Dirigir o robô 3 pelo teclado, direto na placa de hover (sem ROS).
 
-Fala o protocolo 0xABCD a 115200 pela MEGA com a `firmware/hover_ponte`
-(ou por um USB-TTL: --porta /dev/ttyUSB0). Feito para demonstração em
-bancada/chão, não para navegação.
+Abre uma janela e lê APERTOU/SOLTOU de verdade (Tk), em vez de depender do
+repeat do terminal. Fala o protocolo 0xABCD a 115200 pela MEGA com a
+`firmware/hover_ponte` (ou por um USB-TTL: --porta /dev/ttyUSB0).
+Feito para demonstração, não para navegação.
 
-O que ele garante, e por quê (bancada 01-09 e 10-09):
-  - manda comando a 50 Hz O TEMPO TODO, zero quando nada está apertado: a placa
-    trava depois de um silêncio, e zeros mandados depois NÃO destravam;
-  - modo CONSTANTE (padrão): um toque em w anda e SEGUE andando até espaço.
-    Em 10-09 o terminal do notebook não repetia tecla segurada (3 teclas em
-    44 s no CSV), e o modo de segurar virava anda-0,6 s-para. O modo antigo
-    fica em --segurar (sem tecla por 0,6 s volta a zero);
-  - rampa de velocidade: o degrau seco de 0 a 300 desligou a placa em 10-09;
+Comportamento (pedido do dono, 10-09):
+  - SEGURANDO w/s anda, SOLTOU para. Nada apertado = zero, sempre.
+  - a/d é PIVÔ (uma roda para cada lado), não curva. a/d têm prioridade
+    sobre w/s.
+  - velocidade CONSTANTE enquanto segura; rampa curta só para não dar degrau
+    seco (o degrau de 0 a 300 desligou a placa em 10-09). Soltar freia em
+    ~0,1 s.
+  - a janela perdeu o foco -> zero (tecla "presa" não fica andando).
+
+Por que assim (bancada 01-09 e 10-09):
+  - uma thread manda comando a 50 Hz O TEMPO TODO, zero quando nada está
+    apertado: a placa trava depois de um silêncio, e zeros mandados depois
+    NÃO destravam;
   - se o script morrer, a MEGA cala e a placa zera pelo timeout dela.
 
-Uso (no terminal do notebook, com a MEGA em /dev/ttyACM0):
+Uso (no notebook, com a MEGA em /dev/ttyACM0):
     python3 tools/teclado_placa.py
-    python3 tools/teclado_placa.py --vel 200 --giro 150
+    python3 tools/teclado_placa.py --vel 200 --giro 250
 
-Teclas:
-    w / s     frente / ré, constante (zera o giro)
-    a / d     gira esquerda / direita, constante (soma com w/s)
-    espaço    PARA na hora
-    + / -     velocidade máxima +50 / -50
-    i         inverte frente/ré (se o 'w' andar para trás)
-    o         inverte o giro     (se o 'a' girar para a direita)
-    q         sai (manda zero antes de fechar)
+Teclas (com a JANELA em foco):
+    w / s     frente / ré      (segurando)
+    a / d     pivô esq / dir   (segurando)
+    espaço    zera tudo
+    + / -     velocidade de w/s  ±50
+    [ / ]     velocidade do pivô ±50
+    i / o     inverte frente / inverte pivô (se sair trocado)
+    q / Esc   sai (manda zero antes de fechar)
 
-Arme: com o script rodando (já mandando zero), religue a placa ou gire as duas
+Arme: com a janela aberta (já mandando zero), religue a placa ou gire as duas
 rodas com a mão até o beep mudar. Só então comande.
 """
 
 import argparse
 import csv
 import os
-import select
 import struct
-import sys
-import termios
+import threading
 import time
-import tty
+import tkinter as tk
 
 import serial
 
 START = 0xABCD
-PERIODO = 0.02          # 50 Hz
-SEM_TECLA_PARA = 0.6    # s sem tecla -> alvo zero
-RAMPA = 15              # passo máximo por ciclo (750/s: 0 -> 300 em 0,4 s)
-VEL_MAX_ABS = 600       # teto do '+', não passa disso
+PERIODO = 0.02        # 50 Hz
+RAMPA_SOBE = 15       # por ciclo: 0 -> 250 em ~0,34 s
+RAMPA_DESCE = 50      # por ciclo: 250 -> 0 em 0,1 s
+SOLTOU_DEBOUNCE_MS = 60   # o autorepeat do X/Wayland manda solta+aperta em rajada
+TETO = 600
 
 
 def frame(steer, speed):
@@ -56,101 +61,166 @@ def frame(steer, speed):
                        (START ^ (steer & 0xFFFF) ^ (speed & 0xFFFF)) & 0xFFFF)
 
 
-def aproxima(atual, alvo):
-    if alvo > atual:
-        return min(alvo, atual + RAMPA)
-    return max(alvo, atual - RAMPA)
+def alvo(teclas, vel, giro, sinal_frente, sinal_giro):
+    """(speed, steer) desejados para o conjunto de teclas seguradas.
+
+    A placa distribui speedR = speed - steer, speedL = speed + steer, então
+    speed=0 com steer≠0 é pivô puro."""
+    a, d = 'a' in teclas, 'd' in teclas
+    if a != d:
+        return 0, (-giro if a else giro) * sinal_giro
+    w, s = 'w' in teclas, 's' in teclas
+    if w != s:
+        return (vel if w else -vel) * sinal_frente, 0
+    return 0, 0
+
+
+def aproxima(atual, desejado):
+    if desejado == atual:
+        return atual
+    # acelerar = afastar do zero; frear = aproximar do zero (ou trocar de sinal)
+    acelerando = abs(desejado) > abs(atual) and (atual == 0 or (desejado > 0) == (atual > 0))
+    passo = RAMPA_SOBE if acelerando else RAMPA_DESCE
+    if desejado > atual:
+        return min(desejado, atual + passo)
+    return max(desejado, atual - passo)
+
+
+class Controle:
+    def __init__(self, porta, vel, giro, caminho_csv):
+        self.lock = threading.Lock()
+        self.teclas = set()
+        self.vel, self.giro = vel, giro
+        # -1: no robô 3 com speed>0 ele anda para trás (dono, 10-09).
+        self.sinal_frente, self.sinal_giro = -1, 1
+        self.v = self.g = 0
+        self.rodando = True
+        self.s = serial.Serial(porta, 115200, timeout=0)
+        time.sleep(2.5)  # a MEGA reinicia ao abrir a porta
+        self.s.reset_input_buffer()
+        self.fcsv = open(caminho_csv, 'w', newline='')
+        self.log = csv.writer(self.fcsv)
+        self.log.writerow(['t', 'teclas', 'alvo_speed', 'alvo_steer', 'speed', 'steer'])
+        self.t0 = time.time()
+        self.thread = threading.Thread(target=self._envia, daemon=True)
+        self.thread.start()
+
+    def _envia(self):
+        prox = time.time()
+        while self.rodando:
+            with self.lock:
+                teclas = ''.join(sorted(self.teclas))
+                av, ag = alvo(self.teclas, self.vel, self.giro,
+                              self.sinal_frente, self.sinal_giro)
+            self.v = aproxima(self.v, av)
+            self.g = aproxima(self.g, ag)
+            self.s.write(frame(self.g, self.v))
+            self.s.read(512)  # descarta a volta: a placa não responde legível
+            self.log.writerow([f'{time.time() - self.t0:.3f}', teclas, av, ag, self.v, self.g])
+            prox += PERIODO
+            espera = prox - time.time()
+            if espera > 0:
+                time.sleep(espera)
+            else:
+                prox = time.time()  # atrasou: não dispara rajada
+
+    def fecha(self):
+        self.rodando = False
+        self.thread.join(timeout=1)
+        for _ in range(10):
+            self.s.write(frame(0, 0))
+            time.sleep(PERIODO)
+        self.s.close()
+        self.fcsv.close()
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('--porta', default='/dev/ttyACM0')
-    ap.add_argument('--vel', type=int, default=250, help='speed máximo (padrão 250)')
-    ap.add_argument('--giro', type=int, default=150, help='steer máximo (padrão 150)')
-    ap.add_argument('--segurar', action='store_true',
-                    help='modo antigo: só anda com a tecla segurada (precisa de repeat do teclado)')
+    ap.add_argument('--vel', type=int, default=250, help='speed de w/s (padrão 250)')
+    ap.add_argument('--giro', type=int, default=250, help='steer do pivô (padrão 250)')
     a = ap.parse_args()
 
     os.makedirs(os.path.expanduser('~/bancada_robo3'), exist_ok=True)
     caminho_csv = os.path.expanduser(time.strftime('~/bancada_robo3/teclado_%Y%m%d_%H%M%S.csv'))
+    print(f'Abrindo {a.porta} (a MEGA reinicia ao abrir, 2,5 s)...')
+    c = Controle(a.porta, a.vel, a.giro, caminho_csv)
+    print(f'Mandando zero. Log: {caminho_csv}')
 
-    s = serial.Serial(a.porta, 115200, timeout=0)
-    print(f'Abrindo {a.porta}... (a MEGA reinicia ao abrir, 2,5 s)')
-    time.sleep(2.5)
-    s.reset_input_buffer()
+    raiz = tk.Tk()
+    raiz.title('Robô 3 — teclado')
+    raiz.geometry('520x260')
+    info = tk.Label(raiz, font=('monospace', 14), justify='left')
+    info.pack(expand=True, fill='both', padx=16, pady=16)
+    pendente = {}  # tecla -> id do after() que vai soltá-la
 
-    vel_max, giro_max = a.vel, a.giro
-    # -1: no robô 3 com speed>0 ele anda para trás (dono, 10-09). 'i' inverte.
-    sinal_frente, sinal_giro = -1, 1
-    alvo_v = alvo_g = 0
-    v = g = 0
-    ultima_tecla = 0.0
-    fd = sys.stdin.fileno()
-    antigo = termios.tcgetattr(fd)
+    def solta(k):
+        pendente.pop(k, None)
+        with c.lock:
+            c.teclas.discard(k)
 
-    print(__doc__[__doc__.index('Teclas:'):])
-    print(f'\nMANDANDO ZERO. Arme agora (religue a placa ou gire as rodas até o beep mudar).')
-    print(f'vel={vel_max} giro={giro_max}   log: {caminho_csv}\n')
+    def aperta(ev):
+        k = ev.keysym.lower()
+        if k in pendente:                 # era autorepeat: cancela a soltura
+            raiz.after_cancel(pendente.pop(k))
+        if k in ('w', 'a', 's', 'd'):
+            with c.lock:
+                c.teclas.add(k)
+        elif k == 'space':
+            with c.lock:
+                c.teclas.clear()
+        elif k in ('plus', 'equal', 'kp_add'):
+            c.vel = min(TETO, c.vel + 50)
+        elif k in ('minus', 'kp_subtract'):
+            c.vel = max(50, c.vel - 50)
+        elif k == 'bracketright':
+            c.giro = min(TETO, c.giro + 50)
+        elif k == 'bracketleft':
+            c.giro = max(50, c.giro - 50)
+        elif k == 'i':
+            c.sinal_frente = -c.sinal_frente
+        elif k == 'o':
+            c.sinal_giro = -c.sinal_giro
+        elif k in ('q', 'escape'):
+            sair()
 
-    with open(caminho_csv, 'w', newline='') as fcsv:
-        log = csv.writer(fcsv)
-        log.writerow(['t', 'tecla', 'alvo_speed', 'alvo_steer', 'speed', 'steer'])
-        t0 = time.time()
-        prox = t0
-        try:
-            tty.setcbreak(fd)
-            while True:
-                tecla = ''
-                espera = max(0.0, prox - time.time())
-                if select.select([sys.stdin], [], [], espera)[0]:
-                    tecla = sys.stdin.read(1).lower()
+    def soltou(ev):
+        k = ev.keysym.lower()
+        if k in ('w', 'a', 's', 'd'):
+            if k in pendente:
+                raiz.after_cancel(pendente[k])
+            pendente[k] = raiz.after(SOLTOU_DEBOUNCE_MS, solta, k)
 
-                agora = time.time()
-                if tecla:
-                    if tecla == 'q':
-                        break
-                    elif tecla == ' ':
-                        alvo_v = alvo_g = v = g = 0
-                    elif tecla in 'ws':
-                        alvo_v = (vel_max if tecla == 'w' else -vel_max) * sinal_frente
-                        if not a.segurar:
-                            alvo_g = 0
-                        ultima_tecla = agora
-                    elif tecla in 'ad':
-                        alvo_g = (-giro_max if tecla == 'a' else giro_max) * sinal_giro
-                        ultima_tecla = agora
-                    elif tecla in '+=':
-                        vel_max = min(VEL_MAX_ABS, vel_max + 50)
-                    elif tecla == '-':
-                        vel_max = max(50, vel_max - 50)
-                    elif tecla == 'i':
-                        sinal_frente = -sinal_frente
-                    elif tecla == 'o':
-                        sinal_giro = -sinal_giro
+    def perdeu_foco(_ev):
+        with c.lock:
+            c.teclas.clear()
 
-                if a.segurar and agora - ultima_tecla > SEM_TECLA_PARA:
-                    alvo_v = alvo_g = 0
+    def atualiza():
+        with c.lock:
+            t = ''.join(sorted(c.teclas)) or '-'
+        info.config(text=(
+            f'segurando: {t}\n\n'
+            f'speed = {c.v:5d}   steer = {c.g:5d}\n'
+            f'vel w/s = {c.vel}   pivô = {c.giro}\n'
+            f'frente {"+" if c.sinal_frente > 0 else "-"}   pivô {"+" if c.sinal_giro > 0 else "-"}\n\n'
+            'w/s anda  a/d pivô  +/- vel  [ ] pivô  q sai'))
+        raiz.after(50, atualiza)
 
-                if agora >= prox:
-                    v = aproxima(v, alvo_v)
-                    g = aproxima(g, alvo_g)
-                    s.write(frame(g, v))
-                    s.read(512)  # descarta a volta: a placa não responde legível
-                    log.writerow([f'{agora - t0:.3f}', tecla.strip(), alvo_v, alvo_g, v, g])
-                    prox += PERIODO
-                    if prox < agora:  # atrasou (terminal travou): não dispara rajada
-                        prox = agora + PERIODO
-                    sys.stdout.write(f'\r speed={v:5d}  steer={g:5d}  max={vel_max:4d}  '
-                                     f'frente={"+" if sinal_frente > 0 else "-"} '
-                                     f'giro={"+" if sinal_giro > 0 else "-"}   ')
-                    sys.stdout.flush()
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, antigo)
-            for _ in range(10):
-                s.write(frame(0, 0))
-                time.sleep(PERIODO)
-            s.close()
-            print(f'\nParado (zero enviado). Log em {caminho_csv}')
+    def sair():
+        c.fecha()
+        raiz.destroy()
+        print(f'Parado (zero enviado). Log em {caminho_csv}')
+
+    raiz.bind('<KeyPress>', aperta)
+    raiz.bind('<KeyRelease>', soltou)
+    raiz.bind('<FocusOut>', perdeu_foco)
+    raiz.protocol('WM_DELETE_WINDOW', sair)
+    atualiza()
+    try:
+        raiz.mainloop()
+    finally:
+        if c.rodando:
+            c.fecha()
 
 
 if __name__ == '__main__':
