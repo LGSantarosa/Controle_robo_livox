@@ -61,6 +61,32 @@ def frame(steer, speed):
                        (START ^ (steer & 0xFFFF) ^ (speed & 0xFFFF)) & 0xFFFF)
 
 
+FB_TAM = 18   # start, cmd1, cmd2, speedR, speedL, bat, temp, cmdLed, checksum
+
+
+def extrai_feedback(buf):
+    """Tira do buffer os frames de feedback válidos da placa.
+
+    Devolve (frames, resto). Cada frame é o dict dos campos; o checksum é o
+    XOR de todos os campos anteriores (hoverboard.h do mega_bridge)."""
+    frames = []
+    i = buf.find(b'\xcd\xab')
+    while i >= 0 and len(buf) - i >= FB_TAM:
+        c = struct.unpack('<HhhhhhhHH', buf[i:i + FB_TAM])
+        x = 0
+        for v in c[:-1]:
+            x ^= v & 0xFFFF
+        if x == c[-1]:
+            frames.append({'cmd1': c[1], 'cmd2': c[2], 'spdR': c[3], 'spdL': c[4],
+                           'bat': c[5] / 100.0, 'temp': c[6] / 10.0})
+            i = buf.find(b'\xcd\xab', i + FB_TAM)
+        else:
+            i = buf.find(b'\xcd\xab', i + 1)
+    if i < 0:
+        return frames, buf[-1:]          # guarda um byte: pode ser o 0xCD de um início
+    return frames, buf[i:]
+
+
 def alvo(teclas, vel, giro, sinal_frente, sinal_giro):
     """(speed, steer) desejados para o conjunto de teclas seguradas.
 
@@ -100,7 +126,11 @@ class Controle:
         self.s.reset_input_buffer()
         self.fcsv = open(caminho_csv, 'w', newline='')
         self.log = csv.writer(self.fcsv)
-        self.log.writerow(['t', 'teclas', 'alvo_speed', 'alvo_steer', 'speed', 'steer'])
+        self.log.writerow(['t', 'teclas', 'alvo_speed', 'alvo_steer', 'speed', 'steer',
+                           'fb_n', 'bat', 'cmd1', 'cmd2', 'spdR', 'spdL', 'temp'])
+        self.rx = b''
+        self.fb = None      # último feedback válido
+        self.fb_total = 0
         self.t0 = time.time()
         self.thread = threading.Thread(target=self._envia, daemon=True)
         self.thread.start()
@@ -115,8 +145,18 @@ class Controle:
             self.v = aproxima(self.v, av)
             self.g = aproxima(self.g, ag)
             self.s.write(frame(self.g, self.v))
-            self.s.read(512)  # descarta a volta: a placa não responde legível
-            self.log.writerow([f'{time.time() - self.t0:.3f}', teclas, av, ag, self.v, self.g])
+            # A volta da placa (azul -> pino 19 da MEGA). Sem o fio, só ruído
+            # e fb_n fica 0; com ele, o CSV mostra se a placa aceitou (cmd1/cmd2),
+            # se a roda girou (spdR/spdL) e a bateria afundando.
+            self.rx = (self.rx + self.s.read(512))[-4096:]
+            fbs, self.rx = extrai_feedback(self.rx)
+            if fbs:
+                self.fb = fbs[-1]
+                self.fb_total += len(fbs)
+            f = self.fb if fbs else None
+            self.log.writerow([f'{time.time() - self.t0:.3f}', teclas, av, ag, self.v, self.g,
+                               len(fbs)] + ([f['bat'], f['cmd1'], f['cmd2'], f['spdR'],
+                                             f['spdL'], f['temp']] if f else [''] * 6))
             prox += PERIODO
             espera = prox - time.time()
             if espera > 0:
@@ -198,8 +238,11 @@ def main():
     def atualiza():
         with c.lock:
             t = ''.join(sorted(c.teclas)) or '-'
+        f = c.fb
+        placa = (f'placa: {f["bat"]:.1f} V  cmd2={f["cmd2"]}  rodas R={f["spdR"]} L={f["spdL"]}'
+                 if f else 'placa: sem resposta (azul no pino 19?)')
         info.config(text=(
-            f'segurando: {t}\n\n'
+            f'segurando: {t}\n{placa}\n\n'
             f'speed = {c.v:5d}   steer = {c.g:5d}\n'
             f'vel w/s = {c.vel}   pivô = {c.giro}\n'
             f'frente {"+" if c.sinal_frente > 0 else "-"}   pivô {"+" if c.sinal_giro > 0 else "-"}\n\n'
