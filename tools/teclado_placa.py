@@ -8,17 +8,20 @@ bancada/chão, não para navegação.
 O que ele garante, e por quê (bancada 01-09 e 10-09):
   - manda comando a 50 Hz O TEMPO TODO, zero quando nada está apertado: a placa
     trava depois de um silêncio, e zeros mandados depois NÃO destravam;
-  - SEGURAR a tecla anda, SOLTAR para: sem tecla por 0,6 s volta a zero
-    (0,6 s porque o repeat do teclado demora ~0,5 s para começar);
-  - rampa de velocidade: o degrau seco de 0 a 300 desligou a placa em 10-09.
+  - modo CONSTANTE (padrão): um toque em w anda e SEGUE andando até espaço.
+    Em 10-09 o terminal do notebook não repetia tecla segurada (3 teclas em
+    44 s no CSV), e o modo de segurar virava anda-0,6 s-para. O modo antigo
+    fica em --segurar (sem tecla por 0,6 s volta a zero);
+  - rampa de velocidade: o degrau seco de 0 a 300 desligou a placa em 10-09;
+  - se o script morrer, a MEGA cala e a placa zera pelo timeout dela.
 
 Uso (no terminal do notebook, com a MEGA em /dev/ttyACM0):
     python3 tools/teclado_placa.py
     python3 tools/teclado_placa.py --vel 200 --giro 150
 
 Teclas:
-    w / s     frente / ré            (segurar)
-    a / d     gira esquerda / direita (segurar; combina com w/s)
+    w / s     frente / ré, constante (zera o giro)
+    a / d     gira esquerda / direita, constante (soma com w/s)
     espaço    PARA na hora
     + / -     velocidade máxima +50 / -50
     i         inverte frente/ré (se o 'w' andar para trás)
@@ -64,6 +67,8 @@ def main():
     ap.add_argument('--porta', default='/dev/ttyACM0')
     ap.add_argument('--vel', type=int, default=250, help='speed máximo (padrão 250)')
     ap.add_argument('--giro', type=int, default=150, help='steer máximo (padrão 150)')
+    ap.add_argument('--segurar', action='store_true',
+                    help='modo antigo: só anda com a tecla segurada (precisa de repeat do teclado)')
     a = ap.parse_args()
 
     os.makedirs(os.path.expanduser('~/bancada_robo3'), exist_ok=True)
@@ -75,7 +80,8 @@ def main():
     s.reset_input_buffer()
 
     vel_max, giro_max = a.vel, a.giro
-    sinal_frente, sinal_giro = 1, 1
+    # -1: no robô 3 com speed>0 ele anda para trás (dono, 10-09). 'i' inverte.
+    sinal_frente, sinal_giro = -1, 1
     alvo_v = alvo_g = 0
     v = g = 0
     ultima_tecla = 0.0
@@ -107,6 +113,8 @@ def main():
                         alvo_v = alvo_g = v = g = 0
                     elif tecla in 'ws':
                         alvo_v = (vel_max if tecla == 'w' else -vel_max) * sinal_frente
+                        if not a.segurar:
+                            alvo_g = 0
                         ultima_tecla = agora
                     elif tecla in 'ad':
                         alvo_g = (-giro_max if tecla == 'a' else giro_max) * sinal_giro
@@ -120,7 +128,7 @@ def main():
                     elif tecla == 'o':
                         sinal_giro = -sinal_giro
 
-                if agora - ultima_tecla > SEM_TECLA_PARA:
+                if a.segurar and agora - ultima_tecla > SEM_TECLA_PARA:
                     alvo_v = alvo_g = 0
 
                 if agora >= prox:
