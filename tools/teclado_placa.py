@@ -1,50 +1,50 @@
 #!/usr/bin/env python3
 """Dirigir o robô 3 pelo teclado, direto na placa de hover (sem ROS).
 
-Abre uma janela e lê APERTOU/SOLTOU de verdade (Tk), em vez de depender do
-repeat do terminal. Fala o protocolo 0xABCD a 115200 pela MEGA com a
-`firmware/hover_ponte` (ou por um USB-TTL: --porta /dev/ttyUSB0).
-Feito para demonstração, não para navegação.
+Velocidade SÓ enquanto a tecla está apertada. Soltou, zero. Nada apertado,
+zero — sempre.
 
-Comportamento (pedido do dono, 10-09):
-  - SEGURANDO w/s anda, SOLTOU para. Nada apertado = zero, sempre.
-  - a/d é PIVÔ (uma roda para cada lado), não curva. a/d têm prioridade
-    sobre w/s.
-  - velocidade CONSTANTE enquanto segura; rampa curta só para não dar degrau
-    seco (o degrau de 0 a 300 desligou a placa em 10-09). Soltar freia em
-    ~0,1 s.
-  - a janela perdeu o foco -> zero (tecla "presa" não fica andando).
+Lê o teclado direto do kernel (/dev/input/event*): cada tecla chega como
+APERTOU (1) / REPETIU (2) / SOLTOU (0), sem depender do repeat do terminal
+(que não entrega "soltou") nem de janela (o Tk no Wayland perdia eventos).
+Por isso precisa de sudo. Atenção: lê o teclado INTEIRO — digitar em outra
+janela também dirige o robô.
 
-Por que assim (bancada 01-09 e 10-09):
-  - uma thread manda comando a 50 Hz O TEMPO TODO, zero quando nada está
-    apertado: a placa trava depois de um silêncio, e zeros mandados depois
-    NÃO destravam;
-  - se o script morrer, a MEGA cala e a placa zera pelo timeout dela.
+Fala o protocolo 0xABCD a 115200 pela MEGA com a `firmware/hover_ponte`
+(ou por um USB-TTL: --porta /dev/ttyUSB0).
 
 Uso (no notebook, com a MEGA em /dev/ttyACM0):
-    python3 tools/teclado_placa.py
-    python3 tools/teclado_placa.py --vel 200 --giro 250
+    sudo python3 tools/teclado_placa.py
+    sudo python3 tools/teclado_placa.py --vel 200 --giro 250
 
-Teclas (com a JANELA em foco):
-    w / s     frente / ré      (segurando)
-    a / d     pivô esq / dir   (segurando)
-    espaço    zera tudo
-    + / -     velocidade de w/s  ±50
-    [ / ]     velocidade do pivô ±50
+Teclas (segurando):
+    w / ↑     frente            s / ↓     ré
+    a / ←     pivô esquerda     d / →     pivô direita
+    + / -     velocidade de frente/ré ±50
+    ] / [     velocidade do pivô ±50
     i / o     inverte frente / inverte pivô (se sair trocado)
     q / Esc   sai (manda zero antes de fechar)
 
-Arme: com a janela aberta (já mandando zero), religue a placa ou gire as duas
+Por que assim (bancada 01-09 e 10-09):
+  - manda comando a 50 Hz O TEMPO TODO, zero quando nada está apertado: a
+    placa trava depois de um silêncio, e zeros mandados depois NÃO destravam;
+  - rampa curta na subida: o degrau seco de 0 a 300 desligou a placa;
+  - se o script morrer, a MEGA cala e a placa zera pelo timeout dela.
+
+Arme: com o script rodando (já mandando zero), religue a placa ou gire as duas
 rodas com a mão até o beep mudar. Só então comande.
 """
 
 import argparse
 import csv
+import glob
 import os
+import pwd
+import select
 import struct
-import threading
+import sys
+import termios
 import time
-import tkinter as tk
 
 import serial
 
@@ -52,8 +52,19 @@ START = 0xABCD
 PERIODO = 0.02        # 50 Hz
 RAMPA_SOBE = 15       # por ciclo: 0 -> 250 em ~0,34 s
 RAMPA_DESCE = 50      # por ciclo: 250 -> 0 em 0,1 s
-SOLTOU_DEBOUNCE_MS = 60   # o autorepeat do X/Wayland manda solta+aperta em rajada
 TETO = 600
+
+# struct input_event (64 bits): timeval (2 x long), type u16, code u16, value s32
+EV_FMT = 'llHHi'
+EV_TAM = struct.calcsize(EV_FMT)
+EV_KEY = 1
+
+# código do kernel (linux/input-event-codes.h) -> nome usado aqui
+TECLA = {17: 'w', 103: 'w', 31: 's', 108: 's', 30: 'a', 105: 'a', 32: 'd', 106: 'd',
+         13: '+', 78: '+', 12: '-', 74: '-', 27: ']', 26: '[', 23: 'i', 24: 'o',
+         16: 'q', 1: 'q'}
+MOVE = {'w', 's', 'a', 'd'}
+FB_TAM = 18   # start, cmd1, cmd2, speedR, speedL, bat, temp, cmdLed, checksum
 
 
 def frame(steer, speed):
@@ -61,14 +72,8 @@ def frame(steer, speed):
                        (START ^ (steer & 0xFFFF) ^ (speed & 0xFFFF)) & 0xFFFF)
 
 
-FB_TAM = 18   # start, cmd1, cmd2, speedR, speedL, bat, temp, cmdLed, checksum
-
-
 def extrai_feedback(buf):
-    """Tira do buffer os frames de feedback válidos da placa.
-
-    Devolve (frames, resto). Cada frame é o dict dos campos; o checksum é o
-    XOR de todos os campos anteriores (hoverboard.h do mega_bridge)."""
+    """Tira do buffer os frames de feedback válidos da placa -> (frames, resto)."""
     frames = []
     i = buf.find(b'\xcd\xab')
     while i >= 0 and len(buf) - i >= FB_TAM:
@@ -83,12 +88,12 @@ def extrai_feedback(buf):
         else:
             i = buf.find(b'\xcd\xab', i + 1)
     if i < 0:
-        return frames, buf[-1:]          # guarda um byte: pode ser o 0xCD de um início
+        return frames, buf[-1:]
     return frames, buf[i:]
 
 
 def alvo(teclas, vel, giro, sinal_frente, sinal_giro):
-    """(speed, steer) desejados para o conjunto de teclas seguradas.
+    """(speed, steer) para as teclas seguradas. Pivô (a/d) tem prioridade.
 
     A placa distribui speedR = speed - steer, speedL = speed + steer, então
     speed=0 com steer≠0 é pivô puro."""
@@ -104,7 +109,6 @@ def alvo(teclas, vel, giro, sinal_frente, sinal_giro):
 def aproxima(atual, desejado):
     if desejado == atual:
         return atual
-    # acelerar = afastar do zero; frear = aproximar do zero (ou trocar de sinal)
     acelerando = abs(desejado) > abs(atual) and (atual == 0 or (desejado > 0) == (atual > 0))
     passo = RAMPA_SOBE if acelerando else RAMPA_DESCE
     if desejado > atual:
@@ -112,158 +116,149 @@ def aproxima(atual, desejado):
     return max(desejado, atual - passo)
 
 
-class Controle:
-    def __init__(self, porta, vel, giro, caminho_csv):
-        self.lock = threading.Lock()
-        self.teclas = set()
-        self.vel, self.giro = vel, giro
-        # -1: no robô 3 com speed>0 ele anda para trás (dono, 10-09).
-        self.sinal_frente, self.sinal_giro = -1, 1
-        self.v = self.g = 0
-        self.rodando = True
-        self.s = serial.Serial(porta, 115200, timeout=0)
-        time.sleep(2.5)  # a MEGA reinicia ao abrir a porta
-        self.s.reset_input_buffer()
-        self.fcsv = open(caminho_csv, 'w', newline='')
-        self.log = csv.writer(self.fcsv)
-        self.log.writerow(['t', 'teclas', 'alvo_speed', 'alvo_steer', 'speed', 'steer',
-                           'fb_n', 'bat', 'cmd1', 'cmd2', 'spdR', 'spdL', 'temp'])
-        self.rx = b''
-        self.fb = None      # último feedback válido
-        self.fb_total = 0
-        self.t0 = time.time()
-        self.thread = threading.Thread(target=self._envia, daemon=True)
-        self.thread.start()
+def teclados():
+    """Caminhos /dev/input/eventN de tudo que o kernel marca como teclado."""
+    achados, bloco = [], ''
+    with open('/proc/bus/input/devices') as f:
+        for linha in f.read().split('\n\n'):
+            bloco = linha
+            handlers = next((l for l in bloco.splitlines() if l.startswith('H: Handlers=')), '')
+            ev = next((l for l in bloco.splitlines() if l.startswith('B: EV=')), '')
+            if 'kbd' in handlers and ev.endswith('120013'):
+                for h in handlers.split('=')[1].split():
+                    if h.startswith('event'):
+                        achados.append('/dev/input/' + h)
+    return achados
 
-    def _envia(self):
-        prox = time.time()
-        while self.rodando:
-            with self.lock:
-                teclas = ''.join(sorted(self.teclas))
-                av, ag = alvo(self.teclas, self.vel, self.giro,
-                              self.sinal_frente, self.sinal_giro)
-            self.v = aproxima(self.v, av)
-            self.g = aproxima(self.g, ag)
-            self.s.write(frame(self.g, self.v))
-            # A volta da placa (azul -> pino 19 da MEGA). Sem o fio, só ruído
-            # e fb_n fica 0; com ele, o CSV mostra se a placa aceitou (cmd1/cmd2),
-            # se a roda girou (spdR/spdL) e a bateria afundando.
-            self.rx = (self.rx + self.s.read(512))[-4096:]
-            fbs, self.rx = extrai_feedback(self.rx)
-            if fbs:
-                self.fb = fbs[-1]
-                self.fb_total += len(fbs)
-            f = self.fb if fbs else None
-            self.log.writerow([f'{time.time() - self.t0:.3f}', teclas, av, ag, self.v, self.g,
-                               len(fbs)] + ([f['bat'], f['cmd1'], f['cmd2'], f['spdR'],
-                                             f['spdL'], f['temp']] if f else [''] * 6))
-            prox += PERIODO
-            espera = prox - time.time()
-            if espera > 0:
-                time.sleep(espera)
-            else:
-                prox = time.time()  # atrasou: não dispara rajada
 
-    def fecha(self):
-        self.rodando = False
-        self.thread.join(timeout=1)
-        for _ in range(10):
-            self.s.write(frame(0, 0))
-            time.sleep(PERIODO)
-        self.s.close()
-        self.fcsv.close()
+def casa_do_usuario():
+    dono = os.environ.get('SUDO_USER')
+    return pwd.getpwnam(dono) if dono else pwd.getpwuid(os.getuid())
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('--porta', default='/dev/ttyACM0')
-    ap.add_argument('--vel', type=int, default=250, help='speed de w/s (padrão 250)')
+    ap.add_argument('--vel', type=int, default=250, help='speed de frente/ré (padrão 250)')
     ap.add_argument('--giro', type=int, default=250, help='steer do pivô (padrão 250)')
+    ap.add_argument('--teclado', action='append',
+                    help='/dev/input/eventN (padrão: todos os teclados)')
     a = ap.parse_args()
 
-    os.makedirs(os.path.expanduser('~/bancada_robo3'), exist_ok=True)
-    caminho_csv = os.path.expanduser(time.strftime('~/bancada_robo3/teclado_%Y%m%d_%H%M%S.csv'))
-    print(f'Abrindo {a.porta} (a MEGA reinicia ao abrir, 2,5 s)...')
-    c = Controle(a.porta, a.vel, a.giro, caminho_csv)
-    print(f'Mandando zero. Log: {caminho_csv}')
-
-    raiz = tk.Tk()
-    raiz.title('Robô 3 — teclado')
-    raiz.geometry('520x260')
-    info = tk.Label(raiz, font=('monospace', 14), justify='left')
-    info.pack(expand=True, fill='both', padx=16, pady=16)
-    pendente = {}  # tecla -> id do after() que vai soltá-la
-
-    def solta(k):
-        pendente.pop(k, None)
-        with c.lock:
-            c.teclas.discard(k)
-
-    def aperta(ev):
-        k = ev.keysym.lower()
-        if k in pendente:                 # era autorepeat: cancela a soltura
-            raiz.after_cancel(pendente.pop(k))
-        if k in ('w', 'a', 's', 'd'):
-            with c.lock:
-                c.teclas.add(k)
-        elif k == 'space':
-            with c.lock:
-                c.teclas.clear()
-        elif k in ('plus', 'equal', 'kp_add'):
-            c.vel = min(TETO, c.vel + 50)
-        elif k in ('minus', 'kp_subtract'):
-            c.vel = max(50, c.vel - 50)
-        elif k == 'bracketright':
-            c.giro = min(TETO, c.giro + 50)
-        elif k == 'bracketleft':
-            c.giro = max(50, c.giro - 50)
-        elif k == 'i':
-            c.sinal_frente = -c.sinal_frente
-        elif k == 'o':
-            c.sinal_giro = -c.sinal_giro
-        elif k in ('q', 'escape'):
-            sair()
-
-    def soltou(ev):
-        k = ev.keysym.lower()
-        if k in ('w', 'a', 's', 'd'):
-            if k in pendente:
-                raiz.after_cancel(pendente[k])
-            pendente[k] = raiz.after(SOLTOU_DEBOUNCE_MS, solta, k)
-
-    def perdeu_foco(_ev):
-        with c.lock:
-            c.teclas.clear()
-
-    def atualiza():
-        with c.lock:
-            t = ''.join(sorted(c.teclas)) or '-'
-        f = c.fb
-        placa = (f'placa: {f["bat"]:.1f} V  cmd2={f["cmd2"]}  rodas R={f["spdR"]} L={f["spdL"]}'
-                 if f else 'placa: sem resposta (azul no pino 19?)')
-        info.config(text=(
-            f'segurando: {t}\n{placa}\n\n'
-            f'speed = {c.v:5d}   steer = {c.g:5d}\n'
-            f'vel w/s = {c.vel}   pivô = {c.giro}\n'
-            f'frente {"+" if c.sinal_frente > 0 else "-"}   pivô {"+" if c.sinal_giro > 0 else "-"}\n\n'
-            'w/s anda  a/d pivô  +/- vel  [ ] pivô  q sai'))
-        raiz.after(50, atualiza)
-
-    def sair():
-        c.fecha()
-        raiz.destroy()
-        print(f'Parado (zero enviado). Log em {caminho_csv}')
-
-    raiz.bind('<KeyPress>', aperta)
-    raiz.bind('<KeyRelease>', soltou)
-    raiz.bind('<FocusOut>', perdeu_foco)
-    raiz.protocol('WM_DELETE_WINDOW', sair)
-    atualiza()
+    caminhos = a.teclado or teclados()
     try:
-        raiz.mainloop()
+        fds = [os.open(p, os.O_RDONLY | os.O_NONBLOCK) for p in caminhos]
+    except PermissionError:
+        sys.exit('Sem acesso ao teclado do kernel: rode com sudo.')
+    if not fds:
+        sys.exit('Nenhum teclado achado em /proc/bus/input/devices.')
+
+    usuario = casa_do_usuario()
+    pasta = os.path.join(usuario.pw_dir, 'bancada_robo3')
+    os.makedirs(pasta, exist_ok=True)
+    caminho_csv = os.path.join(pasta, time.strftime('teclado_%Y%m%d_%H%M%S.csv'))
+
+    print(f'Teclados: {", ".join(caminhos)}')
+    print(f'Abrindo {a.porta} (a MEGA reinicia ao abrir, 2,5 s)...')
+    s = serial.Serial(a.porta, 115200, timeout=0)
+    time.sleep(2.5)
+    s.reset_input_buffer()
+
+    vel, giro = a.vel, a.giro
+    # -1: no robô 3 com speed>0 ele anda para trás (dono, 10-09).
+    sinal_frente, sinal_giro = -1, 1
+    seguradas = set()
+    v = g = 0
+    rx, fb = b'', None
+
+    # o terminal não ecoa as letras (senão elas viram comando no shell ao sair)
+    tty_fd = sys.stdin.fileno() if sys.stdin.isatty() else None
+    antigo = termios.tcgetattr(tty_fd) if tty_fd is not None else None
+    if antigo:
+        novo = termios.tcgetattr(tty_fd)
+        novo[3] &= ~(termios.ECHO | termios.ICANON)
+        termios.tcsetattr(tty_fd, termios.TCSANOW, novo)
+
+    print(__doc__[__doc__.index('Teclas'):__doc__.index('Por que')].rstrip())
+    print(f'\nMANDANDO ZERO. Arme agora (religue a placa ou gire as rodas até o beep mudar).')
+    print(f'log: {caminho_csv}\n')
+
+    fcsv = open(caminho_csv, 'w', newline='')
+    log = csv.writer(fcsv)
+    log.writerow(['t', 'teclas', 'alvo_speed', 'alvo_steer', 'speed', 'steer',
+                  'fb_n', 'bat', 'cmd1', 'cmd2', 'spdR', 'spdL', 'temp'])
+    t0 = time.time()
+    prox = t0
+    sair = False
+    try:
+        while not sair:
+            espera = max(0.0, prox - time.time())
+            prontos = select.select(fds, [], [], espera)[0]
+            for fd in prontos:
+                try:
+                    dados = os.read(fd, EV_TAM * 64)
+                except BlockingIOError:
+                    continue
+                for off in range(0, len(dados) - EV_TAM + 1, EV_TAM):
+                    _, _, tipo, cod, valor = struct.unpack(EV_FMT, dados[off:off + EV_TAM])
+                    if tipo != EV_KEY or cod not in TECLA:
+                        continue
+                    k = TECLA[cod]
+                    if k in MOVE:
+                        if valor == 0:
+                            seguradas.discard(k)
+                        else:
+                            seguradas.add(k)
+                    elif valor == 1:          # ajustes só no aperto, não no repeat
+                        if k == 'q':
+                            sair = True
+                        elif k == '+':
+                            vel = min(TETO, vel + 50)
+                        elif k == '-':
+                            vel = max(50, vel - 50)
+                        elif k == ']':
+                            giro = min(TETO, giro + 50)
+                        elif k == '[':
+                            giro = max(50, giro - 50)
+                        elif k == 'i':
+                            sinal_frente = -sinal_frente
+                        elif k == 'o':
+                            sinal_giro = -sinal_giro
+
+            agora = time.time()
+            if agora < prox:
+                continue
+            av, ag = alvo(seguradas, vel, giro, sinal_frente, sinal_giro)
+            v, g = aproxima(v, av), aproxima(g, ag)
+            s.write(frame(g, v))
+            rx = (rx + s.read(512))[-4096:]
+            fbs, rx = extrai_feedback(rx)
+            if fbs:
+                fb = fbs[-1]
+            f = fbs[-1] if fbs else None
+            log.writerow([f'{agora - t0:.3f}', ''.join(sorted(seguradas)), av, ag, v, g, len(fbs)]
+                         + ([f['bat'], f['cmd1'], f['cmd2'], f['spdR'], f['spdL'], f['temp']]
+                            if f else [''] * 6))
+            prox += PERIODO
+            if prox < agora:
+                prox = agora + PERIODO
+            placa = f'{fb["bat"]:.1f}V' if fb else 'sem resposta'
+            sys.stdout.write(f'\r segurando={"".join(sorted(seguradas)) or "-":3s} '
+                             f'speed={v:5d} steer={g:5d}  vel={vel} pivô={giro}  placa: {placa}   ')
+            sys.stdout.flush()
     finally:
-        if c.rodando:
-            c.fecha()
+        for _ in range(10):
+            s.write(frame(0, 0))
+            time.sleep(PERIODO)
+        s.close()
+        fcsv.close()
+        os.chown(caminho_csv, usuario.pw_uid, usuario.pw_gid)
+        for fd in fds:
+            os.close(fd)
+        if antigo:
+            termios.tcflush(tty_fd, termios.TCIFLUSH)   # joga fora as letras digitadas
+            termios.tcsetattr(tty_fd, termios.TCSANOW, antigo)
+        print(f'\nParado (zero enviado). Log em {caminho_csv}')
 
 
 if __name__ == '__main__':
