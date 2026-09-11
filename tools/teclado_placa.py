@@ -50,9 +50,15 @@ import serial
 
 START = 0xABCD
 PERIODO = 0.02        # 50 Hz
-RAMPA_SOBE = 15       # por ciclo: 0 -> 250 em ~0,34 s
+RAMPA_SOBE = 50       # por ciclo: com a compensação, 0 -> 100 -> 250 em ~80 ms
 RAMPA_DESCE = 50      # por ciclo: 250 -> 0 em 0,1 s
 TETO = 600
+# Compensação de zona morta COPIADA do hoverboard_driver (write(), deadband_speed
+# do robo2.urdf.xacro): se a roda mais rápida pediria entre 1 e 100, escala as
+# duas juntas até ela chegar a 100. A placa não mexe a roda abaixo de ~60-80, e
+# sem isto a rampa passava ~0,3 s num comando que ela ignora. No robô 2 a
+# compensação levou o arranque de 0,9 s para 0,35 s (MODELO_ROBO2.md §1).
+DEADBAND = 100.0
 
 # struct input_event (64 bits): timeval (2 x long), type u16, code u16, value s32
 EV_FMT = 'llHHi'
@@ -104,6 +110,19 @@ def alvo(teclas, vel, giro, sinal_frente, sinal_giro):
     if w != s:
         return (vel if w else -vel) * sinal_frente, 0
     return 0, 0
+
+
+def compensa(speed, steer):
+    """A mesma conta do hoverboard_driver: rodas = speed ± steer/2 (a mesma
+    convenção que o driver usa para montar o frame); se a maior ficar entre 1 e
+    DEADBAND, escala as duas até DEADBAND, preservando a proporção."""
+    esq, dir_ = speed + steer / 2.0, speed - steer / 2.0
+    mx = max(abs(esq), abs(dir_))
+    if 1.0 < mx < DEADBAND:
+        k = DEADBAND / mx
+        esq, dir_ = esq * k, dir_ * k
+    sp = (esq + dir_) / 2.0
+    return int(sp), int((esq - sp) * 2.0)
 
 
 def aproxima(atual, desejado):
@@ -230,13 +249,14 @@ def main():
                 continue
             av, ag = alvo(seguradas, vel, giro, sinal_frente, sinal_giro)
             v, g = aproxima(v, av), aproxima(g, ag)
-            s.write(frame(g, v))
+            vs, gs = compensa(v, g)           # o que vai de fato para a placa
+            s.write(frame(gs, vs))
             rx = (rx + s.read(512))[-4096:]
             fbs, rx = extrai_feedback(rx)
             if fbs:
                 fb = fbs[-1]
             f = fbs[-1] if fbs else None
-            log.writerow([f'{agora - t0:.3f}', ''.join(sorted(seguradas)), av, ag, v, g, len(fbs)]
+            log.writerow([f'{agora - t0:.3f}', ''.join(sorted(seguradas)), av, ag, vs, gs, len(fbs)]
                          + ([f['bat'], f['cmd1'], f['cmd2'], f['spdR'], f['spdL'], f['temp']]
                             if f else [''] * 6))
             prox += PERIODO
@@ -244,7 +264,7 @@ def main():
                 prox = agora + PERIODO
             placa = f'{fb["bat"]:.1f}V' if fb else 'sem resposta'
             sys.stdout.write(f'\r segurando={"".join(sorted(seguradas)) or "-":3s} '
-                             f'speed={v:5d} steer={g:5d}  vel={vel} pivô={giro}  placa: {placa}   ')
+                             f'speed={vs:5d} steer={gs:5d}  vel={vel} pivô={giro}  placa: {placa}   ')
             sys.stdout.flush()
     finally:
         for _ in range(10):
