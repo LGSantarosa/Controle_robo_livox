@@ -8271,7 +8271,8 @@ CSVs em `~/bancada_robo3/` do PC dev: `teclado_20260914_195954`, `_200548`,
 
 Sem instrumento novo: o dono pediu uma escuta ao vivo do azul
 (`tools/escuta_placa.py`, `c7afad5`) para cutucar o cabo, e antes de usá-la
-**trocou o GND de lugar e de cabo**. Na hora: a placa fica sem beep com o
+**trocou o fio do GND** — mesmos pontos na MEGA e na placa, só o fio novo;
+o antigo estava com defeito (confirmado pelo dono). Na hora: a placa fica sem beep com o
 teclado ligado, responde na hora e constante.
 
 `teclado_20260914_202729.csv` (73 s):

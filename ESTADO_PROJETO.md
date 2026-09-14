@@ -13,7 +13,7 @@
 
 ## ✅ 14-09 ~20:25 (BANCADA, PC dev) — ROBÔ 3: ERA O GND
 
-O dono trocou o GND de lugar e de cabo. `teclado_20260914_202729.csv`:
+O **fio do GND estava com defeito**; o dono trocou só o fio (mesmos pontos). `teclado_20260914_202729.csv`:
 
 | o quê | estado |
 |---|---|
