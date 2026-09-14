@@ -189,7 +189,8 @@ def main():
     print(f'\nMANDANDO ZERO. Arme agora (religue a placa ou gire as rodas até o beep mudar).')
     print(f'vel={vel_max} giro={giro_max}   log: {caminho_csv}\n')
 
-    with open(caminho_csv, 'w', newline='') as fcsv:
+    # <csv>.rx.bin: bytes crus da placa, na ordem; a coluna rx_bytes dá o offset no tempo.
+    with open(caminho_csv, 'w', newline='') as fcsv, open(caminho_csv + '.rx.bin', 'wb') as frx:
         log = csv.writer(fcsv)
         # mega_*: último FT_DEBUG (só com --mega) — o que a MEGA escreveu na placa.
         log.writerow(['t', 'tecla', 'alvo_speed', 'alvo_steer', 'speed', 'steer',
@@ -244,6 +245,7 @@ def main():
                         debug.alimenta(volta)
                     else:
                         volta_placa.alimenta(volta)
+                        frx.write(volta)
                     log.writerow([f'{agora - t0:.3f}', pendentes, alvo_v, alvo_g, v, g]
                                  + debug.ultimo
                                  + [volta_placa.bytes_total, volta_placa.ok, volta_placa.ruim]
