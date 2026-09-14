@@ -11,6 +11,28 @@
 
 ---
 
+## 🔧 14-09 (BANCADA) — ROBÔ 3: A PLACA ARMA PELO `mega_bridge`, MAS RODA E PARA (decisão 047)
+
+Notebook no `144b739`, MEGA com `mega_bridge` + pull-up no 19 (conferido por
+verify do avrdude). Diário de 14-09 (bancada) tem a sequência inteira.
+
+| o quê | estado |
+|---|---|
+| `twist_mux` (symbol lookup) | ✅ `diagnostic-updater` 4.2.7 via apt |
+| `/joy` | ✅ `device_id: 0` (SDL), não o N do `jsN` |
+| MEGA → placa: bytes, ritmo, aceitos | ✅ `/mega/debug`: 20/20 cmd/s, 50 Hz, 0 checksum errado |
+| arme pelo `mega_bridge` | ✅ com `pinMode(19, INPUT_PULLUP)`; ritual: **ligar a placa segurando comando** (`S` no teclado) |
+| roda ~1 s e para com comando contínuo | 🔴 pelos dois firmwares; é da placa |
+| retorno da placa (bateria, rpm) | 🔴 nunca chegou |
+| ROS no controle com o pull-up | ⬜ não testado |
+| `teclado_placa.py --mega` | ✅ mesmo ritual pelo `mega_bridge`, grava `/mega/debug` e erros no CSV |
+
+> ⚠️ Antes de chamar o dono para uma corrida: conferir o firmware da MEGA com
+> `avrdude -U flash:v:<hex>:i`. Uma corrida de 14-09 foi perdida com a
+> `hover_ponte` gravada sem ninguém saber.
+
+---
+
 ## 🎮 14-09 (dev) — ROBÔ 3 NO CONTROLE XBOX, PELA MEGA (decisão 046)
 
 Pronto para testar, provado só sem hardware. Roteiro completo em

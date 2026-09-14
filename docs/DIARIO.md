@@ -8132,3 +8132,70 @@ Para hoje, a correção é `bitola:=-0.3225`. Pela cinemática
 inverte somente o termo de giro e preserva o termo linear. Frente inteira
 trocada continua sendo `sinal:=1.0`. Um parâmetro próprio para o sinal angular
 fica para depois do teste, sem aumentar a mudança que vai ao robô hoje.
+
+---
+
+## 🔧 2026-09-14 (BANCADA, rodas suspensas) — O PULL-UP DO PINO 19 ERA O QUE SEPARAVA A PLACA ARMADA DA MORTA
+
+Primeiro teste da decisão 046 no notebook do robô 3. Terminou com a placa
+armando pelo `mega_bridge` (decisão 047) e com o defeito de "roda e para" ainda
+aberto. Custou a tarde, e boa parte do custo foi meu.
+
+### O que travou antes de chegar à placa
+
+| sintoma na `sobe-robo3` | causa | correção |
+|---|---|---|
+| `twist_mux` morre ao subir (`symbol lookup error` em `diagnostic_updater::Updater`) | `ros-jazzy-twist-mux` compilado contra `diagnostic-updater` 4.2.7, instalado 4.2.6 | dono rodou `apt install --only-upgrade ros-jazzy-diagnostic-updater ros-jazzy-twist-mux` |
+| `/joy` mudo | `device_id` do `joy_node` é índice do SDL, não o N do `jsN`: Xbox era `js1` (`js0` = mouse falso) e SDL 0 | `1e1ffef`: `device_id: 0` |
+| placa não responde | ver abaixo | — |
+
+### A sequência
+
+1. **LB + frente, suspenso: nada.** O bag mostrou 419 setpoints diferentes de
+   zero (−107) e a placa muda em 844 de 844 leituras.
+2. **Religar a placa: nada.** Erro meu: pedi só para religar. A receita de 01-09
+   (`BANCADA_HOVER_2026-09-01.md` §5) manda girar as rodas com a mão. Girar
+   também não armou.
+3. **Teclado pela `hover_ponte`:** gira, mas intermitente. O dono achou o ritual:
+   **ligar a placa segurando o `S`** muda o beep e o `W` gira. CSV
+   `teclado_20260914_184257`: −250 por 6,5 s a 50 Hz sem buraco e a roda girou
+   ~1 s. Minha hipótese "trava quando o comando chega a zero" caiu aqui.
+4. **O dado do dono que virou o rumo:** no robô 1, a mesma cadeia com zero a
+   50 Hz já muda o beep. Aqui a placa liga morta. "O erro é nosso."
+5. **ROS ligando a placa com comando:** LB + frente (−107/−200) e LB + RB + trás
+   (+200, 538 setpoints positivos). Morta nos dois. Minha hipótese de sinal caiu.
+6. **Instrumento na MEGA** (`384d20b`, `/mega/debug`). Com a placa desligada, a
+   MEGA aceitou 20,2 de 20 comandos/s, escreveu `speed=200` a 50,2 Hz, zero
+   checksum errado. A primeira medida deu 12,4/s: janela minha mal alinhada.
+7. **Teclado `--mega`** (`7c69e35`): mesmo ritual pelo `mega_bridge`. A primeira
+   corrida **não valeu**: a MEGA estava com a `hover_ponte` (verify do avrdude
+   bateu 2372 bytes), regravada por alguém depois das ~18:58, e o programa deu
+   erro na tela ao ligar a placa. O traceback se perdeu → `3d87210` grava o erro
+   ao lado do CSV. Regravado e conferido o `mega_bridge`.
+8. **`teclado_mega_20260914_191731`:** a MEGA escreveu os mesmos ±250 do teclado
+   a 50 Hz por 52 s, todos aceitos, e **a placa não armou**. ROS descartado; a
+   diferença estava no firmware da MEGA fora dos bytes.
+9. **A diferença:** `pinMode(19, INPUT_PULLUP)` existe na `hover_ponte` desde o
+   primeiro commit e não no `mega_bridge`; `Serial1.begin` não liga pull-up.
+   `144b739` acrescenta a linha.
+10. **`teclado_mega_20260914_192125`:** **armou**, girou com o `W` e parou de
+    novo, com a MEGA ainda escrevendo ±250 a 49,7 Hz.
+
+### Meus tropeços (para não repetir)
+
+- Pedi "religar" em vez da receita completa de 01-09, que estava escrita.
+- Duas hipóteses testadas no robô sem dado que as sustentasse (zero trava;
+  sinal do comando). O dono gastou bateria e paciência nelas.
+- `pgrep -f` dentro de `bash -c` casou a própria linha duas vezes: deu "porta
+  ocupada" e "teclado ainda rodando" falsos. Conferir porta com `fuser`.
+- Um `ros2 bag record` em andamento não abre (mcap sem índice e em buffer);
+  matei o gravador para ler e tive de subir outro.
+- Uma corrida inteira (`--mega` 190918) sem conferir o firmware da MEGA antes.
+  Agora o verify do avrdude vem antes de chamar o dono.
+
+### O que continua aberto
+
+- **Por que** o pull-up do RX da MEGA muda o arme da placa: não medido.
+- **Roda ~1 s e para** com comando contínuo no fio, pelos dois firmwares.
+- **O retorno da placa nunca chegou**, nem com o pull-up (escuta logo após a
+  corrida, placa talvez já desligada). Sem ele, bateria e erro seguem no escuro.
