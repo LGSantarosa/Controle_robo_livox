@@ -8056,3 +8056,67 @@ tirou o fio e mesmo assim oscilou entre bom e ruim, o que enfraquece essa).
 3. Ponte que não repassa ruído (só frames 0xABCD válidos) — se (3) se confirmar.
 4. Corrigir o `setup_livox.sh` para máquina limpa.
 5. Driver ROS pela MEGA (`device:=/dev/ttyACM0`) e geometria do robô 3.
+
+---
+
+## 🎮 2026-09-14 (dev) — O ROBÔ 3 VAI PARA O CONTROLE PELA MEGA
+
+**Pedido do dono:** chegar hoje no laboratório e mover o robô 3 no Xbox, sem
+Livox. Só ver se ele responde; movimentação vem depois do lidar.
+
+### O caminho que eu ia propor, e por que caiu
+
+Primeiro li a cadeia do robô 2 (ros2_control + mux + joystick) e achei quatro
+jeitos de o robô 3 ficar parado sem erro: controlador recusa comando sem frame
+da placa (`open_loop: false` + posição NaN), zona morta (0,30 m/s → ~35
+unidades), sentido invertido sem parâmetro no driver, e 10 Hz saindo do PC para
+uma placa que trava no silêncio. Propus consertar por config e com um parâmetro
+novo em C++.
+
+O dono cortou: **o robô 3 usa MEGA, então a base é a cadeia da MEGA com
+protocolo próprio**, e não a do robô 2, que é cheia de compensação. Ele estava
+certo, e a leitura do firmware mostrou que era mais do que conveniência: a MEGA
+manda a 50 Hz fixos por conta própria e lê a volta da placa. Isso tira da mesa
+dois dos quatro defeitos e ainda entrega a pendência nº 1 de 10-09 (bateria e
+placa respondendo).
+
+### O que foi feito (decisão 046, plano em `docs/PLANO_CONTROLE_ROBO3.md`)
+
+- `robot_nav/launch/controle_robo3.launch.py`: mega_bridge + cmd_vel_to_wheels
+  + joy + teleop + mux. Porta, sinal, bitola e escala como argumento.
+- `teleop_xbox_robo3.yaml` (LB/RB, 0,30/0,50 m/s, 1,5/2,3 rad/s) e
+  `twist_mux_robo3.yaml` (só o controle; Twist cru dos dois lados).
+- `bin/sobe-robo3`: sobe, confere placa/bateria/controle, grava bag em
+  `~/bancada_robo3/controle_<data>/`.
+- **Não mexi** no firmware nem no `platformio.ini`: a cópia daqui só não tem o
+  BNO055, e `--upload-port` substitui a porta fixa. O passo 2 do plano virou nada.
+
+### Prova sem hardware
+
+MEGA fingida em pty (sem `socat` no dev; pty em Python):
+
+| entrada | frame para a MEGA |
+|---|---|
+| LB + frente | `steer=0 speed=-120` (31 frames) |
+| LB + esquerda | `steer=97 speed=0` (39 frames) |
+| LB solto | `steer=0 speed=0` |
+
+Conta: 0,30 × 400 × −1 = −120; 1,5 × 0,16125 × 400 = 96,75. ✅
+
+`sobe-robo3` contra MEGA fingida mandando estado: placa 🟢, 36,5 V, bag
+gravado, `--mata` limpo.
+
+**Tropeço meu, pego antes de ir:** a primeira versão conferia a placa com
+`ros2 topic echo /system/health --once`. O `mega_bridge` só publica o health
+quando **muda**, então com tudo certo o `--once` esperaria até o timeout e
+diria 🔴. Trocado por `/battery/front` (~5 Hz, `present`).
+
+⚠️ Ao receber SIGINT a launch não derrubou os filhos no teste com pty. O
+`--mata` tem `kill -9` de reserva, então não bloqueia o lab. Fica anotado.
+
+### O que ainda não se sabe
+
+- Se o −1 está certo e para que lado é o giro: só com as rodas suspensas.
+- Se a placa continua intermitente. Agora o bag mostra.
+- Com o `mega_bridge` gravado, o `teclado_placa.py` (que fala com a
+  `hover_ponte`) para de funcionar.

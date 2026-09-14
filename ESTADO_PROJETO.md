@@ -1,13 +1,38 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-08-20** (3ª leva, dev — a conta da
-> porta 2 está no topo e vem antes de qualquer sintonia).
+> Versionado na `main`. Atualizado em **2026-09-14** (dev — robô 3 pronto para o controle
+> Xbox pela MEGA; primeiro teste no lab, com as rodas suspensas).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+---
+
+## 🎮 14-09 (dev) — ROBÔ 3 NO CONTROLE XBOX, PELA MEGA (decisão 046)
+
+Pronto para testar, provado só sem hardware. Roteiro completo em
+`docs/PLANO_CONTROLE_ROBO3.md`. No notebook do robô 3:
+
+```bash
+git fetch && git reset --hard origin/main      # (ou o remoto do notebook)
+colcon build --packages-select robot_nav
+pio run -d firmware/mega_bridge -t upload --upload-port /dev/ttyACM0   # placa DESLIGADA
+bash bin/sobe-robo3                             # RODAS SUSPENSAS, placa ligada
+bash bin/sobe-robo3 --mata
+```
+
+| o quê | estado |
+|---|---|
+| cadeia joy → mux → cmd_vel_to_wheels → mega_bridge | ✅ provada com MEGA fingida (frente −120, esquerda steer 97, LB solto 0) |
+| MEGA com `firmware/mega_bridge` (50 Hz fixos, lê a volta da placa) | ⬜ gravar no lab (substitui a `hover_ponte`) |
+| sinal −1 (10-09: speed>0 = ré) | ❓ confirmar suspenso; `sinal:=1.0` se trocado |
+| giro 1,5 rad/s acima da zona morta | ❓ se o pivô não sair, subir e anotar |
+| bag por sessão em `~/bancada_robo3/controle_<data>/` | ✅ |
+
+Números **de partida**. Movimentação só depois do Livox.
 
 ---
 
