@@ -11,6 +11,23 @@
 
 ---
 
+## ✅ 14-09 ~20:25 (BANCADA, PC dev) — ROBÔ 3: ERA O GND
+
+O dono trocou o GND de lugar e de cabo. `teclado_20260914_202729.csv`:
+
+| o quê | estado |
+|---|---|
+| volta da placa (azul → 19) | ✅ 99,6 quadros válidos/s, 0 ruins |
+| bateria das rodas | ✅ 40,8 V pelo retorno |
+| comando pelo teclado (`hover_ponte`) | ✅ na hora e constante; `cmd1,cmd2` da placa = mandado |
+| giro sozinho | ✅ nenhum em 73 s (só desaceleração ≤ 1,5 s) |
+| pull-up no 19 ainda necessário? | ❓ não testado com o GND bom |
+| ROS/Xbox pelo `mega_bridge` (decisão 046) | ⬜ próximo |
+
+A tabela abaixo (noite, antes do GND) fica como histórico: tudo nela era o GND.
+
+---
+
 ## 🔌 14-09 noite (BANCADA, PC dev) — ROBÔ 3: O AZUL NÃO TRAZ NADA, E A PLACA GIRA SOZINHA
 
 MEGA `55632313039351D05132` no PC dev, com `hover_ponte`. Diário de 14-09

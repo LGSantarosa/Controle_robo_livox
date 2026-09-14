@@ -7998,6 +7998,8 @@ de diagnóstico (`hover_sniff`, `hover_escuta`, `hover_ponte`). O dono afirmou
 desde o início que Mega, fios e placa tinham funcionado na semana anterior; era
 dado, e eu tratei como hipótese. Os sketches ficam — a ponte é o caminho do
 driver pela MEGA —, mas o diagnóstico de "GND ruim" e "placa muda" caiu.
+> ⚠️ **Retratado em 14-09 (noite): era o GND.** Trocado de lugar e de cabo, a
+> placa passou a responder 99,6 quadros/s e o comando ficou constante.
 
 ### O que isto vira para o driver
 
@@ -8264,3 +8266,32 @@ CSVs em `~/bancada_robo3/` do PC dev: `teclado_20260914_195954`, `_200548`,
 2. **Giro sozinho** com o PC em zero: da placa, mecanismo desconhecido.
 3. **Atraso e inconstância** no comando pelo teclado.
 4. Bateria das rodas sob carga: sem multímetro hoje e sem retorno da placa.
+
+### ✅ ~20:25 — ERA O GND
+
+Sem instrumento novo: o dono pediu uma escuta ao vivo do azul
+(`tools/escuta_placa.py`, `c7afad5`) para cutucar o cabo, e antes de usá-la
+**trocou o GND de lugar e de cabo**. Na hora: a placa fica sem beep com o
+teclado ligado, responde na hora e constante.
+
+`teclado_20260914_202729.csv` (73 s):
+
+| | antes (20:05) | depois do GND |
+|---|---|---|
+| quadros 0xABCD válidos | 0 | **7 310 (99,6/s), 0 ruins** |
+| bytes no 19 | ~225/s, 0xBF/0xFF | 1 793/s |
+| bateria das rodas | ? | **40,76–41,00 V** |
+| `cmd1,cmd2` da placa | ? | igual ao mandado (`0,250` para 250; `0,-135` na rampa para −150) |
+| giro com PC em zero | 3 marcas `m` | **0**: as 108 linhas com roda girando e PC em zero estão todas a ≤ 1,5 s do último comando (desaceleração) |
+
+`spdR`/`spdL` com sinais opostos em linha reta (−122/+120) é o espelhamento das
+rodas, não defeito.
+
+**O que isto explica, e o que não mede:** sem referência comum, o 19 lê ruído e o
+verde vazando (os `0xBF`/`0xFF` e `cd ab`), e o comando chega corrompido às vezes
+— atraso, inconstância e giro sozinho são compatíveis. Que o pull-up do 19
+"armasse" a placa (decisão 047) fica como provável caminho de referência pelo
+azul; **não medido**, e não testei a placa sem o pull-up com o GND bom.
+
+**Retratação:** em 10-09 escrevi que o diagnóstico de "GND ruim" tinha caído.
+Estava errado, e custou 10-09 e a tarde e a noite de 14-09.
