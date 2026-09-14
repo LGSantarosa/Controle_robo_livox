@@ -299,6 +299,10 @@ void wdt_init(void) {
 void setup() {
     Serial.begin(PC_BAUD);
     Serial1.begin(HOVER_BAUD);
+    // Pull-up no RX1 (19, azul da placa), igual à hover_ponte. Robô 3, 14-09:
+    // com os mesmos bytes no Serial1, a placa armava pela hover_ponte e não
+    // por aqui; a única diferença de pino entre as duas era esta.
+    pinMode(19, INPUT_PULLUP);
     Serial2.begin(HOVER_BAUD);
 
     io_signals::begin();
