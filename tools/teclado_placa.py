@@ -111,12 +111,23 @@ def main():
     ap.add_argument('--giro', type=int, default=150, help='steer máximo (padrão 150)')
     ap.add_argument('--mega', action='store_true',
                     help='MEGA com firmware/mega_bridge (e não hover_ponte)')
+    ap.add_argument('--checksum-errado', action='store_true',
+                    help='só com a hover_ponte: inverte o checksum de todo quadro. '
+                         'Se a placa armar mesmo assim, ela não lê o comando como serial')
     a = ap.parse_args()
+    if a.mega and a.checksum_errado:
+        ap.error('--checksum-errado só vale pela hover_ponte (o mega_bridge refaz o checksum)')
 
     os.makedirs(os.path.expanduser('~/bancada_robo3'), exist_ok=True)
-    nome = 'teclado_mega' if a.mega else 'teclado'
+    nome = 'teclado_mega' if a.mega else ('teclado_chkerrado' if a.checksum_errado else 'teclado')
     caminho_csv = os.path.expanduser(time.strftime(f'~/bancada_robo3/{nome}_%Y%m%d_%H%M%S.csv'))
-    monta = frame_mega if a.mega else frame
+    if a.mega:
+        monta = frame_mega
+    elif a.checksum_errado:
+        # Robô 3, 14-09: separar "a placa lê o quadro" de "a placa reage ao fio".
+        monta = lambda g, v: frame(g, v)[:6] + bytes(b ^ 0xFF for b in frame(g, v)[6:])
+    else:
+        monta = frame
     debug = LeDebug()
 
     s = serial.Serial(a.porta, 230400 if a.mega else 115200, timeout=0)
