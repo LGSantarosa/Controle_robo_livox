@@ -65,6 +65,7 @@ setsid nohup ros2 bag record -o "$SAIDA/bag" \
 sleep 2
 
 echo "== 4/4 conferências =="
+FALHOU=0
 # /battery/front e não /system/health: o health só publica quando MUDA, e um
 # `--once` nele esperaria para sempre com tudo certo. A bateria sai a ~5 Hz,
 # e `present` é "a placa respondeu nos últimos 200 ms" (firmware txState).
@@ -72,19 +73,37 @@ BAT="$(timeout 6 ros2 topic echo /battery/front --once 2>/dev/null)"
 echo -n "   placa responde:     "
 if [ -z "$BAT" ]; then
   echo "🔴 /battery/front mudo — MEGA sem mega_bridge gravado? veja $SAIDA/launch.log"
+  FALHOU=1
 elif echo "$BAT" | grep -q "^present: true"; then
   echo "🟢 sim"
 else
   echo "🔴 NÃO (placa desligada, azul fora do 19, ou travada — religue a placa)"
+  FALHOU=1
 fi
 echo -n "   bateria das rodas:  "
-echo "$BAT" | grep -m1 -oE "^voltage: [0-9.]+" || echo "sem leitura"
+TENSAO="$(echo "$BAT" | sed -nE 's/^voltage: ([0-9]+([.][0-9]+)?)$/\1/p' | head -1)"
+if [ -n "$TENSAO" ] && awk -v v="$TENSAO" 'BEGIN { exit !(v > 0) }'; then
+  echo "🟢 $TENSAO V"
+else
+  echo "🔴 sem leitura válida"
+  FALHOU=1
+fi
 echo -n "   controle (/joy):    "
-timeout 8 ros2 topic hz /joy --window 5 2>&1 | grep -m1 -oE "average rate: [0-9.]+" \
-  || echo "🔴 mudo — controle ligado? (botão Xbox; ls /dev/input/js*)"
+JOY_RATE="$(timeout 8 ros2 topic hz /joy --window 5 2>&1 \
+  | grep -m1 -oE "average rate: [0-9.]+")"
+if [ -n "$JOY_RATE" ]; then
+  echo "🟢 $JOY_RATE"
+else
+  echo "🔴 mudo — controle ligado? (botão Xbox; ls /dev/input/js*)"
+  FALHOU=1
+fi
 
 echo
-echo "   LB segurado + analógico esquerdo dirige · RB = turbo · soltou o LB, para"
-echo "   🔴 PRIMEIRO TESTE COM AS RODAS SUSPENSAS (roteiro no PLANO_CONTROLE_ROBO3)"
 echo "   gravando em: $SAIDA"
 echo "   para derrubar:  bash bin/sobe-robo3 --mata"
+if [ "$FALHOU" -ne 0 ]; then
+  echo "   🔴 NÃO TESTE — resolva o que está vermelho acima"
+  exit 1
+fi
+echo "   LB segurado + analógico esquerdo dirige · RB = turbo · soltou o LB, para"
+echo "   🔴 PRIMEIRO TESTE COM AS RODAS SUSPENSAS (roteiro no PLANO_CONTROLE_ROBO3)"
