@@ -85,9 +85,12 @@ Validação no dev antes do deploy: build do `robot_nav`, launch sobe sem MEGA
 | 5 | suspenso | soltar o LB no meio | as rodas param em < 0,5 s |
 | 6 | NO CHÃO | frente, ré, pivô e curvas devagar; RB só depois | robô responde ao controle |
 
-Frente trocada: `sinal:=+1`. Giro trocado com a frente certa: é fio L/R trocado,
-e o conserto é `left_wheel_sign` e `right_wheel_sign` com sinais opostos. Nos
-dois casos, anotar o que se viu.
+Frente trocada: `sinal:=1.0`. Frente certa e giro trocado:
+`bitola:=-0.3225`. A conta é direta: em
+`v_left = v - wz·bitola/2` e `v_right = v + wz·bitola/2`, trocar o sinal da
+bitola inverte somente os termos de giro e preserva o comando reto. Usar sinais
+opostos em `left_wheel_sign` e `right_wheel_sign` estaria errado: transformaria
+o comando reto em pivô. Nos dois casos, anotar o que se viu.
 
 **Arme da placa:** com a `sobe-robo3` de pé a MEGA já manda zero a 50 Hz. Se a
 placa não armar, religue-a com tudo rodando.

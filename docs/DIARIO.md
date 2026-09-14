@@ -8120,3 +8120,15 @@ diria 🔴. Trocado por `/battery/front` (~5 Hz, `present`).
 - Se a placa continua intermitente. Agora o bag mostra.
 - Com o `mega_bridge` gravado, o `teclado_placa.py` (que fala com a
   `hover_ponte`) para de funcionar.
+
+### Revisão antes do laboratório — correção do giro
+
+A revisão encontrou um erro operacional no primeiro roteiro: eu tinha escrito
+que, com a frente certa e o giro trocado, bastava usar sinais opostos em
+`left_wheel_sign` e `right_wheel_sign`. Isso transformaria avanço reto em pivô.
+
+Para hoje, a correção é `bitola:=-0.3225`. Pela cinemática
+`v_left = v - wz·bitola/2` e `v_right = v + wz·bitola/2`, a bitola negativa
+inverte somente o termo de giro e preserva o termo linear. Frente inteira
+trocada continua sendo `sinal:=1.0`. Um parâmetro próprio para o sinal angular
+fica para depois do teste, sem aumentar a mudança que vai ao robô hoje.

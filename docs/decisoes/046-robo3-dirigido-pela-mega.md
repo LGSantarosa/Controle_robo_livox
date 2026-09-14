@@ -86,10 +86,21 @@ placa respondendo): conferências 🟢 e bag gravado; `--mata` limpa.
 
 - **Sinal −1 e sentido do giro não foram vistos no robô.** O −1 vem de uma
   observação de 10-09 feita por outra cadeia (teclado direto na placa). O teste
-  suspenso confirma.
+  suspenso confirma. Se só a frente sair trocada, usar `sinal:=1.0`. Se a frente
+  estiver certa e somente o giro sair trocado, usar `bitola:=-0.3225`: inverter
+  a bitola troca apenas o termo angular da cinemática e preserva o linear.
 - Escala 400 e giro 1,5/2,3 rad/s são **de partida**. Nenhum número de
   movimentação sai daqui; isso é trabalho com o Livox.
 - Não resolve placa intermitente. Se ela voltar, agora aparece no bag
   (`present`) em vez de ser palpite.
 - O ros2_control continua sendo o caminho da caracterização
   (`robo3-bancada-validacao`, decisão 045).
+
+### Correção da revisão de 14-09
+
+A primeira versão do plano dizia para usar sinais opostos em
+`left_wheel_sign`/`right_wheel_sign` caso a frente estivesse certa e o giro
+trocado. Isso estava errado: com `v_left = v - wz·bitola/2` e
+`v_right = v + wz·bitola/2`, sinais de roda opostos transformam avanço reto em
+pivô. Para o teste de hoje, `bitola:=-0.3225` inverte só o giro. Um parâmetro
+próprio de sinal angular pode ser criado depois do teste.
