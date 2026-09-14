@@ -193,12 +193,23 @@ def main():
                                      f'frente={"+" if sinal_frente > 0 else "-"} '
                                      f'giro={"+" if sinal_giro > 0 else "-"}   ')
                     sys.stdout.flush()
+        except Exception:
+            # 14-09: deu erro na tela ao ligar a placa e o traceback se perdeu.
+            # Fica ao lado do CSV para ler por ssh.
+            import traceback
+            with open(caminho_csv + '.erro.txt', 'w') as ferr:
+                ferr.write(f't={time.time() - t0:.3f}\n')
+                traceback.print_exc(file=ferr)
+            raise
         finally:
             termios.tcsetattr(fd, termios.TCSADRAIN, antigo)
-            for _ in range(10):
-                s.write(monta(0, 0))
-                time.sleep(PERIODO)
-            s.close()
+            try:
+                for _ in range(10):
+                    s.write(monta(0, 0))
+                    time.sleep(PERIODO)
+                s.close()
+            except Exception:
+                pass  # porta morreu: o watchdog da MEGA (0,5 s) zera sozinho
             print(f'\nParado (zero enviado). Log em {caminho_csv}')
 
 
