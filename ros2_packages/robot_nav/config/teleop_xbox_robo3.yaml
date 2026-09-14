@@ -8,9 +8,11 @@
 # ⚠️ NÚMEROS DE PARTIDA, NÃO CALIBRADOS (docs/PLANO_CONTROLE_ROBO3.md). Servem
 # para ver o robô responder; a movimentação se calibra com o Livox montado.
 #
-# Giro: 1,5 rad/s com bitola 0,3225 e escala 400 dá ±97 unidades na placa em
-# pivô, acima da zona morta de ~60–80 do motor. Se o pivô não sair do lugar, é
-# zona morta aparecendo: subir este número e anotar.
+# Giro: yaw × bitola/2 × escala = steer na placa (0,3225/2 × 400 = 64,5 por
+# unidade). 14-09 (GND bom, rodas no ar, teclado_20260914_202729): steer 150 em
+# pivô deu ~17 rpm, contra ~117 rpm do speed 250 reto — a placa entrega o steer
+# bem mais fraco. Com 1,5/2,3 o Xbox quase não girava. 4,0 → steer ~258;
+# 7,5 → steer ~484. O "rad/s" aqui NÃO é real; calibra com o Livox.
 teleop_twist_joy_node:
   ros__parameters:
     axis_linear:
@@ -23,9 +25,9 @@ teleop_twist_joy_node:
     axis_angular:
       yaw: 0
     scale_angular:
-      yaw: 1.5
+      yaw: 4.0         # steer ~258
     scale_angular_turbo:
-      yaw: 2.3         # ≈ o steer 150 que o teclado usou em 10-09
+      yaw: 7.5         # steer ~484
 
     enable_button: 6        # LB = homem-morto (só anda enquanto segurado)
     enable_turbo_button: 7  # RB = turbo
