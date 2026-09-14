@@ -109,6 +109,12 @@ def _monta(contexto, *_a, **_k):
             remappings=[('cmd_vel', 'joy_vel')],
         ),
         Node(
+            # LB + direcional cima/baixo = reta pura (giro zero), acima do
+            # analógico no mux. Velocidades iguais às do teleop.
+            package='robot_nav', executable='dpad_reto', name='dpad_reto',
+            output='screen',
+        ),
+        Node(
             package='twist_mux', executable='twist_mux', name='twist_mux',
             output='screen',
             parameters=[os.path.join(pkg, 'config', 'twist_mux_robo3.yaml')],

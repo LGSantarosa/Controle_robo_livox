@@ -26,6 +26,7 @@ setup(
     entry_points={
         'console_scripts': [
             'cmd_vel_to_wheels = robot_nav.cmd_vel_to_wheels:main',
+            'dpad_reto = robot_nav.dpad_reto:main',
             'mega_bridge = robot_nav.mega_bridge:main',
             'pose_estimator = robot_nav.pose_estimator:main',
             'unstuck_supervisor = robot_nav.unstuck_supervisor:main',

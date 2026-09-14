@@ -15,6 +15,12 @@ twist_mux:
     use_stamped: false
 
     topics:
+      # LB + direcional (dpad_reto): reta pura, manda sobre o analógico enquanto
+      # apertado. Timeout curto: soltou, em 0,3 s o analógico volta.
+      direcional:
+        topic: dpad_vel
+        timeout: 0.3
+        priority: 110
       joystick:
         topic: joy_vel
         timeout: 0.5
