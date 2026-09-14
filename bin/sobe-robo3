@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+# Sobe o ROBÔ 3 para dirigir no controle Xbox, pela MEGA, sem Livox.
+#
+#   bash bin/sobe-robo3                  sobe (sinal -1, MEGA em /dev/ttyACM0)
+#   bash bin/sobe-robo3 sinal:=1.0       frente saiu trocada no teste suspenso
+#   bash bin/sobe-robo3 --mata           mata tudo e confere que morreu
+#
+# Plano e roteiro do laboratório: docs/PLANO_CONTROLE_ROBO3.md
+#
+# Pré-requisito: a MEGA gravada com firmware/mega_bridge (NÃO a hover_ponte):
+#   pio run -d firmware/mega_bridge -t upload --upload-port /dev/ttyACM0
+#
+# Tudo o que acontece fica num bag em ~/bancada_robo3/controle_<data>/. Não
+# precisa relatar console: puxe a pasta e eu leio.
+#
+# ⚠️ NÃO usa `pkill -f`: ele já matou a sessão ssh em outra máquina.
+set +u
+R="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+CARIMBO="$(date +%Y%m%d_%H%M%S)"
+SAIDA="$HOME/bancada_robo3/controle_$CARIMBO"
+PORTA=/dev/ttyACM0
+for a in "$@"; do case "$a" in porta:=*) PORTA="${a#porta:=}" ;; esac; done
+
+vivos() {
+  ps -eo pid,args | grep -E "ros2 launch robot_nav controle_robo3|mega_bridge|cmd_vel_to_wheels|\
+joy_node|teleop_twist_joy|twist_mux|ros2 bag record" | grep -v grep
+}
+
+mata() {
+  echo "== matando =="
+  vivos | awk '{print $1}' | sort -u | xargs -r kill -INT
+  sleep 3
+  vivos | awk '{print $1}' | sort -u | xargs -r kill -9
+  sleep 1
+  if [ "$(vivos | wc -l)" -eq 0 ]; then echo "   🟢 limpo"
+  else echo "   🔴 AINDA TEM COISA VIVA — não suba por cima"; vivos; return 1; fi
+}
+
+[ "$1" = "--mata" ] && { mata; exit $?; }
+
+cd "$R" || exit 1
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+mata || exit 1
+
+echo "== 1/4 MEGA =="
+if [ ! -e "$PORTA" ]; then
+  echo "   🔴 $PORTA não existe. MEGA no USB?  ls /dev/ttyACM*"; exit 1
+fi
+echo "   $PORTA presente"
+
+mkdir -p "$SAIDA"
+echo "== 2/4 subindo (log em $SAIDA/launch.log) =="
+setsid nohup ros2 launch robot_nav controle_robo3.launch.py "$@" \
+    > "$SAIDA/launch.log" 2>&1 < /dev/null &
+# A MEGA reseta ao abrir a porta (~2 s) e a IMU ausente custa a primeira falha.
+sleep 8
+grep -m1 "\[robo3\] controle" "$SAIDA/launch.log" | sed 's/^.*\[robo3\]/   /'
+
+echo "== 3/4 gravando bag =="
+setsid nohup ros2 bag record -o "$SAIDA/bag" \
+    /joy /joy_vel /cmd_vel /wheel_vel_setpoints \
+    /hoverboard/wheel_velocities /battery/front /system/health \
+    > "$SAIDA/bag.log" 2>&1 < /dev/null &
+sleep 2
+
+echo "== 4/4 conferências =="
+# /battery/front e não /system/health: o health só publica quando MUDA, e um
+# `--once` nele esperaria para sempre com tudo certo. A bateria sai a ~5 Hz,
+# e `present` é "a placa respondeu nos últimos 200 ms" (firmware txState).
+BAT="$(timeout 6 ros2 topic echo /battery/front --once 2>/dev/null)"
+echo -n "   placa responde:     "
+if [ -z "$BAT" ]; then
+  echo "🔴 /battery/front mudo — MEGA sem mega_bridge gravado? veja $SAIDA/launch.log"
+elif echo "$BAT" | grep -q "^present: true"; then
+  echo "🟢 sim"
+else
+  echo "🔴 NÃO (placa desligada, azul fora do 19, ou travada — religue a placa)"
+fi
+echo -n "   bateria das rodas:  "
+echo "$BAT" | grep -m1 -oE "^voltage: [0-9.]+" || echo "sem leitura"
+echo -n "   controle (/joy):    "
+timeout 8 ros2 topic hz /joy --window 5 2>&1 | grep -m1 -oE "average rate: [0-9.]+" \
+  || echo "🔴 mudo — controle ligado? (botão Xbox; ls /dev/input/js*)"
+
+echo
+echo "   LB segurado + analógico esquerdo dirige · RB = turbo · soltou o LB, para"
+echo "   🔴 PRIMEIRO TESTE COM AS RODAS SUSPENSAS (roteiro no PLANO_CONTROLE_ROBO3)"
+echo "   gravando em: $SAIDA"
+echo "   para derrubar:  bash bin/sobe-robo3 --mata"
