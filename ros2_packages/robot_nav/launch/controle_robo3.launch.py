@@ -86,7 +86,10 @@ def _monta(contexto, *_a, **_k):
             package='joy', executable='joy_node', name='joy_node',
             output={'stdout': 'screen', 'stderr': 'log'},
             parameters=[{
-                'device_id': dev_id,
+                # device_id é o índice do SDL, NÃO o N do /dev/input/jsN: em
+                # 14-09 o Xbox era js1 (js0 = mouse falso) e SDL ID 0, e com
+                # device_id 1 o /joy ficou mudo. O robô 3 tem um controle só.
+                'device_id': 0,
                 # Drift de repouso do analógico só morde com o LB apertado —
                 # que é justamente quando o robô anda.
                 'deadzone': 0.10,
