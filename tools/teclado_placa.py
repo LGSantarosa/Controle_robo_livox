@@ -25,7 +25,8 @@ Teclas:
     + / -     velocidade máxima +50 / -50
     i         inverte frente/ré (se o 'w' andar para trás)
     o         inverte o giro     (se o 'a' girar para a direita)
-    q         sai (manda zero antes de fechar)
+    m         MARCA no CSV "girou sozinha" (não manda nada para a placa)
+    q        sai (manda zero antes de fechar)
 
 Arme: com o script rodando (já mandando zero), religue a placa ou gire as duas
 rodas com a mão até o beep mudar. Só então comande.
@@ -98,6 +99,45 @@ class LeDebug:
                 del self.buf[:2 if chk != self.buf[4 + n] else 5 + n]
 
 
+class LeVolta:
+    """Pela hover_ponte: conta bytes crus e acha o feedback 0xABCD da placa (18 bytes).
+
+    Robô 3, 14-09: a placa gira sozinha com o PC mandando zero, e sem a volta dela
+    não se sabe o que ela entendeu (cmd1/cmd2), a bateria nem se as rodas giram.
+    """
+
+    def __init__(self):
+        self.buf = bytearray()
+        self.bytes_total = 0
+        self.ok = 0
+        self.ruim = 0
+        self.ultimo = ['', '', '', '', '', '']  # cmd1 cmd2 spdR spdL bat_V temp_C
+
+    def alimenta(self, dados):
+        self.bytes_total += len(dados)
+        self.buf += dados
+        while True:
+            i = self.buf.find(b'\xcd\xab')
+            if i < 0:
+                del self.buf[:-1]
+                return
+            del self.buf[:i]
+            if len(self.buf) < 18:
+                return
+            cmd1, cmd2, spd_r, spd_l, bat, temp, led, chk = struct.unpack('<hhhhhhHH', self.buf[2:18])
+            esperado = START
+            for campo in (cmd1, cmd2, spd_r, spd_l, bat, temp):
+                esperado ^= campo & 0xFFFF
+            esperado ^= led
+            if esperado == chk:
+                self.ok += 1
+                self.ultimo = [cmd1, cmd2, spd_r, spd_l, f'{bat / 100:.2f}', f'{temp / 10:.1f}']
+                del self.buf[:18]
+            else:
+                self.ruim += 1
+                del self.buf[:2]
+
+
 def aproxima(atual, alvo):
     if alvo > atual:
         return min(alvo, atual + RAMPA)
@@ -129,6 +169,7 @@ def main():
     else:
         monta = frame
     debug = LeDebug()
+    volta_placa = LeVolta()
 
     s = serial.Serial(a.porta, 230400 if a.mega else 115200, timeout=0)
     print(f'Abrindo {a.porta}... (a MEGA reinicia ao abrir, 2,5 s)')
@@ -153,16 +194,22 @@ def main():
         # mega_*: último FT_DEBUG (só com --mega) — o que a MEGA escreveu na placa.
         log.writerow(['t', 'tecla', 'alvo_speed', 'alvo_steer', 'speed', 'steer',
                       'mega_steer', 'mega_speed', 'mega_set_ok', 'mega_pc_bad',
-                      'mega_len_bad', 'mega_hover_tx'])
+                      'mega_len_bad', 'mega_hover_tx',
+                      # placa_*: feedback 0xABCD (só pela hover_ponte); rx_bytes acumulado
+                      'rx_bytes', 'placa_ok', 'placa_ruim', 'placa_cmd1', 'placa_cmd2',
+                      'placa_spdR', 'placa_spdL', 'placa_bat_V', 'placa_temp_C'])
         t0 = time.time()
         prox = t0
         try:
             tty.setcbreak(fd)
+            pendentes = ''  # teclas lidas desde a última linha: não se perdem entre envios
             while True:
                 tecla = ''
                 espera = max(0.0, prox - time.time())
                 if select.select([sys.stdin], [], [], espera)[0]:
                     tecla = sys.stdin.read(1).lower()
+                    if tecla.strip():
+                        pendentes += tecla
 
                 agora = time.time()
                 if tecla:
@@ -192,11 +239,16 @@ def main():
                     v = aproxima(v, alvo_v)
                     g = aproxima(g, alvo_g)
                     s.write(monta(g, v))
-                    volta = s.read(512)  # hover_ponte: a placa não responde legível
+                    volta = s.read(512)
                     if a.mega:
                         debug.alimenta(volta)
-                    log.writerow([f'{agora - t0:.3f}', tecla.strip(), alvo_v, alvo_g, v, g]
-                                 + debug.ultimo)
+                    else:
+                        volta_placa.alimenta(volta)
+                    log.writerow([f'{agora - t0:.3f}', pendentes, alvo_v, alvo_g, v, g]
+                                 + debug.ultimo
+                                 + [volta_placa.bytes_total, volta_placa.ok, volta_placa.ruim]
+                                 + volta_placa.ultimo)
+                    pendentes = ''
                     prox += PERIODO
                     if prox < agora:  # atrasou (terminal travou): não dispara rajada
                         prox = agora + PERIODO
