@@ -8199,3 +8199,68 @@ aberto. Custou a tarde, e boa parte do custo foi meu.
 - **Roda ~1 s e para** com comando contínuo no fio, pelos dois firmwares.
 - **O retorno da placa nunca chegou**, nem com o pull-up (escuta logo após a
   corrida, placa talvez já desligada). Sem ele, bateria e erro seguem no escuro.
+
+---
+
+## 🔌 2026-09-14 (BANCADA, PC dev, noite) — REFAZER O DIA 1: O AZUL NÃO TRAZ NADA, E A PLACA GIRA SOZINHA
+
+O dono trouxe a MEGA de volta para o PC dev para repetir a bancada de 01-09
+(`Controle_robo_web_hover/BANCADA_HOVER_2026-09-01.md`), em que a bateria chegou
+pelo azul e as rodas giraram. Mesma MEGA (serial `55632313039351D05132`,
+conferido), mesmo PC, fios "iguais ao dia 1" (afirmação do dono), rodas
+suspensas. Sessão tensa: o dono cobrou, com razão, que eu tinha refeito o dia 1
+ignorando o que a própria tarde tinha provado.
+
+### A sequência
+
+| hora | MEGA | rodas | o que aconteceu |
+|---|---|---|---|
+| 19:40 | `hover_probe` de 01-09, **sem** pull-up | do robô | 90 s, zero quadros; beep igual depois de girar na mão |
+| 19:45 | idem | **do dia 1** | zero quadros; beep igual → rodas descartadas |
+| 19:48 | `hover_probe` **+ `pinMode(19, INPUT_PULLUP)`** (`7baa3fb` no `Controle_robo_web_hover`, `.hex` junto) | do dia 1 | **rodas giraram sozinhas**, MEGA mandando só zero, nenhum `g` |
+| ~19:55 | idem | do robô | beep mudou; `g` (0,5 s a +300) não mexeu nada; zero quadros |
+| 19:59 | `hover_ponte` + teclado | do robô | **anda pelo teclado**, com atraso e inconstante; gira sozinha com o PC em zero |
+| 20:05 | idem, teclado lendo a volta (`61d8880`) | do robô | 66 695 bytes no 19 (~225/s parada, ~650/s com comando), **0 quadros 0xABCD válidos**; 3 marcas `m` de giro sozinho, todas com o PC em zero |
+| 20:11 | idem, bytes crus em `.rx.bin` (`e3cb011`) | do robô | 64 501 bytes: 4,4 % ASCII; `0xBF` 32 939 e `0xFF` 21 099; `cd ab` acima do fundo |
+| 20:15 | `--checksum-errado` | do robô | **rodas imóveis** em 29 s de `s`/`w`/`a`/`d`; mesmo ruído no 19 |
+
+CSVs em `~/bancada_robo3/` do PC dev: `teclado_20260914_195954`, `_200548`,
+`_201104` (+ `.rx.bin`), `teclado_chkerrado_20260914_201521` (+ `.rx.bin`).
+
+### O que ficou medido
+
+- **O comando chega e é lido como serial.** Checksum certo: roda obedece;
+  checksum invertido: imóvel. Descarta a hipótese que levantei na hora (azul numa
+  entrada analógica de acelerador) — ela estava errada.
+- **O PC não comanda nada sozinho.** 20 ms cravados (máx 23), e todo comando
+  ≠ 0 nasce de tecla. Os giros sozinhos acontecem com o PC mandando zero.
+- **A placa não transmite no azul.** O 19 recebe picos curtos (`0xBF`/`0xFF` são
+  a linha em alto com um pulso estreito para baixo) e o nosso próprio quadro
+  vazando do verde (`cd ab`). Transmissor de verdade não produz isso, e o padrão
+  é o mesmo com checksum certo e invertido. Em 01-09 a mesma MEGA recebeu
+  `batF = 36,45 V` por esse fio.
+- **O pull-up no 19 muda o beep.** Três vezes hoje: sem ele nunca armou, com ele
+  armou (19:48 e ~19:55). Mesmo efeito da decisão 047. Mecanismo não medido.
+
+### Meus erros
+
+- **Gravei a sonda do dia 1 sem o pull-up** que a decisão 047 tinha provado
+  necessário horas antes. Duas corridas do dono perdidas (19:40 e 19:45).
+- **Não avisei que armar podia mover as rodas.** Com o pull-up a placa armou e
+  girou sozinha na bancada, sem pedido. "Manda zero" não garante roda parada
+  nesta placa; já tinha andado sozinha em 10-09 (teclado v3).
+- Tratei a volta da placa como "não chega" por quatro sessões sem nunca olhar os
+  bytes crus: o `s.read` do teclado ia para o lixo desde 10-09.
+- Levantei a hipótese do acelerador analógico antes de ter o dado que a
+  separava; caiu na corrida seguinte.
+- Propus uma corrida longa de checksum invertido (3 min parada) para separar o
+  giro sozinho; o dono recusou — não mexe roda e não aproxima do objetivo.
+  Aberta, não feita.
+
+### O que continua aberto
+
+1. **Por que o azul não traz nada hoje e trouxe em 01-09.** Pedido ao dono: foto
+   de em qual cabo da placa o fio está agora e print do vídeo do dia 1.
+2. **Giro sozinho** com o PC em zero: da placa, mecanismo desconhecido.
+3. **Atraso e inconstância** no comando pelo teclado.
+4. Bateria das rodas sob carga: sem multímetro hoje e sem retorno da placa.

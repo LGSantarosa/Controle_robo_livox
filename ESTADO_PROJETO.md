@@ -11,6 +11,28 @@
 
 ---
 
+## 🔌 14-09 noite (BANCADA, PC dev) — ROBÔ 3: O AZUL NÃO TRAZ NADA, E A PLACA GIRA SOZINHA
+
+MEGA `55632313039351D05132` no PC dev, com `hover_ponte`. Diário de 14-09
+(noite) tem a sequência e os CSVs.
+
+| o quê | estado |
+|---|---|
+| comando pelo verde, lido como serial | ✅ checksum invertido = roda imóvel |
+| teclado (`tools/teclado_placa.py`) | 🟡 anda, com atraso e inconstante |
+| **giro sozinho com o PC em zero** | 🔴 3 marcas `m` em 176 s; da placa |
+| volta da placa pelo azul (19) | 🔴 só ruído (`0xBF`/`0xFF`) + vazamento do verde; 0 quadros. Em 01-09 chegou |
+| pull-up no 19 | ⚠️ muda o beep / arma (3×), mecanismo não medido |
+| `hover_probe` + pull-up | ✅ `7baa3fb` no `Controle_robo_web_hover` (`.hex` junto) |
+| teclado grava a volta (`placa_*`, `.rx.bin`, tecla `m`) | ✅ `61d8880`, `e3cb011` |
+
+> ⚠️ **As rodas podem girar sozinhas quando a placa arma**, mesmo com zero no
+> serial. Rodas no ar e mão no botão antes de qualquer corrida.
+>
+> Próximo: foto de em qual cabo da placa o fio está hoje × print do vídeo do dia 1.
+
+---
+
 ## 🔧 14-09 (BANCADA) — ROBÔ 3: A PLACA ARMA PELO `mega_bridge`, MAS RODA E PARA (decisão 047)
 
 Notebook no `144b739`, MEGA com `mega_bridge` + pull-up no 19 (conferido por
