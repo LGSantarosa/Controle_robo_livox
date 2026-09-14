@@ -15,6 +15,7 @@ constexpr uint8_t FT_STATE     = 0x81;
 constexpr uint8_t FT_IMU       = 0x82;
 constexpr uint8_t FT_FLOW      = 0x83;
 constexpr uint8_t FT_MAG       = 0x84;   // magnetômetro AK8963 (mx,my,mz int16) — yaw absoluto fase 1
+constexpr uint8_t FT_DEBUG     = 0x85;   // o que a MEGA aceitou do PC e mandou à placa (robô 3, 14-09)
 
 uint8_t computeChecksum(uint8_t type, uint8_t len, const uint8_t* payload);
 void    writeFrame(Stream& port, uint8_t type, const uint8_t* payload, uint8_t len);
@@ -25,6 +26,7 @@ class Decoder {
     uint8_t type()    const { return type_; }
     uint8_t len()     const { return len_; }
     const uint8_t* payload() const { return buf_; }
+    uint16_t bad()    const { return bad_; }   // frames com checksum errado
 
  private:
     enum class State : uint8_t { S0, S1, TYPE, LEN, PAYLOAD, CHECK };
@@ -32,6 +34,7 @@ class Decoder {
     uint8_t type_ = 0;
     uint8_t len_  = 0;
     uint8_t got_  = 0;
+    uint16_t bad_ = 0;
     uint8_t buf_[MAX_PAYLOAD] = {0};
 };
 

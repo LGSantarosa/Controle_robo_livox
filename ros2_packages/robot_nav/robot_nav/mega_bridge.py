@@ -38,7 +38,7 @@ from geometry_msgs.msg import Vector3Stamped
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, qos_profile_sensor_data
 from sensor_msgs.msg import BatteryState, Imu
-from std_msgs.msg import Bool, ColorRGBA, Float64MultiArray, String
+from std_msgs.msg import Bool, ColorRGBA, Float64MultiArray, Int32MultiArray, String
 from wheel_msgs.msg import WheelSpeeds
 
 from .utils import spin_node
@@ -52,6 +52,7 @@ FT_RELAY     = 0x03
 FT_STATE     = 0x81
 FT_IMU       = 0x82
 FT_FLOW      = 0x83
+FT_DEBUG     = 0x85
 
 
 def _xor8(data: bytes) -> int:
@@ -214,6 +215,9 @@ class MegaBridge(Node):
         self._pub_bat_front = self.create_publisher(BatteryState, 'battery/front', qos_cmd)
         self._pub_bat_rear = self.create_publisher(BatteryState, 'battery/rear', qos_cmd)
         self._pub_health = self.create_publisher(String, 'system/health', qos_cmd)
+        # [steer, speed, set_ok, pc_bad, set_len_bad, hover_tx] — o que a MEGA
+        # aceitou do PC e escreveu no Serial1 (FT_DEBUG, 10 Hz). Robô 3, 14-09.
+        self._pub_debug = self.create_publisher(Int32MultiArray, 'mega/debug', qos_cmd)
         # Cache do último health para evitar reemitir JSON idêntico a 50 Hz.
         self._last_health_json: str = ''
 
@@ -375,8 +379,17 @@ class MegaBridge(Node):
                     self._handle_imu(payload)
                 elif ft == FT_FLOW:
                     self._handle_flow(payload)
+                elif ft == FT_DEBUG:
+                    self._handle_debug(payload)
             except Exception as e:
                 self.get_logger().warn(f'erro decodificando frame 0x{ft:02x}: {e}')
+
+    def _handle_debug(self, p: bytes):
+        # 12 bytes: steer, speed (int16 escritos no Serial1), set_ok, pc_bad,
+        # set_len_bad, hover_tx (uint16, dão a volta).
+        if len(p) != 12:
+            return
+        self._pub_debug.publish(Int32MultiArray(data=list(struct.unpack('<hhHHHH', p))))
 
     def _handle_state(self, p: bytes):
         # 16 bytes: rpm_FL/FR/RL/RR, batF_x100, batR_x100, faultF, faultR, <byte14

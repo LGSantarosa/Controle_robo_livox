@@ -60,7 +60,7 @@ grep -m1 "\[robo3\] controle" "$SAIDA/launch.log" | sed 's/^.*\[robo3\]/   /'
 echo "== 3/4 gravando bag =="
 setsid nohup ros2 bag record -o "$SAIDA/bag" \
     /joy /joy_vel /cmd_vel /wheel_vel_setpoints \
-    /hoverboard/wheel_velocities /battery/front /system/health \
+    /hoverboard/wheel_velocities /battery/front /system/health /mega/debug \
     > "$SAIDA/bag.log" 2>&1 < /dev/null &
 sleep 2
 

@@ -48,6 +48,7 @@ bool Decoder::feed(uint8_t b) {
         case State::CHECK: {
             const uint8_t expected = computeChecksum(type_, len_, buf_);
             st_ = State::S0;
+            if (b != expected) ++bad_;
             return b == expected;
         }
     }

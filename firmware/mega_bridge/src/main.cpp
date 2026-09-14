@@ -49,6 +49,16 @@ static Setpoint sp_front      = {0, 0};
 static Setpoint sp_rear       = {0, 0};
 static uint32_t last_setpoint = 0;
 
+// Instrumento do robô 3 (14-09): a placa não reage ao ROS e a MEGA não dizia
+// o que aceitou nem o que pôs no fio. Contadores uint16 dão a volta; quem lê
+// olha a diferença entre amostras.
+static Setpoint sent_front    = {0, 0};   // último par escrito no Serial1
+static uint16_t n_set_ok      = 0;        // FT_SET_SPEED aceitos
+static uint16_t n_set_len_bad = 0;        // FT_SET_SPEED com tamanho errado
+static uint16_t n_hover_tx    = 0;        // comandos escritos no Serial1
+constexpr uint32_t TX_DEBUG_PERIOD = 100; // 10 Hz
+
+static uint32_t last_tx_debug = 0;
 static uint32_t last_tx_hover = 0;
 static uint32_t last_tx_state = 0;
 static uint32_t last_tx_imu   = 0;
@@ -57,7 +67,8 @@ static uint32_t last_tx_flow  = 0;
 static void handlePcFrame(uint8_t type, uint8_t len, const uint8_t* p) {
     switch (type) {
         case protocol::FT_SET_SPEED: {
-            if (len != 8) return;
+            if (len != 8) { ++n_set_len_bad; return; }
+            ++n_set_ok;
             int16_t sf, vf, sr, vr;
             memcpy(&sf, p + 0, 2);
             memcpy(&vf, p + 2, 2);
@@ -120,6 +131,25 @@ static void txHoverboard() {
     }
     hoverboard::sendCommand(Serial1, sp_front.steer, sp_front.speed);
     hoverboard::sendCommand(Serial2, sp_rear.steer,  sp_rear.speed);
+    sent_front = sp_front;
+    ++n_hover_tx;
+}
+
+// 12 bytes: steer, speed (o que foi para o Serial1), set_ok, pc_bad (checksum),
+// set_len_bad, hover_tx.
+static void txDebug() {
+    const uint32_t now = millis();
+    if (now - last_tx_debug < TX_DEBUG_PERIOD) return;
+    last_tx_debug = now;
+    const uint16_t pc_bad = pc_decoder.bad();
+    uint8_t buf[12];
+    memcpy(buf + 0,  &sent_front.steer, 2);
+    memcpy(buf + 2,  &sent_front.speed, 2);
+    memcpy(buf + 4,  &n_set_ok,         2);
+    memcpy(buf + 6,  &pc_bad,           2);
+    memcpy(buf + 8,  &n_set_len_bad,    2);
+    memcpy(buf + 10, &n_hover_tx,       2);
+    protocol::writeFrame(Serial, protocol::FT_DEBUG, buf, sizeof(buf));
 }
 
 static void txState() {
@@ -314,6 +344,7 @@ void loop() {
     txHoverboard();
     pumpPcSerial();
     txState();
+    txDebug();
     txImu();
     pumpPcSerial();
     txFlow();
