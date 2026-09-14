@@ -26,7 +26,7 @@ for a in "$@"; do case "$a" in porta:=*) PORTA="${a#porta:=}" ;; esac; done
 
 vivos() {
   ps -eo pid,args | grep -E "ros2 launch robot_nav controle_robo3|mega_bridge|cmd_vel_to_wheels|\
-joy_node|teleop_twist_joy|twist_mux|ros2 bag record" | grep -v grep
+joy_node|teleop_twist_joy|twist_mux|dpad_reto|ros2 bag record" | grep -v grep
 }
 
 mata() {
