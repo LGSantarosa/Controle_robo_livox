@@ -1,7 +1,7 @@
 """Dirigir o robô 3 no controle Xbox, pela MEGA, sem Livox.
 
     ros2 launch robot_nav controle_robo3.launch.py
-    ros2 launch robot_nav controle_robo3.launch.py sinal:=1.0        # frente trocada
+    ros2 launch robot_nav controle_robo3.launch.py sinal:=-1.0       # inverte frente E giro
     ros2 launch robot_nav controle_robo3.launch.py porta:=/dev/ttyACM1
 
 A cadeia (plano em docs/PLANO_CONTROLE_ROBO3.md):
@@ -10,6 +10,7 @@ A cadeia (plano em docs/PLANO_CONTROLE_ROBO3.md):
       → MEGA (firmware/mega_bridge, 50 Hz fixos) → Serial1 → placa
 
 Segure o LB e mexa o analógico esquerdo. RB = turbo. Soltou o LB, o robô para.
+LB + direcional cima/baixo = reta pura, sem giro (dpad_reto).
 
 Sem URDF, sem estimador de pose, sem autonomia: o objetivo é só ver o robô
 responder. Os números são de partida e estão todos como argumento, para
@@ -129,9 +130,9 @@ def generate_launch_description():
             'porta', default_value='/dev/ttyACM0',
             description='USB da MEGA com firmware/mega_bridge'),
         DeclareLaunchArgument(
-            'sinal', default_value='-1.0',
-            description='-1.0: em 10-09 speed>0 andou de ré. 1.0 se a frente '
-                        'sair trocada'),
+            'sinal', default_value='1.0',
+            description='1.0 (14-09, aprovado pelo dono): frente = a das rodas, '
+                        'giro e força bons. -1.0 inverte frente E giro juntos'),
         DeclareLaunchArgument(
             'bitola', default_value='0.3225',
             description='[m] centro a centro das motrizes (URDF do robô 3)'),

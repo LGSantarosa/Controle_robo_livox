@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 # Sobe o ROBÔ 3 para dirigir no controle Xbox, pela MEGA, sem Livox.
 #
-#   bash bin/sobe-robo3                  sobe (sinal -1, MEGA em /dev/ttyACM0)
-#   bash bin/sobe-robo3 sinal:=1.0       frente saiu trocada no teste suspenso
+#   bash bin/sobe-robo3                  sobe (sinal 1, MEGA em /dev/ttyACM0)
+#   bash bin/sobe-robo3 sinal:=-1.0      inverte frente E giro juntos
 #   bash bin/sobe-robo3 --mata           mata tudo e confere que morreu
+#
+# No controle: LB segurado + analógico esquerdo dirige · RB = turbo ·
+# LB + direcional cima/baixo = reta pura · soltou o LB, para.
 #
 # Plano e roteiro do laboratório: docs/PLANO_CONTROLE_ROBO3.md
 #
