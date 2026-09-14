@@ -15,6 +15,8 @@ O que ele garante, e por quê (bancada 01-09 e 10-09):
 Uso (no terminal do notebook, com a MEGA em /dev/ttyACM0):
     python3 tools/teclado_placa.py
     python3 tools/teclado_placa.py --vel 200 --giro 150
+    python3 tools/teclado_placa.py --mega    # MEGA com firmware/mega_bridge; CSV
+                                             # grava o que a MEGA pôs na placa
 
 Teclas:
     w / s     frente / ré            (segurar)
@@ -53,6 +55,49 @@ def frame(steer, speed):
                        (START ^ (steer & 0xFFFF) ^ (speed & 0xFFFF)) & 0xFFFF)
 
 
+# --mega: fala o protocolo do firmware/mega_bridge (0xAA 0x55, 230400) em vez
+# da hover_ponte. A MEGA repete o par para a placa a 50 Hz e devolve FT_DEBUG.
+# Serve para separar firmware da MEGA de cadeia ROS (robô 3, 14-09).
+FT_SET_SPEED, FT_DEBUG = 0x01, 0x85
+
+
+def frame_mega(steer, speed):
+    payload = struct.pack('<hhhh', steer, speed, 0, 0)
+    chk = FT_SET_SPEED ^ len(payload)
+    for b in payload:
+        chk ^= b
+    return bytes([0xAA, 0x55, FT_SET_SPEED, len(payload)]) + payload + bytes([chk])
+
+
+class LeDebug:
+    """Acha FT_DEBUG no que a MEGA devolve; guarda o último (6 valores)."""
+
+    def __init__(self):
+        self.buf = bytearray()
+        self.ultimo = ['', '', '', '', '', '']
+
+    def alimenta(self, dados):
+        self.buf += dados
+        while True:
+            i = self.buf.find(b'\xaa\x55')
+            if i < 0:
+                del self.buf[:-1]
+                return
+            del self.buf[:i]
+            if len(self.buf) < 4 or len(self.buf) < 5 + self.buf[3]:
+                return
+            tipo, n = self.buf[2], self.buf[3]
+            corpo = bytes(self.buf[4:4 + n])
+            chk = tipo ^ n
+            for b in corpo:
+                chk ^= b
+            if chk == self.buf[4 + n] and tipo == FT_DEBUG and n == 12:
+                self.ultimo = list(struct.unpack('<hhHHHH', corpo))
+                del self.buf[:5 + n]
+            else:
+                del self.buf[:2 if chk != self.buf[4 + n] else 5 + n]
+
+
 def aproxima(atual, alvo):
     if alvo > atual:
         return min(alvo, atual + RAMPA)
@@ -64,12 +109,17 @@ def main():
     ap.add_argument('--porta', default='/dev/ttyACM0')
     ap.add_argument('--vel', type=int, default=250, help='speed máximo (padrão 250)')
     ap.add_argument('--giro', type=int, default=150, help='steer máximo (padrão 150)')
+    ap.add_argument('--mega', action='store_true',
+                    help='MEGA com firmware/mega_bridge (e não hover_ponte)')
     a = ap.parse_args()
 
     os.makedirs(os.path.expanduser('~/bancada_robo3'), exist_ok=True)
-    caminho_csv = os.path.expanduser(time.strftime('~/bancada_robo3/teclado_%Y%m%d_%H%M%S.csv'))
+    nome = 'teclado_mega' if a.mega else 'teclado'
+    caminho_csv = os.path.expanduser(time.strftime(f'~/bancada_robo3/{nome}_%Y%m%d_%H%M%S.csv'))
+    monta = frame_mega if a.mega else frame
+    debug = LeDebug()
 
-    s = serial.Serial(a.porta, 115200, timeout=0)
+    s = serial.Serial(a.porta, 230400 if a.mega else 115200, timeout=0)
     print(f'Abrindo {a.porta}... (a MEGA reinicia ao abrir, 2,5 s)')
     time.sleep(2.5)
     s.reset_input_buffer()
@@ -89,7 +139,10 @@ def main():
 
     with open(caminho_csv, 'w', newline='') as fcsv:
         log = csv.writer(fcsv)
-        log.writerow(['t', 'tecla', 'alvo_speed', 'alvo_steer', 'speed', 'steer'])
+        # mega_*: último FT_DEBUG (só com --mega) — o que a MEGA escreveu na placa.
+        log.writerow(['t', 'tecla', 'alvo_speed', 'alvo_steer', 'speed', 'steer',
+                      'mega_steer', 'mega_speed', 'mega_set_ok', 'mega_pc_bad',
+                      'mega_len_bad', 'mega_hover_tx'])
         t0 = time.time()
         prox = t0
         try:
@@ -127,9 +180,12 @@ def main():
                 if agora >= prox:
                     v = aproxima(v, alvo_v)
                     g = aproxima(g, alvo_g)
-                    s.write(frame(g, v))
-                    s.read(512)  # descarta a volta: a placa não responde legível
-                    log.writerow([f'{agora - t0:.3f}', tecla.strip(), alvo_v, alvo_g, v, g])
+                    s.write(monta(g, v))
+                    volta = s.read(512)  # hover_ponte: a placa não responde legível
+                    if a.mega:
+                        debug.alimenta(volta)
+                    log.writerow([f'{agora - t0:.3f}', tecla.strip(), alvo_v, alvo_g, v, g]
+                                 + debug.ultimo)
                     prox += PERIODO
                     if prox < agora:  # atrasou (terminal travou): não dispara rajada
                         prox = agora + PERIODO
@@ -140,7 +196,7 @@ def main():
         finally:
             termios.tcsetattr(fd, termios.TCSADRAIN, antigo)
             for _ in range(10):
-                s.write(frame(0, 0))
+                s.write(monta(0, 0))
                 time.sleep(PERIODO)
             s.close()
             print(f'\nParado (zero enviado). Log em {caminho_csv}')
