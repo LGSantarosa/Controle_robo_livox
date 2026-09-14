@@ -1,0 +1,37 @@
+# Controle Xbox Series X|S → teleop_twist_joy, ROBÔ 3 (controle_robo3.launch.py).
+#
+# Botões medidos por ioctl JSIOCGBTNMAP com o controle por Bluetooth:
+#   eixo 0 = analógico esq. X (giro)   eixo 1 = analógico esq. Y (frente/ré)
+#   LB = botão 6 (homem-morto)         RB = botão 7 (turbo)
+# Reconferir no notebook com:  python3 scripts/js_mapping.py /dev/input/js0
+#
+# ⚠️ NÚMEROS DE PARTIDA, NÃO CALIBRADOS (docs/PLANO_CONTROLE_ROBO3.md). Servem
+# para ver o robô responder; a movimentação se calibra com o Livox montado.
+#
+# Giro: 1,5 rad/s com bitola 0,3225 e escala 400 dá ±97 unidades na placa em
+# pivô, acima da zona morta de ~60–80 do motor. Se o pivô não sair do lugar, é
+# zona morta aparecendo: subir este número e anotar.
+teleop_twist_joy_node:
+  ros__parameters:
+    axis_linear:
+      x: 1
+    scale_linear:
+      x: 0.30          # m/s → 120 unidades na placa
+    scale_linear_turbo:
+      x: 0.50
+
+    axis_angular:
+      yaw: 0
+    scale_angular:
+      yaw: 1.5
+    scale_angular_turbo:
+      yaw: 2.3         # ≈ o steer 150 que o teclado usou em 10-09
+
+    enable_button: 6        # LB = homem-morto (só anda enquanto segurado)
+    enable_turbo_button: 7  # RB = turbo
+    require_enable_button: true
+
+    # 🔴 Casa com `use_stamped: false` do twist_mux_robo3.yaml. Se só um dos
+    # dois mudar, o DDS recusa a ligação por type hash e o robô não anda, sem
+    # erro nenhum.
+    publish_stamped_twist: false

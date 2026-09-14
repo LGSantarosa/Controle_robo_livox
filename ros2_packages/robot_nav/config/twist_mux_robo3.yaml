@@ -1,0 +1,21 @@
+# Arbitragem de comando do ROBÔ 3 no teste de controle (controle_robo3.launch.py).
+#
+# Uma entrada só, o controle. O mux fica mesmo assim porque é ele que dá o
+# `timeout`: soltou o LB, o teleop emudece, em 0,5 s o mux para de repetir e o
+# cmd_vel_to_wheels não recebe mais nada; a MEGA zera a placa pelo watchdog dela
+# (0,5 s sem setpoint). E quando o Livox e a autonomia entrarem, eles ganham
+# faixa aqui abaixo do humano.
+#
+# ⚠️ O `bin/robot-key` deste repo publica TwistStamped e NÃO entra neste mux.
+twist_mux:
+  ros__parameters:
+    use_sim_time: false
+    # 🔴 Casa com `publish_stamped_twist: false` do teleop_xbox_robo3.yaml e
+    # com o Twist cru que o cmd_vel_to_wheels assina.
+    use_stamped: false
+
+    topics:
+      joystick:
+        topic: joy_vel
+        timeout: 0.5
+        priority: 100
