@@ -11,6 +11,17 @@
 
 ---
 
+## 🤖 15-09 noite — ROBÔ 2 DE PÉ NO NAV2 (lidar em `.158`)
+
+- **O lidar do robô 2 agora está em `192.168.1.158`**; o config dizia `.169`,
+  por isso não havia `/Odometry` e o Nav2 abortava. Diário de 15-09.
+- NUC: IP `10.127.116.205` (Wi-Fi `Trafico de banana`), cabo do lidar em `enp1s0`.
+- 🔴 **O NUC não consegue `git fetch`** (sem chave do GitHub). Deploy de hoje:
+  `git push ssh://bara@10.127.116.205/home/bara/Controle_robo_livox main:refs/remotes/origin/main`
+  e no NUC `git reset --hard origin/main` + `colcon build`.
+
+---
+
 ## 🧩 AMANHÃ (16-09) COM O ROBÔ 3 — PIVÔ LIMPO + RETA, NA MESMA BATERIA
 
 **Pergunta:** por que a frente puxa para a direita e a ré vai reta (robôs 2 e 3)?

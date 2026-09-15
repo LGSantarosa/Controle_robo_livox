@@ -4,6 +4,32 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-09-15 (robô 2, noite) — NÃO SUBIA: O LIDAR ESTAVA EM OUTRO IP
+
+Sintoma: a pilha de navegação abortava (`Failed to activate global_costmap
+because transform from base_link to map did not become available`) e o
+`heading_controller` repetia `sem /Odometry`. A placa estava viva
+(`/hoverboard/connected: true`).
+
+Causa, na ordem em que apareceu:
+1. Rede: o PC de dev estava na `Visitantes` e o NUC em `10.127.116.205`. Sem
+   rota. Depois de trocar, o ssh deu `Host key verification failed`, mas era só
+   o IP novo: a chave era a mesma já salva sob outros IPs.
+2. `/livox/lidar`, `/livox/imu`, `/Odometry` e `/scan` mudos.
+3. No cabo do lidar (`enp1s0`, não mais `enp2s0`): `.169`
+   (`e4:7a:2c:90:1d:f1`) FAILED no ARP; um Livox em **`.158`**
+   (`e4:7a:2c:95:df:da`) responde ping. Os dois valores já constavam no
+   README do config.
+
+Conserto: `lidar_configs[].ip` para `.158` (`56e6bda`). Resultado:
+`/livox/lidar` 7,5 Hz, `/Odometry` 10 Hz, `/scan` 10,5 Hz; os dois
+pré-voos com Translation, `/joy` 14 Hz com o Xbox em `js0`, web na 5000.
+
+Deploy fora do padrão: o NUC está **67 commits atrás** e o `git fetch` dá
+`Permission denied (publickey)`. Fiz `git push` do dev direto para o
+`refs/remotes/origin/main` do NUC por ssh, e depois `reset --hard`. Continua
+sendo git, não scp. A chave do GitHub no NUC fica pendente.
+
 ## 2026-08-20 — DESFAZENDO UMA LEVA DE 12 MUDANÇAS, E O QUE SOBROU DELA
 
 Sessão inteira no Gazebo, sem robô. Começou com o dono relatando que uma leva
