@@ -41,24 +41,15 @@ pio run -d firmware/mega_bridge -t upload --upload-port /dev/ttyACM0   # placa d
 | \|L\| ≠ \|R\| dentro do mesmo pivô | mede `x` (canal) |
 | tudo igual | hipótese cai |
 
-**Dono, 15-09:** a placa é **igual nos dois robôs**, e **quem gravou o firmware
-mexeu na configuração** — não é o EFeru padrão. A conta de 15-09 usou os valores
-padrão (`VLT_MODE`, `STEER 0,5`, `pwmr = -cmdR`); o comportamento medido bate com
-eles, mas **não estão confirmados** até ter o `config.h` gravado. Vale ajustar a
-configuração depois que o pivô disser a causa.
+**Placas: mesmo modelo, unidades diferentes** nos robôs 2 e 3.
 
-**Placas: mesmo modelo, unidades diferentes** nos robôs 2 e 3. O `config.h`
-gravado provavelmente não vai ser conseguido (dono tenta).
+**Firmware da placa:** o dono achou que "quem gravou mexeu", e depois descobriu
+que **a mudança foi no ROS do hover, não na placa** — não chega ao robô 3. A
+configuração gravada segue **desconhecida**, compatível com o EFeru padrão
+(`VLT_MODE`, `STEER 0,5`, `pwmr = -cmdR`) usado na conta de 15-09, não
+confirmada.
 
-**Plano A' (dono): regravar com o EFeru, configuração nossa.** Ordem:
-1. pivô no chão com o firmware atual (o "antes");
-2. ST-Link V2 no SWD: tentar **ler e guardar** o firmware atual (se estiver
-   protegido, destravar APAGA — sem volta ao firmware modificado);
-3. regravar **só a placa do robô 3** (a do robô 2 fica de referência);
-4. repetir reta e pivô (o "depois"). Candidato: `SPD_MODE` (a placa iguala as
-   rodas); recalibra escala/giro/zona morta da 048.
-Pré-requisitos em aberto: **qual MCU** a placa tem (EFeru só STM32F103/GD32F103;
-AT32 como a J20 V4 não serve) e se há ST-Link.
+~~Regravar as placas com o EFeru~~ — **descartado pelo dono em 15-09**.
 
 **Plano B (dono):** se a causa não tiver conserto, inverter frente/ré **só na
 reta**, no código, para o robô andar sempre no sentido elétrico da ré (o que vai

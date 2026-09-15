@@ -31,9 +31,10 @@
   `DEFAULT_STEER_COEFFICIENT 8192` (0,5) e `DEFAULT_SPEED_COEFFICIENT 16384`
   (1,0); `Src/main.c` `mixerFcn(speed << 4, steer << 4, &cmdR, &cmdL)` e
   `pwmr = -cmdR` sem `INVERT_R_DIRECTION`. Base da hipótese do puxão crônico
-  (diário 15-09) e do giro fraco (decisão 048). Status: lido; **o dono confirmou em
-  15-09 que a configuração gravada nas placas (iguais nos robôs 2 e 3) foi
-  alterada por quem gravou** — os valores acima são do padrão, não das placas.
+  (diário 15-09) e do giro fraco (decisão 048). Status: lido. Os valores acima são
+  do **padrão**; a configuração gravada nas placas (mesmo modelo nos robôs 2 e
+  3) é desconhecida. A "mudança de quem gravou" era no ROS do hover, não na
+  placa (dono, 15-09).
 
 ## Stack de navegação (herdada do robô 1)
 

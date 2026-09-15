@@ -8460,12 +8460,14 @@ coeficiente 0,5).
 
 - A placa é **igual nos robôs 2 e 3**. Mesmo defeito em dois robôs com a mesma
   placa e o mesmo firmware reforça causa sistemática, não peça ruim.
-- **Quem gravou o firmware mexeu no `config.h`.** A conta acima usou o EFeru
-  padrão. Os números medidos são compatíveis com ele (a rpm não se iguala; o
-  `steer` sai ~7× mais fraco que o `speed` no ar, perto do 0,5 com zona morta),
-  mas `VLT_MODE`, o coeficiente e a inversão do motor direito **não estão
-  confirmados** sem o `config.h` gravado. Ler da placa exige ST-Link e pode
-  estar protegido; o caminho é pedir o `config.h`/fork a quem gravou.
+- ~~Quem gravou o firmware mexeu no `config.h`~~ — **corrigido pelo dono na
+  mesma conversa: a mudança foi no ROS do hover, não na placa**, e não chega ao
+  robô 3. As placas são do mesmo modelo, unidades diferentes. A configuração
+  gravada segue desconhecida; os números medidos são compatíveis com o EFeru
+  padrão (a rpm não se iguala; o `steer` sai ~7× mais fraco que o `speed` no ar,
+  perto do 0,5 com zona morta), mas `VLT_MODE`, o coeficiente e a inversão do
+  motor direito **não estão confirmados**. Regravar as placas com o EFeru foi
+  considerado e **descartado pelo dono**.
 
 **Plano B do dono**, se a causa não tiver conserto: inverter frente/ré só na
 reta, no código, e o robô passa a andar sempre no sentido elétrico da ré. Com os
