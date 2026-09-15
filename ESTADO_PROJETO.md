@@ -45,7 +45,8 @@ Tudo fica gravado em `~/bancada_robo3/controle_<data>/`.
 | Xbox → placa pelo `mega_bridge` | ✅ anda; giro com força e direção boas (dono) |
 | `sinal` padrão 1.0 | ✅ frente = a das rodas |
 | giro 4,0 / 7,5 | ✅ de partida, rodas no ar |
-| direcional reto | 🟡 anda reto "não 100%"; desvio não medido (bag sem índice) |
+| direcional reto | 🟡 frente puxa à direita: **canal L +9,8 % de rpm com `speed>0` no chão** (3/3 corridas), ré −1,8 %; no ar igual → só com carga (`reta_chao_211439.csv`) |
+| cabos das rodas trocados na placa | ⚠️ frente = lado das bobas; giro continua certo |
 | suspensão do notebook | ✅ desligada (derrubava rede, Xbox e o USB da MEGA) |
 | pull-up no 19 com GND bom | ❓ não testado |
 

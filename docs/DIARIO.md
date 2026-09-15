@@ -8346,3 +8346,44 @@ Mesma MEGA, com o fio do GND novo, no notebook do robô 3, pelo `mega_bridge`
   ler `/hoverboard/wheel_velocities` × `/dpad_vel`.
 - Se o pull-up no 19 ainda é necessário com o GND bom.
 - Tudo com as rodas no ar: no chão o giro pode pedir mais.
+
+### 21:14 (NO CHÃO) — POR QUE A FRENTE PUXA PARA A DIREITA E A RÉ NÃO
+
+O dono subiu a pilha sozinho e trocou os cabos das rodas na placa (a frente
+passou das motrizes para as bobas). Relato dele: **nas duas montagens** a frente
+no direcional vai torta para a direita e a ré vai mais reta; o giro continuou
+certo depois da troca (bate com a conta: trocar os canais inverte só frente/ré).
+
+**O que o relato já descarta:** "cabos trocados + frente" e "antes + ré" movem o
+robô para o mesmo lado físico, cada motor girando para o mesmo lado — e deram
+resultados diferentes. Chão, bobas, diâmetro de roda e os motores seriam iguais
+nos dois. O que muda é o sinal do comando e qual canal da placa move cada roda.
+
+**Medido** (`reta_chao_211439.csv` no notebook, `/hoverboard/wheel_velocities` e
+`/dpad_vel` com carimbo de chegada, LB + direcional, `steer = 0` exato, regime a
+partir de 1 s):
+
+| janela | FL (canal L) | FR (canal R) | \|FL\|−\|FR\| |
+|---|---|---|---|
+| frente 19,6 s | +41,4 | +37,8 | **+8,8 %** |
+| ré 28,3 s | −40,7 | −41,1 | −1,1 % |
+| frente 35,1 s | +42,4 | +37,7 | **+11,1 %** |
+| ré 43,0 s | −39,2 | −40,2 | −2,5 % |
+| frente 50,6 s | +43,3 | +39,1 | **+9,6 %** |
+| **total frente** (n=857) | +42,3 | +38,1 | **+9,8 %** |
+| **total ré** (n=521) | −39,9 | −40,6 | −1,8 % |
+
+**A placa entrega ~10 % mais rpm no canal L que no R com `speed > 0`, no chão,
+nas três corridas; na ré, praticamente igual.** Mesmo comando nos dois canais.
+Isso também diz que a placa **não está em malha fechada de velocidade** — senão
+as rpm se igualariam.
+
+No ar (`teclado_20260914_202729`), `+250` saiu igual nos dois canais (−0,1 %):
+**a diferença só aparece com carga.** Sem carga a rotação é a de tensão
+aplicada; com carga, o canal que entrega menos torque naquele sentido afunda
+mais. Aponta para o caminho de corrente/torque do canal R no sentido positivo
+(sensor de corrente, driver, MOSFET, limite por canal) — **não medido**: o
+retorno da placa não traz corrente.
+
+Não medido ainda: a antes-da-troca (só relato do dono), e se a diferença cresce
+com mais carga (turbo).
