@@ -41,8 +41,15 @@ pio run -d firmware/mega_bridge -t upload --upload-port /dev/ttyACM0   # placa d
 | \|L\| ≠ \|R\| dentro do mesmo pivô | mede `x` (canal) |
 | tudo igual | hipótese cai |
 
-Em aberto (perguntado ao dono, sem resposta): a placa do robô 3 é a mesma do
-robô 2? Qual firmware/`config.h` foi gravado nas placas?
+**Dono, 15-09:** a placa é **igual nos dois robôs**, e **quem gravou o firmware
+mexeu na configuração** — não é o EFeru padrão. A conta de 15-09 usou os valores
+padrão (`VLT_MODE`, `STEER 0,5`, `pwmr = -cmdR`); o comportamento medido bate com
+eles, mas **não estão confirmados** até ter o `config.h` gravado. Vale ajustar a
+configuração depois que o pivô disser a causa.
+
+**Plano B (dono):** se a causa não tiver conserto, inverter frente/ré **só na
+reta**, no código, para o robô andar sempre no sentido elétrico da ré (o que vai
+reto). Não implementado: primeiro o pivô.
 
 ---
 

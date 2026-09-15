@@ -8455,3 +8455,20 @@ nos dois sentidos (compatível com `x > 0`); os dois sentidos diferem ~4 %. **N�
 decide**: ~19 rpm é beira de zona morta e sem carga, onde a própria hipótese
 espera `b ≈ 0`. O teste vale no chão e com `--giro 400` (~200 por roda depois do
 coeficiente 0,5).
+
+**Duas respostas do dono que mudam a leitura:**
+
+- A placa é **igual nos robôs 2 e 3**. Mesmo defeito em dois robôs com a mesma
+  placa e o mesmo firmware reforça causa sistemática, não peça ruim.
+- **Quem gravou o firmware mexeu no `config.h`.** A conta acima usou o EFeru
+  padrão. Os números medidos são compatíveis com ele (a rpm não se iguala; o
+  `steer` sai ~7× mais fraco que o `speed` no ar, perto do 0,5 com zona morta),
+  mas `VLT_MODE`, o coeficiente e a inversão do motor direito **não estão
+  confirmados** sem o `config.h` gravado. Ler da placa exige ST-Link e pode
+  estar protegido; o caminho é pedir o `config.h`/fork a quem gravou.
+
+**Plano B do dono**, se a causa não tiver conserto: inverter frente/ré só na
+reta, no código, e o robô passa a andar sempre no sentido elétrico da ré. Com os
+cabos já trocados, isso devolve a frente às motrizes. Custos a registrar quando
+for decidido: a ré de verdade passa a ser o sentido torto, e a odometria e o
+Nav2 precisam enxergar a mesma convenção. Não implementado.
