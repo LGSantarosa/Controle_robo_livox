@@ -8448,3 +8448,10 @@ elétrico**: um lado de pivô = ambas em +, o outro = ambas em −.
 
 Se `b` se confirmar, as saídas são `SPD_MODE` no firmware (precisa de ST-Link) ou
 malha de velocidade por roda no PC com a rpm que a placa já manda.
+
+**Pivô no ar que já existia** (`teclado_20260914_202729`, `steer ±150`, regime
+> 1 s): `+150` → média 18,5 rpm, L−R +1,8; `−150` → 19,3 rpm, L−R +1,1. L ganha
+nos dois sentidos (compatível com `x > 0`); os dois sentidos diferem ~4 %. **Não
+decide**: ~19 rpm é beira de zona morta e sem carga, onde a própria hipótese
+espera `b ≈ 0`. O teste vale no chão e com `--giro 400` (~200 por roda depois do
+coeficiente 0,5).
