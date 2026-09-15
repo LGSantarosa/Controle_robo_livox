@@ -11,6 +11,46 @@
 
 ---
 
+## 🎮 14-09 ~21:00 — ROBÔ 3 DIRIGE NO XBOX (decisão 048)
+
+### Como subir o controle manual sozinho (no notebook do robô 3)
+
+```bash
+cd ~/Workspace/Controle_robo_livox
+bash bin/sobe-robo3          # com a PLACA DESLIGADA
+```
+
+1. Xbox ligado e conectado (botão Xbox, luz fixa).
+2. Esperar as conferências: `controle (/joy): 🟢`. Placa e bateria ficam 🔴
+   enquanto a placa está desligada — é esperado.
+3. **Ligar a placa.** Rodas no ar no primeiro teste do dia.
+4. Dirigir:
+   - **LB segurado** + analógico esquerdo = anda e gira (soltou o LB, para)
+   - **RB** = turbo
+   - **LB + direcional cima/baixo** = reta pura / ré pura
+5. Para derrubar: `bash bin/sobe-robo3 --mata`
+
+Tudo fica gravado em `~/bancada_robo3/controle_<data>/`.
+
+**Se não andar:**
+
+| sintoma | o que fazer |
+|---|---|
+| `controle (/joy): 🔴` ou "NENHUM Xbox" | ligar/reconectar o Xbox e subir de novo |
+| `placa responde: 🔴 /battery/front mudo` | é a MEGA, não a placa: `--mata`, **replugar o USB da MEGA**, subir de novo |
+| beep da placa continua e nada anda | religar a placa com a pilha já no ar; conferir o fio do GND |
+
+| o quê | estado |
+|---|---|
+| Xbox → placa pelo `mega_bridge` | ✅ anda; giro com força e direção boas (dono) |
+| `sinal` padrão 1.0 | ✅ frente = a das rodas |
+| giro 4,0 / 7,5 | ✅ de partida, rodas no ar |
+| direcional reto | 🟡 anda reto "não 100%"; desvio não medido (bag sem índice) |
+| suspensão do notebook | ✅ desligada (derrubava rede, Xbox e o USB da MEGA) |
+| pull-up no 19 com GND bom | ❓ não testado |
+
+---
+
 ## ✅ 14-09 ~20:25 (BANCADA, PC dev) — ROBÔ 3: ERA O GND
 
 O **fio do GND estava com defeito**; o dono trocou só o fio (mesmos pontos). `teclado_20260914_202729.csv`:

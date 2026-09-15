@@ -8296,3 +8296,53 @@ azul; **não medido**, e não testei a placa sem o pull-up com o GND bom.
 
 **Retratação:** em 10-09 escrevi que o diagnóstico de "GND ruim" tinha caído.
 Estava errado, e custou 10-09 e a tarde e a noite de 14-09.
+
+---
+
+## 🎮 2026-09-14 (NOTEBOOK, ~20:30–21:00) — O ROBÔ 3 ANDA NO XBOX, E O CONTROLE MANUAL FICA SALVO
+
+Mesma MEGA, com o fio do GND novo, no notebook do robô 3, pelo `mega_bridge`
+(decisão 046). Rodas suspensas. Decisão desta sessão: **048**.
+
+### A sequência
+
+| hora | o quê | resultado |
+|---|---|---|
+| 20:32 | `mega_bridge` gravado (13 152 bytes, pull-up no 19); `sobe-robo3` | controle 🟢; placa 🔴 (desligada) |
+| — | dono liga a placa e dirige | **anda pelo Xbox**; giro "lento demais", quase não move, normal e turbo |
+| — | conta + `teclado_20260914_202729` | Xbox mandava `steer` 97/148; no teclado, `steer 150` em pivô = ~17 rpm contra ~117 rpm de `speed 250` reto |
+| 20:38 | giro 1,5/2,3 → **4,0/7,5** (`b9dcbeb`) e `sinal:=1.0` (o −1 invertia frente **e** giro) | placa 🟢, bateria 40,65 V; dono: **força e direção do giro boas** |
+| 20:43 | `/joy` gravado com o direcional (`joy_dpad_204304.csv`) | cima/baixo = eixo 7 (+1 cima); esquerda/direita = eixo 6 (+1 esquerda) |
+| — | `dpad_reto` (`c5376e2`): LB + direcional = reta pura, mux 110 | função testada fora do robô, 7 casos |
+| 20:48 | `sinal` 1.0 vira padrão (`b4d2c39`); na subida o notebook **tinha suspendido** | caiu da rede, Xbox desconectou |
+| 20:50 | subida de novo | não anda: `joy`→`cmd_vel`→`wheel_vel_setpoints` fluindo (até 31 Hz), `/mega/debug` e `/battery/front` **mudos** em 60 s; `dpad_reto` órfão da subida anterior (fora da lista do `--mata`) |
+| 20:54 | leitura crua da porta, pilha derrubada | **0 bytes da MEGA em 5 s**, sem "USB disconnect" no kernel |
+| 20:55 | dono replugou o USB | 6 117 bytes / 301 quadros em 5 s |
+| 20:56 | `sobe-robo3` puro | **anda; direcional reto "não 100%, mas é erro dele"** (dono) |
+
+### Mudanças
+
+- `teleop_xbox_robo3.yaml`: giro 4,0 (normal) / 7,5 (turbo). O "rad/s" não é
+  real; calibra com o Livox.
+- `controle_robo3.launch.py`: `sinal` padrão **1.0**.
+- `dpad_reto` + entrada `direcional` no `twist_mux_robo3.yaml`.
+- `sobe-robo3 --mata` inclui `dpad_reto` (`877d632`).
+- Notebook: suspensão por inatividade **desligada** (`gsettings`
+  `sleep-inactive-{battery,ac}-type nothing`; `sudo` pede senha, a tampa já era
+  `ignore`).
+
+### Meus erros
+
+- Pus o `dpad_reto` no launch sem pôr no `--mata`: um órfão sobreviveu.
+- Levantei "MEGA reconectou às 20:51" pelo horário do `/dev/ttyACM0`; o kernel
+  não tinha queda nenhuma. A leitura crua é que separou.
+- O "placa responde 🔴" da subida das 20:48 foi lido como "placa desligada",
+  mas a mensagem era `/battery/front mudo` — a MEGA, não a placa.
+
+### O que não foi medido
+
+- **Quanto o direcional desvia da reta.** O bag `controle_20260914_205608`
+  ficou sem índice (gravador derrubado); precisa `ros2 bag reindex` antes de
+  ler `/hoverboard/wheel_velocities` × `/dpad_vel`.
+- Se o pull-up no 19 ainda é necessário com o GND bom.
+- Tudo com as rodas no ar: no chão o giro pode pedir mais.
