@@ -22,6 +22,18 @@
   exige IMU de 9 eixos própria e ajustes pra Livox (padrão é Velodyne).
   Status: ⏳ a ler.
 
+## Placa de hoverboard (atuador dos robôs 2 e 3)
+
+- **hoverboard-firmware-hack-FOC** — EFeru. https://github.com/EFeru/hoverboard-firmware-hack-FOC
+  — firmware das placas (protocolo `0xABCD`, 115200). Lido em 2026-09-15:
+  `Inc/config.h` padrão `CTRL_TYP_SEL FOC_CTRL`, `CTRL_MOD_REQ VLT_MODE`,
+  `FIELD_WEAK_ENA 0`, `I_MOT_MAX 15`, `N_MOT_MAX 1000`; `VARIANT_USART`
+  `DEFAULT_STEER_COEFFICIENT 8192` (0,5) e `DEFAULT_SPEED_COEFFICIENT 16384`
+  (1,0); `Src/main.c` `mixerFcn(speed << 4, steer << 4, &cmdR, &cmdL)` e
+  `pwmr = -cmdR` sem `INVERT_R_DIRECTION`. Base da hipótese do puxão crônico
+  (diário 15-09) e do giro fraco (decisão 048). Status: lido; **a configuração
+  gravada nas placas dos robôs 2 e 3 não é conhecida** — pode diferir do padrão.
+
 ## Stack de navegação (herdada do robô 1)
 
 - **Nav2** — Macenski, S.; et al. "The Marathon 2: A Navigation System".

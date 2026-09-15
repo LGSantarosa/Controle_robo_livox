@@ -8387,3 +8387,64 @@ retorno da placa não traz corrente.
 
 Não medido ainda: a antes-da-troca (só relato do dono), e se a diferença cresce
 com mais carga (turbo).
+
+---
+
+## 🧩 2026-09-15 (dev, sem robô) — O PUXÃO PODE SER CRÔNICO: O FIRMWARE INVERTE UM MOTOR E NÃO FECHA A VELOCIDADE
+
+O dono lembrou que o **robô 2 tinha o mesmo padrão**: frente puxa para a
+direita, ré quase reta. Está medido na decisão 011 (04-08): frente, círculo de
+**1,22 m para a direita**; ré, **8,3× menos**. Lá atribuímos a boba + peso, sem
+rpm por roda. Duas placas com o mesmo defeito tornam peça ruim menos provável.
+
+**Nosso pacote ROS está fora por construção:** no direcional,
+`esquerda = direita = 120` → `mega_bridge.py` manda `steer = round((L−R)/2) = 0`,
+o firmware da MEGA repassa sem ajuste, e o protocolo da placa só tem
+`steer`/`speed` — com `steer = 0` não há como pedir mais a uma roda. (Não
+gravado no fio naquela corrida: `/mega/debug` fora do gravador.)
+
+**O que o firmware EFeru FOC faz por padrão** (fonte em `docs/REFERENCIAS.md`):
+
+| `Inc/config.h` / `Src/main.c` | consequência |
+|---|---|
+| `CTRL_MOD_REQ VLT_MODE` | tensão, não velocidade: cada roda gira o que a carga deixa |
+| `DEFAULT_STEER_COEFFICIENT 8192` (0,5) | o `steer` sai pela metade — explica a decisão 048 |
+| `pwmr = -cmdR` (sem `INVERT_R_DIRECTION`) | andando reto, os dois motores giram em **sentidos elétricos opostos** |
+
+### A hipótese (coerente com todos os números, não medida)
+
+Dois efeitos somados, em % de rpm do canal L sobre o R:
+
+- **x** = diferença de canal (a mesma nos dois sentidos);
+- **b** = um sentido elétrico rende mais que o outro sob carga, **igual nos dois
+  motores** — p.ex. o ângulo fixo hall→comutação do firmware adiantado num
+  sentido e atrasado no outro, que nenhum dos dois motores calibra.
+
+Frente: L no sentido elétrico +, R no −  → `x + 2b = +9,8 %`
+Ré:     L no −, R no +                   → `x − 2b = −1,8 %`
+⇒ **x ≈ +4 %**, **2b ≈ +5,8 %**.
+
+Explica também o ar: sem carga, em `VLT_MODE` a rotação é a da tensão e quase
+não depende do ângulo de comutação (+250 no ar: −0,1 %); com carga, o sentido
+com ângulo pior dá menos torque e afunda. E explica o crônico: mesmo modelo de
+motor + mesmo firmware padrão = mesmo `b` nos dois robôs.
+
+### ⚠️ Correção do que escrevi em 14-09 21:14
+
+"A troca de cabos descarta os motores" estava **largo demais**. Ela descarta
+uma **diferença entre os dois motores** (e chão, bobas, peso). **Não descarta um
+defeito de sentido igual nos dois motores**, porque depois da troca cada canal
+continua usando o mesmo sentido elétrico para "frente".
+
+### O teste que separa x de b (próxima sessão com robô)
+
+**Pivô no chão**, pelo `teclado_placa.py` (sem ROS), `a` e `d`, rpm gravada.
+Com o motor direito invertido, no pivô **as duas rodas giram no mesmo sentido
+elétrico**: um lado de pivô = ambas em +, o outro = ambas em −.
+
+- rpm do pivô para um lado ≠ para o outro (mesmo `|steer|`) → mede **b**;
+- |L| ≠ |R| dentro do mesmo pivô → mede **x**;
+- pivôs iguais e L = R → a hipótese cai.
+
+Se `b` se confirmar, as saídas são `SPD_MODE` no firmware (precisa de ST-Link) ou
+malha de velocidade por roda no PC com a rpm que a placa já manda.
