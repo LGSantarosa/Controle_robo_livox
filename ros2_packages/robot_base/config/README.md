@@ -17,8 +17,8 @@ normalmente, só não sai dado.
 
 | Campo | O que é | Como conferir |
 |---|---|---|
-| `host_net_info.*_ip` | IP da **NUC** na interface ethernet ligada ao lidar | `ip -brief addr` — na NUC a interface é `enp2s0`. Valor atual: `192.168.1.2` |
-| `lidar_configs[].ip` | IP do **lidar** | varredura da sub-rede (abaixo). Valor atual: `192.168.1.169` |
+| `host_net_info.*_ip` | IP da **NUC** na interface ethernet ligada ao lidar | `ip -brief addr` — na NUC a interface já foi `enp2s0` e em 15-09 era `enp1s0` (o IP é o que importa). Valor atual: `192.168.1.2` |
+| `lidar_configs[].ip` | IP do **lidar** | varredura da sub-rede (abaixo). Valor atual: `192.168.1.158` (15-09: `e4:7a:2c:95:df:da`; o `.169` era `e4:7a:2c:90:1d:f1` e não respondeu) |
 
 Descobrir o IP do lidar:
 
