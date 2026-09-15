@@ -47,6 +47,19 @@ padrão (`VLT_MODE`, `STEER 0,5`, `pwmr = -cmdR`); o comportamento medido bate c
 eles, mas **não estão confirmados** até ter o `config.h` gravado. Vale ajustar a
 configuração depois que o pivô disser a causa.
 
+**Placas: mesmo modelo, unidades diferentes** nos robôs 2 e 3. O `config.h`
+gravado provavelmente não vai ser conseguido (dono tenta).
+
+**Plano A' (dono): regravar com o EFeru, configuração nossa.** Ordem:
+1. pivô no chão com o firmware atual (o "antes");
+2. ST-Link V2 no SWD: tentar **ler e guardar** o firmware atual (se estiver
+   protegido, destravar APAGA — sem volta ao firmware modificado);
+3. regravar **só a placa do robô 3** (a do robô 2 fica de referência);
+4. repetir reta e pivô (o "depois"). Candidato: `SPD_MODE` (a placa iguala as
+   rodas); recalibra escala/giro/zona morta da 048.
+Pré-requisitos em aberto: **qual MCU** a placa tem (EFeru só STM32F103/GD32F103;
+AT32 como a J20 V4 não serve) e se há ST-Link.
+
 **Plano B (dono):** se a causa não tiver conserto, inverter frente/ré **só na
 reta**, no código, para o robô andar sempre no sentido elétrico da ré (o que vai
 reto). Não implementado: primeiro o pivô.
