@@ -11,35 +11,62 @@
 
 ---
 
-## 🧩 PRÓXIMA SESSÃO COM O ROBÔ 3 — PIVÔ NO CHÃO (aprovado pelo dono em 15-09)
+## 🧩 AMANHÃ (16-09) COM O ROBÔ 3 — PIVÔ LIMPO + RETA, NA MESMA BATERIA
 
-Pergunta: o puxão da frente para a direita (canal L +9,8 % de rpm; ré −1,8 %;
-robô 2 igual, decisão 011) é **sentido elétrico do motor/firmware** (`b`) ou
-**diferença de canal** (`x`)? Hipótese e conta no diário de 15-09. No pivô,
-com `pwmr = -cmdR` do EFeru, as duas rodas ficam no **mesmo** sentido elétrico.
+**Pergunta:** por que a frente puxa para a direita e a ré vai reta (robôs 2 e 3)?
 
-No notebook, **placa desligada** para gravar:
+**O que 15-09 já mostrou (parcial, `docs/dados/2026-09-15-robo3-pivo-parcial`):**
+no pivô pelo Xbox, **nos dois lados a roda que roda para trás girou mais**
+(esq.: L trás 126 × R frente 79 rpm; dir.: R trás 122 × L frente 91). Se
+confirmar, **derruba a hipótese elétrica de 15-09** (no pivô as duas rodas estão
+no mesmo sentido elétrico e mesmo assim diferem) e aponta um efeito **do sentido
+físico de cada roda**, comum às duas. Não conclusivo: pivô esquerdo com
+`speed −18` (analógico escapou) e o direito só 1,4 s — o notebook caiu e o USB
+da MEGA desconectou (voltou como `/dev/ttyACM1`).
 
+### Passo a passo
+
+**0. Antes de ligar nada** — notebook **fixo no robô**, USB da MEGA firme,
+placa **desligada**, robô no chão com ~1 m livre. Os dois PCs na "Trafico de
+banana".
+
+**1. Pré-voo (eu, por ssh)** — sincronizo o repo no notebook; confiro porta da
+MEGA (`ls /dev/ttyACM*`, serial `55632313039351D05132`) e que não sobrou pilha.
+MEGA precisa estar com o `mega_bridge` (está, desde 15-09 17:0x).
+
+**2. Subir a pilha (placa desligada)**
 ```bash
 cd ~/Workspace/Controle_robo_livox
-bash bin/sobe-robo3 --mata
-pio run -d firmware/hover_ponte -t upload --upload-port /dev/ttyACM0   # lê a rpm da placa
-python3 tools/teclado_placa.py --giro 400
+bash bin/sobe-robo3                      # se a MEGA estiver em ACM1: porta:=/dev/ttyACM1
 ```
+Esperar `controle (/joy): 🟢`.
 
-Robô **no chão**, espaço para girar. Ligar a placa segurando `s` (ritual), soltar,
-e: **`a` ~4 s, solta, `d` ~4 s, solta — 3 vezes.** `q` sai. CSV + `.rx.bin` em
-`~/bancada_robo3/`. Depois, voltar ao Xbox:
+**3. Gravador (eu, por ssh)** — `python3 tools/grava_pivo.py ~/bancada_robo3/pivo_chao_<hora>.csv 420`
+(rpm, `/mega/debug`, `cmd_vel`, bateria). Eu aviso a hora de fim.
 
-```bash
-pio run -d firmware/mega_bridge -t upload --upload-port /dev/ttyACM0   # placa desligada
-```
+**4. Ligar a placa.** Mão no botão.
 
-| resultado | leitura |
-|---|---|
-| rpm média do pivô `a` ≠ `d` | mede `b` (sentido elétrico) — crônico, firmware/motor |
-| \|L\| ≠ \|R\| dentro do mesmo pivô | mede `x` (canal) |
-| tudo igual | hipótese cai |
+**5. Pivô limpo** — **LB + RB**, analógico **só para o lado, até o fim**:
+esquerda **5 s**, solta, direita **5 s**, solta — **3 vezes**. Olhar se o robô
+**anda de ré enquanto gira**.
+
+**6. Reta na mesma bateria** — **LB + direcional**: cima **5 s**, solta, baixo
+**5 s**, solta — **3 vezes**.
+
+**7. "pronto"** — eu leio. Placa pode ficar ligada; **não derrubo a pilha sem
+"pode"**.
+
+### Como eu leio
+
+Só trechos com `/mega/debug` = `speed 0, |steer| 484` (pivô) ou `steer 0` (reta),
+regime a partir de 1 s.
+
+| resultado do pivô | leitura | próximo passo |
+|---|---|---|
+| nos dois lados a roda **para trás** gira mais | efeito do **sentido físico** da roda, comum às duas (bobas, carga, apoio) | teste físico: bobas / peso — definido na hora |
+| a mesma roda (L) gira mais nos dois lados | diferença de **canal** (`x`) | trocar os cabos de volta e repetir |
+| os dois lados de pivô diferem na média | sentido **elétrico** (`b`) | reabre a hipótese de 15-09 |
+| tudo igual | nenhuma das três; a reta volta a ser a pista | — |
 
 **Placas: mesmo modelo, unidades diferentes** nos robôs 2 e 3.
 

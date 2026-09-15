@@ -8474,3 +8474,39 @@ reta, no código, e o robô passa a andar sempre no sentido elétrico da ré. Co
 cabos já trocados, isso devolve a frente às motrizes. Custos a registrar quando
 for decidido: a ré de verdade passa a ser o sentido torto, e a odometria e o
 Nav2 precisam enxergar a mesma convenção. Não implementado.
+
+---
+
+## 🔄 2026-09-15 (NOTEBOOK, ~17:00) — O PIVÔ PARCIAL DESMENTE A MINHA HIPÓTESE, E O NOTEBOOK CAI NO CHÃO
+
+Lab. Notebook sincronizado (`fa828f4`), MEGA `55632313039351D05132` em
+`/dev/ttyACM0`, nenhuma pilha. Gravei a `hover_ponte` para o pivô pelo teclado;
+o dono preferiu o **Xbox** — voltei o `mega_bridge` (13 152 bytes) e montei um
+gravador só de leitura com o **`/mega/debug`** (o comando no fio), para filtrar
+trechos com o analógico fora do lado. Tropeço meu: gravador primeiro com
+`Int16MultiArray`; o tópico é `Int32MultiArray`.
+
+**O notebook caiu do robô** no meio do pivô: `usb 1-1: USB disconnect` às
+17:06:30, MEGA voltou como **`/dev/ttyACM1`** às 17:06:38, com a pilha presa no
+`ACM0` (sem comando → MEGA zera; robô parado).
+
+**O que foi gravado antes** (`docs/dados/2026-09-15-robo3-pivo-parcial/pivo_chao_170422.csv`):
+
+| pivô | no fio (`/mega/debug`) | FL (canal L) | FR (canal R) | mais rápida |
+|---|---|---|---|---|
+| esquerda, 5,6 s | steer −484, **speed −17…−21** | −125,9 (trás) | +78,9 (frente) | L, a de trás |
+| direita, **1,4 s** | steer +484, speed 0 | +91,0 (frente) | −122,5 (trás) | R, a de trás |
+
+**Leitura, com cuidado:** nos dois pivôs a roda que roda **para trás** gira
+mais, e a mais rápida **troca de lado** — não é canal (`x`). No pivô, com a
+inversão do motor direito, as duas rodas estão no **mesmo sentido elétrico** e
+mesmo assim diferem — não é o `b` da minha hipótese de hoje de manhã. Aponta um
+efeito do **sentido físico de cada roda**, comum às duas; a média com sinal é
+para trás nos dois (−23,5 e −15,8 rpm): o robô **andaria de ré enquanto gira**.
+
+**Não conclusivo:** o speed −18 do pivô esquerdo sozinho explica ~14 % de
+diferença entre as rodas, não 46 %, mas contamina; o direito tem 21 amostras.
+E conflita com o relato da troca de cabos (a frente puxando igual nas duas
+montagens), que nunca foi medido antes da troca. Repetir limpo antes de mexer em
+qualquer explicação. Roteiro de 16-09 no `ESTADO_PROJETO.md`; gravador
+versionado em `tools/grava_pivo.py` (com bateria).
