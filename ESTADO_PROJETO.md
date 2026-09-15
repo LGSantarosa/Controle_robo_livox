@@ -11,6 +11,41 @@
 
 ---
 
+## 🧩 PRÓXIMA SESSÃO COM O ROBÔ 3 — PIVÔ NO CHÃO (aprovado pelo dono em 15-09)
+
+Pergunta: o puxão da frente para a direita (canal L +9,8 % de rpm; ré −1,8 %;
+robô 2 igual, decisão 011) é **sentido elétrico do motor/firmware** (`b`) ou
+**diferença de canal** (`x`)? Hipótese e conta no diário de 15-09. No pivô,
+com `pwmr = -cmdR` do EFeru, as duas rodas ficam no **mesmo** sentido elétrico.
+
+No notebook, **placa desligada** para gravar:
+
+```bash
+cd ~/Workspace/Controle_robo_livox
+bash bin/sobe-robo3 --mata
+pio run -d firmware/hover_ponte -t upload --upload-port /dev/ttyACM0   # lê a rpm da placa
+python3 tools/teclado_placa.py --giro 400
+```
+
+Robô **no chão**, espaço para girar. Ligar a placa segurando `s` (ritual), soltar,
+e: **`a` ~4 s, solta, `d` ~4 s, solta — 3 vezes.** `q` sai. CSV + `.rx.bin` em
+`~/bancada_robo3/`. Depois, voltar ao Xbox:
+
+```bash
+pio run -d firmware/mega_bridge -t upload --upload-port /dev/ttyACM0   # placa desligada
+```
+
+| resultado | leitura |
+|---|---|
+| rpm média do pivô `a` ≠ `d` | mede `b` (sentido elétrico) — crônico, firmware/motor |
+| \|L\| ≠ \|R\| dentro do mesmo pivô | mede `x` (canal) |
+| tudo igual | hipótese cai |
+
+Em aberto (perguntado ao dono, sem resposta): a placa do robô 3 é a mesma do
+robô 2? Qual firmware/`config.h` foi gravado nas placas?
+
+---
+
 ## 🎮 14-09 ~21:00 — ROBÔ 3 DIRIGE NO XBOX (decisão 048)
 
 ### Como subir o controle manual sozinho (no notebook do robô 3)
