@@ -2,8 +2,12 @@
 # Sobe o ROBÔ 3 para dirigir no controle Xbox, pela MEGA, sem Livox.
 #
 #   bash bin/sobe-robo3                  sobe (sinal 1, MEGA em /dev/ttyACM0)
+#   bash bin/sobe-robo3 frente:=-1.0     troca frente ↔ ré, giro IGUAL (decisão 049)
 #   bash bin/sobe-robo3 sinal:=-1.0      inverte frente E giro juntos
 #   bash bin/sobe-robo3 --mata           mata tudo e confere que morreu
+#
+# ⚠️ `frente` e `sinal` NÃO são a mesma coisa: `frente` é rotação (vira o robô
+# de costas, giro continua igual para quem dirige), `sinal` é espelho.
 #
 # No controle: LB segurado + analógico esquerdo dirige · RB = turbo ·
 # LB + direcional cima/baixo = reta pura · soltou o LB, para.

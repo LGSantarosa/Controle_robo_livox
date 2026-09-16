@@ -1,6 +1,7 @@
 """Dirigir o robô 3 no controle Xbox, pela MEGA, sem Livox.
 
     ros2 launch robot_nav controle_robo3.launch.py
+    ros2 launch robot_nav controle_robo3.launch.py frente:=-1.0      # troca frente ↔ ré, giro igual
     ros2 launch robot_nav controle_robo3.launch.py sinal:=-1.0       # inverte frente E giro
     ros2 launch robot_nav controle_robo3.launch.py porta:=/dev/ttyACM1
 
@@ -56,6 +57,7 @@ def _monta(contexto, *_a, **_k):
     pkg = get_package_share_directory('robot_nav')
     dev_id, motivo = escolhe_joystick()
     sinal = ParameterValue(LaunchConfiguration('sinal'), value_type=float)
+    frente = ParameterValue(LaunchConfiguration('frente'), value_type=float)
 
     return [
         LogInfo(msg=f'[robo3] controle em js{dev_id} — {motivo}'),
@@ -80,6 +82,10 @@ def _monta(contexto, *_a, **_k):
                 # ré, e inverter as duas inverte speed E steer juntos.
                 'left_wheel_sign': sinal,
                 'right_wheel_sign': sinal,
+                # `frente` é OUTRA coisa: -1.0 vira o robô de costas (só a
+                # linear troca de sinal, o giro continua igual para quem
+                # dirige). O `sinal` acima é espelho, este é rotação.
+                'linear_sign': frente,
                 'cmd_vel_topic': 'cmd_vel',
             }],
         ),
@@ -133,6 +139,11 @@ def generate_launch_description():
             'sinal', default_value='1.0',
             description='1.0 (14-09, aprovado pelo dono): frente = a das rodas, '
                         'giro e força bons. -1.0 inverte frente E giro juntos'),
+        DeclareLaunchArgument(
+            'frente', default_value='1.0',
+            description='-1.0 troca frente ↔ ré SEM mexer no giro (robô de '
+                        'costas). Para o defeito de 16-09: a ré anda reto e a '
+                        'frente puxa para a direita. Diferente de `sinal`'),
         DeclareLaunchArgument(
             'bitola', default_value='0.3225',
             description='[m] centro a centro das motrizes (URDF do robô 3)'),

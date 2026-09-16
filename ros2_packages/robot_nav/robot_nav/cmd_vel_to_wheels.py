@@ -4,8 +4,8 @@ Converts geometry_msgs/Twist (/cmd_vel) into wheel_msgs/WheelSpeeds
 (/wheel_vel_setpoints for the hoverboard driver).
 
 Cinemática diferencial amarrada à geometria do robô:
-  v_left  = linear - angular * wheel_base / 2     (m/s)
-  v_right = linear + angular * wheel_base / 2     (m/s)
+  v_left  = linear * linear_sign - angular * wheel_base / 2     (m/s)
+  v_right = linear * linear_sign + angular * wheel_base / 2     (m/s)
   cmd_left  = v_left  * linear_scale * left_wheel_sign
   cmd_right = v_right * linear_scale * right_wheel_sign
 
@@ -18,6 +18,15 @@ do driver (~ -1000..1000). `wheel_base` é a bitola física — assim
 com os mesmos parâmetros do `odom_publisher` — se inverter aqui sem
 inverter lá (ou vice-versa) o AMCL/EKF enxerga divergência entre comando
 e feedback. Por isso a inversão antiga "fios trocados" foi removida.
+
+`linear_sign` = -1.0 é o robô DE COSTAS: um giro de 180° do base_link.
+Só a linear troca de sinal; o giro fica como está, e para quem dirige
+esquerda continua esquerda — porque virar o robô troca também qual roda
+é a esquerda, e as duas inversões se cancelam no `angular`.
+
+NÃO confundir com inverter os DOIS `*_wheel_sign` juntos: aquilo é um
+ESPELHO, inverte frente E giro (e por isso o giro sai trocado para quem
+dirige). Rotação ≠ reflexão. Ver decisão 049.
 """
 
 import math
@@ -39,6 +48,9 @@ class CmdVelToWheels(Node):
         self.declare_parameter('linear_scale', 400.0)
         self.declare_parameter('left_wheel_sign', 1.0)
         self.declare_parameter('right_wheel_sign', 1.0)
+        # -1.0 = robô de costas (frente ↔ ré), sem mexer no giro. Default 1.0:
+        # quem não passa o parâmetro não sente diferença nenhuma.
+        self.declare_parameter('linear_sign', 1.0)
         self.declare_parameter('cmd_vel_topic', 'cmd_vel')
         self.declare_parameter('max_output', 1000.0)
 
@@ -46,6 +58,7 @@ class CmdVelToWheels(Node):
         self.linear_scale = float(self.get_parameter('linear_scale').value)
         self.left_sign = float(self.get_parameter('left_wheel_sign').value)
         self.right_sign = float(self.get_parameter('right_wheel_sign').value)
+        self.linear_sign = float(self.get_parameter('linear_sign').value)
         self.cmd_vel_topic = self.get_parameter('cmd_vel_topic').value
         self.max_output = float(self.get_parameter('max_output').value)
 
@@ -62,7 +75,9 @@ class CmdVelToWheels(Node):
             f'CmdVelToWheels: listening on /{self.cmd_vel_topic} '
             f'| wheel_base={self.wheel_base} m '
             f'| linear_scale={self.linear_scale} units/(m/s) '
-            f'| signs L={self.left_sign} R={self.right_sign}'
+            f'| signs L={self.left_sign} R={self.right_sign} '
+            f'| linear_sign={self.linear_sign}'
+            f'{" (DE COSTAS: frente ↔ ré)" if self.linear_sign < 0 else ""}'
         )
 
     def _cmd_vel_callback(self, msg: Twist):
@@ -75,6 +90,9 @@ class CmdVelToWheels(Node):
                 throttle_duration_sec=1.0,
             )
             return
+
+        # O 180°: só a linear vira. O `angular` NÃO — ver o cabeçalho.
+        linear *= self.linear_sign
 
         v_left = linear - angular * self.wheel_base / 2.0
         v_right = linear + angular * self.wheel_base / 2.0

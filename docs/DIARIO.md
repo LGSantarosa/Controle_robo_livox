@@ -4,6 +4,35 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-09-16 (dev, robô desligado) — CONTORNAR: A RÉ VIRA A FRENTE
+
+Sessão curta e de propósito sem investigação. O dono cortou o roteiro de pivô
+limpo + reta que o `ESTADO_PROJETO` planejava para hoje: *"inverte aí a ré e a
+frente, quero só que esse bixo funcione, não descobrir o porquê ele anda reto
+errado"*. Como a ré já anda reto nos dois robôs, promover a ré a frente é o
+contorno mais barato — e a pergunta de 15-09 fica aberta, registrada.
+
+A armadilha que quase custou a sessão: **já existia** um `sinal:=-1.0` no launch
+do robô 3, e ele NÃO faz isso. `sinal` multiplica as duas rodas, o que é uma
+reflexão — inverte `speed` e `steer` juntos, e foi reprovado pelo dono em 14-09
+justamente por trocar o giro (decisão 048, problema 2).
+
+Virar o robô de costas é uma **rotação**: troca o sentido da frente E qual roda
+é a esquerda, e as duas inversões se cancelam no termo do giro. Na conta, isso
+é negar só o `linear` e não tocar no `angular` — parâmetro novo `linear_sign`
+no `cmd_vel_to_wheels`, exposto como `frente:=` no launch. Conferido na conta
+(o pivô puro e o giro com frente não mudam de sinal; só o `speed` inverte):
+
+    frente 0,30 m/s              hoje  speed +120,0  →  novo  speed −120,0
+    frente + manche p/ esquerda  hoje  yaw +4,00     →  novo  yaw +4,00
+
+Default `frente:=1.0`: quem não passar o argumento não sente diferença. Decisão
+049. **Nada foi ao robô** — falta `bash bin/sobe-robo3 frente:=-1.0`.
+
+⚠️ O contorno pode falhar de um jeito específico: se a causa do desvio for do
+LADO (canal, cabo) e não do SENTIDO, o puxão troca de lado junto com a frente e
+o robô volta a andar torto. É a primeira coisa a olhar no teste.
+
 ## 2026-09-15 (robô 2, noite) — NÃO SUBIA: O LIDAR ESTAVA EM OUTRO IP
 
 Sintoma: a pilha de navegação abortava (`Failed to activate global_costmap

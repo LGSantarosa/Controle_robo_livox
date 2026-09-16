@@ -1,8 +1,8 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-09-14** (dev — robô 3 pronto para o controle
-> Xbox pela MEGA; primeiro teste no lab, com as rodas suspensas).
+> Versionado na `main`. Atualizado em **2026-09-16** (dev — robô 3 ganhou o
+> `frente:=-1.0` para trocar frente e ré; não testado no robô).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
@@ -22,9 +22,28 @@
 
 ---
 
-## 🧩 AMANHÃ (16-09) COM O ROBÔ 3 — PIVÔ LIMPO + RETA, NA MESMA BATERIA
+## 🔁 16-09 dev — A RÉ VIRA A FRENTE (contorno, não conserto)
 
-**Pergunta:** por que a frente puxa para a direita e a ré vai reta (robôs 2 e 3)?
+Decisão do dono: parar de caçar a causa e fazer o robô andar. Como a ré já anda
+reto, ela passa a ser a frente.
+
+- `bash bin/sobe-robo3 frente:=-1.0` — troca frente ↔ ré, **giro igual** para
+  quem dirige. Default `1.0`, então nada muda para quem não passar.
+- ⚠️ **Não é o `sinal:=-1.0`** que já existia: aquele é espelho (inverte o giro
+  junto, reprovado em 14-09). `frente` é rotação. Decisão 049.
+- 🔴 **NÃO TESTADO NO ROBÔ.** Falta subir e rodar LB + direcional cima/baixo.
+- ⚠️ Se o puxão só trocar de lado (passar a puxar para a esquerda), a causa é de
+  LADO e não de SENTIDO, e o contorno não resolve — é o que olhar primeiro.
+
+O roteiro de pivô limpo abaixo fica **em pausa**, não descartado: a pergunta
+segue aberta e vale para o artigo.
+
+---
+
+## 🧩 EM PAUSA (era 16-09) COM O ROBÔ 3 — PIVÔ LIMPO + RETA, NA MESMA BATERIA
+
+**Pergunta (ADIADA pelo contorno acima, não respondida):** por que a frente puxa
+para a direita e a ré vai reta (robôs 2 e 3)?
 
 **O que 15-09 já mostrou (parcial, `docs/dados/2026-09-15-robo3-pivo-parcial`):**
 no pivô pelo Xbox, **nos dois lados a roda que roda para trás girou mais**
