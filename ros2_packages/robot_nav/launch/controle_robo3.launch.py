@@ -1,7 +1,7 @@
 """Dirigir o robô 3 no controle Xbox, pela MEGA, sem Livox.
 
-    ros2 launch robot_nav controle_robo3.launch.py
-    ros2 launch robot_nav controle_robo3.launch.py frente:=-1.0      # troca frente ↔ ré, giro igual
+    ros2 launch robot_nav controle_robo3.launch.py                   # a FRENTE é a antiga RÉ
+    ros2 launch robot_nav controle_robo3.launch.py frente:=1.0       # volta a frente antiga
     ros2 launch robot_nav controle_robo3.launch.py sinal:=-1.0       # inverte frente E giro
     ros2 launch robot_nav controle_robo3.launch.py porta:=/dev/ttyACM1
 
@@ -140,10 +140,12 @@ def generate_launch_description():
             description='1.0 (14-09, aprovado pelo dono): frente = a das rodas, '
                         'giro e força bons. -1.0 inverte frente E giro juntos'),
         DeclareLaunchArgument(
-            'frente', default_value='1.0',
-            description='-1.0 troca frente ↔ ré SEM mexer no giro (robô de '
-                        'costas). Para o defeito de 16-09: a ré anda reto e a '
-                        'frente puxa para a direita. Diferente de `sinal`'),
+            'frente', default_value='-1.0',
+            description='-1.0 (PADRÃO desde 16-09, decisão do dono): a frente '
+                        'do robô 3 é a antiga ré — a ponta que anda reto. Só a '
+                        'linear vira; o giro fica igual para quem dirige. '
+                        '1.0 volta a frente antiga (a que puxa p/ direita). '
+                        'Diferente de `sinal`, que é espelho'),
         DeclareLaunchArgument(
             'bitola', default_value='0.3225',
             description='[m] centro a centro das motrizes (URDF do robô 3)'),

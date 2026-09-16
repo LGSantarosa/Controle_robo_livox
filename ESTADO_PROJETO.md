@@ -27,8 +27,13 @@
 Decisão do dono: parar de caçar a causa e fazer o robô andar. Como a ré já anda
 reto, ela passa a ser a frente.
 
-- `bash bin/sobe-robo3 frente:=-1.0` — troca frente ↔ ré, **giro igual** para
-  quem dirige. Default `1.0`, então nada muda para quem não passar.
+- `bash bin/sobe-robo3` — **já sobe com a antiga ré como frente**, é o padrão
+  agora. Giro **igual** para quem dirige. `frente:=1.0` volta a frente antiga.
+- Pega tudo o que dirige o robô 3 hoje (analógico e direcional). O nav2 do robô
+  3 ainda não existe; quando for adaptado, o launch novo manda
+  `linear_sign: -1.0` no `cmd_vel_to_wheels` e herda o mesmo comportamento.
+- O robô 2 fica **fora** disto: lá o Livox define a odometria e os calibres de
+  frente e ré são separados.
 - ⚠️ **Não é o `sinal:=-1.0`** que já existia: aquele é espelho (inverte o giro
   junto, reprovado em 14-09). `frente` é rotação. Decisão 049.
 - 🔴 **NÃO TESTADO NO ROBÔ.** Falta subir e rodar LB + direcional cima/baixo.

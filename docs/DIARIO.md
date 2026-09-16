@@ -26,8 +26,12 @@ no `cmd_vel_to_wheels`, exposto como `frente:=` no launch. Conferido na conta
     frente 0,30 m/s              hoje  speed +120,0  →  novo  speed −120,0
     frente + manche p/ esquerda  hoje  yaw +4,00     →  novo  yaw +4,00
 
-Default `frente:=1.0`: quem não passar o argumento não sente diferença. Decisão
-049. **Nada foi ao robô** — falta `bash bin/sobe-robo3 frente:=-1.0`.
+Virou o **PADRÃO** do robô 3 na mesma sessão, a pedido do dono: `bash
+bin/sobe-robo3` sobe assim, sem argumento (`frente:=1.0` volta a frente
+antiga). Pega o analógico e o `dpad_reto`, que passam os dois pelo mesmo nó.
+O default DO NÓ fica em 1.0 de propósito — ele é compartilhado com o
+`robot.launch.py` do robô 2, e mudar lá viraria a frente do robô 2 sem
+ninguém pedir. Decisão 049. **Nada foi ao robô** — falta `bash bin/sobe-robo3`.
 
 ⚠️ O contorno pode falhar de um jeito específico: se a causa do desvio for do
 LADO (canal, cabo) e não do SENTIDO, o puxão troca de lado junto com a frente e
