@@ -34,6 +34,25 @@ reto, ela passa a ser a frente.
   `linear_sign: -1.0` no `cmd_vel_to_wheels` e herda o mesmo comportamento.
 - O robô 2 fica **fora** disto: lá o Livox define a odometria e os calibres de
   frente e ré são separados.
+
+### 🗺️ E o nav2 do robô 3 ganhou plano: `docs/PLANO_NAV2_ROBO3.md`
+
+Decidido em 16-09: **frente = motoras, traseira = bobas** (eletricamente é o
+contrário, e a correção fica no código — é o `linear_sign` de hoje); **o Livox
+vem emprestado do robô 2**, no centro do robô, no topo. Atuador se baseia no
+robô 1 (MEGA), seguidor e navegação no robô 2 (também diferencial de 2 motoras;
+o robô 1 é 4x4 e só faz pivô).
+
+- ⚠️ **Enquanto o robô 3 navega, o robô 2 não navega** — só há um Mid-360.
+- 🟢 O chute do URDF (`livox_z_solo` 0,24, centro da caixa) **já casa** com a
+  montagem decidida: topo da caixa 0,205 + meio cilindro = 0,2375 m.
+- 🔴 O `scan_2d.yaml` **não se herda**: com o sensor a 0,24 m (era 0,42 no robô
+  2) o chão entra no campo a 1,95 m em vez de 3,4 m.
+- **Próximo passo é a etapa 1 do plano, e ela é barata**: reta de ida e volta
+  pelo `dpad_reto` comparando `frente:=-1.0` × `frente:=1.0`, 3x cada, mesma
+  bateria. **Não precisa do Livox** e é a única etapa que pode derrubar a
+  premissa do plano inteiro — se o puxão só trocar de lado, a causa é de canal
+  (elétrica) e não de sentido, e aí não se mexe no Livox do robô 2 à toa.
 - ⚠️ **Não é o `sinal:=-1.0`** que já existia: aquele é espelho (inverte o giro
   junto, reprovado em 14-09). `frente` é rotação. Decisão 049.
 - 🔴 **NÃO TESTADO NO ROBÔ.** Falta subir e rodar LB + direcional cima/baixo.
