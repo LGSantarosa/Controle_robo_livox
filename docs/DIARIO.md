@@ -16,6 +16,68 @@ Pedido do dono: a pose pula no mapa com o robô parado. Decisão 050.
   tem as mesmas 2 falhas de antes (`test_scan_2d`, `test_plano_suavizado`).
 - 🔴 Não testado no robô.
 
+### 🔴 A trava levou revisão no mesmo dia, e tinha um defeito que mentia a pose
+
+Revisão cruzada pegou quatro coisas, todas conferidas no código antes de mexer.
+A grave é a primeira, e não é estilo — é comportamento:
+
+**1. Uma roda falava pela outra.** O `CongelaParado` guardava **um** `t_roda`
+para as duas, e o `tf_odom` chamava `rodas(agora, *self.v)` a cada mensagem de
+qualquer lado, passando o valor em **cache** do outro — que nascia `0,0`. Então
+bastava o stream de uma roda nunca chegar (driver caído, cabo solto) para a
+outra, publicando zero, **manter a trava armada contra uma leitura que nunca
+existiu**. A TF congelava com o robô possivelmente andando, empurrado pela roda
+que não reporta, e a pose mentia **sem sintoma** — a pior forma de defeito neste
+projeto. Agora cada roda tem valor e instante próprios; só congela com as duas
+vistas e as duas frescas. Dois testes novos: "roda que nunca publicou" e
+"leitura velha de UMA roda". Os 4 testes originais ficaram **intactos** — a
+assinatura `rodas()` foi preservada de propósito, porque mudar API e depois
+ajustar teste para passar é apagar regressão.
+
+**2. `recovery_alpha_*` devolvidos** a 0,001/0,1. Zerá-los é mudança
+independente da trava; juntas, um ensaio ruim não diz qual das duas foi. E
+**nenhum teste no repo afirma esses valores** — entraram sem cobertura.
+
+**3. `std_msgs` faltando** no `package.xml` do `robot_base`, com o `tf_odom`
+importando `Float64`. Funcionava de carona no ambiente; quebraria em build limpo.
+
+**4. O tutorial mandava manter o robô ligado** durante `--mata`, build e
+subida. Contradiz o registro da placa **girar as rodas sozinha** com a MEGA
+mandando zero, e os 0,52 s de retenção da decisão 020 — e desta vez com um nó
+novo assumindo o `odom → base_link`. Agora: placa desligada (ou rodas
+suspensas) nos passos 1 a 3.
+
+**E um quinto, que eu acrescentei:** a `base.launch.py` ligava a trava por
+**padrão**. Qualquer `reset --hard origin/main` + `sobe-robo` no NUC a
+implantaria sozinho — código não validado entrando em produção por inércia, que
+é o pior estado intermediário possível. Virou argumento, padrão `false`.
+
+⚠️ **DOIS erros meus no caminho, e são o MESMO erro — escrever instrução sem
+conferir se ela roda:**
+
+1. Ao tornar o launch opt-in usei `LaunchConfiguration` num arquivo que não o
+   importava e sem declarar o argumento. `py_compile` **não pega** (é lookup em
+   tempo de execução dentro da função); só apareceu ao carregar o módulo e
+   chamar `generate_launch_description()` de verdade.
+2. Tornar a trava opt-in quebrou o passo 3 do tutorial, que mandava
+   `bash bin/sobe-robo` e depois conferir a linha no log — que **nunca mais ia
+   aparecer**. Escrevi `congela=on` na correção... sem ver que o `case "$1"` do
+   script recusava qualquer coisa fora de `slam|nav2|mapa=|--mapa` e sairia com
+   "modo desconhecido". A instrução corrigida também não funcionava.
+
+Consertado: o `sobe-robo` ganhou `congela=on`, parseado **antes** do `case` e
+fora dele (idioma do `sobe-robo3`), para compor com `mapa=<nome>` em vez de
+virar um modo. E foi **provado** extraindo o bloco do arquivo real e rodando 7
+conjuntos de argumentos, inclusive o vazio — não a cópia redigitada, que é onde
+esse tipo de teste mente.
+
+**A lição, que vale para o artigo:** compilar não é conferir. Launch se
+instancia, script se executa com os argumentos de verdade. Duas vezes na mesma
+hora, as duas pegas só porque rodei — nenhuma apareceu na leitura.
+
+Suíte depois de tudo: **847 passed** (era 845; +2 são os testes novos), com as
+mesmas 1 falha e 7 erros do `twist_mux` vendorizado. **Nada implantado no robô.**
+
 ## 2026-09-17 (dev, robô desligado) — O PLANO DO NAV2 LEVOU UMA REVISÃO E CAIU
 
 Fracasso documentado, que aqui é resultado: o `PLANO_NAV2_ROBO3.md` escrito

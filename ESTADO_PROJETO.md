@@ -13,10 +13,20 @@
 
 ## 📍 17-09 dev — ROBÔ 2: AMCL SÓ CORRIGE COM AS RODAS ANDANDO
 
-- Contra a pose pulando parado: `recovery_alpha` = 0 e `tf_odom` com
-  `congela_parado` (ligado só na `base.launch.py`). Decisão 050.
+- Contra a pose pulando parado: `tf_odom` com `congela_parado`. Decisão 050.
 - 🔴 **NÃO TESTADO NO ROBÔ.** Ensaio: parar 1 min com `localizacao:=amcl` e ver
   se a pose fica quieta; depois andar e ver se não dá degrau.
+- 🔴 **REVISADA no mesmo dia, e duas coisas desta seção mudaram:**
+  - **`recovery_alpha` voltou** a 0,001/0,1. Zerá-los era mudança independente
+    da trava; juntas, um ensaio ruim não diz qual das duas foi. (E nenhum teste
+    do repo afirmava esses valores.)
+  - **A trava NÃO sobe mais sozinha.** Ela era `true` na `base.launch.py`, e
+    assim qualquer `reset --hard origin/main` + `sobe-robo` no NUC a implantava
+    sem ninguém pedir. Agora é argumento, **padrão `false`**:
+    `ros2 launch robot_base base.launch.py congela_parado:=true`.
+  - Corrigido também um defeito que **mentia a pose**: o estado era único para
+    as duas rodas, então uma roda muda + a outra publicando zero congelava a TF
+    com o robô possivelmente andando. Agora é por roda. Diário de 17-09.
 
 ---
 

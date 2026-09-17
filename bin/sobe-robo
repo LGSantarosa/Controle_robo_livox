@@ -106,6 +106,24 @@ salva_mapa() {
   echo "   ⚠️ o mapa fica só no NUC — puxe por scp e commite, senão ele some"
 }
 
+# `congela=on` liga a trava do AMCL (decisao 050): rodas paradas = odom parado.
+# Ela e OPT-IN de proposito desde 17-09 — o padrao da base.launch.py e
+# DESLIGADO, para que nenhum `reset --hard` + subida normal implante no robo um
+# codigo que ainda nao passou no ensaio. So o ensaio dela liga.
+#
+# Sai dos argumentos ANTES do case abaixo, para compor com `mapa=<nome>` em vez
+# de virar um "modo" e cair no "modo desconhecido".
+CONGELA=false
+ARGS=()
+for a in "$@"; do
+  case "$a" in
+    congela=on|congela=true)   CONGELA=true ;;
+    congela=off|congela=false) CONGELA=false ;;
+    *)                         ARGS+=("$a") ;;
+  esac
+done
+set -- "${ARGS[@]}"
+
 # ⚠️ `mapa=` aceita MAPA=/mapa=/--mapa porque a mensagem do --salva-mapa dizia
 # "troque a linha MAPA=" e isso se lê como argumento — foi o que aconteceu em
 # 18-08. Recusar a forma que o proprio script sugeriu e armadilha nossa.
@@ -118,6 +136,7 @@ case "$1" in
   --mapa)       MODO=nav2; MAPA_NOME="$2" ;;
   *) echo "modo desconhecido: $1"
      echo "use: (vazio) | mapa=<nome> | slam | --mata | --salva-mapa <nome>"
+     echo "     + congela=on   (trava do AMCL, decisao 050 — so para o ensaio)"
      echo
      echo "mapas disponiveis em maps/:"
      ls -d "$R"/maps/*/ 2>/dev/null | xargs -r -n1 basename | sed 's/^/   /'
@@ -153,7 +172,11 @@ source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
 echo "== 1/5 base (rodas + Livox + FAST-LIO) =="
-setsid nohup ros2 launch robot_base base.launch.py > "$LOGS/base.log" 2>&1 < /dev/null &
+[ "$CONGELA" = true ] \
+  && echo "   🔴 trava do AMCL LIGADA (congela=on) — decisao 050, NAO validada no robo" \
+  || echo "   trava do AMCL desligada (padrao); para o ensaio dela: congela=on"
+setsid nohup ros2 launch robot_base base.launch.py congela_parado:="$CONGELA" \
+    > "$LOGS/base.log" 2>&1 < /dev/null &
 sleep 20
 echo -n "   /scan: "; timeout 12 ros2 topic hz /scan --window 10 2>&1 | grep -oE "average rate: [0-9.]+" | head -1
 echo -n "   placa: "; timeout 10 ros2 topic echo /hoverboard/connected --once 2>&1 | grep -oE "true|false" | head -1

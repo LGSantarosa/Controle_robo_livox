@@ -28,26 +28,62 @@ IDENT_Q = (0.0, 0.0, 0.0, 1.0)
 
 
 class CongelaParado:
+    """Estado POR RODA: uma leitura nunca fala pela outra.
+
+    🔴 Corrigido em 17-09. A primeira versão guardava UM `t_roda` para as duas
+    rodas, e o `tf_odom` chamava `rodas()` a cada mensagem de QUALQUER lado,
+    passando o valor em CACHE do outro (que nascia 0,0). Consequência: se o
+    stream de uma roda nunca chegasse — driver caído, cabo solto —, a outra
+    publicando zero mantinha a trava armada contra uma leitura que nunca
+    existiu. A TF congelava com o robô possivelmente ANDANDO, empurrado pela
+    roda muda, e a pose mentia sem sintoma.
+
+    Agora cada roda tem valor e instante próprios, e só congela com as DUAS
+    vistas e as DUAS frescas.
+    """
+
     def __init__(self, limiar=0.05, espera=0.5, validade=0.5):
         self.limiar = limiar        # rad/s; a placa mede em passos de 0,105
         self.espera = espera        # s parado antes de congelar
         self.validade = validade    # s sem leitura = leitura velha
         self.c_t, self.c_q = IDENT_T, IDENT_Q
         self.ultima = None          # última TF publicada (t, q)
-        self.t_roda = None          # instante da última leitura de roda
+        self.t_roda = [None, None]  # instante da última leitura, POR RODA
+        self.v_roda = [None, None]  # última velocidade lida, POR RODA
         self.parado_desde = None
 
+    def roda(self, agora, i, v):
+        """Uma leitura de UMA roda (0 = esquerda, 1 = direita)."""
+        self.t_roda[i] = agora
+        self.v_roda[i] = v
+        self._reavalia(agora)
+
     def rodas(self, agora, v_esq, v_dir):
-        self.t_roda = agora
-        if abs(v_esq) < self.limiar and abs(v_dir) < self.limiar:
+        """As duas rodas no mesmo instante — é o que os ensaios sintéticos usam.
+
+        No nó real NÃO se usa isto: as mensagens chegam separadas, e juntá-las
+        aqui reintroduziria o defeito de uma roda falar pela outra.
+        """
+        self.t_roda = [agora, agora]
+        self.v_roda = [v_esq, v_dir]
+        self._reavalia(agora)
+
+    def _reavalia(self, agora):
+        if self._parado():
             if self.parado_desde is None:
                 self.parado_desde = agora
         else:
             self.parado_desde = None
 
+    def _parado(self):
+        return all(v is not None and abs(v) < self.limiar for v in self.v_roda)
+
+    def _frescas(self, agora):
+        return all(t is not None and agora - t <= self.validade
+                   for t in self.t_roda)
+
     def congelado(self, agora):
-        return (self.t_roda is not None
-                and agora - self.t_roda <= self.validade
+        return (self._frescas(agora)
                 and self.parado_desde is not None
                 and agora - self.parado_desde >= self.espera
                 and self.ultima is not None)

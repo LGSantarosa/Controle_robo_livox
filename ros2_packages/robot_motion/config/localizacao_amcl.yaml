@@ -51,11 +51,18 @@ amcl:
     update_min_a: 0.20      # rad girados antes de reamostrar
     resample_interval: 1
     transform_tolerance: 1.0
-    # 0,0 = SEM injeção de partícula aleatória, como no robô 1 (padrão do
-    # AMCL). Com 0,001/0,1 o filtro espalhava partículas pelo mapa ao
-    # reamostrar, e a pose pulava (decisão 050).
-    recovery_alpha_slow: 0.0
-    recovery_alpha_fast: 0.0
+    # 🔴 DEVOLVIDOS aos valores de antes em 17-09. A decisão 050 zerou os dois
+    # JUNTO com a trava do odom, e são duas mudanças independentes: zerar isto
+    # desliga a recuperação automática por partícula aleatória, enquanto a
+    # trava ataca outra coisa (o LIO derivando parado). Misturadas, um ensaio
+    # ruim não diz qual das duas foi.
+    #
+    # A trava se prova sozinha primeiro. Mexer nestes dois fica para mudança
+    # própria, com ensaio próprio — e o AMCL do Jazzy já decide reamostrar
+    # pelos deltas de odometria, então a premissa de que era daqui que vinha o
+    # pulo nunca foi medida.
+    recovery_alpha_slow: 0.001
+    recovery_alpha_fast: 0.1
     tf_broadcast: true
 
     # ── a pose inicial VEM POR PARÂMETRO, e isto não é conveniência ──────

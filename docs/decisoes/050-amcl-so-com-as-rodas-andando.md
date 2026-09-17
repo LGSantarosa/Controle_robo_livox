@@ -2,6 +2,28 @@
 
 **Data**: 2026-09-17 (PC de dev, robô desligado)
 **Status**: aplicada em código, **NÃO testada no robô**.
+**🔴 Revisada no mesmo dia** — três correções antes de qualquer implantação:
+
+1. **Estado por roda.** A primeira versão tinha **um** `t_roda` para as duas, e
+   o `tf_odom` chamava a cada mensagem de qualquer lado passando o valor em
+   **cache** do outro (nascido `0,0`). Uma roda muda — driver caído, cabo solto
+   — e a outra publicando zero **mantinha a trava armada contra uma leitura que
+   nunca existiu**: a TF congelava com o robô possivelmente andando, empurrado
+   pela roda que não reporta, e a pose mentia sem sintoma. Agora cada roda tem
+   valor e instante próprios, e só congela com as duas vistas e frescas. Dois
+   testes novos cobrem "roda nunca publicou" e "leitura velha de uma roda".
+2. **`recovery_alpha_*` DEVOLVIDOS** a 0,001/0,1. Zerá-los é mudança
+   **independente** da trava — misturadas, um ensaio ruim não diz qual das duas
+   foi. E o AMCL do Jazzy já decide reamostrar pelos deltas de odometria, então
+   a premissa de que o pulo vinha daí nunca foi medida. Fica para mudança
+   própria, com ensaio próprio.
+3. **A trava não sobe mais por padrão.** A `base.launch.py` a ligava como
+   `true`, então qualquer `reset --hard origin/main` + `sobe-robo` no NUC a
+   implantava sozinho — código não validado entrando em produção por inércia.
+   Virou argumento, padrão `false`; o ensaio liga explicitamente.
+
+Junto: `std_msgs` estava faltando no `package.xml` (o `tf_odom` importa
+`Float64`); funcionava de carona no ambiente e quebraria em build limpo.
 **Toca**: `robot_base/congela_parado.py` (novo), `robot_base/tf_odom.py`,
 `launch/localizacao.launch.py`, `launch/base.launch.py`,
 `robot_motion/config/localizacao_amcl.yaml`. **Só o robô 2.**

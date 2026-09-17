@@ -57,3 +57,38 @@ def test_uma_roda_girando_nao_congela():
     c.passo(0.0, (0.0, 0.0, 0.0), yaw_q(0.0))
     t, q = c.passo(0.1, (0.0, 0.0, 0.0), yaw_q(0.2))
     perto(q, yaw_q(0.2))
+
+
+# 🔴 Os dois abaixo são o defeito de 17-09: estado POR RODA. Antes havia um
+# `t_roda` só, e o nó chamava com o valor em cache do outro lado (nascido 0,0),
+# então uma roda sozinha mantinha a trava armada. Ver `congela_parado.py`.
+
+def test_roda_que_nunca_publicou_nao_deixa_congelar():
+    """Direita muda desde sempre: a esquerda mandando zero NÃO pode congelar.
+
+    É o caso perigoso — o robô pode estar sendo tocado pela roda que não
+    reporta, e congelar a TF faria a pose mentir com o robô andando.
+    """
+    c = CongelaParado(espera=0.5)
+    for k in range(10):                      # só a esquerda publica, 1 s
+        c.roda(k * 0.1, 0, 0.0)
+    c.passo(0.0, (0.0, 0.0, 0.0), yaw_q(0.0))
+    t, _ = c.passo(1.0, (0.7, 0.0, 0.0), yaw_q(0.0))
+    perto(t, (0.7, 0.0, 0.0))                # passou o LIO direto
+
+
+def test_leitura_velha_de_UMA_roda_nao_deixa_congelar():
+    """Esquerda fresca, direita parou de chegar: não congela.
+
+    Driver de um lado caído no meio da operação é o mesmo risco, e a validade
+    tem de valer por roda — não para a última mensagem que chegou de qualquer
+    uma.
+    """
+    c = CongelaParado(espera=0.5, validade=0.5)
+    c.roda(0.0, 0, 0.0)
+    c.roda(0.0, 1, 0.0)
+    c.passo(0.0, (0.0, 0.0, 0.0), yaw_q(0.0))
+    for k in range(1, 21):                   # só a esquerda segue publicando
+        c.roda(k * 0.1, 0, 0.0)
+    t, _ = c.passo(2.0, (0.4, 0.0, 0.0), yaw_q(0.0))
+    perto(t, (0.4, 0.0, 0.0))                # direita velha -> sem congelar

@@ -84,7 +84,6 @@ class TfOdom(Node):
         self.congela = None
         if self.par['congela_parado']:
             self.congela = CongelaParado()
-            self.v = [0.0, 0.0]
             for i, lado in enumerate(('left', 'right')):
                 self.create_subscription(
                     Float64, f'/hoverboard/{lado}_wheel/velocity',
@@ -109,8 +108,10 @@ class TfOdom(Node):
         return self.get_clock().now().nanoseconds * 1e-9
 
     def roda(self, i, v):
-        self.v[i] = v
-        self.congela.rodas(self.agora(), *self.v)
+        # 🔴 UMA roda por chamada, e nunca falando pela outra: antes isto
+        # passava `*self.v`, o cache do outro lado (nascido 0,0), e uma roda
+        # sozinha mantinha a trava armada. Ver `congela_parado.py`.
+        self.congela.roda(self.agora(), i, v)
 
     def uma_vez(self, chave, msg):
         """Loga uma vez por causa — este callback roda a 10 Hz."""

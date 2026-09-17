@@ -16,6 +16,9 @@
   <depend>rclpy</depend>
   <depend>geometry_msgs</depend>
   <depend>nav_msgs</depend>
+  <!-- `tf_odom` lê as rodas em std_msgs/Float64 (decisão 050). Estava faltando:
+       funciona hoje por vir de carona no ambiente, e quebra em build limpo. -->
+  <depend>std_msgs</depend>
   <depend>tf2_ros</depend>
 
   <!-- Tração: interface ros2_control da placa hover + controlador diferencial -->
