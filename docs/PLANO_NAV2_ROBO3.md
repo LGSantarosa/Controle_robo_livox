@@ -1,6 +1,9 @@
 # Plano — adaptar o Nav2 para o robô 3 (v2.5)
 
-> **Status: nada implementado. Aguardando a aprovação do dono.**
+> **Status: plano APROVADO em 17-09, depois de seis revisões cruzadas.**
+> **Etapa 0 executada** no mesmo dia (§8) — é a única coisa implementada até
+> aqui; da etapa 1 em diante nada foi feito, e nada foi ao robô.
+>
 > **Seis** revisões cruzadas em dois dias, e cada uma achou coisa real:
 >
 > - **v1** (2026-09-16) — a primeira revisão **derrubou duas etapas inteiras**
@@ -269,7 +272,7 @@ Uma etapa por sessão. Nenhuma começa sem a anterior fechada.
 
 | # | etapa | prova / entrega | precisa do robô? |
 |---|---|---|---|
-| 0 | Consertar `test_scan_2d.py` (vermelho por `robot_radius` da 032) — **escopo enxuto do §8**: remover o teste inválido, corrigir os textos, manter o de coerência que já passa | "suíte verde" volta a ser critério válido, **sem petrificar o corte e sem teste que não afirma nada** | não |
+| 0 | ✅ **FEITA (17-09)** — teste inválido removido, textos corrigidos, o de coerência intacto | `test_scan_2d.py` **7/7 verde**; o corte não ficou petrificado e não entrou teste que não afirma nada | não |
 | 1 | Fechar **a placa** (§5.1 da revisão cruzada) e a geometria física autoritativa (trena) | sem isso a etapa 8 recomeça do zero | sim, desligado |
 | 2 | Repetir o ensaio frente/ré com o protocolo do §7 | confirma ou derruba a premissa do §2 | sim, ligado |
 | 3 | URDF completo girado (§3) + `robot_state_publisher` + footprints + testes reescritos | modelo e marcha concordam; o Nav2 passa a ter contorno | não |
@@ -291,9 +294,9 @@ justamente os ensaios em que se está mexendo neles. A decisão 048 já registro
 a placa girando sozinha com a MEGA mandando zero.
 
 **Etapa 0 — o que o teste passa a conferir, e por que não é substituição direta.**
-`test_o_robo_nao_se_enxerga_como_parede` hoje lê `robot_radius` do `nav2.yaml` e
-exige `range_min > robot_radius` (0,35 > 0,32). O `robot_radius` saiu na decisão
-032. 🔴 **Mas trocar por "o footprint" reprova o robô 2**: o vértice do contorno
+`test_o_robo_nao_se_enxerga_como_parede` lia `robot_radius` do `nav2.yaml` e
+exigia `range_min > robot_radius` (0,35 > 0,32). O `robot_radius` saiu na decisão
+032. **Removido em 17-09** — ver o bloco de comentário que ficou no lugar dele. 🔴 **Mas trocar por "o footprint" reprova o robô 2**: o vértice do contorno
 da 032 está a √(0,35² + 0,2775²) = **0,447 m**, contra `range_min` 0,35.
 
 Não é defeito do `range_min` — é a grandeza errada. O que o robô vê de si mesmo
@@ -328,7 +331,14 @@ autoritativa do robô 3 só fecha nas etapas **1** (trena) e **3** (URDF girado)
 Prometer "por robô" na etapa 0 é prometer contra coisa que ainda não existe.
 Então:
 
-**Etapa 0 — escopo enxuto (v2.5), e é só isto:**
+**Etapa 0 — ✅ EXECUTADA em 17-09** (`test_scan_2d.py`: 7 passaram, 0 falharam).
+Escopo enxuto (v2.5), e foi só isto:
+
+⚠️ **"Suíte verde" como critério só vale se a suíte for invocada certo**, e isso
+foi descoberto ao fechar esta etapa: `pytest` **da raiz, sem argumento** (ROS
+carregado) → **845 passed**. Passar `ros2_packages/` como alvo dá *"no tests
+collected"* e aborta com um `ImportError` de `rclpy.qos` que é `sys.path`, não
+defeito. Quem usar a invocação errada vai "descobrir" um defeito que não existe.
 
 1. **remover** `test_o_robo_nao_se_enxerga_como_parede`, que é inválido: ele
    afirma uma desigualdade que a v2.4 derrubou e depende de um `robot_radius`
@@ -445,8 +455,13 @@ z, roll e pitch; **deriva com o robô parado**; **sentido positivo do yaw**
    etapa 8 recomeça. Por isso subiu para a etapa 1.
 3. **Só LIO no começo**, deixando IMU e optical flow da MEGA de fora: um sensor
    a mais sem necessidade é um modo de falha a mais.
-4. **Quero fazer a etapa 0 agora?** Não toca o robô, e sem ela não dá para usar
-   "suíte verde" como critério. Com o escopo enxuto da v2.5 ela **voltou a ser
-   pequena**: remover um teste inválido e corrigir dois textos — o cálculo da
-   envolvente, que era a parte cara, saiu de cena até haver estratégia de
-   filtragem para validar (§8). Pendente de "pode".
+4. ~~**Quero fazer a etapa 0 agora?**~~ ✅ **Respondida e feita em 17-09.** Com o
+   escopo enxuto da v2.5 ela voltou a ser pequena — remover um teste inválido e
+   corrigir dois textos — e o cálculo da envolvente, que era a parte cara, saiu
+   de cena até haver estratégia de filtragem para validar (§8).
+5. **E agora, etapa 1 ou etapa 2?** A ordem do §8 diz **1** (fechar a placa e a
+   geometria por trena) antes de **2** (o ensaio frente/ré), e por um motivo: se
+   a placa mudar, a etapa 8 recomeça. Mas a **2 é a única que pode derrubar a
+   premissa do plano inteiro**, não precisa do Livox e é barata. Minha opinião:
+   se a decisão da placa depender de prazo ou de compra, **fazer a 2 primeiro** —
+   ela não desperdiça nada e pode mudar o que a 1 precisa decidir.

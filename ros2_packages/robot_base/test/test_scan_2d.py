@@ -19,7 +19,6 @@ SCAN_LAUNCH = os.path.join(RAIZ, 'ros2_packages', 'robot_base', 'launch',
 LOCALIZACAO = os.path.join(RAIZ, 'ros2_packages', 'robot_base', 'launch',
                            'localizacao.launch.py')
 SIM = os.path.join(RAIZ, 'ros2_packages', 'robot_base', 'launch', 'sim.launch.py')
-NAV2 = os.path.join(RAIZ, 'ros2_packages', 'robot_motion', 'config', 'nav2.yaml')
 URDF = os.path.join(RAIZ, 'ros2_packages', 'robot_base', 'description',
                     'robo2.urdf.xacro')
 
@@ -72,18 +71,27 @@ def test_a_fatia_nao_le_o_TETO():
         'max_height abaixo do próprio sensor descarta a parede na altura dele')
 
 
-def test_o_robo_nao_se_enxerga_como_parede():
-    """`range_min` tem de passar do raio do robô.
-
-    A caixa fica a 0,23 m de altura — DENTRO da fatia — e o sensor está em cima
-    dela. Sem este corte o robô lê a própria carcaça como obstáculo colado, em
-    todos os quadros e em todas as direções: o AMCL trava com um anel fixo que
-    nenhuma pose explica.
-    """
-    raio_robo = valor(NAV2, 'robot_radius')
-    assert valor(SCAN, 'range_min') > raio_robo, (
-        f"range_min={valor(SCAN, 'range_min')} não passa do raio do robô "
-        f'({raio_robo}) — ele vai se ler como parede')
+# 🔴 AQUI MORAVA `test_o_robo_nao_se_enxerga_como_parede`, REMOVIDO EM 17-09
+# (etapa 0 do `docs/PLANO_NAV2_ROBO3.md`). Ele exigia
+# `range_min > robot_radius`, e estava inválido por DOIS motivos:
+#
+# 1. `robot_radius` SAIU do `nav2.yaml` na decisão 032 (entrou o contorno real).
+#    O teste estava vermelho desde então, lendo uma chave que não existe.
+# 2. A desigualdade era a errada. O autorretorno é limitado POR CIMA pela
+#    envolvente do robô dentro da fatia:
+#
+#        autorretorno visível máximo  ≤  envolvente geométrica
+#
+#    A envolvente diz ONDE o autorretorno pode estar; ela não é piso obrigatório
+#    do `range_min`. Exigir o contrário PROÍBE a saída por filtro espacial com
+#    corte pequeno — e num robô assimétrico o corte radial grande cega a frente
+#    (no robô 3: corte 0,276 contra nariz a 0,0825 = 19 cm cegos à frente).
+#
+# ⚠️ ISTO DEIXA O AUTORRETORNO SEM TESTE, e é de propósito: não há o que travar
+# antes de medir. A etapa 9 do plano mede o autorretorno real, escolhe entre
+# corte radial e filtro espacial, e SÓ ENTÃO escreve o teste da estratégia
+# escolhida — incluindo que obstáculo logo fora do contorno continue visível.
+# A etapa 9 não fecha sem esse teste.
 
 
 def test_a_fatia_e_alcancavel_pelo_campo_de_visao_do_sensor():

@@ -71,9 +71,22 @@ estavam escritas** — conferido no código, não aceito de boca:
 - A cadeia do robô 2 é toda `TwistStamped` e a do robô 3 toda `Twist` — são dois
   contratos, e dois launches disputam o mesmo mux.
 
-**Nova ordem (v2): etapa 0** = consertar `test_scan_2d.py`, que está **vermelho**
-hoje (procura um `robot_radius` que saiu do `nav2.yaml` na decisão 032) — sem
-isso "suíte verde" não serve de critério. **Etapa 1** = fechar a placa e a
+**Nova ordem (v2): etapa 0** ✅ **FEITA em 17-09** — `test_scan_2d.py` estava
+vermelho procurando um `robot_radius` que saiu do `nav2.yaml` na decisão 032.
+O teste era inválido em dois sentidos (a chave não existe mais, e a
+desigualdade era a inversa da certa), foi **removido** com o porquê registrado
+no lugar dele, e a suíte do arquivo está **7/7 verde**.
+
+🔴 **E como rodar a suíte, porque isto custa sessão:** `pytest` **da raiz, sem
+argumento** (com o ROS carregado) → **845 passed**. Passar `ros2_packages/` como
+alvo dá **"no tests collected"** e aborta no primeiro import, com um
+`ImportError` de `rclpy.qos` que **não é defeito nenhum** — é `sys.path`. O
+mesmo arquivo passa sozinho.
+
+⚠️ Por causa disso, a nota da outra sessão de 17-09 ("a suíte tem as mesmas 2
+falhas") está desatualizada: uma era o `test_scan_2d`, consertado agora; a
+outra, `test_plano_suavizado`, **não está vermelha** — 10/10 quando invocada
+direito. **Etapa 1** = fechar a placa e a
 geometria por trena. **Etapa 2** = o ensaio frente/ré, agora com protocolo
 objetivo (o bag de hoje **não grava pose**; sem Livox não há desvio lateral sem
 régua). **O Livox só sobe na etapa 7** — até lá o robô 2 continua navegando.

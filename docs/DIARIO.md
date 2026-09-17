@@ -138,6 +138,65 @@ etapa 9; e o teste só ganha dente **depois** dela, validando a estratégia
 escolhida. Entra na etapa 0 também o comentário do `scan_2d.yaml:48`, que afirma
 como regra (*"`range_min` 0,35 > raio do robô"*) o que esta rodada derrubou.
 
+### ✅ ETAPA 0 EXECUTADA — a primeira linha de código do arco inteiro
+
+Aprovada depois da sexta revisão, e feita no mesmo dia. O que foi:
+
+- **removido** `test_o_robo_nao_se_enxerga_como_parede`, inválido em dois
+  sentidos: lia um `robot_radius` que saiu do `nav2.yaml` na decisão 032 (por
+  isso vermelho desde então) **e** afirmava a desigualdade inversa da certa;
+- **no lugar dele ficou o porquê**, em comentário: a relação correta
+  (`autorretorno ≤ envolvente`), o motivo de não ser piso do `range_min`, a
+  conta dos 19 cm de cegueira à frente no robô 3, e o aviso explícito de que
+  **isso deixa o autorretorno sem teste de propósito** até a etapa 9 medir;
+- **removida** a constante `NAV2`, que ficou órfã;
+- **reescrito** o comentário categórico do `scan_2d.yaml`, que afirmava a regra
+  derrubada e citava o mesmo parâmetro extinto. O valor 0,35 **não mudou** —
+  mudou a justificativa, que agora diz que ele é herdado e não validado;
+- **não encostei** no teste de coerência AMCL↔fatia, que já passava.
+
+Resultado: `test_scan_2d.py` **7 passaram, 0 falharam** (era 1 falha / 7).
+
+⚠️ Um susto no caminho, que vale registrar porque é armadilha de ambiente: a
+suíte do `robot_motion` deu 3 `ModuleNotFoundError: No module named
+'robot_motion'`. **Não era meu** — faltava `source install/setup.bash`. Conferido
+dos dois lados: com o ambiente carregado dá 83 passed, e com as minhas mudanças
+no `git stash` dá 83 passed igual. A lição é a de sempre aqui: antes de culpar
+a mudança, reproduzir sem ela.
+
+### 🔴 E a segunda armadilha, que vale mais que a etapa 0 em si
+
+Puxando esse fio apareceu uma coisa que pode custar uma sessão inteira a quem
+não souber: **o resultado da suíte depende de COMO ela é chamada.**
+
+| invocação (com ROS carregado) | resultado |
+|---|---|
+| `pytest` da raiz, sem argumento | **845 passed**, 1 failed, 7 errors (todos em `twist_mux/test/test_joystick_relay.py`) |
+| `pytest ros2_packages/` | **no tests collected**, aborta no 1º import |
+| `pytest <arquivo>` | passa |
+
+E as 8 que sobram na invocação certa **não são nossas**: `twist_mux` é pacote de
+terceiro vendorizado (4.5.0, Apache 2.0, mantenedor upstream), o arquivo de
+teste nem é rastreado pelo git, e são testes de `launch` que sobem nós ROS — ao
+rodar sozinhos eles **penduram** (estourei 120 s). Não confundir com defeito
+nosso: os 5 arquivos mexidos hoje não encostam nesse pacote.
+
+O aborto vem com `ImportError: cannot import name 'DurabilityPolicy' from
+'rclpy.qos' (unknown location)` — que **parece** defeito grave de dependência e
+não é nada: o `rclpy` real resolve certo para `/opt/ros/jazzy/...`, não há
+`rclpy` no repo, não há `conftest.py` nem cópia de teste em `build/`. É só a
+raiz que o pytest insere no `sys.path` mudando conforme o alvo.
+
+Duas hipóteses minhas caíram no caminho (coleta duplicada em `build/`; diretório
+`rclpy` sombreando), as duas verificadas e descartadas — registradas porque
+hipótese descartada com evidência é o que impede a próxima pessoa de refazê-la.
+
+**Consequência prática:** a nota da outra sessão de hoje ("a suíte tem as mesmas
+2 falhas: `test_scan_2d`, `test_plano_suavizado`") está **meio errada**. O
+`test_scan_2d` era real e foi consertado aqui; o `test_plano_suavizado` **passa
+10/10** quando invocado direito. Ficou um defeito fantasma no registro por causa
+da invocação — exatamente o tipo de coisa que este diário existe para matar.
+
 ### Sexta rodada (v2.5) — "teste diagnóstico" é teste que não afirma nada
 
 A última achou o excesso que eu tinha deixado ao consertar o excesso anterior.

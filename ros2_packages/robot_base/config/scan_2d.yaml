@@ -45,9 +45,28 @@ scan_2d:
 
     scan_time: 0.10          # 10 Hz, a taxa da nuvem
 
-    # `range_min` 0,35 > raio do robô (0,32): abaixo disso o que aparece é a
-    # PRÓPRIA caixa do robô, que fica a 0,23 m de altura — dentro da fatia. Sem
-    # este corte o robô se enxerga como parede colada e o AMCL trava.
+    # Corta o AUTORRETORNO: a caixa do robô fica a 0,23 m de altura, dentro da
+    # fatia, e o sensor está em cima dela. Sem corte nenhum o robô se lê como
+    # parede colada em todos os quadros, e o AMCL trava com um anel fixo que
+    # nenhuma pose explica.
+    #
+    # ⚠️ 0,35 é HERDADO e NÃO VALIDADO contra autorretorno real. Ele veio de
+    # "passar do `robot_radius` 0,32" — e o `robot_radius` saiu do `nav2.yaml`
+    # na decisão 032. O número ficou; a justificativa dele, não.
+    #
+    # 🔴 E a regra que estava escrita aqui era a inversa da certa. O correto:
+    #
+    #     autorretorno visível máximo  ≤  envolvente do robô dentro da fatia
+    #
+    # A envolvente limita ONDE o autorretorno pode estar; ela NÃO é piso
+    # obrigatório deste parâmetro. Subir o corte até o autorretorno sumir apaga
+    # junto o obstáculo real colado na frente — num robô assimétrico isso é
+    # troca de um defeito sem sintoma por outro. Se o autorretorno não couber
+    # num corte radial que preserve a visão de perto, a saída é filtro
+    # espacial/angular (por ONDE o ponto está), não corte maior.
+    #
+    # Quem mede e decide é a etapa 9 de `docs/PLANO_NAV2_ROBO3.md`. Até lá este
+    # valor está sem teste, de propósito: não há o que travar antes de medir.
     range_min: 0.35
     # O mapa tem 23,5 × 67,2 m; ler mais longe que ele não ajuda a casar, e
     # traz retorno de fora da planta (porta aberta, janela) que o mapa não tem.
