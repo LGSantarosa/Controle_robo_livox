@@ -1,7 +1,7 @@
-# Plano — adaptar o Nav2 para o robô 3 (v2.3)
+# Plano — adaptar o Nav2 para o robô 3 (v2.4)
 
 > **Status: nada implementado. Aguardando a aprovação do dono.**
-> Três revisões cruzadas em dois dias, e cada uma achou coisa real:
+> **Cinco** revisões cruzadas em dois dias, e cada uma achou coisa real:
 >
 > - **v1** (2026-09-16) — a primeira revisão **derrubou duas etapas inteiras**
 >   (§1): a pilha não subia sobre o simulador do robô 3 e a localização não
@@ -31,9 +31,18 @@
 >   conceitual mais importante até agora: **`range_min` é corte radial num robô
 >   assimétrico**, e dimensioná-lo pela cauda cega ~19 cm à frente do nariz (§8).
 >
-> O que sobreviveu das três: consertar o teste da etapa 0 **não é** trocar
+> - **v2.4** (ainda 17-09) — a quinta achou uma **contradição lógica** minha: a
+>   etapa 0 exigia `range_min` **maior** que a envolvente (0,276 m), enquanto a
+>   etapa 9 exigia enxergar obstáculo logo fora do contorno (nariz a 0,0825 m).
+>   A faixa de 0,0825 a 0,276 m à frente está **fora do robô** e seria cortada:
+>   o teste da etapa 0 **vetaria** a saída por filtro espacial antes de a etapa 9
+>   poder avaliá-la. A relação certa é `autorretorno visível máximo ≤ envolvente`
+>   — cota **superior** do autorretorno, não piso do corte (§8).
+>
+> O que sobreviveu de todas: consertar o teste da etapa 0 **não é** trocar
 > `robot_radius` por footprint — isso reprovaria o robô 2 (0,447 m contra
-> `range_min` 0,35). Essa parte estava certa; o número que derivei dela, não.
+> `range_min` 0,35). Essa parte estava certa; o número que derivei dela e a
+> desigualdade que construí em cima dele, não.
 >
 > Irmão do `PLANO_CONTROLE_ROBO3.md`. Regra do projeto: cada etapa é uma mudança
 > pequena, com o "pode" do dono antes de ir ao robô. Este documento não autoriza
@@ -249,7 +258,7 @@ Uma etapa por sessão. Nenhuma começa sem a anterior fechada.
 
 | # | etapa | prova / entrega | precisa do robô? |
 |---|---|---|---|
-| 0 | Consertar `test_scan_2d.py` (vermelho por `robot_radius` da 032) — **contra a envolvente real, ver abaixo** | "suíte verde" volta a ser critério válido de etapa | não |
+| 0 | Consertar `test_scan_2d.py` (vermelho por `robot_radius` da 032) — tirar a dependência, **envolvente só como diagnóstico** (§8) | "suíte verde" volta a ser critério válido de etapa, **sem petrificar o corte** | não |
 | 1 | Fechar **a placa** (§5.1 da revisão cruzada) e a geometria física autoritativa (trena) | sem isso a etapa 8 recomeça do zero | sim, desligado |
 | 2 | Repetir o ensaio frente/ré com o protocolo do §7 | confirma ou derruba a premissa do §2 | sim, ligado |
 | 3 | URDF completo girado (§3) + `robot_state_publisher` + footprints + testes reescritos | modelo e marcha concordam; o Nav2 passa a ter contorno | não |
@@ -282,8 +291,25 @@ inclui para-choque e roda, abaixo da fatia). A meia-diagonal da caixa do robô 2
 é √(0,2165² + 0,2275²) = **0,314 m** — exatamente o *"0,32 = 0,314 medido + 6 mm"*
 que o `nav2.yaml` documenta. Era isso que o `robot_radius` representava ali.
 
-➡️ O teste passa a conferir `range_min` contra a **envolvente própria medida no
-`base_link`** — sem número mágico solto e sem ressuscitar o `robot_radius`.
+🔴 **CONTRADIÇÃO DA v2.3, corrigida aqui (v2.4) — e era minha.** A v2.3 mandava o
+teste exigir `range_min` **maior** que a envolvente. Isso briga de frente com a
+trava de dois lados que a mesma versão criou para a etapa 9: para o robô 3,
+
+    nariz 0,0825 m   ·   envolvente 0,276 m
+
+um obstáculo frontal **entre 0,0825 e 0,276 m está FORA do robô** e seria
+apagado pelo corte. Ou seja: o teste da etapa 0 **proibiria de antemão** a saída
+por filtro espacial com `range_min` pequeno — justamente a saída que a etapa 9
+pode concluir ser a certa. Teste que veta a solução antes de ela ser avaliada
+não é trava, é chute petrificado.
+
+➡️ **A relação correta é a inversa, e é uma cota SUPERIOR:**
+
+    autorretorno visível máximo  ≤  envolvente geométrica
+
+A envolvente limita **onde o autorretorno pode estar**; ela não é piso
+obrigatório para o `range_min`. Com filtro espacial, o corte radial pode e deve
+ficar pequeno.
 
 🔴 **Mas a etapa 0 NÃO pode ser "por robô", e isso é correção da v2.3.** Hoje
 existe **um** `scan_2d.yaml` só; os perfis nascem na **etapa 4**, e a geometria
@@ -291,10 +317,18 @@ autoritativa do robô 3 só fecha nas etapas **1** (trena) e **3** (URDF girado)
 Prometer "por robô" na etapa 0 é prometer contra coisa que ainda não existe.
 Então:
 
-- **etapa 0**: conserta o teste para o robô que existe hoje (o 2), contra a
-  envolvente dele calculada no `base_link`, e **remove a dependência do
-  `robot_radius`** — que é o que destrava "suíte verde" como critério;
-- **etapa 4**: quando os perfis existirem, o teste passa a valer **por robô**.
+- **etapa 0**: **remove a dependência do `robot_radius`** (é o que destrava
+  "suíte verde" como critério), confere **coerência de configuração**, e calcula
+  a envolvente **só como diagnóstico** — sem exigir `range_min` maior que ela.
+  Entra também a correção do comentário ainda categórico do
+  `scan_2d.yaml:48` (*"`range_min` 0,35 > raio do robô (0,32)"*), que afirma
+  como regra o que a v2.4 acabou de derrubar e cita um `robot_radius` que não
+  existe mais;
+- **etapa 9**: mede o autorretorno **real** e escolhe entre corte radial e
+  filtro espacial;
+- **depois da 9**: o teste passa a validar a **estratégia escolhida**, incluindo
+  a visibilidade logo fora do contorno;
+- **etapa 4**: quando os perfis existirem, tudo isso passa a valer **por robô**.
 
 ⚠️ **E não é "uma linha".** Calcular a envolvente a partir do URDF exige
 interpretar caixas, rodas, alturas e as transformações até o `base_link`. Eu
@@ -324,8 +358,15 @@ casting. Então:
   autorretorno — etapa 9, não agora.
 
 ⚠️ Segue aberta, e é do robô 2 de hoje: **o que mais sobe acima dos 0,15 m**
-(roda com topo a 0,16 m, cabos, o suporte do Livox)? Se algo passar de 0,35 m em
-raio, o `range_min` atual está apertado.
+(roda com topo a 0,16 m, cabos, o suporte do Livox)?
+
+🔴 Mas **cuidado com a conclusão** — até a v2.3 este parágrafo terminava dizendo
+que, se algo passasse de 0,35 m em raio, "o `range_min` está apertado". Isso é o
+raciocínio que a v2.4 derrubou: achar autorretorno longe **não** manda subir o
+corte. A pergunta mede **onde o autorretorno pode aparecer**, e a resposta é
+entrada da decisão da etapa 9 — corte radial *ou* filtro espacial. Se o
+autorretorno for longe **e** houver obstáculo real a cobrir na mesma faixa, é
+justamente o caso em que o corte radial não serve e o filtro espacial é a saída.
 
 ### 🔴 O risco de ver o `range_min` como "aumentar até parar de se enxergar"
 
@@ -350,6 +391,12 @@ invisível na direção de marcha) não é conserto.
 radial** — é **filtro espacial/angular de autorretorno** (descartar por *onde* o
 ponto está no `base_link`, não por *quão perto* ele está). Fica registrado aqui
 para não ser reinventado no susto, no meio da etapa 9.
+
+➡️ **E só DEPOIS da etapa 9 o teste ganha dente**: ele passa a validar a
+estratégia que foi escolhida — se o corte é radial, que ele cubra o autorretorno
+medido; se é filtro espacial, que o filtro pegue o autorretorno **e** que a
+visibilidade logo fora do contorno continue de pé. Antes disso o teste não tem
+o que travar, e fingir que tem foi o erro da v2.3.
 
 **Validação do LIO na etapa 7 (a v1 pedia só x, y e yaw):**
 z, roll e pitch; **deriva com o robô parado**; **sentido positivo do yaw**

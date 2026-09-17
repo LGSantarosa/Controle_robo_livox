@@ -100,6 +100,39 @@ Se um `range_min` único não fizer os dois, a saída registrada **não é aumen
 corte** — é filtro espacial/angular de autorretorno, por *onde* o ponto está e
 não por *quão perto*. Fica escrito para não ser reinventado no susto.
 
+### Quinta rodada (v2.4) — a trava que eu criei vetava a própria saída
+
+E a rodada seguinte mostrou que eu tinha escrito uma **contradição lógica** entre
+as duas etapas que acabara de ajustar. A etapa 0 exigia `range_min` **maior** que
+a envolvente (0,276 m); a etapa 9 exigia enxergar obstáculo logo fora do contorno
+(nariz a 0,0825 m). A faixa entre os dois:
+
+    0,0825 m  ──── FORA do robô, e cortada pelo range_min ────  0,276 m
+
+Um obstáculo aí está fora do corpo e some do `/scan`. Pior que o buraco: o teste
+da etapa 0 **vetaria a solução por filtro espacial antes de a etapa 9 poder
+avaliá-la**. Teste que petrifica um chute é pior que teste nenhum, porque parece
+rigor.
+
+A relação certa, e é o que ficou no plano:
+
+    autorretorno visível máximo  ≤  envolvente geométrica
+
+A envolvente é **cota superior de onde o autorretorno pode estar** — não piso
+obrigatório do corte. Com filtro espacial, o `range_min` pode e deve ser pequeno.
+Então a etapa 0 passa a só tirar a dependência do `robot_radius`, conferir
+coerência e calcular a envolvente **como diagnóstico**; quem mede e escolhe é a
+etapa 9; e o teste só ganha dente **depois** dela, validando a estratégia
+escolhida. Entra na etapa 0 também o comentário do `scan_2d.yaml:48`, que afirma
+como regra (*"`range_min` 0,35 > raio do robô"*) o que esta rodada derrubou.
+
+**O padrão das cinco rodadas**, e é a lição do dia para o artigo: as duas
+primeiras acharam erro de arquitetura (não li o código antes de planejar), a
+terceira um número herdado de outra máquina, a quarta incoerência de texto, e a
+quinta — a mais sutil — **uma trava que eu mesmo inventei e que impedia a
+solução certa**. Nenhuma das cinco achou erro de direção. O plano estava indo
+para o lugar certo desde a v1; o que faltava era ele ser verdadeiro nos detalhes.
+
 ## 2026-09-16 (dev, robô desligado) — CONTORNAR: A RÉ VIRA A FRENTE
 
 Sessão curta e de propósito sem investigação. O dono cortou o roteiro de pivô
