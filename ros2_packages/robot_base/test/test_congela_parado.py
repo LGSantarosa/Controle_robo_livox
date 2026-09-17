@@ -92,3 +92,32 @@ def test_leitura_velha_de_UMA_roda_nao_deixa_congelar():
         c.roda(k * 0.1, 0, 0.0)
     t, _ = c.passo(2.0, (0.4, 0.0, 0.0), yaw_q(0.0))
     perto(t, (0.4, 0.0, 0.0))                # direita velha -> sem congelar
+
+
+def test_roda_que_VOLTA_tem_de_reobservar_a_espera():
+    """🔴 Regressão de 17-09: o cronômetro tem de zerar no apagão.
+
+    Antes, `parado_desde` sobrevivia à janela de leitura velha. Quando o lado
+    sumido voltava com zero, a trava congelava NO PRIMEIRO PACOTE, usando o
+    carimbo antigo — sem reobservar os 0,5 s. Perigoso porque o apagão é
+    justamente quando não se sabe se o robô andou.
+    """
+    c = CongelaParado(espera=0.5, validade=0.5)
+    for k in range(11):                       # 1 s com as duas paradas
+        c.roda(k * 0.1, 0, 0.0)
+        c.roda(k * 0.1, 1, 0.0)
+    c.passo(1.0, (0.0, 0.0, 0.0), yaw_q(0.0))
+    assert c.congelado(1.0), 'com as duas frescas e paradas, tem de congelar'
+
+    for k in range(11, 41):                   # 3 s só com a esquerda
+        c.roda(k * 0.1, 0, 0.0)
+    assert not c.congelado(4.0), 'leitura velha não pode congelar'
+
+    c.roda(4.0, 1, 0.0)                       # a direita VOLTA, um pacote
+    assert not c.congelado(4.0), (
+        'congelou no primeiro pacote que voltou: o cronômetro não zerou')
+
+    for k in range(41, 47):                   # 0,5 s com as duas de novo
+        c.roda(k * 0.1, 0, 0.0)
+        c.roda(k * 0.1, 1, 0.0)
+    assert c.congelado(4.6), 'depois de reobservar a espera, tem de congelar'

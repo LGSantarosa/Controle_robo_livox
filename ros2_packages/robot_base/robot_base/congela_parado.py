@@ -83,8 +83,21 @@ class CongelaParado:
                    for t in self.t_roda)
 
     def congelado(self, agora):
-        return (self._frescas(agora)
-                and self.parado_desde is not None
+        # 🔴 O CRONÔMETRO ZERA QUANDO A LEITURA ENVELHECE (corrigido 17-09).
+        # `_reavalia` só roda quando CHEGA mensagem de roda, então durante um
+        # apagão de um dos lados o `parado_desde` ficava congelado no valor
+        # antigo. Quando a roda sumida voltava com zero, `_frescas` virava True
+        # e o `agora - parado_desde >= espera` já estava satisfeito com o
+        # carimbo VELHO: congelava no primeiro pacote, sem reobservar os 0,5 s
+        # de robô parado. Reproduzido antes de consertar.
+        #
+        # Este método é chamado a cada pose do LIO, então serve de tique: sem
+        # as duas leituras frescas, o robô volta a ter de PROVAR que está
+        # parado desde agora.
+        if not self._frescas(agora):
+            self.parado_desde = None
+            return False
+        return (self.parado_desde is not None
                 and agora - self.parado_desde >= self.espera
                 and self.ultima is not None)
 

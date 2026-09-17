@@ -248,7 +248,16 @@ sem lastro. Antes do Nav2, medir:
 - atraso liga/desliga e distância real de parada;
 - soma dos watchdogs (mux 0,3–0,5 s + MEGA 0,5 s) e a retenção da placa;
 - aceleração e frenagem;
-- zona morta e curvaturas.
+- zona morta e curvaturas;
+- 🔴 **a bitola, por ensaio de pivô** — a trena deixou 0,320 como **nominal**
+  (ela sai da *média* de duas leituras "±", onde viés comum soma em vez de
+  cancelar). É o divisor do `wz`: 1% aqui é 1% em **todo** giro, e nenhum ganho
+  de rumo sintonizado em cima de uma bitola errada se salva. N voltas de pivô
+  com o LIO medindo o yaw fecha.
+
+⚠️ E a placa **não** dispensa esta etapa. É o mesmo **modelo** do robô 1 e do 2,
+mas peça própria e **configuração gravada desconhecida** — o `MODELO_ROBO2.md`
+entra como ponto de partida, não como medida deste robô.
 
 ---
 
@@ -273,14 +282,14 @@ Uma etapa por sessão. Nenhuma começa sem a anterior fechada.
 | # | etapa | prova / entrega | precisa do robô? |
 |---|---|---|---|
 | 0 | ✅ **FEITA (17-09)** — teste inválido removido, textos corrigidos, o de coerência intacto | `test_scan_2d.py` **7/7 verde**; o corte não ficou petrificado e não entrou teste que não afirma nada | não |
-| 1 | ✅ **FEITA (17-09)** — placa respondida (*mesmo modelo do 1 e do 2, peça própria*) e geometria medida com trena | 4 valores do URDF corrigidos, **D3 e D4 encerradas**, bitola com 3 caminhos concordando. A etapa 8 vira **conferência**, não levantamento novo | foi, desligado |
+| 1 | ✅ **FEITA (17-09)** — placa respondida (*mesmo modelo do 1 e do 2, peça própria*) e geometria medida com trena | 4 valores do URDF corrigidos, **D3 e D4 encerradas**. ⚠️ A etapa 8 **continua sendo medição**: mesmo modelo não prova mesmo firmware, e a bitola ficou **nominal** | foi, desligado |
 | 2 | Repetir o ensaio frente/ré com o protocolo do §7 | confirma ou derruba a premissa do §2 | sim, ligado |
 | 3 | URDF completo girado (§3) + `robot_state_publisher` + footprints + testes reescritos | modelo e marcha concordam; o Nav2 passa a ter contorno | não |
 | 4 | Perfis `robo2`/`robo3` e **um bringup único** do robô 3 | RSP + MEGA + `cmd_vel_to_wheels` + Xbox/direcional + mux único num lugar só | não |
 | 5 | Unificar o contrato de mensagens (§4) e testar a cadeia **sem Gazebo** | comando atravessa de ponta a ponta, sem simulador para confundir | não |
 | 6 | Ensinar a `pilha` a escolher `sim_robo3` (`robo:=3`, `use_sim_time`, qual atuador encerra) | a etapa 3 da v1, agora possível | não |
 | 7 | Montar o Livox, medir a pose **6D** e validar o LIO por inteiro (abaixo) | a árvore de TF fecha com medida, não com chute | sim |
-| 8 | Calibrar escala e dinâmica (§6); depois rumo e curvatura | os números do Nav2 passam a ter lastro físico | sim |
+| 8 | Calibrar escala e dinâmica (§6); **fechar a bitola por ensaio de pivô**; depois rumo e curvatura | os números do Nav2 passam a ter lastro físico | sim |
 | 9 | Validar percepção e reflexo (`scan_2d`, `collision_monitor`) — **os dois lados do `range_min`** (§8), escolher a estratégia **e escrever os testes dela** | o robô enxerga e freia antes de planejar, **e não fica cego na frente**. 🔴 Não fecha só com a escolha | sim |
 | 10 | Nav2 `mapa:=nenhum`, espaço livre, **parada física independente do Xbox** | objetivo curto | sim |
 

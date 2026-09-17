@@ -113,22 +113,32 @@
        CSV histórico e mexer nele invalidaria a comparação. Se a diferença
        importar, ela vira uma linha no DIÁRIO, não uma edição retroativa. -->
   <xacro:property name="roda_raio"      value="0.0825"/>
-  <!-- 🟢 MEDIDO EM 17-09, e sem fita atravessada: o dono deu extremo-a-extremo
-       38,0 e face-interna-a-face-interna 26,0. A largura sai da diferença, que
-       é medida derivada de duas leituras independentes e não de uma fita
-       apoiada torto:  (38,0 − 26,0)/2 = 6,0 cm.
-       Era 0,058 (catálogo) e a tabela §5.8 dizia 0,050 — as duas caem. -->
+  <!-- 🟡 DERIVADO da trena de 17-09: extremo-a-extremo 38,0 e
+       interna-a-interna 26,0, ambos dados como "±". Daí (38,0 − 26,0)/2 = 6,0.
+       Substitui o 0,058 de catálogo e o 0,050 da tabela §5.8.
+
+       ⚠️ HONESTIDADE ESTATÍSTICA (corrigido no mesmo dia): um viés comum às
+       duas leituras — fita apoiada torto — **cancela** nesta diferença, mas
+       **soma** na média que dá a bitola. Então 6,0 é robusto a esse viés e
+       0,320 NÃO é: ver o comentário da `roda_separacao`. As duas entradas
+       continuam sendo "±1 cm" de trena, não medida de precisão. -->
   <xacro:property name="roda_largura"   value="0.060"/>
   <!-- O cubo de metal da roda, 15 mm, virado para DENTRO. Não é decoração: é
        ele que vence o vão entre a lateral da caixa (y=0,120) e a face interna
        do pneu (y=0,135), e foi vê-lo faltando no Gazebo que resolveu a D5. -->
   <xacro:property name="roda_cubo"      value="0.015"/>
-  <!-- 🟢 MEDIDA DIRETA EM 17-09, e ela fecha a história:
-            centro a centro = (38,0 + 26,0)/2 = 32,0 cm
-       Bate com os 32,25 que a §5.9 tinha fechado desenhando no Gazebo (2,5 mm
-       de erro de trena) e ENTERRA de vez os 42,5 da §5.7, que a tabela-resumo
-       ainda carregava. Três caminhos independentes — trena, desenho e a
-       restrição "o corpo encosta nas rodas" — dão o mesmo número. -->
+  <!-- 🟡 NOMINAL de 17-09: (38,0 + 26,0)/2 = 32,0 cm, das duas leituras "±" do
+       dono. Concorda com os 32,25 que a §5.9 fechou desenhando no Gazebo e
+       ENTERRA os 42,5 da §5.7 — três caminhos apontando o mesmo lugar.
+
+       ⚠️ MAS NÃO É VALIDAÇÃO COM 2,5 mm (corrigido no mesmo dia; eu tinha
+       escrito que era). Esta grandeza sai da MÉDIA das duas leituras, e viés
+       comum às duas — fita apoiada torto, ponto de apoio escolhido no olho —
+       **soma** aqui em vez de cancelar. O acordo de 2,5 mm entre trena e
+       Gazebo é bom sinal de que não há erro grosseiro; não é barra de erro.
+
+       ➡️ Quem fecha a bitola de verdade é ENSAIO: um pivô de N voltas com o
+       LIO medindo o yaw. É o divisor do `wz`, e 1% aqui é 1% em todo giro. -->
   <xacro:property name="roda_separacao" value="0.320"/>
 
   <!-- Onde a caixa fica em relação ao eixo. 🟢 DERIVADO (C5, §5.4.4): dos
@@ -384,11 +394,14 @@
     </ros2_control>
   </xacro:if>
 
-  <!-- ⚠️ O BLOCO DO ROBÔ REAL É HERDADO DO ROBÔ 2 E PODE CAIR INTEIRO.
-       A placa do robô 3 pode ser outra — o dono ia testar (§5.1). Se for outra,
-       `deadband_speed`, os sinais de realimentação e o `device` são de outra
-       máquina e nada disto vale. Se for a mesma, vale tudo. Até saber, este
-       bloco NÃO deve ir para o robô. -->
+  <!-- ⚠️ O BLOCO DO ROBÔ REAL É HERDADO DO ROBÔ 2 — ponto de partida, não medida.
+       🟢 §5.1 RESPONDIDA em 17-09: é o **mesmo modelo** de placa do robô 1 e do
+       2, mas **peça própria**. O bloco deixa de "poder cair inteiro" — o modelo
+       não muda.
+       🔴 Mas mesmo modelo NÃO prova mesmo firmware, e a configuração gravada
+       NESTA placa é desconhecida (ver `ESTADO_PROJETO`). Então
+       `deadband_speed`, os sinais de realimentação e o `device` continuam
+       valores a CONFIRMAR no robô (etapa 8 do plano), não valores validados. -->
   <xacro:unless value="$(arg sim)">
     <ros2_control name="HoverboardSystem" type="system">
       <hardware>

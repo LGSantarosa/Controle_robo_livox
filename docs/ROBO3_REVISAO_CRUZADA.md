@@ -206,10 +206,18 @@ rumo — C2 continua de pé nos dois cenários.
 Palavra do dono: *"é o mesmo **modelo** da placa do 1 e do 2, mas não a mesma,
 cada um tem a sua."*
 
-➡️ **Saída 🟢 da tabela acima:** o modelo de atuador **sobrevive**. Zona morta,
-patamar de saída e latência são propriedades **daquele firmware**, e o firmware
-é o mesmo. O `placa_simulada.py` não recomeça do zero, e a etapa 8 do
-`PLANO_NAV2_ROBO3.md` deixa de ser um levantamento novo para ser **conferência**.
+➡️ **Saída 🟢 da tabela acima, mas com menos alcance do que escrevi antes:** o
+modelo de atuador **não cai**, e o `placa_simulada.py` não recomeça do zero.
+
+🔴 **Correção de 17-09 — "mesmo modelo" NÃO prova "mesmo firmware".** Eu havia
+escrito que "o firmware é o mesmo"; o dono disse *modelo*, não firmware, e o
+próprio `ESTADO_PROJETO` registra que **a configuração gravada nesta placa é
+desconhecida**. Zona morta, patamar e latência são propriedades do **firmware e
+da unidade**, não do modelo.
+
+➡️ Portanto a **etapa 8 continua sendo medição real do atuador**, e não
+"conferência". O que muda é só o ponto de partida: em vez de levantar do zero,
+parte-se dos números do robô 2 e mede-se para confirmar ou derrubar.
 
 ⚠️ **A ressalva, e ela não é formalidade:** é o mesmo modelo, **não a mesma
 peça**. Variação de unidade para unidade existe — a própria história deste repo
@@ -908,13 +916,13 @@ esquerda, tudo em metros.
 | `caixa_z` (altura) | 0,135 | 🟢 medido |
 | `caixa_cx` (centro da caixa) | **+0,093** | 🟢 derivado do C5 |
 | `altura_solo` | ~~0,070~~ → **0,065** | 🟢 **D4 ENCERRADA em 17-09, e não havia caimento** — havia número errado. Topo 20,0 − corpo 13,5 = fundo 6,5, que é exatamente o "6,5 da boba até o corpo" medido. Palavra do dono: *"está sim alinhado, não está caído não"* |
-| `roda_raio` | **0,0835** | 🟡 provisório: fecha por corrida reta (§5.4.1) |
+| `roda_raio` | **0,0825** (o URDF usa este) | 🟡 provisório: fecha por corrida reta (§5.4.1). ⚠️ Esta linha dizia 0,0835 — a recomendação da §5.4.1 —, mas código e `ESTADO` sempre usaram 0,0825. Alinhada em 17-09 com o que o robô carrega |
 | `roda_largura` | ~~0,050~~ → **0,060** | 🟢 **MEDIDO em 17-09** por diferença de duas leituras independentes: (38,0 − 26,0)/2. Derruba o 0,050 desta tabela e o 0,058 de catálogo que o URDF usava |
-| `roda_separacao` | ~~0,425~~ ~~0,3225~~ → **0,320** | 🟢 **MEDIDO com trena em 17-09**: (38,0 extremo-a-extremo + 26,0 interna-a-interna)/2. A linha dizia 0,425 (§5.7) e estava velha — a §5.9 já a tinha revisado para 0,3225 desenhando no Gazebo, e a trena agora fecha em 0,320. **Três caminhos independentes, 2,5 mm de espalhamento.** |
+| `roda_separacao` | ~~0,425~~ ~~0,3225~~ → **0,320** | 🟢 **MEDIDO com trena em 17-09**: (38,0 extremo-a-extremo + 26,0 interna-a-interna)/2. A linha dizia 0,425 (§5.7) e estava velha — a §5.9 já a tinha revisado para 0,3225 desenhando no Gazebo, e a trena dá 0,320. ⚠️ **Nominal, não validação:** esta grandeza sai da MÉDIA de duas leituras "±", e viés comum às duas **soma** aqui em vez de cancelar. O acordo com o Gazebo descarta erro grosseiro; não é barra de erro. Quem fecha é ensaio de pivô. |
 | `roda_x` | **0,000** | 🟢 é a origem, por definição (C8) |
 | `boba_raio` | ~~0,025~~ → **0,020** | 🟢 **D3 ENCERRADA em 17-09**: o dono mediu chão até o **centro** da rodinha = 2,0 cm, e com ela apoiada essa altura **é** o raio. O empate 40 × 50 mm da §5.5.1 acabou, e ganhou o 40 |
 | `boba_x` | **+0,2485** | 🟢 ponta da frente da caixa |
-| `boba_y` | **±0,120** | 🟢 quinas da caixa |
+| `boba_y` | **±0,105** | 🟢 o PIVÔ, no URDF. ⚠️ Esta linha dizia ±0,120, que é a **quina da caixa** — a §5.9.2 recuou o pivô meia largura da rodinha para alinhar as FACES (0,120 − 0,030/2). Alinhada em 17-09 com o URDF renderizado |
 | `boba_trail` | 0,020 | 🟢 medido |
 | Bobas têm mola? | **não** | 🔴 é o que confirma o C3 |
 | Envelope (larg × compr × alt) | ~~0,475~~ → **0,380** × 0,331 × 0,200 | 🟢 **fechado com a trena de 17-09**: 0,320 + 0,060. A altura 0,200 é medida direta (chão ao topo do corpo) e o comprimento 0,331 cai do contorno — as três conferem entre si |
@@ -952,9 +960,11 @@ do mesmo lugar que vinha no robô 2, e é o erro fácil de cometer aqui.
 1. 🔴 **Onde o Livox monta** — decisão do dono, e o C3 entra junto: **antes** de
    montar, decidir se o chassi ganha complacência.
 2. 🔴 **Peso e centro de massa**, medidos **depois** do Livox e do NUC subirem.
-3. 🟡 **D4** — o 1 cm entre `altura_solo` 7,0 e a boba de 6,0: o robô está
-   inclinado 1,8° para a frente, ou uma das medidas está errada? Resolve com o
-   robô na mão e um nível.
+3. 🟢 **D4 — ENCERRADA em 17-09.** Era a segunda hipótese: **uma das medidas
+   estava errada**, e não havia inclinação. Topo 20,0 − corpo 13,5 = fundo 6,5,
+   que é exatamente a medida "da boba até o corpo". O `altura_solo` virou 0,065
+   e o "suporte de 10 mm" que o modelo inventava para acomodar a diferença
+   deixou de existir. Dono: *"está sim alinhado, não está caído não."*
 4. 🟡 **`roda_raio`** — corrida reta de 5 m contra o LIO fecha os 2,2%.
 
 ---

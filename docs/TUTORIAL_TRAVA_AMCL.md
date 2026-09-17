@@ -50,8 +50,10 @@ sem dar erro nenhum.
 opt-in, de propósito, para nenhum deploy normal a ativar sem querer. Para o
 ensaio ela tem de ser pedida explicitamente.
 
-**Só agora a placa pode ser energizada** (passos 1 e 2 são com ela desligada), e
-com a mão no botão.
+🔴 **A placa continua DESLIGADA aqui** (ou as rodas suspensas). Subir a pilha é
+justamente quando um nó novo assume o `odom → base_link` pela primeira vez —
+energizar antes disso é o cenário do robô girar as rodas sozinho. Energize
+**só no passo 4**, com a mão no botão.
 
 ```bash
 bash bin/sobe-robo congela=on

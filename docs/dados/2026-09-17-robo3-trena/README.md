@@ -45,11 +45,21 @@ centro a centro  = (38 + 26)/2 = 32,0 cm   -> wheel_separation
 largura da roda  = (38 − 26)/2 =  6,0 cm
 ```
 
-Fita apoiada torto erra as duas leituras **para o mesmo lado**, e o erro se
-cancela na diferença. A bitola tinha custado quatro levas de medida e uma
-etiqueta trocada; assim fechou na primeira tentativa, e com **três caminhos
-independentes concordando** — trena 32,0, desenho no Gazebo 32,25 (§5.9) e a
-restrição "o corpo encosta nas rodas". Espalhamento: 2,5 mm.
+⚠️ **E as duas contas NÃO são igualmente robustas** — a primeira versão deste
+README dizia que sim, e estava errada:
+
+- **a largura** sai da **diferença**. Viés comum às duas leituras (fita apoiada
+  torto, ponto de apoio escolhido no olho) erra as duas para o mesmo lado e
+  **cancela** aqui. É a conta robusta;
+- **a bitola** sai da **média**. O mesmo viés **soma**. Não há cancelamento.
+
+A bitola tinha custado quatro levas de medida e uma etiqueta trocada, e agora
+três caminhos apontam o mesmo lugar — trena 32,0, desenho no Gazebo 32,25 (§5.9)
+e a restrição "o corpo encosta nas rodas". **Isso descarta erro grosseiro; não é
+barra de erro.** 0,320 é **nominal**.
+
+➡️ A bitola é o divisor do `wz`: 1% aqui é 1% em todo giro. Quem a fecha de
+verdade é **ensaio de pivô** com o LIO medindo o yaw, não trena.
 
 ---
 

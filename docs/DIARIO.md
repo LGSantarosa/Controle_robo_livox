@@ -75,6 +75,18 @@ esse tipo de teste mente.
 instancia, script se executa com os argumentos de verdade. Duas vezes na mesma
 hora, as duas pegas só porque rodei — nenhuma apareceu na leitura.
 
+⚠️ **E à tarde eu caí na armadilha que documentei de manhã, nesta mesma
+entrada.** Rodei `pytest` passando caminhos como alvo, vi
+`test_o_raio_de_chegada_do_nav2_bate_com_o_do_seguidor` falhar importando de
+**`build/robot_motion/...`** (a árvore velha do colcon), e por um momento achei
+que tinha quebrado alguma coisa. Da raiz, sem argumento, o mesmo teste passa:
+`1 passed, 855 deselected`.
+
+Documentar a armadilha **não** impede de cair nela — o que impede é a regra
+virar hábito de invocação. Fica reforçado: **a suíte deste repo se roda da raiz,
+sem passar caminho.** Quando o resultado for estranho, a primeira suspeita é a
+invocação, não a mudança.
+
 ### 📏 Lista de medidas da etapa 1 — e a tabela-resumo estava velha
 
 Escrita a `ETAPA1_MEDIDAS_ROBO3.md`: o dono passa a trena e anota, eu comparo e
@@ -120,16 +132,24 @@ vendorizado).
 | `boba_raio` | 0,025 | **0,020** | chão → centro da rodinha |
 | `altura_solo` | 0,070 | **0,065** | topo 20,0 − corpo 13,5 |
 
-**O método que deu certo, e vale registrar:** as duas medidas mais importantes
-não foram lidas direto — saíram da **diferença entre duas leituras
-independentes**. Extremo-a-extremo (38,0) e interna-a-interna (26,0) dão a
-bitola pela soma e a largura da roda pela diferença. Fita apoiada torto erra as
-duas para o mesmo lado e a diferença se cancela; foi por isso que a bitola, que
-custou quatro levas de medida e uma etiqueta trocada, fechou de primeira agora.
+**O método, e eu errei a estatística dele na primeira escrita.** As duas
+grandezas saem de extremo-a-extremo (38,0) e interna-a-interna (26,0): a bitola
+pela **soma**, a largura pela **diferença**. Eu escrevi que o truque da
+diferença tinha feito a bitola fechar — e é o contrário:
 
-**A bitola tem três caminhos independentes concordando:** trena 32,0, desenho no
-Gazebo 32,25 (§5.9) e a restrição "o corpo encosta nas rodas". Espalhamento de
-2,5 mm. Os 42,5 da §5.7 morreram de vez.
+```
+largura = (38 − 26)/2   viés comum às duas leituras CANCELA   -> robusta
+bitola  = (38 + 26)/2   viés comum SOMA                       -> não cancela
+```
+
+Ou seja: a largura de 6,0 é sólida; a bitola de 32,0 é **nominal plausível**.
+Três caminhos apontam o mesmo lugar (trena 32,0, Gazebo 32,25 da §5.9, e "o
+corpo encosta nas rodas"), o que descarta **erro grosseiro** — mas concordância
+entre métodos **não é barra de erro**, e eu tinha vendido os 2,5 mm como se
+fosse. Os 42,5 da §5.7 morreram de vez; a precisão da bitola, não.
+
+➡️ A bitola é o divisor do `wz`: 1% aqui é 1% em **todo** giro. Fecha por
+**ensaio de pivô** com o LIO, não por trena. Entra na etapa 8.
 
 **D4 nunca foi caimento — era um número errado.** O modelo inventava um "suporte
 de 10 mm" sob a boba para explicar 1 cm de diferença entre duas fitas. Com

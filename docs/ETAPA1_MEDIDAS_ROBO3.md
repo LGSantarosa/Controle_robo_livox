@@ -23,13 +23,20 @@
 > 20,0 − 13,5 = 6,5, que é exatamente o "6,5 da boba até o corpo". Palavra do
 > dono: *"está sim alinhado, não está caído não."*
 >
-> **A bitola tem agora três caminhos independentes concordando** — trena (32,0),
-> desenho no Gazebo (32,25) e a restrição "o corpo encosta nas rodas" — com
-> 2,5 mm de espalhamento. Os 42,5 da §5.7 estão enterrados.
+> **A bitola tem três caminhos apontando o mesmo lugar** — trena (32,0), desenho
+> no Gazebo (32,25) e a restrição "o corpo encosta nas rodas". Os 42,5 da §5.7
+> estão enterrados.
+>
+> ⚠️ **Mas isso é NOMINAL, não validação com 2,5 mm** (corrigido no mesmo dia).
+> A largura da roda sai da **diferença** das duas leituras e é robusta a viés
+> comum; a bitola sai da **média**, onde o mesmo viés **soma**. Concordância
+> entre métodos descarta erro grosseiro — não é barra de erro. A bitola é o
+> divisor do `wz`: quem a fecha de verdade é **ensaio de pivô** contra o LIO.
 >
 > **Continua aberto:** `roda_raio` (0,0825 provisório, fecha por corrida reta na
-> etapa 8), Livox (só quando montar, etapa 7) e massas (prematuro até Livox e
-> NUC subirem).
+> etapa 8), **a bitola** (0,320 é nominal — fecha por ensaio de pivô, mesma
+> etapa), Livox (só quando montar, etapa 7) e massas (prematuro até Livox e NUC
+> subirem).
 
 > Etapa 1 do `PLANO_NAV2_ROBO3.md`. **Você passa a trena e anota; eu comparo e
 > atualizo o URDF.** Nada aqui liga o robô.
@@ -102,29 +109,33 @@ Vista **de lado**:
 
 ## Parte C — a lista
 
-Cada linha diz **o que o robô carrega hoje** (valor renderizado do
-`robo3.urdf.xacro`, não fórmula redigitada) e **o que a medida decide**.
+🟢 **RESPONDIDA.** A coluna do meio é o que o URDF tinha **antes** da sessão; a
+última diz no que deu.
 
-| # | medir | o URDF tem hoje | decide / fecha |
+| # | medir | o URDF tinha | ➡️ virou |
 |---|---|---|---|
-| **M1** | Caixa: comprimento × largura × altura | 0,311 × 0,240 × 0,135 | footprint e polígonos do reflexo (etapa 3) |
-| **M2** | Altura do **ponto mais baixo** do chassi ao chão | 0,070 | 🔴 **fecha a D4** — ver o alerta abaixo |
-| **M3** | Largura da roda motora (só o pneu, sem o cubo) | **0,058** | 🔴 **divergência aberta**: a tabela §5.8 diz **0,050**. São 4 mm por lado no footprint |
-| **M4** | **Separação centro-a-centro das motoras** | **0,3225** | entra **direto na odometria de giro**. Confirmar, não recalcular — ver a nota abaixo |
-| **M5** | Raio da roda **com o peso do robô em cima** (pneu comprime) | 0,0825 | 🟡 a §5.4.1 recomenda 0,0835; fecha de verdade por **corrida reta** na etapa 8. A trena só confirma a ordem de grandeza |
-| **M6** | Bobas: x e y de **cada uma**, raio, largura e o *trail* (pivô → contato) | x +0,2485 · y ±0,105 · raio 0,025 · larg 0,030 · trail 0,020 | 🟡 a tabela §5.8 diz y ±0,120 (quinas); o URDF usa ±0,105 (faces alinhadas, §5.9.2) |
-| **M7** | As bobas têm **mola ou suspensão**? (sim/não) | modelo assume **não** | confirma o **C3** — 4 apoios rígidos, uma roda no ar em piso irregular |
-| **M8** | Envelope total: largura × comprimento × altura | 0,3805 × 0,331 × 0,200 | conferência cruzada de M1+M3+M4 |
+| **M1** | Caixa: comprimento × largura × altura | 0,311 × 0,240 × 0,135 | ✅ **confirmado**, sem mexer |
+| **M2** | Altura do **ponto mais baixo** do chassi ao chão | 0,070 | ➡️ **0,065** — e **fecha a D4**: não era caimento, era este número |
+| **M3** | Largura da roda motora (só o pneu, sem o cubo) | 0,058 | ➡️ **0,060** = (38 − 26)/2. Cai o 0,058 de catálogo e o 0,050 da §5.8 |
+| **M4** | **Separação centro-a-centro das motoras** | 0,3225 | ➡️ **0,320** = (38 + 26)/2. ⚠️ nominal, não validado — ver o aviso no topo |
+| **M5** | Raio da roda **com o peso em cima** | 0,0825 | 🟡 **continua aberto**: fecha por corrida reta (etapa 8) |
+| **M6** | Bobas: x/y, raio, largura e o *trail* | x +0,2485 · y ±0,105 · raio 0,025 · larg 0,030 · trail 0,020 | ➡️ **raio 0,020** (fecha a D3); o resto confirmado |
+| **M7** | As bobas têm **mola ou suspensão**? | modelo assume **não** | ✅ **confirmado: não** — o C3 fica de pé |
+| **M8** | Envelope total | 0,3805 × 0,331 × 0,200 | ➡️ **0,380** × 0,331 × 0,200 |
 
-### 🔴 Alerta da M2 — a D4, e ela tem consequência
+### 🟢 Alerta da M2 — RESOLVIDO, e a resposta foi a mais chata das duas
 
-`altura_solo` = 7,0 cm e a boba com estrutura mede 6,0 cm. **Se os dois
-estiverem certos, o robô fica caído para a frente** (~2,3° ao longo do
-entre-eixos). O modelo hoje assume **nivelado**, supondo que a boba sobe num
-suporte de 1 cm.
+A pergunta era: `altura_solo` 7,0 contra boba de 6,0 — o robô está caído ~2,3°
+para a frente, ou **uma das medidas está errada**? O modelo assumia nivelado e
+inventava um "suporte de 10 mm" sob a boba para fechar a conta.
 
-➡️ Meça com **nível**, não só com trena: inclinação permanente muda para onde o
-Livox aponta, e ele vai em cima disso.
+**Era a medida.** Topo 20,0 − corpo 13,5 = fundo **6,5**, que é exatamente o
+"6,5 da boba até o corpo". O `altura_solo` virou 0,065 e o suporte imaginário
+sumiu do modelo. Dono: *"está sim alinhado, não está caído não."*
+
+➡️ Fica a lição: uma hipótese mecânica inteira (inclinação permanente, com
+consequência para onde o Livox aponta) existia só para acomodar **um número
+errado**. Antes de modelar um fenômeno, conferir se a conta fecha.
 
 ### ⚠️ Nota da M4 — confirmar, não recalcular
 
