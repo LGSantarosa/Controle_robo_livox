@@ -147,8 +147,9 @@ def generate_launch_description():
                         '1.0 volta a frente antiga (a que puxa p/ direita). '
                         'Diferente de `sinal`, que é espelho'),
         DeclareLaunchArgument(
-            'bitola', default_value='0.3225',
-            description='[m] centro a centro das motrizes (URDF do robô 3)'),
+            'bitola', default_value='0.320',
+            description='[m] centro a centro das motrizes — trena 17-09, '
+                        '(38,0 + 26,0)/2. Era 0,3225 (URDF do robô 3)'),
         DeclareLaunchArgument(
             'escala', default_value='400.0',
             description='[unidades da placa por m/s] de partida, não calibrada'),

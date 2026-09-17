@@ -1,5 +1,36 @@
 # Etapa 1 — lista de medidas do robô 3 (trena, robô DESLIGADO)
 
+> ## ✅ RESPONDIDA EM 17-09 — trena do dono + 8 fotos
+>
+> **Parte A, a placa:** *"é o mesmo **modelo** da placa do 1 e do 2, mas não a
+> mesma, cada um tem a sua."* → saída 🟢: o modelo de atuador sobrevive, a
+> etapa 8 vira **conferência** e não levantamento novo. Ressalva: mesma
+> **classe**, peça diferente — os números entram como ponto de partida.
+>
+> **Parte C, o que a trena mudou no URDF:**
+>
+> | | era | virou | como saiu |
+> |---|---|---|---|
+> | `roda_separacao` | 0,3225 | **0,320** | (38,0 + 26,0)/2 |
+> | `roda_largura` | 0,058 | **0,060** | (38,0 − 26,0)/2 |
+> | `boba_raio` | 0,025 | **0,020** | chão→centro da rodinha = 2,0 |
+> | `altura_solo` | 0,070 | **0,065** | topo 20,0 − corpo 13,5 |
+>
+> Confirmados sem mexer: caixa 0,311 × 0,240 × **0,135** (o "±14" fechou em
+> 13,5), topo do corpo a 0,200, comprimento do contorno 0,331.
+>
+> **D3 e D4 encerradas.** A D4 nunca foi caimento — era o `altura_solo` errado:
+> 20,0 − 13,5 = 6,5, que é exatamente o "6,5 da boba até o corpo". Palavra do
+> dono: *"está sim alinhado, não está caído não."*
+>
+> **A bitola tem agora três caminhos independentes concordando** — trena (32,0),
+> desenho no Gazebo (32,25) e a restrição "o corpo encosta nas rodas" — com
+> 2,5 mm de espalhamento. Os 42,5 da §5.7 estão enterrados.
+>
+> **Continua aberto:** `roda_raio` (0,0825 provisório, fecha por corrida reta na
+> etapa 8), Livox (só quando montar, etapa 7) e massas (prematuro até Livox e
+> NUC subirem).
+
 > Etapa 1 do `PLANO_NAV2_ROBO3.md`. **Você passa a trena e anota; eu comparo e
 > atualizo o URDF.** Nada aqui liga o robô.
 >

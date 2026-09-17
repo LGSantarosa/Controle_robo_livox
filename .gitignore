@@ -11,6 +11,11 @@ venv/
 *.log
 controle_web/logs/
 
+# Fotos cruas da bancada largadas na raiz (zip do WhatsApp, 17-09). Evidência de
+# medida É versionada neste projeto — mas em `docs/dados/<data>-<assunto>/`, com
+# nome que diga o que a foto mostra, não como zip anônimo de 2,7 MB na raiz.
+robo3.zip
+
 # Mapas gerados pelo SLAM.
 # `maps/*` e não `maps/`: com o DIRETÓRIO ignorado o git nem entra nele, e a
 # exceção abaixo não teria efeito nenhum.

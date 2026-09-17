@@ -50,14 +50,24 @@
   <!-- Caixa. 🟢 MEDIDA: 311 × 240 × 135 mm, fundo a 70 mm do chão.
        ⚠️ D4 ABERTA: a boba com estrutura mede 60 mm e o fundo da caixa está a
        70 mm. Se os dois estiverem certos, o robô fica 2,3° caído para a frente
-       ao longo do entre-eixos. Aqui o modelo assume NIVELADO (a boba sobe num
-       suporte de 10 mm), porque inclinação permanente é afirmação forte para
-       sair de uma diferença de 1 cm entre duas medidas de fita. Se a medida
-       com nível confirmar o caimento, ele entra aqui e não em outro lugar. -->
+       ao longo do entre-eixos.
+
+       🟢 D4 ENCERRADA EM 17-09, e não havia caimento nenhum — havia um número
+       errado. A trena do dono fecha sozinha:
+
+            topo do corpo    20,0
+            altura do corpo  13,5   −
+                             ─────
+            fundo do corpo    6,5   = os "6,5 da boba até o corpo" medidos
+
+       Ou seja `altura_solo` é 0,065, e o 0,070 é que estava errado. Palavra do
+       dono: *"ele está sim alinhado, não está caído não"*. Some o suporte de
+       10 mm inventado para explicar a diferença: ela não existia. -->
   <xacro:property name="caixa_x"     value="0.311"/>
   <xacro:property name="caixa_y"     value="0.240"/>
+  <!-- 13,5 confirmado em 17-09 (o dono deu "±14" e fechou em 13,5). -->
   <xacro:property name="caixa_z"     value="0.135"/>
-  <xacro:property name="altura_solo" value="0.070"/>
+  <xacro:property name="altura_solo" value="0.065"/>
 
   <!-- Motrizes (hoverboard 6,5"). A separação é o divisor do `wz`: errar aqui
        erra TODO comando de giro, e foi o parâmetro que mais custou a fechar —
@@ -103,12 +113,23 @@
        CSV histórico e mexer nele invalidaria a comparação. Se a diferença
        importar, ela vira uma linha no DIÁRIO, não uma edição retroativa. -->
   <xacro:property name="roda_raio"      value="0.0825"/>
-  <xacro:property name="roda_largura"   value="0.058"/>
+  <!-- 🟢 MEDIDO EM 17-09, e sem fita atravessada: o dono deu extremo-a-extremo
+       38,0 e face-interna-a-face-interna 26,0. A largura sai da diferença, que
+       é medida derivada de duas leituras independentes e não de uma fita
+       apoiada torto:  (38,0 − 26,0)/2 = 6,0 cm.
+       Era 0,058 (catálogo) e a tabela §5.8 dizia 0,050 — as duas caem. -->
+  <xacro:property name="roda_largura"   value="0.060"/>
   <!-- O cubo de metal da roda, 15 mm, virado para DENTRO. Não é decoração: é
        ele que vence o vão entre a lateral da caixa (y=0,120) e a face interna
        do pneu (y=0,135), e foi vê-lo faltando no Gazebo que resolveu a D5. -->
   <xacro:property name="roda_cubo"      value="0.015"/>
-  <xacro:property name="roda_separacao" value="0.3225"/>
+  <!-- 🟢 MEDIDA DIRETA EM 17-09, e ela fecha a história:
+            centro a centro = (38,0 + 26,0)/2 = 32,0 cm
+       Bate com os 32,25 que a §5.9 tinha fechado desenhando no Gazebo (2,5 mm
+       de erro de trena) e ENTERRA de vez os 42,5 da §5.7, que a tabela-resumo
+       ainda carregava. Três caminhos independentes — trena, desenho e a
+       restrição "o corpo encosta nas rodas" — dão o mesmo número. -->
+  <xacro:property name="roda_separacao" value="0.320"/>
 
   <!-- Onde a caixa fica em relação ao eixo. 🟢 DERIVADO (C5, §5.4.4): dos
        33,1 cm de comprimento total contra 31,1 da caixa sobram 2,0 cm de roda
@@ -121,17 +142,21 @@
   <!-- Rodas bobas — DUAS, uma em cada quina da frente da caixa.
        🟢 MEDIDO: trail 20 mm, e elas ficam "cada uma na ponta da frente da
        caixa, uma em cada extremidade".
-       🟡 Raio 25 mm ADOTADO: as medidas empataram 2 a 2 entre 40 e 50 mm de
-       diâmetro (§5.5.1). Ficou 50 mm por ser tamanho de catálogo, e o empate
-       é irrelevante porque a altura da frente vem do CONJUNTO (60 mm medidos),
-       não do diâmetro da roda.
+       🟢 RAIO 20 mm MEDIDO EM 17-09 — o empate da §5.5.1 (40 contra 50 mm de
+       diâmetro) acabou, e ganhou o 40: o dono mediu **chão até o centro da
+       rodinha = 2,0 cm**, e com ela apoiada no chão essa altura É o raio.
+       Estava 0,025 aqui, adotado por ser tamanho de catálogo.
+
+       O conjunto continua tocando o chão, e é o que o modelo garante sozinho:
+       pivô em `altura_solo` 0,065, junta da roda em −(0,065 − 0,020) = −0,045,
+       centro da rodinha em 0,020 = o raio.
 
        🔴 O TRAIL DOBROU E DUPLICOU (C7, §5.6.3): o robô 2 tinha 10 mm em UMA
        boba, este tem 20 mm em DUAS. Numa inversão de marcha cada boba gira
        180° e arrasta o contato por 2×trail = 40 mm, contra 20 mm do robô 2.
        Com o entre-eixos de 24,85 cm isso é até 9,1° de perturbação de rumo
        contra 4,6° — e o robô 2 dava SETE rés numa aproximação de porta. -->
-  <xacro:property name="boba_raio"  value="0.025"/>
+  <xacro:property name="boba_raio"  value="0.020"/>
   <xacro:property name="boba_trail" value="0.020"/>
   <!-- ONDE A BOBA FICA — "as pontas com as pontas" (dono, olhando o Gazebo).
        A regra NÃO é sobre o pivô, é sobre a SUPERFÍCIE do conjunto: a face

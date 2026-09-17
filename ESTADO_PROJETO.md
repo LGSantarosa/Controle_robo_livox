@@ -98,7 +98,29 @@ falhas") está desatualizada: uma era o `test_scan_2d`, consertado agora; a
 outra, `test_plano_suavizado`, **não está vermelha** — 10/10 quando invocada
 direito.
 
-### 📏 Próximo passo: `docs/ETAPA1_MEDIDAS_ROBO3.md` (robô DESLIGADO)
+### ✅ ETAPA 1 FECHADA em 17-09 — geometria medida e placa respondida
+
+- **Placa:** *"mesmo modelo do 1 e do 2, mas não a mesma, cada um tem a sua."*
+  → o modelo de atuador **sobrevive**; a etapa 8 vira conferência em vez de
+  levantamento novo. ⚠️ Mesma classe, **peça diferente**: os números do
+  `MODELO_ROBO2.md` são ponto de partida, não medida deste robô.
+- **Quatro valores do URDF mudaram** pela trena: `roda_separacao` 0,3225→**0,320**,
+  `roda_largura` 0,058→**0,060**, `boba_raio` 0,025→**0,020**, `altura_solo`
+  0,070→**0,065**. Caixa 0,311 × 0,240 × 0,135 confirmada.
+- **D3 e D4 encerradas.** A D4 nunca foi caimento: 20,0 − 13,5 = 6,5, e o robô
+  está alinhado. O modelo carregava um "suporte de 10 mm" inventado para
+  explicar um número errado.
+- **Bitola com três caminhos independentes concordando** (trena 32,0, Gazebo
+  32,25, "o corpo encosta nas rodas"), 2,5 mm de espalhamento.
+- Testes: **104 passed** nos do robô 3; suíte em 847, sem regressão.
+- **Ainda aberto:** `roda_raio` (fecha por corrida reta, etapa 8), Livox (etapa
+  7) e massas (só depois de Livox e NUC subirem).
+
+➡️ **Próxima:** etapa 2 — o ensaio frente/ré. Ela tem três pré-requisitos, e o
+primeiro acabou de cair: placa decidida ✅, **parada física independente do Xbox**
+🔴 e **protocolo de régua/câmera** 🔴.
+
+### 📏 A lista que originou isto: `docs/ETAPA1_MEDIDAS_ROBO3.md` (robô DESLIGADO)
 
 Lista pronta para você passar a trena e anotar — cada medida diz **o que o URDF
 carrega hoje** (valor renderizado, não fórmula) e o que ela fecha. Abre com a

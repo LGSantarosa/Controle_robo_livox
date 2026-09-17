@@ -41,7 +41,7 @@ from launch_ros.actions import Node
 # Geometria do robô 3. Mora aqui e no YAML do controlador, e os dois são
 # conferidos em par por `test_urdf_robo3.py` — mudar um sozinho quebra o teste
 # de propósito.
-BITOLA = 0.3225  # fechada olhando o Gazebo, §5.9
+BITOLA = 0.320   # 🟢 trena 17-09: (38,0 + 26,0)/2. Era 0,3225 (Gazebo, §5.9)
 RAIO = 0.0825    # catálogo do hub motor 6,5" (165 mm OD)
 
 

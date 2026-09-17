@@ -201,8 +201,24 @@ Também não se confunda o que cada saída preserva: a placa decide o **atuador*
 a inversão das rodas mexe na **geometria**. Placa igual **não** salva a lei de
 rumo — C2 continua de pé nos dois cenários.
 
-**Fica aguardando o aviso do dono.** Enquanto não vier, o trabalho de hoje é só
-medida física (itens 1-11) — nada de sintonia.
+### 🟢 RESPONDIDA EM 17-09 — e caiu na saída boa, com uma ressalva
+
+Palavra do dono: *"é o mesmo **modelo** da placa do 1 e do 2, mas não a mesma,
+cada um tem a sua."*
+
+➡️ **Saída 🟢 da tabela acima:** o modelo de atuador **sobrevive**. Zona morta,
+patamar de saída e latência são propriedades **daquele firmware**, e o firmware
+é o mesmo. O `placa_simulada.py` não recomeça do zero, e a etapa 8 do
+`PLANO_NAV2_ROBO3.md` deixa de ser um levantamento novo para ser **conferência**.
+
+⚠️ **A ressalva, e ela não é formalidade:** é o mesmo modelo, **não a mesma
+peça**. Variação de unidade para unidade existe — a própria história deste repo
+tem duas placas do robô 2 com comportamento diferente. Então os números do
+`MODELO_ROBO2.md` entram como **ponto de partida declarado**, não como medida do
+robô 3, e a primeira corrida de controle confirma ou derruba.
+
+➡️ **O que isto destrava:** a proibição de sintonia sai. O que continua valendo
+é a ordem do plano — geometria antes, dinâmica depois.
 
 ---
 
@@ -891,17 +907,17 @@ esquerda, tudo em metros.
 | `caixa_y` (largura) | 0,240 | 🟢 medido |
 | `caixa_z` (altura) | 0,135 | 🟢 medido |
 | `caixa_cx` (centro da caixa) | **+0,093** | 🟢 derivado do C5 |
-| `altura_solo` | 0,070 | 🟡 medido, mas briga com a boba (D4) |
+| `altura_solo` | ~~0,070~~ → **0,065** | 🟢 **D4 ENCERRADA em 17-09, e não havia caimento** — havia número errado. Topo 20,0 − corpo 13,5 = fundo 6,5, que é exatamente o "6,5 da boba até o corpo" medido. Palavra do dono: *"está sim alinhado, não está caído não"* |
 | `roda_raio` | **0,0835** | 🟡 provisório: fecha por corrida reta (§5.4.1) |
-| `roda_largura` | 0,050 | 🟢 medido (+0,015 de cubo, para dentro) |
-| `roda_separacao` | ~~0,425~~ → **0,3225** | 🔴 **esta linha estava VELHA** — a §5.9 fechou D5 no Gazebo e revisou a §5.7. O código sempre teve 0,3225; era a tabela que discordava (visto em 17-09) |
+| `roda_largura` | ~~0,050~~ → **0,060** | 🟢 **MEDIDO em 17-09** por diferença de duas leituras independentes: (38,0 − 26,0)/2. Derruba o 0,050 desta tabela e o 0,058 de catálogo que o URDF usava |
+| `roda_separacao` | ~~0,425~~ ~~0,3225~~ → **0,320** | 🟢 **MEDIDO com trena em 17-09**: (38,0 extremo-a-extremo + 26,0 interna-a-interna)/2. A linha dizia 0,425 (§5.7) e estava velha — a §5.9 já a tinha revisado para 0,3225 desenhando no Gazebo, e a trena agora fecha em 0,320. **Três caminhos independentes, 2,5 mm de espalhamento.** |
 | `roda_x` | **0,000** | 🟢 é a origem, por definição (C8) |
-| `boba_raio` | 0,025 | 🟡 adotado, empate irrelevante (§5.5.1) |
+| `boba_raio` | ~~0,025~~ → **0,020** | 🟢 **D3 ENCERRADA em 17-09**: o dono mediu chão até o **centro** da rodinha = 2,0 cm, e com ela apoiada essa altura **é** o raio. O empate 40 × 50 mm da §5.5.1 acabou, e ganhou o 40 |
 | `boba_x` | **+0,2485** | 🟢 ponta da frente da caixa |
 | `boba_y` | **±0,120** | 🟢 quinas da caixa |
 | `boba_trail` | 0,020 | 🟢 medido |
 | Bobas têm mola? | **não** | 🔴 é o que confirma o C3 |
-| Envelope (larg × compr × alt) | ~~0,475~~ → **0,3805** × 0,331 × 0,200 | 🔴 **velho pelo mesmo motivo** (bitola da §5.7). Com 0,3225 + roda de 0,058 dá 0,3805; a §5.9 anotou 0,3725 usando roda de 0,050 — os 8 mm de diferença são a pendência de largura da roda |
+| Envelope (larg × compr × alt) | ~~0,475~~ → **0,380** × 0,331 × 0,200 | 🟢 **fechado com a trena de 17-09**: 0,320 + 0,060. A altura 0,200 é medida direta (chão ao topo do corpo) e o comprimento 0,331 cai do contorno — as três conferem entre si |
 | Massas, centro de massa | — | 🔴 pendente, e prematuro (D7) |
 | Livox: altura, x, y, yaw | — | 🔴 nem montado (D7) |
 
@@ -916,16 +932,17 @@ robô — e footprint inflado não dá erro: só faz o planejador recusar vão p
 o robô passa.
 
 ```
-                          ERRADO (§5.7)      CERTO (§5.9 + URDF renderizado)
+                          ERRADO (§5.7)      CERTO (trena 17-09, URDF renderizado)
 traseira: x =             −0,0835            −0,0825   (o pneu, raio do URDF)
 frente:   x =             +0,2485            +0,2485   (ponta da caixa, inalterado)
-laterais: y =             ±0,2375            ±0,19025  (0,16125 + metade de 0,058)
+laterais: y =             ±0,2375            ±0,1900   (0,160 + metade de 0,060)
+comprimento =             —                   0,3310   ✅ bate com os 33,1 medidos
+diagonal    =             —                   0,5039   (porta de 70: 9,8 cm/lado)
 ```
 
-⚠️ **E as laterais ainda têm uma pendência de trena:** a largura da roda aparece
-como **0,050** nesta tabela e como **0,058** no URDF. Com 0,050 a lateral é
-±0,18625; com 0,058, ±0,19025. São 4 mm por lado — pouco para o footprint,
-mas é medida física em aberto e entra na lista da etapa 1.
+🟢 **A pendência de 4 mm nas laterais morreu em 17-09.** A largura da roda saiu
+da diferença de duas leituras independentes — (38,0 − 26,0)/2 = **6,0 cm** — e
+derruba tanto o 0,050 desta tabela quanto o 0,058 de catálogo do URDF.
 
 ⚠️ **A largura vem do PNEU e o comprimento vem da CAIXA.** Nenhum dos dois vem
 do mesmo lugar que vinha no robô 2, e é o erro fácil de cometer aqui.

@@ -42,7 +42,10 @@ hoverboard_base_controller:
     # 58 mm de largura. Não é número para medir com fita — os 165 mm batem com
     # o 16,5 cm lido no robô, e o perímetro de 53 cm que daria 16,87 é a fita
     # passando por fora do relevo do pneu.
-    wheel_separation: 0.3225
+    # 🟢 32,0 cm MEDIDO com trena em 17-09: (38,0 extremo-a-extremo + 26,0
+    # interna-a-interna)/2. Era 0,3225, fechado no Gazebo (§5.9) — 2,5 mm de
+    # diferença. Anda em par com o URDF: há teste travando os dois.
+    wheel_separation: 0.320
     wheel_radius: 0.0825
 
     wheel_separation_multiplier: 1.0

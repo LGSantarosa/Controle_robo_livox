@@ -106,6 +106,52 @@ na tabela e **0,058** no URDF. Virou a medida M3 da lista.
 geometria que sobrevive a duas leituras vai para o Gazebo **antes** de virar
 decisão. Desenhar responde o que a trena não perguntou.
 
+### ✅ ETAPA 1 FECHADA NO MESMO DIA — trena, 8 fotos, e duas divergências mortas
+
+O dono passou a trena e mandou os números com fotos. Quatro valores do URDF
+mudaram, e **nenhum teste quebrou** (104 passed em `test_urdf_robo3` +
+`test_configs_coerentes`; a suíte segue em 847, com as 8 do `twist_mux`
+vendorizado).
+
+| | era | virou | como saiu |
+|---|---|---|---|
+| `roda_separacao` | 0,3225 | **0,320** | (38,0 + 26,0)/2 |
+| `roda_largura` | 0,058 | **0,060** | (38,0 − 26,0)/2 |
+| `boba_raio` | 0,025 | **0,020** | chão → centro da rodinha |
+| `altura_solo` | 0,070 | **0,065** | topo 20,0 − corpo 13,5 |
+
+**O método que deu certo, e vale registrar:** as duas medidas mais importantes
+não foram lidas direto — saíram da **diferença entre duas leituras
+independentes**. Extremo-a-extremo (38,0) e interna-a-interna (26,0) dão a
+bitola pela soma e a largura da roda pela diferença. Fita apoiada torto erra as
+duas para o mesmo lado e a diferença se cancela; foi por isso que a bitola, que
+custou quatro levas de medida e uma etiqueta trocada, fechou de primeira agora.
+
+**A bitola tem três caminhos independentes concordando:** trena 32,0, desenho no
+Gazebo 32,25 (§5.9) e a restrição "o corpo encosta nas rodas". Espalhamento de
+2,5 mm. Os 42,5 da §5.7 morreram de vez.
+
+**D4 nunca foi caimento — era um número errado.** O modelo inventava um "suporte
+de 10 mm" sob a boba para explicar 1 cm de diferença entre duas fitas. Com
+topo 20,0 e corpo 13,5, o fundo está a 6,5 — que é exatamente o "6,5 da boba até
+o corpo" medido. Dono: *"ele está sim alinhado, não está caído não."* Uma
+hipótese mecânica inteira existia só para acomodar um valor errado.
+
+**D3 encerrada** pelo mesmo tipo de medida: chão até o **centro** da rodinha =
+2,0 cm, e com ela apoiada essa altura **é** o raio. O empate 40 × 50 mm da
+§5.5.1 acabou sem precisar de discussão.
+
+**E a placa foi respondida** (§5.1, o item de maior alavancagem): *"mesmo modelo
+do 1 e do 2, mas não a mesma."* Saída boa — o modelo de atuador sobrevive e a
+etapa 8 vira conferência. Mas é mesma **classe**, peça diferente: os números do
+`MODELO_ROBO2.md` entram como ponto de partida, não como medida deste robô.
+
+⚠️ **Um perigo de processo, pego a tempo:** o zip com as fotos foi parar na raiz
+do repo, não rastreado. Eu venho commitando com `git add -A` — o commit seguinte
+teria enfiado 2,7 MB de foto de WhatsApp no histórico, onde não se tira mais.
+Entrou no `.gitignore`. Evidência de medida **é** versionada aqui, mas em
+`docs/dados/<data>-<assunto>/`, com nome que diga o que a foto mostra.
+
 Suíte depois de tudo: **847 passed** (era 845; +2 são os testes novos), com as
 mesmas 1 falha e 7 erros do `twist_mux` vendorizado. **Nada implantado no robô.**
 
