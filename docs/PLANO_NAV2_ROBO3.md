@@ -1,8 +1,12 @@
 # Plano — adaptar o Nav2 para o robô 3 (v2.5)
 
 > **Status: plano APROVADO em 17-09, depois de seis revisões cruzadas.**
-> **Etapa 0 executada** no mesmo dia (§8) — é a única coisa implementada até
-> aqui; da etapa 1 em diante nada foi feito, e nada foi ao robô.
+> **Etapas 0 e 1 executadas** no mesmo dia (§8): o teste inválido saiu, e a
+> geometria foi medida com trena e aplicada ao URDF. **Etapa 2 ADIADA** — sem
+> ensaio nem implantação em robô físico. **Nada foi ao robô.**
+>
+> ⏸️ Corre em paralelo a **trilha de Gazebo (§8-B)**, que é de simulação e
+> **não fecha etapa física nenhuma**.
 >
 > **Seis** revisões cruzadas em dois dias, e cada uma achou coisa real:
 >
@@ -281,20 +285,40 @@ não grava pose, então o desvio se mede **no chão** e vira curvatura por
 
 ⚠️ Duas coisas mudaram em relação ao que este §7 dizia antes:
 
-1. **Ordem alternada, não aleatorizada.** Com N pequeno, alternar balanceia a
-   queda de bateria e o aquecimento de forma **estrita**; sortear só balanceia
-   em média, e é justamente com poucas corridas que a média não protege.
-2. **O discriminador é trocar os canais L/R**, não observar de que lado o robô
-   puxa. Se o desvio segue o canal → causa de lado (elétrica/mecânica); se segue
-   o sentido apesar da troca → causa geométrica, e a premissa do §2 se confirma.
-   Feito em software, invertendo `left_wheel_sign` e `right_wheel_sign` **juntos**
-   — não confundir com `frente:=`, que é rotação (decisão 049).
+1. **Ordem contrabalanceada em blocos `ABBA`/`BAAB`**, não "alternada" e não
+   sorteada. `A B A B` parece alternar mas põe **A sempre antes de B**, então a
+   queda de bateria empurra todos os B para o fim e vira o próprio "efeito de
+   sentido" que se quer medir. Sortear só balanceia em média, e com N pequeno a
+   média não protege.
+2. 🔴 **O discriminador de canal por SOFTWARE não existe — e não é falta de
+   parâmetro, é aritmética.** Esta seção mandava inverter `left_wheel_sign` e
+   `right_wheel_sign` juntos para "trocar canais": aquilo é **espelho**, não
+   troca. E mesmo um `swap_lr` novo seria inútil, porque o `mega_bridge` manda
+   para a placa `speed = (L+R)/2` e `steer = (L−R)/2` — **na reta `L == R`**,
+   logo `steer = 0` e trocar L↔R produz **o frame idêntico**.
+3. ➡️ **O que substitui, e usa dado que já se grava:**
+   `/hoverboard/wheel_velocities` traz **RPM por roda**, e o `bin/sobe-robo3` já
+   o registra. Com os dois setpoints iguais, o RPM responde direto:
+   - **as rodas giram diferente** → a assimetria está na roda/motor/realimentação
+     ou na carga sobre elas;
+   - **as rodas giram igual e o robô ainda puxa** → a causa está **fora** da
+     tração: geometria, boba, raio de pneu, piso.
+
+   ⚠️ Isso **não** prova "elétrico": roda girando menos pode ser carga, não
+   canal. Separar canal de carga exige **trocar os conectores dos motores** —
+   ensaio físico definido com cuidado, não parâmetro.
 
 ---
 
 ## 8. Ordem adotada (da revisão, com o que cada etapa prova)
 
 Uma etapa por sessão. Nenhuma começa sem a anterior fechada.
+
+⏸️ **A trilha de Gazebo (§8-B) é a exceção, e é PARALELA — não sequencial.** Ela
+existe porque a etapa 2 está adiada por falta de hardware (parada física), e
+roda em simulação enquanto isso. 🔴 **Ela não fecha etapa física nenhuma**: nada
+que o Gazebo mostre marca a 2, a 7, a 8 ou a 9 como feitas. As etapas físicas
+continuam na ordem, esperando o robô.
 
 | # | etapa | prova / entrega | precisa do robô? |
 |---|---|---|---|

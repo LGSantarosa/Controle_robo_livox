@@ -104,9 +104,13 @@ comprimento do contorno 0,331.
 
 **E a placa foi respondida** (§5.1, o item de maior alavancagem): *"mesmo
 modelo da placa do 1 e do 2, mas não a mesma, cada um tem a sua."* O modelo de
-atuador sobrevive e a etapa 8 vira **conferência**; mas é mesma classe e **peça
-diferente**, então os números do `MODELO_ROBO2.md` entram como ponto de partida,
-não como medida deste robô.
+atuador **não cai**.
+
+🔴 **Mas a etapa 8 continua sendo MEDIÇÃO do atuador, não "conferência"** — esta
+linha dizia o contrário e foi corrigida no mesmo dia. "Mesmo modelo" **não prova
+mesmo firmware**, e a configuração gravada nesta placa é desconhecida. É mesma
+classe e **peça diferente**: os números do `MODELO_ROBO2.md` entram como ponto de
+partida, não como medida deste robô.
 
 ---
 

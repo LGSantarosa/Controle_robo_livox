@@ -155,6 +155,49 @@ invocação do pytest e agora o espelho × rotação), e as duas só apareceram 
 **outra pessoa leu**. Registro serve para a revisão ter onde se apoiar — não
 para o autor se lembrar sozinho.
 
+### 🔴 E o `swap_lr` que eu ia propor seria um NO-OP — por aritmética
+
+A revisão seguinte matou até o conserto que eu tinha proposto para o
+discriminador. Eu havia escrito que trocar canal exigiria "um parâmetro
+`swap_lr` novo, que não existe". Existe coisa pior que não existir: **não
+funcionaria.**
+
+O `mega_bridge` não manda comando por roda para a placa. Ele manda o par do
+firmware do hoverboard:
+
+```
+speed = (L + R) / 2
+steer = (L − R) / 2
+```
+
+Numa **reta** os dois setpoints são iguais, `L == R`. Logo `steer = 0`, e trocar
+L↔R dá `speed` igual e `steer = −0`: **o frame que chega na placa é idêntico**.
+Um swap de software na reta é literalmente um no-op. Conferi no código antes de
+aceitar — e fico feliz de não ter escrito o parâmetro "só para destravar o
+ensaio": teria sido código novo, testado, versionado, e inútil.
+
+**O que entrou no lugar já existia e ninguém tinha olhado:**
+`/hoverboard/wheel_velocities` publica **RPM por roda**, e o `bin/sobe-robo3`
+**já grava**. Com os setpoints iguais na reta, o RPM separa:
+
+- rodas girando **diferente** → assimetria na tração *ou na carga sobre ela*;
+- rodas girando **igual** e o robô puxando → a causa está **fora** da tração.
+
+⚠️ E não vende mais do que entrega: RPM menor pode ser **carga**, não canal
+elétrico. Isolar canal de carga continua exigindo trocar os conectores dos
+motores — ensaio físico, robô desligado para a troca. Está escrito assim.
+
+Dois consertos menores da mesma leva: o `ABBA/BAAB` tinha chegado ao protocolo
+mas **não** ao §7 do plano, que ainda dizia "alternada"; e o plano afirmava ao
+mesmo tempo "nenhuma etapa começa sem a anterior fechada" e uma trilha de Gazebo
+aberta com a etapa 2 adiada. Agora está declarado: **a trilha de simulação é
+PARALELA e não fecha etapa física nenhuma.**
+
+**O padrão que se repetiu três rodadas seguidas:** o resíduo estava **dentro do
+documento que eu tinha acabado de consertar**. Consertar cria contradição nova
+entre a parte corrigida e a que ficou — e é por isso que a varredura depois de
+editar deixou de ser zelo e virou parte do trabalho.
+
 ### 📏 Lista de medidas da etapa 1 — e a tabela-resumo estava velha
 
 Escrita a `ETAPA1_MEDIDAS_ROBO3.md`: o dono passa a trena e anota, eu comparo e
@@ -233,6 +276,12 @@ hipótese mecânica inteira existia só para acomodar um valor errado.
 do 1 e do 2, mas não a mesma."* Saída boa — o modelo de atuador sobrevive e a
 etapa 8 vira conferência. Mas é mesma **classe**, peça diferente: os números do
 `MODELO_ROBO2.md` entram como ponto de partida, não como medida deste robô.
+
+> ⚠️ **Corrigido mais adiante NESTA MESMA ENTRADA:** o "vira conferência" está
+> errado. "Mesmo modelo" não prova "mesmo firmware", e a configuração gravada
+> nesta placa é desconhecida — a etapa 8 segue sendo **medição** do atuador.
+> Deixo a frase original porque diário é registro do que se pensou na hora; o
+> ponteiro é para ninguém parar de ler aqui e sair com a conclusão errada.
 
 ⚠️ **Um perigo de processo, pego a tempo:** o zip com as fotos foi parar na raiz
 do repo, não rastreado. Eu venho commitando com `git add -A` — o commit seguinte

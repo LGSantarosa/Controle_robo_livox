@@ -49,12 +49,17 @@ das duas:
 
 | caminho | avaliação |
 |---|---|
-| **trocar os conectores dos motores** na placa | é a troca de verdade, mas é física e some do registro se ninguém anotar |
-| **parâmetro `swap_lr` novo no `cmd_vel_to_wheels`** | reversível, versionado e testável — mas é **código que ainda não existe**, e não vou inventar sem pedido |
+| **trocar os conectores dos motores** na placa | é a troca de verdade. Física, com o robô **desligado**, e tem de ser anotada senão some do registro |
+| ~~parâmetro `swap_lr` no `cmd_vel_to_wheels`~~ | 🔴 **NÃO FUNCIONARIA, e não é falta de código — é aritmética.** O `mega_bridge` manda para a placa `speed = (L+R)/2` e `steer = (L−R)/2`. Numa **reta** `L == R`, então `steer = 0` e trocar L↔R produz **o frame idêntico**. Um swap de software é literalmente um no-op aqui |
 
-⚠️ Até uma das duas existir, o ensaio ainda mede a **curvatura por sentido**
-(A × B) — o que já vale —, mas **não separa causa de lado de causa de sentido**.
-Essa parte fica pendente, e é honesto dizer que fica.
+➡️ **O que dá para fazer sem troca nenhuma**, e com dado que o bag já grava:
+ler o **RPM por roda** (`/hoverboard/wheel_velocities`). Com os setpoints
+iguais, ele separa "a tração está assimétrica" de "a tração está simétrica e o
+robô puxa mesmo assim". Ver §6.
+
+⚠️ O ensaio mede a **curvatura por sentido** (A × B) — o que já responde a
+pergunta da decisão 049 — e o RPM estreita a causa. O que continua fora de
+alcance é **isolar canal elétrico de carga**, e isso é honesto dizer.
 
 ---
 
@@ -139,10 +144,16 @@ não há como trocar canal hoje.
 ## 5. Planilha de anotação
 
 ```
-corrida | config | tensão | d (cm) | lado do desvio | observação
-   1    |   A    |  __,_  |   __   |  esq / dir     |
-   2    |   B    |  __,_  |   __   |  esq / dir     |
+corrida | sentido | tensão | d (cm) | lado do desvio | observação
+   1    |    A    |  __,_  |   __   |  esq / dir     |
+   2    |    B    |  __,_  |   __   |  esq / dir     |
+   3    |    B    |  __,_  |   __   |  esq / dir     |
+   4    |    A    |  __,_  |   __   |  esq / dir     |   <- fim do bloco ABBA
 ```
+
+⚠️ O **RPM por roda não vai nesta planilha**: ele já está no bag
+(`/hoverboard/wheel_velocities`), e eu leio de lá. Anote só o que a trena e o
+olho veem — o resto o robô grava sozinho.
 
 ⚠️ **"Lado do desvio" é em relação ao SENTIDO DE MARCHA**, não à sala. Anote
 como se você estivesse sentado no robô, olhando para onde ele vai.
@@ -151,14 +162,23 @@ como se você estivesse sentado no robô, olhando para onde ele vai.
 
 ## 6. Como eu leio
 
-1. Média e dispersão de `κ` por configuração (A, B, C, D).
-2. **A pergunta que decide:** de A para C (mesma marcha, canais trocados) o
-   desvio **troca de lado**?
-   - **trocou** → segue o canal → causa **de lado**, elétrica/mecânica;
-   - **não trocou** → segue o sentido → causa **geométrica**, e a hipótese das
-     bobas se confirma.
-3. Se a dispersão dentro de uma configuração for da ordem da diferença entre
-   configurações, **não decide nada** — e a resposta honesta é "precisa de mais
+1. **Média e dispersão de `κ`** nos dois sentidos, A e B. (C e D não existem —
+   ver §1: não há como trocar canal hoje.)
+2. **`κ_A` contra `κ_B`** — é o que o ensaio decide de fato: o sentido com as
+   motoras à frente anda mais reto que o outro? Isso confirma ou derruba a
+   premissa do §2 e a decisão 049.
+3. **O RPM por roda, do bag** (`/hoverboard/wheel_velocities`, já gravado).
+   Numa reta os dois setpoints são **iguais**, então:
+   - **rodas girando diferente** → a assimetria está na tração (roda, motor,
+     realimentação) **ou na carga sobre ela**;
+   - **rodas girando igual e o robô puxando** → a causa está **fora** da
+     tração: geometria, boba, raio de pneu, piso.
+
+   ⚠️ Isso **não** conclui "elétrico". Roda girando menos pode ser carga. Quem
+   separa canal de carga é **trocar os conectores dos motores** — ensaio físico
+   à parte, com o robô desligado para a troca.
+4. Se a dispersão dentro de um sentido for da ordem da diferença entre os
+   sentidos, **não decide nada** — e a resposta honesta é "precisa de mais
    corridas ou de instrumentação melhor", não escolher a hipótese preferida.
 
 ---
