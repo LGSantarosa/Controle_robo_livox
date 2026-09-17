@@ -152,6 +152,15 @@ teria enfiado 2,7 MB de foto de WhatsApp no histórico, onde não se tira mais.
 Entrou no `.gitignore`. Evidência de medida **é** versionada aqui, mas em
 `docs/dados/<data>-<assunto>/`, com nome que diga o que a foto mostra.
 
+➡️ E foi o que se fez, a pedido do dono: as 8 fotos estão em
+`docs/dados/2026-09-17-robo3-trena/`, nomeadas **pelo ponto de vista** e não
+pelo número que mostram. O README de lá carrega um aviso que vale o registro:
+**os números autoritativos são os que o dono ditou, não os que se lê das fotos.**
+Nelas a fita aparece angulada e em várias o zero está fora de quadro ou atrás da
+roda — rederivar milímetro dali produziria número novo com cara de medida, que é
+como a D2 e a D5 nasceram. Se um valor for contestado, mede-se de novo; não se
+amplia a foto.
+
 Suíte depois de tudo: **847 passed** (era 845; +2 são os testes novos), com as
 mesmas 1 falha e 7 erros do `twist_mux` vendorizado. **Nada implantado no robô.**
 

@@ -14,6 +14,8 @@ controle_web/logs/
 # Fotos cruas da bancada largadas na raiz (zip do WhatsApp, 17-09). Evidência de
 # medida É versionada neste projeto — mas em `docs/dados/<data>-<assunto>/`, com
 # nome que diga o que a foto mostra, não como zip anônimo de 2,7 MB na raiz.
+# Estas foram, e o README de lá explica por que os números NÃO se leem da foto:
+#     docs/dados/2026-09-17-robo3-trena/
 robo3.zip
 
 # Mapas gerados pelo SLAM.
