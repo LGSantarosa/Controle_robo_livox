@@ -1,11 +1,24 @@
-# Plano — adaptar o Nav2 para o robô 3 (v2)
+# Plano — adaptar o Nav2 para o robô 3 (v2.1)
 
-> **Status: PLANO REVISADO, NÃO APROVADO PARA EXECUÇÃO, nada implementado.**
-> v1 escrita em 2026-09-16; **v2 em 2026-09-17**, depois de uma revisão cruzada
-> que derrubou duas etapas inteiras. Irmão do `PLANO_CONTROLE_ROBO3.md`.
+> **Status: nada implementado. Aguardando a aprovação do dono.**
+> v1 em 2026-09-16; **v2 em 2026-09-17**, depois de uma revisão cruzada que
+> derrubou duas etapas inteiras (§1); **v2.1 no mesmo dia**, com os cinco
+> ajustes da segunda revisão já aplicados:
 >
-> Regra do projeto: cada etapa é uma mudança pequena, com o "pode" do dono antes
-> de ir ao robô. Este documento não autoriza nada — ele ordena.
+> 1. classificação de parâmetros separada em quatro classes (§5);
+> 2. a fronteira `TwistStamped → Twist` passa a ser **decidida** na etapa 5, não
+>    adiada (§4);
+> 3. parada física virou **pré-requisito das etapas 2, 8, 9 e 10**, não só da 10;
+> 4. a contradição do `ESTADO_PROJETO` corrigida — trocar o lado do puxão **não**
+>    prova causa de canal;
+> 5. validação do LIO na etapa 7 ampliada para a pose 6D inteira.
+>
+> Junto veio um achado próprio: consertar o teste da etapa 0 **não é** trocar
+> `robot_radius` por footprint — isso reprovaria o robô 2. Ver §8.
+>
+> Irmão do `PLANO_CONTROLE_ROBO3.md`. Regra do projeto: cada etapa é uma mudança
+> pequena, com o "pode" do dono antes de ir ao robô. Este documento não autoriza
+> nada — ele ordena.
 
 ---
 
@@ -101,6 +114,16 @@ Junto: **um mux só**. Hoje a `pilha` e o `controle_robo3.launch.py` disputam o
 mesmo nó, e o `dpad_reto` e o teleop do robô 3 precisam passar a falar o mesmo
 contrato do resto.
 
+🔴 **A fronteira ainda NÃO está decidida, e a etapa 5 tem de fechá-la.** As duas
+saídas vivas são: **(i)** um nó adaptador `TwistStamped → Twist`, ou **(ii)**
+fazer o `cmd_vel_to_wheels` aceitar `TwistStamped`. Dizer "conversão na
+fronteira" sem escolher é adiar, não decidir. A etapa 5 escolhe e **testa**:
+
+- prioridade do mux respeitada (humano fura autonomia);
+- `timeout` de cada faixa (o homem-morto continua soltando o robô);
+- **sinal de `v` e de `wz`** ponta a ponta, com o `linear_sign` no meio;
+- **nenhum nó duplicado** — nem dois mux, nem dois `cmd_vel_to_wheels`.
+
 ---
 
 ## 5. Perfis `robo2` / `robo3`: o que precisa de perfil próprio
@@ -108,16 +131,33 @@ contrato do resto.
 A v1 listava 7 itens. São muitos mais, e **herdar número medido de outra máquina
 é o defeito que este repo já pagou** (a bitola de 29-07).
 
-**Calibração (sai de CSV, no robô):** `curv_frente`/`curv_re`, `zona_morta`,
-`retencao_giro_s`, `a_dec`, `a_lin`, `v_max`, `wz_max`, `ganho_wz`,
-`desvio_taxa_deg_s`, e todo o bloco de passagem estreita do `path_follower`
-(raio mínimo, largura de passagem, meia largura, corredor de ré, recuo do
-para-choque, folga de pivô).
+São **quatro** classes, e misturá-las é o que fez a v1 mandar medir geometria com
+CSV. Cada classe tem origem, dono e momento diferentes:
 
-**Geometria derivada (sai da trena e do URDF, NÃO de CSV):** footprint global e
+**(a) Planta medida — sai de ensaio com CSV, no robô.** `curv_frente`/`curv_re`,
+`zona_morta`, `retencao_giro_s`, `linear_scale` e o ganho linear realizado,
+ganho de giro, aceleração e frenagem reais, atraso liga/desliga.
+→ São propriedades **da máquina e da placa**. Etapa 8.
+
+**(b) Geometria — sai da trena e do URDF, NUNCA de CSV.** Footprint global e
 local do Nav2, os **dois** polígonos do `collision_monitor`, alturas da
 `VoxelLayer`, `scan_2d` (`min/max_height`, `range_min`), `laser_min_range` do
-`localizacao_amcl.yaml`, recuperação em ré e pivô.
+`localizacao_amcl.yaml`, **meia largura, corredor de ré, recuo do para-choque,
+raio mínimo e folga de pivô** do `path_follower`.
+→ Existem **antes** de qualquer simulação de navegação. Etapa 3.
+
+**(c) Limites e política de segurança — escolha nossa, não medida.** `v_max`,
+`wz_max`, largura de passagem e suas margens, `desvio_taxa_deg_s`, quando a ré é
+permitida, o que o reflexo faz ao disparar.
+→ Decisão registrada, com o "porquê". Limitada por (a), nunca maior que ela.
+
+**(d) Sintonia do controlador — ajuste, dentro do que (a) e (c) permitem.**
+`a_dec`, `a_lin`, `ganho_wz`, ganhos kp/ki do rumo e da reta.
+→ Último a mexer, e só com corrida de controle antes e depois.
+
+⚠️ A v1 punha meia largura, corredor de ré e recuo do para-choque em "calibração
+por CSV". São **(b)**: saem da trena. E `desvio_taxa_deg_s` não é planta nem
+geometria — é **(c)**, uma escolha de segurança.
 
 🔴 **O footprint é geometria, não calibração** — ele tem de existir **antes** de
 qualquer simulação de navegação, não no fim. A v1 o jogava para a etapa 6.
@@ -165,20 +205,54 @@ Uma etapa por sessão. Nenhuma começa sem a anterior fechada.
 
 | # | etapa | prova / entrega | precisa do robô? |
 |---|---|---|---|
-| 0 | Consertar `test_scan_2d.py` (vermelho por `robot_radius` da 032) | "suíte verde" volta a ser critério válido de etapa | não |
+| 0 | Consertar `test_scan_2d.py` (vermelho por `robot_radius` da 032) — **contra a envolvente real, ver abaixo** | "suíte verde" volta a ser critério válido de etapa | não |
 | 1 | Fechar **a placa** (§5.1 da revisão cruzada) e a geometria física autoritativa (trena) | sem isso a etapa 8 recomeça do zero | sim, desligado |
 | 2 | Repetir o ensaio frente/ré com o protocolo do §7 | confirma ou derruba a premissa do §2 | sim, ligado |
 | 3 | URDF completo girado (§3) + `robot_state_publisher` + footprints + testes reescritos | modelo e marcha concordam; o Nav2 passa a ter contorno | não |
 | 4 | Perfis `robo2`/`robo3` e **um bringup único** do robô 3 | RSP + MEGA + `cmd_vel_to_wheels` + Xbox/direcional + mux único num lugar só | não |
 | 5 | Unificar o contrato de mensagens (§4) e testar a cadeia **sem Gazebo** | comando atravessa de ponta a ponta, sem simulador para confundir | não |
 | 6 | Ensinar a `pilha` a escolher `sim_robo3` (`robo:=3`, `use_sim_time`, qual atuador encerra) | a etapa 3 da v1, agora possível | não |
-| 7 | Montar o Livox, medir a pose **6D** e validar sinais de x, y e yaw no LIO | a árvore de TF fecha com medida, não com chute | sim |
+| 7 | Montar o Livox, medir a pose **6D** e validar o LIO por inteiro (abaixo) | a árvore de TF fecha com medida, não com chute | sim |
 | 8 | Calibrar escala e dinâmica (§6); depois rumo e curvatura | os números do Nav2 passam a ter lastro físico | sim |
 | 9 | Validar percepção e reflexo (`scan_2d`, `collision_monitor`) | o robô enxerga e freia antes de planejar | sim |
 | 10 | Nav2 `mapa:=nenhum`, espaço livre, **parada física independente do Xbox** | objetivo curto | sim |
 
 ⚠️ A ordem mudou de verdade em relação à v1: **o Livox só sobe na etapa 7**, e
 não na 4. Até lá o robô 2 continua navegando.
+
+🔴 **A parada física independente do Xbox é PRÉ-REQUISITO de toda etapa com as
+rodas no chão — 2, 8, 9 e 10**, não só da 10. O homem-morto do LB depende do
+controle, do Bluetooth e da pilha ROS de pé; nenhum dos três é confiável durante
+justamente os ensaios em que se está mexendo neles. A decisão 048 já registrou
+a placa girando sozinha com a MEGA mandando zero.
+
+**Etapa 0 — o que o teste passa a conferir, e por que não é substituição direta.**
+`test_o_robo_nao_se_enxerga_como_parede` hoje lê `robot_radius` do `nav2.yaml` e
+exige `range_min > robot_radius` (0,35 > 0,32). O `robot_radius` saiu na decisão
+032. 🔴 **Mas trocar por "o footprint" reprova o robô 2**: o vértice do contorno
+da 032 está a √(0,35² + 0,2775²) = **0,447 m**, contra `range_min` 0,35.
+
+Não é defeito do `range_min` — é a grandeza errada. O que o robô vê de si mesmo
+é o que está **dentro da fatia** (0,15–1,00 m), e não o contorno no chão (que
+inclui para-choque e roda, abaixo da fatia). A meia-diagonal da caixa do robô 2
+é √(0,2165² + 0,2275²) = **0,314 m** — exatamente o *"0,32 = 0,314 medido + 6 mm"*
+que o `nav2.yaml` documenta. Era isso que o `robot_radius` representava ali.
+
+➡️ O teste passa a conferir `range_min` contra a **envolvente própria dentro da
+faixa de altura da fatia, derivada do URDF** (caixa + o que mais suba acima de
+`min_height`), por robô. Sem número mágico solto e sem ressuscitar o
+`robot_radius`. Para o robô 3 a caixa é 0,311 × 0,240 → meia-diagonal 0,196 m,
+e é por isso que o `range_min` dele **pode e deve** baixar (§5b).
+
+⚠️ E fica a pergunta que este conserto levanta e não responde: a envolvente da
+fatia é a caixa, mas **o que mais do robô 2 sobe dos 0,15 m** (rodas a 0,16 m de
+topo, cabos, o próprio suporte do Livox)? Se algo passar de 0,35 m em raio, o
+`range_min` de hoje está apertado. Medir na etapa 9, não chutar agora.
+
+**Validação do LIO na etapa 7 (a v1 pedia só x, y e yaw):**
+z, roll e pitch; **deriva com o robô parado**; **sentido positivo do yaw**
+(girando para a esquerda o yaw sobe); e **sobreposição da nuvem com o `/scan`**
+— se os dois discordarem, a fatia 2D está mentindo para o AMCL sem sintoma.
 
 ---
 

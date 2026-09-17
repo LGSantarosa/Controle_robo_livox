@@ -71,8 +71,11 @@ régua). **O Livox só sobe na etapa 7** — até lá o robô 2 continua navegan
 - ⚠️ **Não é o `sinal:=-1.0`** que já existia: aquele é espelho (inverte o giro
   junto, reprovado em 14-09). `frente` é rotação. Decisão 049.
 - 🔴 **NÃO TESTADO NO ROBÔ.** Falta subir e rodar LB + direcional cima/baixo.
-- ⚠️ Se o puxão só trocar de lado (passar a puxar para a esquerda), a causa é de
-  LADO e não de SENTIDO, e o contorno não resolve — é o que olhar primeiro.
+- ⚠️ Se o puxão só trocar de lado (passar a puxar para a esquerda), o contorno
+  não resolve. 🔴 **Mas isso NÃO prova sozinho que a causa é de canal** —
+  assimetria de roda, de carga e o transiente das bobas dão o mesmo sinal.
+  Quem decide é o ensaio com protocolo do §7 do `PLANO_NAV2_ROBO3.md`, não a
+  observação a olho. (Corrigido em 17-09: a redação anterior afirmava a prova.)
 
 O roteiro de pivô limpo abaixo fica **em pausa**, não descartado: a pergunta
 segue aberta e vale para o artigo.
