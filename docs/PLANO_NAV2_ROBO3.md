@@ -334,11 +334,17 @@ Então:
 **Etapa 0 — ✅ EXECUTADA em 17-09** (`test_scan_2d.py`: 7 passaram, 0 falharam).
 Escopo enxuto (v2.5), e foi só isto:
 
-⚠️ **"Suíte verde" como critério só vale se a suíte for invocada certo**, e isso
-foi descoberto ao fechar esta etapa: `pytest` **da raiz, sem argumento** (ROS
-carregado) → **845 passed**. Passar `ros2_packages/` como alvo dá *"no tests
-collected"* e aborta com um `ImportError` de `rclpy.qos` que é `sys.path`, não
-defeito. Quem usar a invocação errada vai "descobrir" um defeito que não existe.
+⚠️ **O critério é "testes DO PROJETO verdes", não "pytest inteiro verde"** — e a
+diferença importa. `pytest` da raiz, sem argumento (ROS carregado) dá
+**845 passed, 1 failed, 7 errors**, e as 8 restantes são do **`twist_mux`
+vendorizado** (pacote de terceiro, testes de `launch` que penduram). Dizer
+"suíte verde" sem essa ressalva é afirmação que não se sustenta — eu disse, e
+está corrigido aqui.
+
+⚠️ E **a invocação decide o resultado**: passar `ros2_packages/` como alvo dá
+*"no tests collected"* e aborta com um `ImportError` de `rclpy.qos` que é
+`sys.path`, não defeito. Quem usar a invocação errada vai "descobrir" um defeito
+que não existe.
 
 1. **remover** `test_o_robo_nao_se_enxerga_como_parede`, que é inválido: ele
    afirma uma desigualdade que a v2.4 derrubou e depende de um `robot_radius`
@@ -459,9 +465,17 @@ z, roll e pitch; **deriva com o robô parado**; **sentido positivo do yaw**
    escopo enxuto da v2.5 ela voltou a ser pequena — remover um teste inválido e
    corrigir dois textos — e o cálculo da envolvente, que era a parte cara, saiu
    de cena até haver estratégia de filtragem para validar (§8).
-5. **E agora, etapa 1 ou etapa 2?** A ordem do §8 diz **1** (fechar a placa e a
-   geometria por trena) antes de **2** (o ensaio frente/ré), e por um motivo: se
-   a placa mudar, a etapa 8 recomeça. Mas a **2 é a única que pode derrubar a
-   premissa do plano inteiro**, não precisa do Livox e é barata. Minha opinião:
-   se a decisão da placa depender de prazo ou de compra, **fazer a 2 primeiro** —
-   ela não desperdiça nada e pode mudar o que a 1 precisa decidir.
+5. **Etapa 1 primeiro — e a minha sugestão anterior estava errada.** Eu havia
+   dito que, se a placa dependesse de prazo ou compra, valia fazer a **2** antes
+   porque "não desperdiça nada". **Desperdiça:** se a placa mudar, a dinâmica e
+   a assimetria observadas no ensaio mudam junto, e ele tem de ser repetido. A
+   parte geométrica da etapa 1 (trena, robô desligado) **não se perde em nenhum
+   cenário**, e é o que fecha a decisão de maior alavancagem.
+
+   🔴 **A etapa 2 só começa depois de três coisas**, e nenhuma é opcional:
+   - **decisão da placa registrada** (§5.1 da revisão cruzada);
+   - **parada física independente do Xbox confirmada** — já era pré-requisito de
+     toda etapa energizada, e aqui é a primeira vez que morde;
+   - **protocolo de medição pronto** (régua ou câmera): o bag do
+     `bin/sobe-robo3` **não grava pose**, então sem isso não há desvio lateral
+     medido, só impressão.

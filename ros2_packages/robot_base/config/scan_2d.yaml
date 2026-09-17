@@ -45,10 +45,14 @@ scan_2d:
 
     scan_time: 0.10          # 10 Hz, a taxa da nuvem
 
-    # Corta o AUTORRETORNO: a caixa do robô fica a 0,23 m de altura, dentro da
-    # fatia, e o sensor está em cima dela. Sem corte nenhum o robô se lê como
-    # parede colada em todos os quadros, e o AMCL trava com um anel fixo que
-    # nenhuma pose explica.
+    # Existe para cortar AUTORRETORNO — o robô lendo a própria carcaça como
+    # parede colada, que trava o AMCL com um anel fixo que nenhuma pose explica.
+    #
+    # ⚠️ QUANTO deste efeito existe aqui NÃO FOI MEDIDO. A caixa fica a 0,23 m,
+    # dentro da faixa da fatia, e o sensor está em cima dela — mas estar na
+    # faixa de altura NÃO implica ser visto: dependem FOV vertical, orientação
+    # e oclusão, e decidir isso no papel exigiria ray casting. Quem mede é a
+    # etapa 9 do plano, com nuvem real do robô parado.
     #
     # ⚠️ 0,35 é HERDADO e NÃO VALIDADO contra autorretorno real. Ele veio de
     # "passar do `robot_radius` 0,32" — e o `robot_radius` saiu do `nav2.yaml`
