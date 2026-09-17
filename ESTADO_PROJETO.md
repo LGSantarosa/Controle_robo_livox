@@ -119,16 +119,44 @@ direito.
 - **Ainda aberto:** `roda_raio` (fecha por corrida reta, etapa 8), Livox (etapa
   7) e massas (só depois de Livox e NUC subirem).
 
-➡️ **Próxima:** etapa 2 — o ensaio frente/ré. Dos três pré-requisitos, **dois já
-caíram**: placa decidida ✅, protocolo escrito ✅
-(`docs/PROTOCOLO_ETAPA2_FRENTE_RE.md`), e falta só a **parada física
-independente do Xbox** 🔴 — que é hardware, não documento.
+### ⏸️ 17-09 — ETAPA 2 ADIADA, a semana é de GAZEBO
 
-O protocolo resolve a medição sem pose (o robô 3 não tem Livox, o bag não grava
-pose): desvio medido **no chão** contra uma fita, virando curvatura por
-`κ ≈ 2d/L²`. E o discriminador não é "de que lado ele puxa" — é **trocar os
-canais L/R** e ver se o desvio segue o canal (causa elétrica/mecânica) ou o
-sentido (causa geométrica, a hipótese das bobas).
+**Decisão do dono:** nesta semana **não há ensaio nem implantação em robô
+físico**. A etapa 2 fica **adiada, não concluída**.
+
+Estado dos pré-requisitos dela, para quando voltar:
+
+- ✅ placa decidida;
+- ✅ protocolo escrito (`docs/PROTOCOLO_ETAPA2_FRENTE_RE.md`);
+- 🔴 **parada física independente do Xbox** — hardware, continua faltando;
+- 🔴 **o discriminador de canal está QUEBRADO** — achado de 17-09, ver acima.
+  Sem ele o ensaio mede curvatura por sentido mas não separa lado de sentido.
+
+**A trilha de Gazebo está aberta** (§8-B do plano). Primeiro passo já feito:
+`colcon build --packages-select robot_base` — o `install/` estava **velho** nos
+três arquivos do robô 3, e validar sem recompilar seria validar o código de
+ontem. Agora está em dia, conferido com `cmp`.
+
+🔴 **O que a trilha NÃO pode declarar validado:** bitola, massas, curvatura e
+dinâmica do atuador. O Gazebo prova que a **cadeia de software** funciona; não
+prova como o robô se comporta — e usa os números que nós demos, então concordar
+consigo mesmo não é evidência.
+
+⚠️ **O smoke test do Gazebo espera você**: a regra da casa é que ele só sobe com
+o dono olhando. O build foi seguro porque não simula nada.
+
+O protocolo resolve a medição sem pose — o robô 3 **terá** o Mid-360, ele só
+ainda **não está montado** (e a pose dele no URDF é provisória). Até lá: desvio
+medido **no chão** contra uma fita, virando curvatura por `κ ≈ 2d/L²`.
+
+🔴 **Mas o discriminador do protocolo está QUEBRADO e não pode ser rodado como
+está** (achado de 17-09): eu escrevi que inverter `left_wheel_sign` e
+`right_wheel_sign` juntos troca os canais L/R. **Não troca** — aquilo é espelho
+(inverte frente e giro), e é o que o `cmd_vel_to_wheels.py` diz em texto escrito
+no mesmo dia. Não existe swap L/R no nó. Trocar canal de verdade exige mexer nos
+conectores dos motores **ou** um parâmetro novo que ainda não existe. Enquanto
+isso o ensaio mede curvatura por sentido, mas **não separa causa de lado de
+causa de sentido**.
 
 ### 📏 A lista que originou isto: `docs/ETAPA1_MEDIDAS_ROBO3.md` (robô DESLIGADO)
 
@@ -145,8 +173,8 @@ para o `nav2.yaml`: sairia um footprint **9 cm mais largo por lado**, e footprin
 inflado não dá erro — só faz o planejador recusar vão por onde o robô passa.
 Corrigido, e conferido que ninguém tinha copiado os números velhos para código. **Etapa 1** = fechar a placa e a
 geometria por trena. **Etapa 2** = o ensaio frente/ré, agora com protocolo
-objetivo (o bag de hoje **não grava pose**; sem Livox não há desvio lateral sem
-régua). **O Livox só sobe na etapa 7** — até lá o robô 2 continua navegando.
+objetivo (o bag de hoje **não grava pose**, porque o Mid-360 ainda não está
+montado no robô 3; até lá não há desvio lateral sem régua). **O Livox só sobe na etapa 7** — até lá o robô 2 continua navegando.
 - ⚠️ **Não é o `sinal:=-1.0`** que já existia: aquele é espelho (inverte o giro
   junto, reprovado em 14-09). `frente` é rotação. Decisão 049.
 - 🔴 **NÃO TESTADO NO ROBÔ.** Falta subir e rodar LB + direcional cima/baixo.

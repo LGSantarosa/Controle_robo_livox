@@ -114,6 +114,47 @@ leituras são "±", a meia-diferença carrega ~0,7 cm, e isso **engole** a dist�
 de 2 mm entre os dois valores. Fica 0,060 por ser deste robô e não de catálogo
 genérico: **escolha declarada, não evidência.**
 
+### ⏸️ Fim do dia — etapa 2 adiada, e eu contradisse a mim mesmo em seis horas
+
+Decisão do dono: sem ensaio nem implantação em robô físico esta semana. Trabalho
+no Gazebo, e a etapa 2 fica **adiada**, não concluída.
+
+**O erro que mais me incomoda do dia inteiro** apareceu na revisão do protocolo
+que eu tinha acabado de escrever. O discriminador que propus — "troque os canais
+L/R e veja se o desvio segue o canal ou o sentido" — mandava inverter
+`left_wheel_sign` e `right_wheel_sign` **juntos**.
+
+Isso não troca canal nenhum. É **espelho**: inverte frente e giro. E quem diz
+isso, em letras grandes, é o docstring do `cmd_vel_to_wheels.py` — *"Rotação ≠
+reflexão. Ver decisão 049"* — que **eu escrevi nesta mesma sessão**, de manhã,
+ao fechar a decisão 049. Seis horas depois construí um ensaio inteiro em cima do
+oposto do que eu mesmo tinha documentado.
+
+Não há swap L/R no nó. Trocar canal de verdade exige mexer nos conectores dos
+motores ou um parâmetro novo que não existe — e eu **não** vou inventar código
+sem pedido. Até lá o ensaio mede curvatura por sentido (o que já vale), mas não
+separa causa de lado de causa de sentido, e o protocolo diz isso agora.
+
+Mais dois consertos da mesma revisão:
+
+- **`A B A B` não contrabalança.** Nessa sequência A vem **sempre** antes de B,
+  então a queda de bateria empurra todos os B para o fim e vira o "efeito de
+  sentido" que se quer medir. Passou para blocos **ABBA/BAAB**.
+- **"O robô 3 não tem Livox" estava errado como enunciado.** Ele **terá** — o
+  Mid-360 vem emprestado do robô 2; o certo é *"ainda não montado, pose
+  provisória"*. Corrigido no protocolo, no plano e no estado.
+
+E um achado de infra que valia a sessão inteira: o **`install/` estava
+desatualizado** em relação ao fonte nos três arquivos do robô 3. Qualquer
+validação no Gazebo hoje teria testado o código de ontem, com a geometria velha
+— e passaria, dando confiança falsa. Recompilado e conferido com `cmp`.
+
+**O padrão do dia, e é o que vai para o artigo:** documentar não impede de
+errar. Errei contra a minha própria documentação duas vezes (a armadilha de
+invocação do pytest e agora o espelho × rotação), e as duas só apareceram porque
+**outra pessoa leu**. Registro serve para a revisão ter onde se apoiar — não
+para o autor se lembrar sozinho.
+
 ### 📏 Lista de medidas da etapa 1 — e a tabela-resumo estava velha
 
 Escrita a `ETAPA1_MEDIDAS_ROBO3.md`: o dono passa a trena e anota, eu comparo e

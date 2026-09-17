@@ -265,8 +265,9 @@ entra como ponto de partida, não como medida deste robô.
 
 A v1 dizia "se o puxão trocar de lado, a causa é de canal". **Não prova.**
 Assimetria de roda, de carga e o transiente das bobas produzem o mesmo sinal.
-E o bag do `bin/sobe-robo3:67` **não grava pose** — sem Livox não há medida de
-desvio lateral sem régua ou câmera externa.
+E o bag do `bin/sobe-robo3:67` **não grava pose**: o Mid-360 **ainda não está
+montado** no robô 3 (ele terá um — emprestado do robô 2, §0). Até lá não há
+medida de desvio lateral sem régua ou câmera externa.
 
 O ensaio só vale com: distância e velocidade fixas, orientação inicial marcada,
 **alinhamento prévio das bobas** (elas têm memória do movimento anterior), ordem
@@ -274,9 +275,9 @@ O ensaio só vale com: distância e velocidade fixas, orientação inicial marca
 uma medida objetiva de curvatura — não "andou tortinho".
 
 ➡️ **Escrito por inteiro em `docs/PROTOCOLO_ETAPA2_FRENTE_RE.md`** (17-09), que
-resolve o pré-requisito da medição: sem Livox no robô 3 o bag não grava pose,
-então o desvio se mede **no chão** e vira curvatura por `κ ≈ 2d/L²` — número
-comparável com o `curv_frente` do robô 2.
+resolve o pré-requisito da medição: com o Mid-360 **ainda não montado**, o bag
+não grava pose, então o desvio se mede **no chão** e vira curvatura por
+`κ ≈ 2d/L²` — número comparável com o `curv_frente` do robô 2.
 
 ⚠️ Duas coisas mudaram em relação ao que este §7 dizia antes:
 
@@ -299,7 +300,7 @@ Uma etapa por sessão. Nenhuma começa sem a anterior fechada.
 |---|---|---|---|
 | 0 | ✅ **FEITA (17-09)** — teste inválido removido, textos corrigidos, o de coerência intacto | `test_scan_2d.py` **7/7 verde**; o corte não ficou petrificado e não entrou teste que não afirma nada | não |
 | 1 | ✅ **FEITA (17-09)** — placa respondida (*mesmo modelo do 1 e do 2, peça própria*) e geometria medida com trena | 4 valores do URDF corrigidos, **D3 e D4 encerradas**. ⚠️ A etapa 8 **continua sendo medição**: mesmo modelo não prova mesmo firmware, e a bitola ficou **nominal** | foi, desligado |
-| 2 | Ensaio frente/ré — **protocolo escrito em `PROTOCOLO_ETAPA2_FRENTE_RE.md`** | confirma ou derruba a premissa do §2. 🔴 Falta só a **parada física** | sim, ligado |
+| 2 | ⏸️ **ADIADA (17-09)** — ensaio frente/ré, protocolo em `PROTOCOLO_ETAPA2_FRENTE_RE.md` | 🔴 falta a **parada física**, e o **discriminador de canal está quebrado** (§7). Nada de robô energizado esta semana | sim, ligado — **quando voltar** |
 | 3 | URDF completo girado (§3) + `robot_state_publisher` + footprints + testes reescritos | modelo e marcha concordam; o Nav2 passa a ter contorno | não |
 | 4 | Perfis `robo2`/`robo3` e **um bringup único** do robô 3 | RSP + MEGA + `cmd_vel_to_wheels` + Xbox/direcional + mux único num lugar só | não |
 | 5 | Unificar o contrato de mensagens (§4) e testar a cadeia **sem Gazebo** | comando atravessa de ponta a ponta, sem simulador para confundir | não |
@@ -472,6 +473,41 @@ incompleta enquanto os testes da estratégia escolhida não existirem.**
 z, roll e pitch; **deriva com o robô parado**; **sentido positivo do yaw**
 (girando para a esquerda o yaw sobe); e **sobreposição da nuvem com o `/scan`**
 — se os dois discordarem, a fatia 2D está mentindo para o AMCL sem sintoma.
+
+---
+
+## 8-B. ⏸️ Trilha provisória de Gazebo (17-09) — enquanto o robô está parado
+
+**Decisão do dono:** esta semana **não há ensaio nem implantação em robô
+físico**. A etapa 2 fica **adiada**, não concluída, e o trabalho corre no
+simulador.
+
+**Primeiro passo, e ele não é opcional:** `colcon build --packages-select
+robot_base`. O `install/` estava **desatualizado** em relação ao fonte nos três
+arquivos do robô 3 (URDF, YAML do controlador e launch do sim) — validar sem
+recompilar seria validar o código de ontem.
+
+**O que esta trilha valida:**
+
+- o modelo atual sobe e assenta (geometria nova de 17-09);
+- `/livox/pontos` sai do lidar simulado e a ponte entrega;
+- `/scan` sai da fatia 2D;
+- `/Odometry` (pose de chão, o papel do LIO), TF e `robot_state_publisher`;
+- os controladores ativam.
+
+🔴 **O QUE ESTA TRILHA NÃO PODE DECLARAR VALIDADO** — e isto é a parte que
+importa, porque é o erro que o simulador convida a cometer:
+
+| não vale para | por quê |
+|---|---|
+| **bitola** | 0,320 é nominal e fecha por **ensaio de pivô no robô**; o Gazebo usa o número que a gente deu, então concordar consigo mesmo não prova nada |
+| **massas e centro de massa** | provisórios — Livox e NUC nem subiram (D7) |
+| **curvatura e rumo** | `curv_frente`/`curv_re` são da máquina real; o simulador não tem o defeito que se quer medir |
+| **dinâmica do atuador** | zona morta, patamar e retenção são do **firmware daquela placa** |
+
+➡️ Regra de bolso: **o Gazebo prova que a cadeia de software funciona; não prova
+como o robô se comporta.** Foi exatamente por confundir os dois que a leva de
+12 mudanças de 20-08 piorou a passagem pela porta.
 
 ---
 

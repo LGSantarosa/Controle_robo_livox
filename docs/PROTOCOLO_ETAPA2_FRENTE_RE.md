@@ -34,16 +34,35 @@ O discriminador honesto é outro, e é barato: **trocar os canais L/R e repetir.
 | o **canal** (troca de lado quando L/R trocam) | roda, motor, realimentação ou cabo — é **elétrico/mecânico de um lado** | conserta na origem; o contorno de 049 não resolve |
 | o **sentido** (fica no mesmo lado do corpo, apesar da troca) | **geometria**: bobas arrastadas × empurradas | a hipótese do plano se confirma, e 049 é o conserto certo |
 
-⚠️ A troca de canal é feita em **software**, sem mexer em fio:
-`left_wheel_sign` e `right_wheel_sign` invertidos **juntos** trocam os dois
-lados. Não confundir com `frente:=`, que é rotação (decisão 049).
+🔴 **ERRO GRAVE DESTA SEÇÃO, corrigido em 17-09 — leia antes de executar.**
+
+A versão anterior dizia que inverter `left_wheel_sign` e `right_wheel_sign`
+**juntos** trocava os canais. **Não troca.** O próprio `cmd_vel_to_wheels.py`
+diz o contrário, em texto escrito no mesmo dia: inverter os dois é um
+**ESPELHO** — inverte frente **e** giro —, e `linear_sign` é **rotação**.
+*Rotação ≠ reflexão* (decisão 049). Nenhum dos dois troca qual roda física
+recebe qual setpoint, e **não existe parâmetro de swap L/R no nó**.
+
+➡️ **Consequência: o discriminador do §1 NÃO é executável hoje**, e este
+protocolo não deve ser rodado como se fosse. Trocar canal de verdade exige uma
+das duas:
+
+| caminho | avaliação |
+|---|---|
+| **trocar os conectores dos motores** na placa | é a troca de verdade, mas é física e some do registro se ninguém anotar |
+| **parâmetro `swap_lr` novo no `cmd_vel_to_wheels`** | reversível, versionado e testável — mas é **código que ainda não existe**, e não vou inventar sem pedido |
+
+⚠️ Até uma das duas existir, o ensaio ainda mede a **curvatura por sentido**
+(A × B) — o que já vale —, mas **não separa causa de lado de causa de sentido**.
+Essa parte fica pendente, e é honesto dizer que fica.
 
 ---
 
 ## 2. Como medir sem pose
 
-O bag do `bin/sobe-robo3` **não grava pose** — não há Livox no robô 3. Então o
-desvio se mede **no chão**, e é isso que dá o número.
+O bag do `bin/sobe-robo3` **não grava pose**: o robô 3 **terá** o Mid-360 — ele
+só ainda **não está montado**, e a pose dele no URDF é provisória. Enquanto isso,
+o desvio se mede **no chão**, e é isso que dá o número.
 
 ```
    partida                                            chegada
@@ -92,26 +111,28 @@ propriedade da máquina, e é comparável com o `curv_frente` do robô 2 (−0,8
 
 ## 4. A ordem, e por que ela é alternada
 
-**6 corridas por configuração, em ordem ALTERNADA** — nunca todas de um sentido
-e depois todas do outro:
+**6 corridas por sentido, em blocos CONTRABALANCEADOS** (ABBA / BAAB):
 
 ```
-A  frente(motoras)   canais normais
-B  ré                canais normais
-A  B  A  B  A  B  ...
+A  frente (motoras à frente)
+B  ré
+
+bloco 1:  A B B A
+bloco 2:  B A A B
+bloco 3:  A B B A
 ```
 
-Depois, **a mesma coisa com os canais trocados** (`left_wheel_sign` e
-`right_wheel_sign` invertidos juntos):
+🔴 **Por que não `A B A B`** — era o que esta seção dizia, e está errado: nessa
+sequência **A vem sempre antes de B**, então a queda de bateria empurra todos os
+B para o fim e vira exatamente o "efeito de sentido" que se quer medir.
+`ABBA/BAAB` equilibra a posição média de cada sentido na ordem, que é o ponto do
+contrabalanceamento.
 
-```
-C  frente(motoras)   canais TROCADOS
-D  ré                canais TROCADOS
-C  D  C  D  ...
-```
+São 12 corridas de 3 m, e **anote a tensão a cada uma** — o contrabalanceamento
+reduz o viés, não substitui o registro.
 
-Alternar é o que impede a queda de bateria e o aquecimento de virarem "efeito de
-sentido". São 24 corridas de 3 m — cabe numa bateria, mas **anote a tensão**.
+⚠️ As configurações C e D (canais trocados) **saíram por enquanto**: ver o §1,
+não há como trocar canal hoje.
 
 ---
 
