@@ -75,6 +75,37 @@ esse tipo de teste mente.
 instancia, script se executa com os argumentos de verdade. Duas vezes na mesma
 hora, as duas pegas só porque rodei — nenhuma apareceu na leitura.
 
+### 📏 Lista de medidas da etapa 1 — e a tabela-resumo estava velha
+
+Escrita a `ETAPA1_MEDIDAS_ROBO3.md`: o dono passa a trena e anota, eu comparo e
+atualizo o URDF. Cada linha diz **o que o robô carrega hoje**, e esse "hoje" saiu
+de **renderizar o xacro** e ler as origens de junta — não de redigitar fórmula,
+que é como número errado se propaga.
+
+E foi renderizando que apareceu o achado da sessão. O URDF diz bitola
+**0,3225**; a tabela-resumo §5.8 da revisão cruzada dizia **0,425**. Dez
+centímetros, no parâmetro que a própria revisão chama de *"o mais grave — entra
+direto na odometria"*.
+
+Cheguei a suspeitar que o robô carregava bitola errada. **Era o contrário:** a
+§5.9 fechou a D5 no Gazebo e revisou a §5.7 de 0,425 para 0,3225 — o código
+sempre esteve certo, e a tabela-resumo é que não foi atualizada junto.
+
+Por que isso importa e não é detalhe de documento: é da §5.8 que a **etapa 3**
+manda copiar o contorno para o `nav2.yaml` e para os polígonos do reflexo. O
+bloco de contorno de lá dava lateral **±0,2375** contra os **±0,19025** reais —
+footprint 9 cm mais largo por lado. E footprint inflado **não dá erro**: só faz o
+planejador recusar vão por onde o robô passa, que é o defeito sem sintoma de
+sempre. Conferido por grep que ninguém havia copiado os números velhos para
+código ou config; o estrago estava contido na tabela.
+
+⚠️ Ficou uma pendência de 8 mm que a trena resolve: a largura da roda é **0,050**
+na tabela e **0,058** no URDF. Virou a medida M3 da lista.
+
+**A regra que a própria §5.9 deixou, e que se confirmou de novo:** medida de
+geometria que sobrevive a duas leituras vai para o Gazebo **antes** de virar
+decisão. Desenhar responde o que a trena não perguntou.
+
 Suíte depois de tudo: **847 passed** (era 845; +2 são os testes novos), com as
 mesmas 1 falha e 7 erros do `twist_mux` vendorizado. **Nada implantado no robô.**
 

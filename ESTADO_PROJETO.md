@@ -96,7 +96,22 @@ mesmo arquivo passa sozinho.
 ⚠️ Por causa disso, a nota da outra sessão de 17-09 ("a suíte tem as mesmas 2
 falhas") está desatualizada: uma era o `test_scan_2d`, consertado agora; a
 outra, `test_plano_suavizado`, **não está vermelha** — 10/10 quando invocada
-direito. **Etapa 1** = fechar a placa e a
+direito.
+
+### 📏 Próximo passo: `docs/ETAPA1_MEDIDAS_ROBO3.md` (robô DESLIGADO)
+
+Lista pronta para você passar a trena e anotar — cada medida diz **o que o URDF
+carrega hoje** (valor renderizado, não fórmula) e o que ela fecha. Abre com a
+única pergunta que não é de trena: **a placa é a mesma ou é outra?** (§5.1 — se
+mudar, a etapa 8 recomeça do zero).
+
+🔴 **Achado ao montar a lista:** a tabela-resumo §5.8 da revisão cruzada estava
+**velha** — dizia `roda_separacao` **0,425** (decisão da §5.7), mas a **§5.9
+revisou para 0,3225** ao fechar a D5 no Gazebo. O **código sempre esteve certo**;
+era a tabela que discordava. Grave porque é dela que a etapa 3 copia o contorno
+para o `nav2.yaml`: sairia um footprint **9 cm mais largo por lado**, e footprint
+inflado não dá erro — só faz o planejador recusar vão por onde o robô passa.
+Corrigido, e conferido que ninguém tinha copiado os números velhos para código. **Etapa 1** = fechar a placa e a
 geometria por trena. **Etapa 2** = o ensaio frente/ré, agora com protocolo
 objetivo (o bag de hoje **não grava pose**; sem Livox não há desvio lateral sem
 régua). **O Livox só sobe na etapa 7** — até lá o robô 2 continua navegando.

@@ -273,7 +273,7 @@ Uma etapa por sessão. Nenhuma começa sem a anterior fechada.
 | # | etapa | prova / entrega | precisa do robô? |
 |---|---|---|---|
 | 0 | ✅ **FEITA (17-09)** — teste inválido removido, textos corrigidos, o de coerência intacto | `test_scan_2d.py` **7/7 verde**; o corte não ficou petrificado e não entrou teste que não afirma nada | não |
-| 1 | Fechar **a placa** (§5.1 da revisão cruzada) e a geometria física autoritativa (trena) | sem isso a etapa 8 recomeça do zero | sim, desligado |
+| 1 | Fechar **a placa** (§5.1) e a geometria por trena — **lista pronta em `ETAPA1_MEDIDAS_ROBO3.md`** | sem isso a etapa 8 recomeça do zero | sim, **desligado** |
 | 2 | Repetir o ensaio frente/ré com o protocolo do §7 | confirma ou derruba a premissa do §2 | sim, ligado |
 | 3 | URDF completo girado (§3) + `robot_state_publisher` + footprints + testes reescritos | modelo e marcha concordam; o Nav2 passa a ter contorno | não |
 | 4 | Perfis `robo2`/`robo3` e **um bringup único** do robô 3 | RSP + MEGA + `cmd_vel_to_wheels` + Xbox/direcional + mux único num lugar só | não |

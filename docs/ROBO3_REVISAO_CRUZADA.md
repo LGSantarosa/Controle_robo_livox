@@ -894,25 +894,38 @@ esquerda, tudo em metros.
 | `altura_solo` | 0,070 | 🟡 medido, mas briga com a boba (D4) |
 | `roda_raio` | **0,0835** | 🟡 provisório: fecha por corrida reta (§5.4.1) |
 | `roda_largura` | 0,050 | 🟢 medido (+0,015 de cubo, para dentro) |
-| `roda_separacao` | **0,425** | 🟢 decisão do dono (§5.7) |
+| `roda_separacao` | ~~0,425~~ → **0,3225** | 🔴 **esta linha estava VELHA** — a §5.9 fechou D5 no Gazebo e revisou a §5.7. O código sempre teve 0,3225; era a tabela que discordava (visto em 17-09) |
 | `roda_x` | **0,000** | 🟢 é a origem, por definição (C8) |
 | `boba_raio` | 0,025 | 🟡 adotado, empate irrelevante (§5.5.1) |
 | `boba_x` | **+0,2485** | 🟢 ponta da frente da caixa |
 | `boba_y` | **±0,120** | 🟢 quinas da caixa |
 | `boba_trail` | 0,020 | 🟢 medido |
 | Bobas têm mola? | **não** | 🔴 é o que confirma o C3 |
-| Envelope (larg × compr × alt) | 0,475 × 0,332 × 0,200 | 🟢 |
+| Envelope (larg × compr × alt) | ~~0,475~~ → **0,3805** × 0,331 × 0,200 | 🔴 **velho pelo mesmo motivo** (bitola da §5.7). Com 0,3225 + roda de 0,058 dá 0,3805; a §5.9 anotou 0,3725 usando roda de 0,050 — os 8 mm de diferença são a pendência de largura da roda |
 | Massas, centro de massa | — | 🔴 pendente, e prematuro (D7) |
 | Livox: altura, x, y, yaw | — | 🔴 nem montado (D7) |
 
 **Contorno do corpo, em `base_link` do C8** — é isto que vai para o `nav2.yaml`
 e para os polígonos do reflexo, e note que **não é simétrico em `x`**:
 
+🔴 **O BLOCO ABAIXO ESTAVA ERRADO** (corrigido em 17-09): foi derivado da bitola
+0,425 da §5.7, que a **§5.9 revisou para 0,3225** ao fechar a D5 no Gazebo. Como
+é exatamente ele que a etapa 3 manda copiar para o `nav2.yaml` e para os
+polígonos do reflexo, ficaria um footprint **9 cm mais largo por lado** que o
+robô — e footprint inflado não dá erro: só faz o planejador recusar vão por onde
+o robô passa.
+
 ```
-traseira: x = −0,0835   (o pneu, que passa 2 cm da caixa)
-frente:   x = +0,2485   (a ponta da caixa, onde estão as bobas)
-laterais: y = ±0,2375   (o pneu — a caixa, de 24 cm, não chega perto)
+                          ERRADO (§5.7)      CERTO (§5.9 + URDF renderizado)
+traseira: x =             −0,0835            −0,0825   (o pneu, raio do URDF)
+frente:   x =             +0,2485            +0,2485   (ponta da caixa, inalterado)
+laterais: y =             ±0,2375            ±0,19025  (0,16125 + metade de 0,058)
 ```
+
+⚠️ **E as laterais ainda têm uma pendência de trena:** a largura da roda aparece
+como **0,050** nesta tabela e como **0,058** no URDF. Com 0,050 a lateral é
+±0,18625; com 0,058, ±0,19025. São 4 mm por lado — pouco para o footprint,
+mas é medida física em aberto e entra na lista da etapa 1.
 
 ⚠️ **A largura vem do PNEU e o comprimento vem da CAIXA.** Nenhum dos dois vem
 do mesmo lugar que vinha no robô 2, e é o erro fácil de cometer aqui.
