@@ -1,4 +1,4 @@
-# Plano — adaptar o Nav2 para o robô 3 (v2.2)
+# Plano — adaptar o Nav2 para o robô 3 (v2.3)
 
 > **Status: nada implementado. Aguardando a aprovação do dono.**
 > Três revisões cruzadas em dois dias, e cada uma achou coisa real:
@@ -20,6 +20,16 @@
 >   — a validação real é com nuvem do robô parado; e três reclassificações:
 >   `raio_min_curva` é planta medida, a **folga** somada ao raio varrido é
 >   política, e `min/max_height` são **percepção**, não geometria pura (§5).
+>
+> - **v2.3** (ainda 17-09) — a quarta rodada pegou três incoerências minhas: o
+>   texto dizia "quatro classes" com **cinco** enumeradas fora de ordem;
+>   `range_min`/`laser_min_range` continuavam em (b) geometria embora o próprio
+>   plano dissesse que só fecham na etapa 9 com autorretorno real (viraram
+>   **(e) percepção**); e a etapa 0 prometia teste **"por robô"** quando existe
+>   um `scan_2d.yaml` só, com os perfis nascendo na etapa 4 — além de eu ter
+>   chamado o conserto de "uma linha", o que ele não é. Junto veio o risco
+>   conceitual mais importante até agora: **`range_min` é corte radial num robô
+>   assimétrico**, e dimensioná-lo pela cauda cega ~19 cm à frente do nariz (§8).
 >
 > O que sobreviveu das três: consertar o teste da etapa 0 **não é** trocar
 > `robot_radius` por footprint — isso reprovaria o robô 2 (0,447 m contra
@@ -140,7 +150,7 @@ fronteira" sem escolher é adiar, não decidir. A etapa 5 escolhe e **testa**:
 A v1 listava 7 itens. São muitos mais, e **herdar número medido de outra máquina
 é o defeito que este repo já pagou** (a bitola de 29-07).
 
-São **quatro** classes, e misturá-las é o que fez a v1 mandar medir geometria com
+São **cinco** classes, e misturá-las é o que fez a v1 mandar medir geometria com
 CSV. Cada classe tem origem, dono e momento diferentes:
 
 **(a) Planta medida — sai de ensaio com CSV, no robô.** `curv_frente`/`curv_re`,
@@ -154,8 +164,7 @@ ganho de giro, aceleração e frenagem reais, atraso liga/desliga, e o
 não do contorno do corpo. A v2.1 o tinha posto em (b), errado.
 
 **(b) Geometria — sai da trena e do URDF, NUNCA de CSV.** Footprint global e
-local do Nav2, os **dois** polígonos do `collision_monitor`, `range_min` do
-`scan_2d` e o `laser_min_range` que anda em par com ele, **meia largura,
+local do Nav2, os **dois** polígonos do `collision_monitor`, **meia largura,
 corredor de ré e recuo do para-choque** do `path_follower`, e o **raio físico
 varrido pelas bobas**.
 → Existem **antes** de qualquer simulação de navegação. Etapa 3.
@@ -163,13 +172,6 @@ varrido pelas bobas**.
 ⚠️ O raio varrido é geometria, mas **a folga que se soma a ele é (c)**, política
 de segurança. Os dois moram em lugares diferentes e mudam por motivos
 diferentes; somar e guardar um número só apaga essa distinção.
-
-**(e) Percepção — informada por geometria E por ruído, não é geometria pura.**
-`min_height` / `max_height` do `scan_2d`, alturas da `VoxelLayer`.
-→ A geometria dá o ponto de partida; quem fecha o valor é o **comportamento**:
-piso que não é plano, e o balanço do chassi (no robô 3, 4 apoios rígidos —
-3 mm de junta de piso viram 1,2°, e o Livox vai em cima disso). Etapa 9, com
-nuvem real.
 
 **(c) Limites e política de segurança — escolha nossa, não medida.** `v_max`,
 `wz_max`, largura de passagem e suas margens, `desvio_taxa_deg_s`, quando a ré é
@@ -180,6 +182,18 @@ permitida, o que o reflexo faz ao disparar.
 `a_dec`, `a_lin`, `ganho_wz`, ganhos kp/ki do rumo e da reta.
 → Último a mexer, e só com corrida de controle antes e depois.
 
+**(e) Percepção — informada por geometria E por ruído, não é geometria pura.**
+`min_height` / `max_height` do `scan_2d`, alturas da `VoxelLayer`, e **`range_min`
+com o `laser_min_range` que anda em par com ele**.
+→ A geometria dá uma **cota**; quem fecha o valor é o **comportamento**: piso que
+não é plano, o balanço do chassi (no robô 3, 4 apoios rígidos — 3 mm de junta de
+piso viram 1,2°, e o Livox vai em cima disso) e o autorretorno real. Etapa 9,
+com nuvem.
+
+⚠️ `range_min` estava em (b) até a v2.2 — **incoerência minha**: o próprio plano
+dizia que o valor final só fecha na etapa 9, com os autorretornos reais. Se o
+número depende do que o sensor devolve, ele não é geometria.
+
 ⚠️ A v1 punha meia largura, corredor de ré e recuo do para-choque em "calibração
 por CSV". São **(b)**: saem da trena. E `desvio_taxa_deg_s` não é planta nem
 geometria — é **(c)**, uma escolha de segurança.
@@ -187,10 +201,15 @@ geometria — é **(c)**, uma escolha de segurança.
 🔴 **O footprint é geometria, não calibração** — ele tem de existir **antes** de
 qualquer simulação de navegação, não no fim. A v1 o jogava para a etapa 6.
 
-⚠️ **`range_min` e `laser_min_range` andam em par.** `range_min` vem da maior
-geometria própria visível do Livox — rodas e varredura das bobas incluídas —,
-não da largura de 24 cm da caixa; e mudá-lo sem mudar o `laser_min_range` deixa
-o AMCL com um limite e a fatia com outro.
+⚠️ **`range_min` e `laser_min_range` andam em par** — mudar um sem o outro deixa
+o AMCL com um limite e a fatia com outro, e isso continua valendo.
+
+🔴 Mas **o `range_min` é (e), não (b)** — corrigido na v2.3, e este parágrafo era
+o último resto do enquadramento antigo. A geometria própria visível do Livox
+(rodas e varredura das bobas incluídas, não a largura de 24 cm da caixa) dá
+apenas uma **cota inferior**; o valor que vai para o arquivo só fecha na **etapa
+9**, contra autorretorno real — e sob a trava dos dois lados do §8, porque um
+corte radial grande demais cega a frente de um robô assimétrico.
 
 ---
 
@@ -239,7 +258,7 @@ Uma etapa por sessão. Nenhuma começa sem a anterior fechada.
 | 6 | Ensinar a `pilha` a escolher `sim_robo3` (`robo:=3`, `use_sim_time`, qual atuador encerra) | a etapa 3 da v1, agora possível | não |
 | 7 | Montar o Livox, medir a pose **6D** e validar o LIO por inteiro (abaixo) | a árvore de TF fecha com medida, não com chute | sim |
 | 8 | Calibrar escala e dinâmica (§6); depois rumo e curvatura | os números do Nav2 passam a ter lastro físico | sim |
-| 9 | Validar percepção e reflexo (`scan_2d`, `collision_monitor`) | o robô enxerga e freia antes de planejar | sim |
+| 9 | Validar percepção e reflexo (`scan_2d`, `collision_monitor`) — **os dois lados do `range_min`, ver §8** | o robô enxerga e freia antes de planejar, **e não fica cego na frente** | sim |
 | 10 | Nav2 `mapa:=nenhum`, espaço livre, **parada física independente do Xbox** | objetivo curto | sim |
 
 ⚠️ A ordem mudou de verdade em relação à v1: **o Livox só sobe na etapa 7**, e
@@ -264,8 +283,22 @@ inclui para-choque e roda, abaixo da fatia). A meia-diagonal da caixa do robô 2
 que o `nav2.yaml` documenta. Era isso que o `robot_radius` representava ali.
 
 ➡️ O teste passa a conferir `range_min` contra a **envolvente própria medida no
-`base_link`**, por robô — sem número mágico solto e sem ressuscitar o
-`robot_radius`.
+`base_link`** — sem número mágico solto e sem ressuscitar o `robot_radius`.
+
+🔴 **Mas a etapa 0 NÃO pode ser "por robô", e isso é correção da v2.3.** Hoje
+existe **um** `scan_2d.yaml` só; os perfis nascem na **etapa 4**, e a geometria
+autoritativa do robô 3 só fecha nas etapas **1** (trena) e **3** (URDF girado).
+Prometer "por robô" na etapa 0 é prometer contra coisa que ainda não existe.
+Então:
+
+- **etapa 0**: conserta o teste para o robô que existe hoje (o 2), contra a
+  envolvente dele calculada no `base_link`, e **remove a dependência do
+  `robot_radius`** — que é o que destrava "suíte verde" como critério;
+- **etapa 4**: quando os perfis existirem, o teste passa a valer **por robô**.
+
+⚠️ **E não é "uma linha".** Calcular a envolvente a partir do URDF exige
+interpretar caixas, rodas, alturas e as transformações até o `base_link`. Eu
+disse "uma linha" no §9 da v2.2 — estava errado, e a correção está lá.
 
 🔴 **Erro da v2.1, corrigido aqui (17-09):** eu escrevi que a envolvente do robô
 3 era 0,196 m, que é a meia-diagonal em torno do **centro da caixa**. Errado: o
@@ -294,6 +327,30 @@ casting. Então:
 (roda com topo a 0,16 m, cabos, o suporte do Livox)? Se algo passar de 0,35 m em
 raio, o `range_min` atual está apertado.
 
+### 🔴 O risco de ver o `range_min` como "aumentar até parar de se enxergar"
+
+`range_min` é um corte **radial**, e o robô 3 é **muito assimétrico no
+`base_link`**: o nariz (ponta da motriz) está a 0,0825 m e a cauda a 0,2485 m.
+Um corte dimensionado pela cauda cega a frente:
+
+    0,276 (corte) − 0,0825 (nariz) ≈ **0,19 m de cegueira à frente do robô**
+
+Ou seja: subir o `range_min` até o autorretorno sumir **também apaga obstáculo
+real colado na frente** — justamente onde o robô anda. Trocar um defeito sem
+sintoma (anel fixo que trava o AMCL) por outro sem sintoma (obstáculo baixo
+invisível na direção de marcha) não é conserto.
+
+➡️ **A etapa 9 testa os DOIS lados, e um só não aprova:**
+
+1. **sem autorretorno** com o robô parado (nuvem real, todos os setores);
+2. **preservando um obstáculo alto posto logo fora do contorno físico** — ele
+   tem de aparecer no `/scan`.
+
+➡️ **Se um `range_min` único não fizer os dois, a saída não é aumentar o corte
+radial** — é **filtro espacial/angular de autorretorno** (descartar por *onde* o
+ponto está no `base_link`, não por *quão perto* ele está). Fica registrado aqui
+para não ser reinventado no susto, no meio da etapa 9.
+
 **Validação do LIO na etapa 7 (a v1 pedia só x, y e yaw):**
 z, roll e pitch; **deriva com o robô parado**; **sentido positivo do yaw**
 (girando para a esquerda o yaw sobe); e **sobreposição da nuvem com o `/scan`**
@@ -312,5 +369,8 @@ z, roll e pitch; **deriva com o robô parado**; **sentido positivo do yaw**
    etapa 8 recomeça. Por isso subiu para a etapa 1.
 3. **Só LIO no começo**, deixando IMU e optical flow da MEGA de fora: um sensor
    a mais sem necessidade é um modo de falha a mais.
-4. **Quero fazer a etapa 0 agora?** É uma linha de teste, não toca o robô, e sem
-   ela não dá para usar "suíte verde" como critério. Pendente de "pode".
+4. **Quero fazer a etapa 0 agora?** Não toca o robô, e sem ela não dá para usar
+   "suíte verde" como critério. ⚠️ **Não é "uma linha"**, como esta lista dizia
+   até a v2.2: calcular a envolvente do URDF exige interpretar caixas, rodas,
+   alturas e transformações. E ela vale **só para o robô 2 de hoje** — a versão
+   "por robô" é etapa 4 (§8). Pendente de "pode".

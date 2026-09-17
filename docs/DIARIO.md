@@ -72,6 +72,34 @@ todas acharam erro de detalhe verificável.** Os dois primeiros erros foram de n
 ler o código antes de planejar; o terceiro foi de herdar um número de outra
 máquina, que é o defeito que o `CLAUDE.md` proíbe em letras grandes.
 
+### Quarta rodada (v2.3) — e o melhor achado do dia não foi um erro, foi um risco
+
+Três incoerências minhas, todas verdadeiras: o texto dizia "quatro classes" com
+**cinco** enumeradas fora de ordem; `range_min` e `laser_min_range` continuavam
+classificados como **geometria** no mesmo documento que dizia que eles só fecham
+na etapa 9 com autorretorno real (se o número depende do que o sensor devolve,
+ele é **percepção**); e a etapa 0 prometia testar "por robô" quando existe **um**
+`scan_2d.yaml` só — os perfis nascem na etapa 4 e a geometria do robô 3 só fecha
+nas etapas 1 e 3. De quebra, eu havia chamado o conserto de "uma linha": não é,
+calcular a envolvente do URDF exige interpretar caixas, rodas, alturas e TFs.
+
+**O risco conceitual, que é o que vale guardar:** `range_min` é um corte
+**radial**, e o robô 3 é muito assimétrico no `base_link` — nariz a 0,0825 m,
+cauda a 0,2485 m. Dimensionar o corte pela cauda deixa
+
+    0,276 − 0,0825 ≈ 0,19 m de CEGUEIRA À FRENTE
+
+Subir o `range_min` até o autorretorno sumir apaga junto o obstáculo colado na
+frente, que é exatamente onde o robô anda. Seria trocar um defeito sem sintoma
+(anel fixo travando o AMCL) por outro sem sintoma (obstáculo invisível na
+direção de marcha) — e este projeto já perdeu dias com defeitos que não avisam.
+
+Por isso a etapa 9 passa a exigir **os dois lados**: nuvem do robô parado sem
+autorretorno **e** um obstáculo alto logo fora do contorno continuando visível.
+Se um `range_min` único não fizer os dois, a saída registrada **não é aumentar o
+corte** — é filtro espacial/angular de autorretorno, por *onde* o ponto está e
+não por *quão perto*. Fica escrito para não ser reinventado no susto.
+
 ## 2026-09-16 (dev, robô desligado) — CONTORNAR: A RÉ VIRA A FRENTE
 
 Sessão curta e de propósito sem investigação. O dono cortou o roteiro de pivô
