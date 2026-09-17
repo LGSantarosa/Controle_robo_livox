@@ -39,6 +39,39 @@ arquitetura em vez de dentro dela.** Ler o `pilha.launch.py` antes de escrever
 "subir a pilha" teria custado 5 minutos. A ordem nova põe a placa e a geometria
 na frente e só sobe o Livox na etapa 7 — assim o robô 2 navega até lá.
 
+### Mais duas rodadas no mesmo dia (v2.1 e v2.2)
+
+**Segunda revisão — cinco ajustes, todos procedentes.** Classificação de
+parâmetros (meia largura, corredor de ré e recuo do para-choque eram geometria,
+não calibração por CSV); a fronteira `TwistStamped → Twist` tinha de ser
+**decidida** na etapa 5, não adiada com a palavra "conversão"; a parada física
+independente do Xbox virou pré-requisito de **toda** etapa energizada, não só da
+última; e a validação do LIO passou a cobrir a pose 6D inteira.
+
+**Terceira revisão — e ela achou um erro MEU, dentro do conserto que eu mesmo
+tinha proposto.** Ao fechar a etapa 0 escrevi que a envolvente do robô 3 era
+0,196 m. Isso é a meia-diagonal em torno do **centro da caixa** — mas o
+`scan_2d` produz no `target_frame: base_link`, e no robô 3 a C8 pôs o
+`base_link` no **eixo das motoras**, com a caixa deslocada 0,093 m. O valor certo:
+
+    √((0,093 + 0,1555)² + 0,120²) ≈ 0,276 m
+
+No robô 2 a minha conta funcionaria (lá o `base_link` **é** o centro da caixa), e
+foi essa memória que me traiu. **Caí na armadilha da C8 no mesmo documento em que
+a citei** — o xacro avisa em letras grandes que comparar coisa do robô 2 com o
+robô 3 exige saber que a origem mudou de lugar, e eu comparei assim mesmo.
+
+Ainda dessa rodada, e mais importante que o número: **estar na faixa vertical do
+`pointcloud_to_laserscan` não significa ser visto pelo Livox.** FOV, orientação,
+oclusão e distância no frame certo mandam junto, e fazer isso direito exigiria
+ray casting. Então o teste ganha uma cota conservadora do URDF, e a validação de
+verdade fica para a etapa 9, com nuvem real do robô parado.
+
+O padrão das três rodadas, que vale registrar: **nenhuma achou erro de direção —
+todas acharam erro de detalhe verificável.** Os dois primeiros erros foram de não
+ler o código antes de planejar; o terceiro foi de herdar um número de outra
+máquina, que é o defeito que o `CLAUDE.md` proíbe em letras grandes.
+
 ## 2026-09-16 (dev, robô desligado) — CONTORNAR: A RÉ VIRA A FRENTE
 
 Sessão curta e de propósito sem investigação. O dono cortou o roteiro de pivô

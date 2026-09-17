@@ -1,20 +1,29 @@
-# Plano — adaptar o Nav2 para o robô 3 (v2.1)
+# Plano — adaptar o Nav2 para o robô 3 (v2.2)
 
 > **Status: nada implementado. Aguardando a aprovação do dono.**
-> v1 em 2026-09-16; **v2 em 2026-09-17**, depois de uma revisão cruzada que
-> derrubou duas etapas inteiras (§1); **v2.1 no mesmo dia**, com os cinco
-> ajustes da segunda revisão já aplicados:
+> Três revisões cruzadas em dois dias, e cada uma achou coisa real:
 >
-> 1. classificação de parâmetros separada em quatro classes (§5);
-> 2. a fronteira `TwistStamped → Twist` passa a ser **decidida** na etapa 5, não
->    adiada (§4);
-> 3. parada física virou **pré-requisito das etapas 2, 8, 9 e 10**, não só da 10;
-> 4. a contradição do `ESTADO_PROJETO` corrigida — trocar o lado do puxão **não**
->    prova causa de canal;
-> 5. validação do LIO na etapa 7 ampliada para a pose 6D inteira.
+> - **v1** (2026-09-16) — a primeira revisão **derrubou duas etapas inteiras**
+>   (§1): a pilha não subia sobre o simulador do robô 3 e a localização não
+>   tinha TF.
+> - **v2** (2026-09-17) — a segunda pediu cinco ajustes, todos aplicados:
+>   classificação de parâmetros; a fronteira `TwistStamped → Twist` passa a ser
+>   **decidida** na etapa 5 e não adiada (§4); parada física virou
+>   **pré-requisito das etapas 2, 8, 9 e 10**; a contradição do
+>   `ESTADO_PROJETO` corrigida (trocar o lado do puxão **não** prova causa de
+>   canal); validação do LIO ampliada para a pose 6D.
+> - **v2.2** (mesmo dia) — a terceira achou **um erro meu na própria etapa 0**:
+>   eu calculei a envolvente do robô 3 como 0,196 m usando a meia-diagonal em
+>   torno do **centro da caixa**, mas o `scan_2d` produz no `base_link`, que no
+>   robô 3 está no eixo das motoras. O valor certo é **0,276 m** (§8). Junto:
+>   um teste geométrico **não** decide visibilidade (FOV, oclusão, ray casting)
+>   — a validação real é com nuvem do robô parado; e três reclassificações:
+>   `raio_min_curva` é planta medida, a **folga** somada ao raio varrido é
+>   política, e `min/max_height` são **percepção**, não geometria pura (§5).
 >
-> Junto veio um achado próprio: consertar o teste da etapa 0 **não é** trocar
-> `robot_radius` por footprint — isso reprovaria o robô 2. Ver §8.
+> O que sobreviveu das três: consertar o teste da etapa 0 **não é** trocar
+> `robot_radius` por footprint — isso reprovaria o robô 2 (0,447 m contra
+> `range_min` 0,35). Essa parte estava certa; o número que derivei dela, não.
 >
 > Irmão do `PLANO_CONTROLE_ROBO3.md`. Regra do projeto: cada etapa é uma mudança
 > pequena, com o "pode" do dono antes de ir ao robô. Este documento não autoriza
@@ -136,15 +145,31 @@ CSV. Cada classe tem origem, dono e momento diferentes:
 
 **(a) Planta medida — sai de ensaio com CSV, no robô.** `curv_frente`/`curv_re`,
 `zona_morta`, `retencao_giro_s`, `linear_scale` e o ganho linear realizado,
-ganho de giro, aceleração e frenagem reais, atraso liga/desliga.
+ganho de giro, aceleração e frenagem reais, atraso liga/desliga, e o
+**`raio_min_curva`**.
 → São propriedades **da máquina e da placa**. Etapa 8.
 
+⚠️ O `raio_min_curva` parece geometria e não é: ele sai do que as rodas
+**conseguem** entregar (zona morta, teto de velocidade, razão entre os lados),
+não do contorno do corpo. A v2.1 o tinha posto em (b), errado.
+
 **(b) Geometria — sai da trena e do URDF, NUNCA de CSV.** Footprint global e
-local do Nav2, os **dois** polígonos do `collision_monitor`, alturas da
-`VoxelLayer`, `scan_2d` (`min/max_height`, `range_min`), `laser_min_range` do
-`localizacao_amcl.yaml`, **meia largura, corredor de ré, recuo do para-choque,
-raio mínimo e folga de pivô** do `path_follower`.
+local do Nav2, os **dois** polígonos do `collision_monitor`, `range_min` do
+`scan_2d` e o `laser_min_range` que anda em par com ele, **meia largura,
+corredor de ré e recuo do para-choque** do `path_follower`, e o **raio físico
+varrido pelas bobas**.
 → Existem **antes** de qualquer simulação de navegação. Etapa 3.
+
+⚠️ O raio varrido é geometria, mas **a folga que se soma a ele é (c)**, política
+de segurança. Os dois moram em lugares diferentes e mudam por motivos
+diferentes; somar e guardar um número só apaga essa distinção.
+
+**(e) Percepção — informada por geometria E por ruído, não é geometria pura.**
+`min_height` / `max_height` do `scan_2d`, alturas da `VoxelLayer`.
+→ A geometria dá o ponto de partida; quem fecha o valor é o **comportamento**:
+piso que não é plano, e o balanço do chassi (no robô 3, 4 apoios rígidos —
+3 mm de junta de piso viram 1,2°, e o Livox vai em cima disso). Etapa 9, com
+nuvem real.
 
 **(c) Limites e política de segurança — escolha nossa, não medida.** `v_max`,
 `wz_max`, largura de passagem e suas margens, `desvio_taxa_deg_s`, quando a ré é
@@ -238,16 +263,36 @@ inclui para-choque e roda, abaixo da fatia). A meia-diagonal da caixa do robô 2
 é √(0,2165² + 0,2275²) = **0,314 m** — exatamente o *"0,32 = 0,314 medido + 6 mm"*
 que o `nav2.yaml` documenta. Era isso que o `robot_radius` representava ali.
 
-➡️ O teste passa a conferir `range_min` contra a **envolvente própria dentro da
-faixa de altura da fatia, derivada do URDF** (caixa + o que mais suba acima de
-`min_height`), por robô. Sem número mágico solto e sem ressuscitar o
-`robot_radius`. Para o robô 3 a caixa é 0,311 × 0,240 → meia-diagonal 0,196 m,
-e é por isso que o `range_min` dele **pode e deve** baixar (§5b).
+➡️ O teste passa a conferir `range_min` contra a **envolvente própria medida no
+`base_link`**, por robô — sem número mágico solto e sem ressuscitar o
+`robot_radius`.
 
-⚠️ E fica a pergunta que este conserto levanta e não responde: a envolvente da
-fatia é a caixa, mas **o que mais do robô 2 sobe dos 0,15 m** (rodas a 0,16 m de
-topo, cabos, o próprio suporte do Livox)? Se algo passar de 0,35 m em raio, o
-`range_min` de hoje está apertado. Medir na etapa 9, não chutar agora.
+🔴 **Erro da v2.1, corrigido aqui (17-09):** eu escrevi que a envolvente do robô
+3 era 0,196 m, que é a meia-diagonal em torno do **centro da caixa**. Errado: o
+`scan_2d` produz no `target_frame: base_link`, e no robô 3 a C8 pôs o
+`base_link` no **eixo das motoras**, não no centro da caixa — que fica deslocado
+`caixa_cx` = 0,093 m. No frame certo:
+
+    √((0,093 + 0,1555)² + 0,120²) ≈ 0,276 m
+
+No robô 2 os 0,314 m valem porque lá o `base_link` **é** o centro da caixa. Esta
+é exatamente a armadilha que o próprio xacro avisa que a C8 cria, e eu caí nela
+no mesmo documento em que a citei.
+
+⚠️ **E um teste puramente geométrico não fecha a questão.** Estar dentro da
+faixa vertical do `pointcloud_to_laserscan` **não** significa ser visto pelo
+Livox: entram FOV vertical, posição e orientação do sensor, oclusão, e a
+distância tem de ser calculada no `base_link`. Fazer isso direito exigiria ray
+casting. Então:
+
+- **no teste**, uma cota conservadora derivada do URDF no `base_link` (é o que
+  ele pode afirmar sem mentir);
+- **a validação de verdade** é com **nuvem real do robô parado**, olhando o
+  autorretorno — etapa 9, não agora.
+
+⚠️ Segue aberta, e é do robô 2 de hoje: **o que mais sobe acima dos 0,15 m**
+(roda com topo a 0,16 m, cabos, o suporte do Livox)? Se algo passar de 0,35 m em
+raio, o `range_min` atual está apertado.
 
 **Validação do LIO na etapa 7 (a v1 pedia só x, y e yaw):**
 z, roll e pitch; **deriva com o robô parado**; **sentido positivo do yaw**
