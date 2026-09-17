@@ -4,6 +4,41 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-09-17 (dev, robô desligado) — O PLANO DO NAV2 LEVOU UMA REVISÃO E CAIU
+
+Fracasso documentado, que aqui é resultado: o `PLANO_NAV2_ROBO3.md` escrito
+ontem foi confrontado com o código, linha por linha, e **duas etapas inteiras
+não param de pé**. Virou v2. Os seis erros, todos conferidos e nenhum refutado:
+
+1. **Etapa 3 impossível**: `pilha.launch.py:556` inclui `sim.launch.py`, que é o
+   **robô 2**. Fugir disso com `sim:=false` deixa a pilha toda sem
+   `use_sim_time`. E `cmd_vel_to_wheels` publica `WheelSpeeds`, que no Gazebo
+   não tem consumidor — o sim do robô 3 termina em `ros2_control`. "Fechar a
+   cadeia até o `cmd_vel_to_wheels`" não provaria movimento nenhum.
+2. **A costura não era uma**: a cadeia do robô 2 é inteira `TwistStamped`
+   (compensador, `collision_monitor`, mux) e a do robô 3 inteira `Twist`. São
+   dois contratos. E dois launches disputam o mesmo mux.
+3. **Etapa 5 sem TF**: ninguém sobe `robot_state_publisher` no robô 3, e o
+   `tf_odom.py:114` se recusa a publicar `odom → base_link` sem
+   `base_link → livox_frame` — a mensagem de erro dele já mandava conferir o RSP.
+4. **O giro de 180° não é trocar 3 sinais de x**: o trail da boba é fixo em −x
+   (garfo, visual e junta da roda). Junto vêm esquerda/direita, o yaw do
+   `livox_frame`, a envolvente varrida pelas bobas e o `test_urdf_robo3.py`.
+5. **8,25 cm, não 8,35**: o comentário do próprio xacro erra 1 mm, e o teste
+   prova (a roda passa exatamente 2 cm da traseira da caixa).
+6. **Eu errei o `scan_2d`**: como `target_frame` é `base_link`, que está no chão,
+   `min_height` 0,15 continua sendo 15 cm do chão com sensor a qualquer altura.
+   O que muda com a altura é a **região observável**, não a margem do piso.
+
+Achado de brinde, sem relação com o robô 3: **`test_scan_2d.py` está vermelho**
+— procura um `robot_radius` que saiu do `nav2.yaml` na decisão 032.
+`test_urdf_robo3.py` 21/21 e `test_configs_coerentes.py` 83/83 passam.
+
+A lição que vai para o artigo é velha e voltou: **v1 planejou por cima da
+arquitetura em vez de dentro dela.** Ler o `pilha.launch.py` antes de escrever
+"subir a pilha" teria custado 5 minutos. A ordem nova põe a placa e a geometria
+na frente e só sobe o Livox na etapa 7 — assim o robô 2 navega até lá.
+
 ## 2026-09-16 (dev, robô desligado) — CONTORNAR: A RÉ VIRA A FRENTE
 
 Sessão curta e de propósito sem investigação. O dono cortou o roteiro de pivô

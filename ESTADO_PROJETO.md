@@ -48,11 +48,26 @@ o robô 1 é 4x4 e só faz pivô).
   montagem decidida: topo da caixa 0,205 + meio cilindro = 0,2375 m.
 - 🔴 O `scan_2d.yaml` **não se herda**: com o sensor a 0,24 m (era 0,42 no robô
   2) o chão entra no campo a 1,95 m em vez de 3,4 m.
-- **Próximo passo é a etapa 1 do plano, e ela é barata**: reta de ida e volta
-  pelo `dpad_reto` comparando `frente:=-1.0` × `frente:=1.0`, 3x cada, mesma
-  bateria. **Não precisa do Livox** e é a única etapa que pode derrubar a
-  premissa do plano inteiro — se o puxão só trocar de lado, a causa é de canal
-  (elétrica) e não de sentido, e aí não se mexe no Livox do robô 2 à toa.
+🔴 **17-09: o plano virou v2 depois de uma revisão cruzada que derrubou duas
+etapas inteiras.** O que a v1 chamava de "etapa 3" (subir a pilha do robô 2
+sobre o simulador do robô 3) e de "etapa 5" (localização) **não funcionam como
+estavam escritas** — conferido no código, não aceito de boca:
+
+- `pilha.launch.py:556` inclui o simulador do **robô 2**; e o `cmd_vel_to_wheels`
+  publica `WheelSpeeds`, que não tem consumidor no Gazebo.
+- Nem o controle do robô 3 nem a `localizacao.launch.py` sobem
+  `robot_state_publisher` → sem `base_link → livox_frame` o `tf_odom` **recusa**
+  publicar `odom → base_link`. Falta um bringup do robô 3.
+- O giro de 180° **não** é trocar 3 sinais de x: o trail da boba é fixo em −x.
+- A cadeia do robô 2 é toda `TwistStamped` e a do robô 3 toda `Twist` — são dois
+  contratos, e dois launches disputam o mesmo mux.
+
+**Nova ordem (v2): etapa 0** = consertar `test_scan_2d.py`, que está **vermelho**
+hoje (procura um `robot_radius` que saiu do `nav2.yaml` na decisão 032) — sem
+isso "suíte verde" não serve de critério. **Etapa 1** = fechar a placa e a
+geometria por trena. **Etapa 2** = o ensaio frente/ré, agora com protocolo
+objetivo (o bag de hoje **não grava pose**; sem Livox não há desvio lateral sem
+régua). **O Livox só sobe na etapa 7** — até lá o robô 2 continua navegando.
 - ⚠️ **Não é o `sinal:=-1.0`** que já existia: aquele é espelho (inverte o giro
   junto, reprovado em 14-09). `frente` é rotação. Decisão 049.
 - 🔴 **NÃO TESTADO NO ROBÔ.** Falta subir e rodar LB + direcional cima/baixo.

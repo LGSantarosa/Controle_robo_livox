@@ -1,234 +1,197 @@
-# Plano — adaptar o Nav2 para o robô 3
+# Plano — adaptar o Nav2 para o robô 3 (v2)
 
-> **Status: PLANO, nada implementado.** Escrito em 2026-09-16 no PC de dev, robô
-> desligado. Irmão do `PLANO_CONTROLE_ROBO3.md` (que fechou o teleop).
+> **Status: PLANO REVISADO, NÃO APROVADO PARA EXECUÇÃO, nada implementado.**
+> v1 escrita em 2026-09-16; **v2 em 2026-09-17**, depois de uma revisão cruzada
+> que derrubou duas etapas inteiras. Irmão do `PLANO_CONTROLE_ROBO3.md`.
 >
-> Regra do projeto: cada etapa abaixo é uma mudança pequena, com o "pode" do
-> dono antes de ir ao robô. Este documento não autoriza nada — ele ordena.
+> Regra do projeto: cada etapa é uma mudança pequena, com o "pode" do dono antes
+> de ir ao robô. Este documento não autoriza nada — ele ordena.
 
 ---
 
-## 0. O que o dono já decidiu (16-09)
+## 0. O que o dono decidiu (16-09)
 
 1. **A frente do robô 3 são as MOTORAS; a traseira são as BOBAS.**
    Eletricamente é o contrário, e a correção fica **no código**.
 2. **O Livox é emprestado do robô 2**, montado **no centro do robô, no topo**.
-3. O atuador se baseia no **robô 1** (MEGA); o seguidor e a navegação, no
-   **robô 2** — que também é diferencial de 2 motoras. O robô 1 é 4x4 skid-steer,
-   não faz curva, só pivô: a lei de movimento dele não serve aqui.
+3. Atuador se baseia no **robô 1** (MEGA); seguidor e navegação, no **robô 2** —
+   também diferencial de 2 motoras. O robô 1 é 4x4 skid-steer, não faz curva, só
+   pivô: a lei de movimento dele não serve aqui.
 
-⚠️ Consequência de (2): **enquanto o robô 3 navega, o robô 2 não navega.** Só
-há um Mid-360. Vale registrar como custo, não como detalhe.
-
----
-
-## 1. Por que a frente nas motoras é a escolha certa (e não só gosto)
-
-A decisão 009 e a `lei_de_rumo` dizem que, andando para trás, *"a boba deixa de
-ser arrastada e passa a ser empurrada"* — e é aí que a direção fica instável.
-
-No `robo3.urdf.xacro` de hoje as **motoras estão em x=0 e as duas bobas em
-x ≈ +0,2485**: na marcha que o URDF chama de "frente", as bobas vão **na
-frente, empurradas** — a configuração instável. Com a frente nas motoras elas
-passam a ser **arrastadas**.
-
-Isso casa com o que o robô vinha mostrando (`ESTADO_PROJETO`): **a ré andava
-reto e a frente puxava para a direita**. A hipótese que este plano adota é que
-a "ré" era o sentido mecanicamente estável. **Não está provado** — segue como
-pergunta aberta do artigo, e a etapa 1 abaixo é o que a mede.
+⚠️ **Enquanto o robô 3 navega, o robô 2 não navega.** Só há um Mid-360.
 
 ---
 
-## 2. A fundação: girar o `base_link` do robô 3 em 180°
+## 1. O que a revisão de 17-09 derrubou da v1
 
-Hoje o URDF e o comando discordam: o comando já anda com a frente nas motoras
-(`linear_sign: -1.0`, decisão 049), mas o **modelo** ainda acha que a frente é
-o lado das bobas. Para o Nav2 isso é fatal: footprint, costmap, fatia 2D e
-plano saem todos espelhados em relação à marcha real.
+Tudo abaixo foi **conferido no código**, não aceito de boca. A v1 está errada
+nestes pontos e eles são a razão de esta versão existir.
 
-**Proposta:** girar o corpo 180° em torno de z no `robo3.urdf.xacro` — trocar o
-sinal de x de `caixa_cx`, `boba_x` e `livox_x`. O `base_link` continua no centro
-do eixo das motoras, no chão (convenção C8, que é boa e não se mexe: o centro de
-rotação é a origem, e `wz` puro não desloca nada).
-
-**E o `linear_sign: -1.0` FICA.** Ele é o adaptador elétrico — a placa entende
-`speed>0` como o outro lado, e é exatamente isso que o dono mandou corrigir no
-código. Bônus já provado na decisão 049: negar só a linear equivale a uma
-rotação de 180°, **incluindo a troca de qual roda é a esquerda**. Ou seja: o
-caminho de comando já está certo para o frame girado, sem renomear canal nenhum.
-
-O que muda de concreto no contorno (o xacro já avisa):
-
-| | hoje | depois do giro |
+| # | o que a v1 dizia | por que está errado |
 |---|---|---|
-| da origem até a ponta da frente | 24,85 cm | **8,35 cm** |
-| da origem até a ponta de trás | 8,35 cm | **24,85 cm** |
+| 1 | "etapa 3: subir a pilha do robô 2 sobre o `sim_robo3`" | `pilha.launch.py:556` inclui `robot_base/launch/sim.launch.py`, que é o **robô 2**. Com `sim:=false` para evitá-lo, a pilha inteira fica `use_sim_time=false`. E `cmd_vel_to_wheels` publica `WheelSpeeds`, que **não tem consumidor no Gazebo** — o sim do robô 3 termina em `ros2_control`. Fechar a cadeia até o `cmd_vel_to_wheels` não prova movimento nenhum. |
+| 2 | "a costura é só a saída do `compensador_rumo`" | A cadeia do robô 2 é **inteira** `TwistStamped` (`compensador_rumo.py:237`, `collision_monitor`, `twist_mux.yaml: use_stamped: true`). A do robô 3 é **inteira** `Twist` (mux, teleop, `dpad_reto`, `cmd_vel_to_wheels`). São dois contratos, não um adaptador. |
+| 3 | "etapa 5: localização de pé" | Nem o `controle_robo3.launch.py` nem o `localizacao.launch.py` sobem **`robot_state_publisher`**. Sem `base_link → livox_frame`, o `tf_odom.py:114` **deliberadamente não publica** `odom → base_link` — e a mensagem de erro dele já diz para conferir o RSP. Falta um bringup real do robô 3. |
+| 4 | "girar 180° = trocar o sinal de 3 x" | Falso. O trail da boba é fixo em **−x** (garfo, visual e `caster_wheel_joint: xyz="${-boba_trail} 0 …"`). Trocar só `boba_x` deixa a boba **liderando** no modelo. Junto vêm: semântica esquerda/direita, orientação do `livox_frame`, envolvente varrida pelas bobas, e `test_urdf_robo3.py:119`, que trava `eixo_x < ox < boba_x` de propósito. |
+| 5 | "8,35 cm de nariz" | **8,25 cm.** O comentário do próprio xacro erra 1 mm; o teste prova que a roda passa exatamente 2 cm da traseira da caixa (−0,0625 − 0,0825 = −0,0825). E a traseira tem de considerar a **varredura das bobas**, não a ponta da caixa. |
+| 6 | "a margem de rejeição do piso cai quase pela metade" | Errado. `target_frame` é `base_link`, que está no chão: `min_height: 0.15` continua sendo 15 cm do chão com sensor a qualquer altura. O que muda com a altura é a **região observável**. |
 
-Nariz curto e corpo comprido atrás do centro de giro — **bom** para navegar em
-lugar apertado, e muda o footprint inteiro.
+**Duas coisas a mais que a revisão levantou e que a v1 nem mencionava:**
 
----
-
-## 3. A cadeia proposta
-
-```
-                    ┌── do ROBÔ 2 (navegação) ──────────────────┐
-  /goal_pose → bt_navigator → planner_server → /plan
-                                                 ↓
-                                         path_follower
-                                                 ↓
-                                      heading_controller
-                                                 ↓
-                                        collision_monitor
-                                                 ↓
-                                           twist_mux  ← Xbox (humano fura)
-                                                 ↓
-                                        compensador_rumo
-                    └───────────────────────────┬───────────────┘
-                                                 ↓   ⬅ A COSTURA (§4)
-                    ┌── do ROBÔ 1 (atuador) ─────┴───────────────┐
-                              cmd_vel_to_wheels
-                                                 ↓
-                                  mega_bridge → MEGA → placa
-                    └────────────────────────────────────────────┘
-
-  Localização: Livox → FAST-LIO → /Odometry → tf_odom → odom→base_link
-               Livox → scan_2d → /scan → AMCL (quando houver mapa)
-```
-
-Do robô 2 vem tudo em `robot_motion` (`path_follower`, `heading_controller`,
-`compensador_rumo`, `lei_de_*`, `collision_monitor`) e a localização de
-`robot_base` (`localizacao.launch.py` + `tf_odom` + `scan_2d`). Do robô 1 vem
-o `cmd_vel_to_wheels` + `mega_bridge`, que já estão de pé e testados no teleop.
+- **Dois launches querem ser donos do mux** (`pilha` e `controle_robo3.launch.py`).
+  Subir os dois faz nó duplicado e duas arquiteturas concorrendo.
+- **`test_scan_2d.py` está VERMELHO hoje**, e não tem nada a ver com o robô 3:
+  procura um `robot_radius` que saiu do `nav2.yaml` na decisão 032.
+  `test_urdf_robo3.py` 21/21 e `test_configs_coerentes.py` 83/83 passam.
 
 ---
 
-## 4. A costura, que é o único pedaço realmente novo
+## 2. Por que a frente nas motoras (mantido da v1)
 
-O robô 2 termina em `ros2_control`: o `compensador_rumo` publica
-**`TwistStamped`** em **`/hoverboard_base_controller/cmd_vel`**.
+A decisão 009 e a `lei_de_rumo`: andando para trás *"a boba deixa de ser
+arrastada e passa a ser empurrada"* — e aí a direção fica instável. Hoje as
+motoras estão em x=0 e as bobas em x ≈ +0,2485: na marcha que o URDF chama de
+"frente" as bobas vão **empurradas**. Com a frente nas motoras, **arrastadas**.
 
-O robô 3 não tem `ros2_control` no hardware: ele termina em **`Twist`** no
-tópico **`cmd_vel`**, que o `cmd_vel_to_wheels` consome.
-
-São duas diferenças: **tipo** (Stamped ou não) e **tópico**. Opções:
-
-| opção | avaliação |
-|---|---|
-| parametrizar o tópico/tipo de saída do `compensador_rumo` | **preferida**: um nó, um parâmetro, sem nó novo no caminho crítico; o robô 2 não sente |
-| nó adaptador `TwistStamped → Twist` no meio | mais um salto de latência numa malha que já tem 0,94 s de tempo morto no robô 2 — ruim |
-| fazer o `cmd_vel_to_wheels` aceitar `TwistStamped` | espalha a decisão por dois pacotes |
-
-⚠️ Conferir antes de escolher: `twist_mux_robo3.yaml` está em
-`use_stamped: false`, e o YAML avisa que **se só um lado mudar o DDS recusa a
-ligação por type hash e o robô não anda, sem erro nenhum**. Essa armadilha é a
-primeira coisa a checar na etapa 3.
+Casa com o robô ter mostrado a ré andando reto e a frente puxando. **Hipótese,
+não prova** — e a etapa 2 é o que a mede. Segue como pergunta aberta do artigo.
 
 ---
 
-## 5. O que NÃO se herda do robô 2 (cada um é uma medida)
+## 3. O giro de 180° é uma obra no URDF, não três sinais
 
-Herdar número medido de outra máquina é o defeito que este repo já pagou caro
-(a bitola de 29-07). Todos abaixo são do robô 2 e **não valem** no robô 3:
+O `base_link` continua no centro do eixo das motoras, no chão (convenção C8: o
+centro de rotação é a origem, `wz` puro não desloca — isso é bom e não se mexe).
+O que gira é o **corpo em relação a ele**. Itens obrigatórios:
 
-| parâmetro | valor do robô 2 | por que não vale |
-|---|---|---|
-| `curv_frente` / `curv_re` | −0,8365 / −0,098 | é a curvatura parasita **daquela** máquina, e no robô 3 a frente acabou de trocar de lado |
-| `zona_morta` | 0,0178 m/s | é da **placa**; a do robô 3 pode ser outra (§5.1 da revisão cruzada) |
-| `retencao_giro_s` | 0,52 s | idem, é retenção de firmware |
-| `a_dec` | 0,1 rad/s² | escolha conservadora amarrada ao S do robô 2 |
-| `footprint` | `[[0.35,0.2775],…]` | outro corpo, e agora assimétrico ao contrário (§2) |
-| `scan_2d` min/max height | 0,15 / 1,00 (sensor a 0,42 m) | **o sensor cai para 0,24 m** — ver §6 |
-| bitola / raio | 0,270 / 0,080 | robô 3: **0,3225 / 0,0825** (já sabidos) |
+1. `caixa_cx`, `boba_x`, `livox_x` — os três sinais (necessário, longe de suficiente).
+2. **Direção do trail** da boba: hoje `-boba_trail`; girar o conjunto inverte o
+   sentido em que a boba se alinha atrás do pivô.
+3. **Semântica esquerda/direita**: uma rotação de 180° em z troca ±y. Qual roda
+   física é `left_wheel_joint` muda junto.
+4. **Orientação do `livox_frame`** (não só a posição): o yaw de montagem entra
+   na nuvem inteira.
+5. **Envolvente varrida pelas bobas** — elas giram no pivô; o contorno é o que
+   elas varrem, não o ponto onde estão paradas.
+6. **`test_urdf_robo3.py` e os comentários** que afirmam "motoras atrás": o teste
+   está certo hoje e vai ficar errado depois. Ele se reescreve junto, de
+   propósito e com registro — não se apaga.
 
----
-
-## 6. A fatia 2D muda, e não é detalhe
-
-O `scan_2d.yaml` é derivado da altura do sensor. Com o Livox no topo da caixa:
-
-    topo da caixa = 0,070 (fundo) + 0,135 (caixa) = 0,205 m
-    centro óptico ≈ 0,205 + 0,0325 = 0,2375 m  ≈ 0,24 m
-
-🟢 O `livox_z_solo = 0,24` que já está no URDF como **chute** casa com a
-montagem decidida. Sorte, mas conferir com trena antes de confiar.
-
-Com 0,24 m em vez de 0,42 m, e o campo de −7° a +52°:
-
-| | robô 2 (0,42 m) | robô 3 (0,24 m) |
-|---|---|---|
-| o chão entra no campo a | 3,4 m | **1,95 m** |
-| o raio de +52° chega a 1,00 m a | 0,45 m | 0,59 m |
-
-O `min_height: 0.15` continua cortando o chão, mas a **margem encolheu quase
-pela metade**. E o `range_min: 0.35` era o raio do robô 2; no robô 3 o sensor
-fica no centro da caixa (0,240 m de largura), então ele pode e deve baixar.
-Os dois se recalculam, não se copiam.
+**O `linear_sign: -1.0` fica.** Ele é o adaptador elétrico, e a decisão 049 já
+provou que negar só a linear equivale à rotação de 180° **incluindo a troca de
+qual roda é a esquerda** — então o caminho de comando já está certo para o frame
+girado. ⚠️ Mas isso vale só para o **comando**: o `pose_estimator` tem
+`left/right_wheel_sign` e **não** tem `linear_sign`. Se um dia a odometria de
+roda entrar, ela não acompanha o giro sozinha.
 
 ---
 
-## 7. Etapas propostas, na ordem, e o que cada uma prova
+## 4. Contrato de mensagens: unificar, não adaptar
 
-Cada etapa é uma sessão. Nenhuma começa sem a anterior fechada.
+Recomendação (adotada da revisão): **cadeia única em `TwistStamped` até o
+compensador — Xbox e direcional inclusos — e conversão só na fronteira do
+atuador.** O tópico se resolve por **remapeamento**; não precisa virar parâmetro.
 
-**Etapa 1 — provar a hipótese da frente (robô 3 como está hoje, sem Livox).**
-Reta de ida e volta pelo `dpad_reto`, com o bag de sempre: `frente:=-1.0`
-(padrão de hoje) contra `frente:=1.0`, 3x cada, mesma bateria. Mede-se o desvio
-lateral nos dois sentidos.
-→ Se o sentido das motoras à frente anda reto e o outro puxa, §1 está provado e
-o resto do plano fica de pé. **Se o puxão só trocar de lado, a causa é de canal
-e não de sentido**, e aí o plano muda: o conserto é elétrico, antes do Nav2.
-*(Não precisa do Livox. Dá para fazer já, é a etapa mais barata.)*
+Retirado da v1: o argumento de que um nó adaptador seria ruim "por causa dos
+0,94 s". Aquele tempo morto é da **planta/malha do robô 2**, não de um salto de
+nó — usá-lo como argumento era medida emprestada, exatamente o que este repo
+proíbe. Se um adaptador for escolhido, o custo dele se **mede**.
 
-**Etapa 2 — o giro de 180° no URDF (§2), sem robô.**
-Xacro + `test_urdf_robo3.py` (o teste que trava URDF e YAML em par). Conferir no
-RViz que o eixo x aponta para as motoras e que as bobas ficam atrás.
-→ Prova que o modelo e a marcha concordam. Nada vai ao robô.
-
-**Etapa 3 — a costura (§4) no simulador.**
-`sim_robo3.launch.py` já tem Gazebo, lidar simulado, `/Odometry` de verdade de
-chão e `scan_2d`. Subir a pilha do robô 2 por cima dele e fechar o caminho até o
-`cmd_vel_to_wheels`. Aqui se pega a armadilha do `use_stamped`.
-→ Prova a cadeia inteira sem gastar bateria nem o Livox do robô 2.
-⚠️ Gazebo só com o dono olhando.
-
-**Etapa 4 — montar o Livox no robô 3 e medir.**
-Trena: altura do centro óptico, x/y, e se está torto em yaw. Atualiza o URDF com
-a **medida**, não com o chute. Recalcula o `scan_2d` (§6).
-→ A partir daqui o robô 2 está sem sensor.
-
-**Etapa 5 — localização de pé no robô 3.**
-`localizacao.launch.py` + `tf_odom` + `scan_2d`. Pré-voo: `/Odometry` a 10 Hz,
-`/scan` vivo, e `odom → base_link` respondendo no `tf2_echo`.
-→ Prova que o robô sabe onde está. Sem isso o Nav2 nem ativa.
-
-**Etapa 6 — calibrar o que não se herda (§5), na ordem de alavancagem.**
-Zona morta e retenção primeiro (são da placa), depois `curv_frente`/`curv_re` na
-frente nova, depois o footprint.
-→ Cada um é um ensaio com CSV, como os de agosto.
-
-**Etapa 7 — Nav2 no robô, `mapa:=nenhum`, espaço livre.**
-Só então objetivo curto, com a mão no Xbox (o humano fura o reflexo).
+Junto: **um mux só**. Hoje a `pilha` e o `controle_robo3.launch.py` disputam o
+mesmo nó, e o `dpad_reto` e o teleop do robô 3 precisam passar a falar o mesmo
+contrato do resto.
 
 ---
 
-## 8. Opiniões e dúvidas em aberto (para o dono)
+## 5. Perfis `robo2` / `robo3`: o que precisa de perfil próprio
 
-1. **Eu faria a etapa 1 antes de qualquer outra coisa** — ela é barata, não
-   precisa do Livox, e é a única que pode derrubar a premissa do plano inteiro.
-   Se o defeito for de canal, gastamos o Livox do robô 2 à toa.
-2. **Pacote novo ou reuso?** Minha opinião: **reusar** `robot_motion` e
-   `robot_base` com um argumento `robo:=3`, em vez de duplicar. Duplicar é o que
-   criou `sim_robo3.launch.py` e `hoverboard_controllers_sim_robo3.yaml`
-   separados — defensável lá (o robô 2 é a linha de base histórica), mas caro se
-   virar regra: toda correção passa a ter de ser aplicada duas vezes.
-3. **A placa do robô 3 está decidida?** A §5.1 da revisão cruzada diz que é o
-   item de maior alavancagem: se a placa mudar, zona morta, patamar e latência
-   caem junto, e a etapa 6 recomeça. Vale resolver antes da etapa 6.
-4. **O robô 3 tem IMU (MPU6050) e optical flow pela MEGA.** O robô 2 não usa —
-   ele localiza só por LIO. Proponho começar igual ao robô 2 (só LIO) e deixar a
-   fusão para depois: um sensor a mais sem necessidade é um modo de falha a mais.
-5. **`pose_estimator` fica de fora?** É o que digo em (4): com LIO, a odometria
-   de roda do robô 1 não entra. Se entrar um dia, atenção — ela tem
-   `left/right_wheel_sign` mas **não** tem `linear_sign`, então o feedback não
-   segue o giro de 180° sozinho.
+A v1 listava 7 itens. São muitos mais, e **herdar número medido de outra máquina
+é o defeito que este repo já pagou** (a bitola de 29-07).
+
+**Calibração (sai de CSV, no robô):** `curv_frente`/`curv_re`, `zona_morta`,
+`retencao_giro_s`, `a_dec`, `a_lin`, `v_max`, `wz_max`, `ganho_wz`,
+`desvio_taxa_deg_s`, e todo o bloco de passagem estreita do `path_follower`
+(raio mínimo, largura de passagem, meia largura, corredor de ré, recuo do
+para-choque, folga de pivô).
+
+**Geometria derivada (sai da trena e do URDF, NÃO de CSV):** footprint global e
+local do Nav2, os **dois** polígonos do `collision_monitor`, alturas da
+`VoxelLayer`, `scan_2d` (`min/max_height`, `range_min`), `laser_min_range` do
+`localizacao_amcl.yaml`, recuperação em ré e pivô.
+
+🔴 **O footprint é geometria, não calibração** — ele tem de existir **antes** de
+qualquer simulação de navegação, não no fim. A v1 o jogava para a etapa 6.
+
+⚠️ **`range_min` e `laser_min_range` andam em par.** `range_min` vem da maior
+geometria própria visível do Livox — rodas e varredura das bobas incluídas —,
+não da largura de 24 cm da caixa; e mudá-lo sem mudar o `laser_min_range` deixa
+o AMCL com um limite e a fatia com outro.
+
+---
+
+## 6. Escala SI: hoje o robô 3 não tem significado físico
+
+`escala:=400` é, nas palavras do próprio launch, **"de partida, não calibrada"**
+(`controle_robo3.launch.py:150`). Enquanto isso for verdade, `v_max: 0.5`, a
+projeção do `collision_monitor` e qualquer distância de frenagem são números
+sem lastro. Antes do Nav2, medir:
+
+- `linear_scale` e o ganho linear realizado;
+- ganho de giro e as velocidades máximas realmente executáveis;
+- atraso liga/desliga e distância real de parada;
+- soma dos watchdogs (mux 0,3–0,5 s + MEGA 0,5 s) e a retenção da placa;
+- aceleração e frenagem;
+- zona morta e curvaturas.
+
+---
+
+## 7. O ensaio de frente/ré precisa de protocolo (e não decide sozinho)
+
+A v1 dizia "se o puxão trocar de lado, a causa é de canal". **Não prova.**
+Assimetria de roda, de carga e o transiente das bobas produzem o mesmo sinal.
+E o bag do `bin/sobe-robo3:67` **não grava pose** — sem Livox não há medida de
+desvio lateral sem régua ou câmera externa.
+
+O ensaio só vale com: distância e velocidade fixas, orientação inicial marcada,
+**alinhamento prévio das bobas** (elas têm memória do movimento anterior), ordem
+**aleatorizada** entre os dois sentidos, tensão da bateria anotada a cada
+corrida, e uma medida objetiva de curvatura — não "andou tortinho".
+
+---
+
+## 8. Ordem adotada (da revisão, com o que cada etapa prova)
+
+Uma etapa por sessão. Nenhuma começa sem a anterior fechada.
+
+| # | etapa | prova / entrega | precisa do robô? |
+|---|---|---|---|
+| 0 | Consertar `test_scan_2d.py` (vermelho por `robot_radius` da 032) | "suíte verde" volta a ser critério válido de etapa | não |
+| 1 | Fechar **a placa** (§5.1 da revisão cruzada) e a geometria física autoritativa (trena) | sem isso a etapa 8 recomeça do zero | sim, desligado |
+| 2 | Repetir o ensaio frente/ré com o protocolo do §7 | confirma ou derruba a premissa do §2 | sim, ligado |
+| 3 | URDF completo girado (§3) + `robot_state_publisher` + footprints + testes reescritos | modelo e marcha concordam; o Nav2 passa a ter contorno | não |
+| 4 | Perfis `robo2`/`robo3` e **um bringup único** do robô 3 | RSP + MEGA + `cmd_vel_to_wheels` + Xbox/direcional + mux único num lugar só | não |
+| 5 | Unificar o contrato de mensagens (§4) e testar a cadeia **sem Gazebo** | comando atravessa de ponta a ponta, sem simulador para confundir | não |
+| 6 | Ensinar a `pilha` a escolher `sim_robo3` (`robo:=3`, `use_sim_time`, qual atuador encerra) | a etapa 3 da v1, agora possível | não |
+| 7 | Montar o Livox, medir a pose **6D** e validar sinais de x, y e yaw no LIO | a árvore de TF fecha com medida, não com chute | sim |
+| 8 | Calibrar escala e dinâmica (§6); depois rumo e curvatura | os números do Nav2 passam a ter lastro físico | sim |
+| 9 | Validar percepção e reflexo (`scan_2d`, `collision_monitor`) | o robô enxerga e freia antes de planejar | sim |
+| 10 | Nav2 `mapa:=nenhum`, espaço livre, **parada física independente do Xbox** | objetivo curto | sim |
+
+⚠️ A ordem mudou de verdade em relação à v1: **o Livox só sobe na etapa 7**, e
+não na 4. Até lá o robô 2 continua navegando.
+
+---
+
+## 9. Opiniões e dúvidas em aberto (para o dono)
+
+1. **Reusar ou duplicar?** Continuo em **reusar** `robot_motion`/`robot_base`
+   com perfil `robo:=3`. Duplicar faz toda correção ter de ser aplicada duas
+   vezes — e já há `sim_robo3.launch.py` e
+   `hoverboard_controllers_sim_robo3.yaml` separados como precedente.
+2. **A placa do robô 3 está decidida?** É o item de maior alavancagem (§5.1 da
+   revisão cruzada): se mudar, zona morta, patamar e latência caem junto e a
+   etapa 8 recomeça. Por isso subiu para a etapa 1.
+3. **Só LIO no começo**, deixando IMU e optical flow da MEGA de fora: um sensor
+   a mais sem necessidade é um modo de falha a mais.
+4. **Quero fazer a etapa 0 agora?** É uma linha de teste, não toca o robô, e sem
+   ela não dá para usar "suíte verde" como critério. Pendente de "pode".
