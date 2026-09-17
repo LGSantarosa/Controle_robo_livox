@@ -132,7 +132,12 @@ oposto do que eu mesmo tinha documentado.
 
 Não há swap L/R no nó. Trocar canal de verdade exige mexer nos conectores dos
 motores ou um parâmetro novo que não existe — e eu **não** vou inventar código
-sem pedido. Até lá o ensaio mede curvatura por sentido (o que já vale), mas não
+sem pedido.
+
+> ⚠️ **Corrigido adiante nesta mesma entrada:** o "parâmetro novo" não é só
+> inexistente, **não funcionaria**. Na reta `L == R`, então `steer = 0` e trocar
+> L↔R entrega o frame idêntico à placa — swap de software ali é no-op. Fica a
+> frase original porque foi o que se pensou na hora. Até lá o ensaio mede curvatura por sentido (o que já vale), mas não
 separa causa de lado de causa de sentido, e o protocolo diz isso agora.
 
 Mais dois consertos da mesma revisão:
@@ -176,6 +181,10 @@ Um swap de software na reta é literalmente um no-op. Conferi no código antes d
 aceitar — e fico feliz de não ter escrito o parâmetro "só para destravar o
 ensaio": teria sido código novo, testado, versionado, e inútil.
 
+> 🔴 **ERRADO, corrigido adiante nesta mesma entrada:** tinham olhado sim — em
+> **14-09**, com os cabos já trocados e os números no `docs/dados/`. A frase
+> abaixo fica como registro do meu erro, não como afirmação.
+
 **O que entrou no lugar já existia e ninguém tinha olhado:**
 `/hoverboard/wheel_velocities` publica **RPM por roda**, e o `bin/sobe-robo3`
 **já grava**. Com os setpoints iguais na reta, o RPM separa:
@@ -197,6 +206,43 @@ PARALELA e não fecha etapa física nenhuma.**
 documento que eu tinha acabado de consertar**. Consertar cria contradição nova
 entre a parte corrigida e a que ficou — e é por isso que a varredura depois de
 editar deixou de ser zelo e virou parte do trabalho.
+
+### 🔴 "Ninguém tinha olhado" — e tinha, três dias antes, com os cabos trocados
+
+Apresentei o RPM por roda como achado meu: *"já existia e ninguém tinha
+olhado"*. **Mentira, sem intenção mas mentira.** Está medido e analisado desde
+**14-09**, em `docs/dados/2026-09-14-robo3-gnd-xbox-reta/`:
+
+| condição | FL × FR |
+|---|---|
+| no ar, +250 | L = R (**−0,1 %**) |
+| no ar, −250 | L **+2,7 %** |
+| **no chão, cabos JÁ TROCADOS na placa**, frente | **+9,8 %** (3/3 corridas) |
+| no chão, ré | **−1,8 %** |
+
+E o diário daquele dia já tinha o raciocínio: *"cabos trocados + frente" e
+"antes + ré" movem o robô para o mesmo lado físico, cada motor girando para o
+mesmo lado — e deram resultados diferentes.*
+
+**Os conectores já foram trocados uma vez.** Eu escrevi um protocolo propondo
+essa troca como se fosse passo inédito.
+
+➡️ O que o dado de 14-09 realmente diz: **no ar os canais são simétricos, no
+chão não**, já com os cabos trocados — aponta para algo **dependente do contato
+com o solo**, não para desequilíbrio eletrônico puro. O que falta para fechar é
+um **par controlado de RPM antes/depois** da troca; o "antes" daquele dia foi
+observação a olho.
+
+⚠️ E mais um exagero meu junto: escrevi que RPM iguais provariam "causa fora da
+tração". Não provam. Provam só que o puxão **não veio de diferença de velocidade
+angular medida nos eixos** — raio efetivo diferente, deformação do pneu,
+escorregamento e carga desigual continuam todos possíveis.
+
+**A lição, e é diferente das outras do dia:** as anteriores foram erros contra a
+minha própria documentação **recente**. Esta foi contra dado que o projeto já
+tinha, medido e escrito, e que eu não fui procurar antes de propor. Antes de
+desenhar ensaio novo, **ler o que já foi medido** — este repo guarda tudo em
+`docs/dados/` exatamente para isso.
 
 ### 📏 Lista de medidas da etapa 1 — e a tabela-resumo estava velha
 

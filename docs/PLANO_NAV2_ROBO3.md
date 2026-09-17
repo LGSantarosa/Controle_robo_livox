@@ -296,17 +296,24 @@ não grava pose, então o desvio se mede **no chão** e vira curvatura por
    troca. E mesmo um `swap_lr` novo seria inútil, porque o `mega_bridge` manda
    para a placa `speed = (L+R)/2` e `steer = (L−R)/2` — **na reta `L == R`**,
    logo `steer = 0` e trocar L↔R produz **o frame idêntico**.
-3. ➡️ **O que substitui, e usa dado que já se grava:**
-   `/hoverboard/wheel_velocities` traz **RPM por roda**, e o `bin/sobe-robo3` já
-   o registra. Com os dois setpoints iguais, o RPM responde direto:
-   - **as rodas giram diferente** → a assimetria está na roda/motor/realimentação
-     ou na carga sobre elas;
-   - **as rodas giram igual e o robô ainda puxa** → a causa está **fora** da
-     tração: geometria, boba, raio de pneu, piso.
+3. ➡️ **O que substitui — e ATENÇÃO, não é novidade: já foi medido em 14-09**
+   (`docs/dados/2026-09-14-robo3-gnd-xbox-reta/`). `/hoverboard/wheel_velocities`
+   traz RPM por roda e o `bin/sobe-robo3` já registra:
 
-   ⚠️ Isso **não** prova "elétrico": roda girando menos pode ser carga, não
-   canal. Separar canal de carga exige **trocar os conectores dos motores** —
-   ensaio físico definido com cuidado, não parâmetro.
+   | condição | FL × FR |
+   |---|---|
+   | no ar, +250 | L = R (−0,1 %) |
+   | no chão, **cabos já trocados**, frente | **+9,8 %** (3/3) |
+   | no chão, ré | −1,8 % |
+
+   **No ar simétrico, no chão não** — e com os conectores já trocados uma vez.
+   Aponta para algo que depende do **contato com o solo**.
+
+   ⚠️ **Não fecha:** falta par controlado de RPM antes/depois da troca (o
+   "antes" de 14-09 foi a olho). E **RPM iguais não provam "causa fora da
+   tração"** — provam só que o puxão não veio de diferença angular **medida nos
+   eixos**; raio efetivo, deformação do pneu, escorregamento e carga desigual
+   continuam possíveis.
 
 ---
 

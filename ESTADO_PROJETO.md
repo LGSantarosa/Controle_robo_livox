@@ -153,10 +153,17 @@ medido **no chão** contra uma fita, virando curvatura por `κ ≈ 2d/L²`.
 está** (achado de 17-09): eu escrevi que inverter `left_wheel_sign` e
 `right_wheel_sign` juntos troca os canais L/R. **Não troca** — aquilo é espelho
 (inverte frente e giro), e é o que o `cmd_vel_to_wheels.py` diz em texto escrito
-no mesmo dia. Não existe swap L/R no nó. Trocar canal de verdade exige mexer nos
-conectores dos motores **ou** um parâmetro novo que ainda não existe. Enquanto
-isso o ensaio mede curvatura por sentido, mas **não separa causa de lado de
-causa de sentido**.
+no mesmo dia. E **um parâmetro novo também não resolveria** — não é falta de
+código, é aritmética: o `mega_bridge` manda `speed=(L+R)/2` e `steer=(L−R)/2`, e
+na reta `L == R`, então trocar L↔R entrega **o frame idêntico**. Swap de
+software na reta é no-op.
+
+Trocar canal de verdade é **físico**, nos conectores dos motores — e ⚠️ **isso já
+foi feito uma vez, em 14-09**. O RPM por roda daquele dia
+(`docs/dados/2026-09-14-robo3-gnd-xbox-reta/`) mostra **no ar simétrico (−0,1 %)
+e no chão assimétrico (frente +9,8 %, ré −1,8 %)**, já com os cabos trocados —
+aponta para algo dependente do **contato com o solo**. Não fecha porque falta
+par controlado de RPM antes/depois; o "antes" foi a olho.
 
 ### 📏 A lista que originou isto: `docs/ETAPA1_MEDIDAS_ROBO3.md` (robô DESLIGADO)
 

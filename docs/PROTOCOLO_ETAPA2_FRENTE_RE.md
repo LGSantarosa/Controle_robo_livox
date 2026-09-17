@@ -1,7 +1,11 @@
 # Protocolo da etapa 2 — o ensaio de frente/ré do robô 3
 
-> Etapa 2 do `PLANO_NAV2_ROBO3.md`. **Mede** se o desvio na reta é efeito do
-> SENTIDO (bobas arrastadas × empurradas) ou de LADO (canal, roda, carga).
+> Etapa 2 do `PLANO_NAV2_ROBO3.md`. **Mede a curvatura da reta em cada sentido**
+> (`κ_A` × `κ_B`) e usa o RPM por roda como **diagnóstico**.
+>
+> 🔴 **Ele NÃO decide sozinho "sentido ou lado"** — a abertura dizia isso e era
+> promessa a mais. Separar canal de carga exige troca física de conectores com
+> par controlado de RPM antes/depois, que não existe (§1).
 >
 > 🔴 **Não começa sem os dois pré-requisitos**, e um deles ainda falta:
 > - ✅ placa decidida (17-09);
@@ -49,7 +53,7 @@ das duas:
 
 | caminho | avaliação |
 |---|---|
-| **trocar os conectores dos motores** na placa | é a troca de verdade. Física, com o robô **desligado**, e tem de ser anotada senão some do registro |
+| **trocar os conectores dos motores** na placa | é a troca de verdade. Física, com o robô **desligado**. ⚠️ **Já foi feita uma vez, em 14-09** — e por isso a próxima só vale com **par controlado de RPM antes/depois**: da outra vez o "antes" foi observação a olho, e é justamente o que impede de fechar canal × carga hoje |
 | ~~parâmetro `swap_lr` no `cmd_vel_to_wheels`~~ | 🔴 **NÃO FUNCIONARIA, e não é falta de código — é aritmética.** O `mega_bridge` manda para a placa `speed = (L+R)/2` e `steer = (L−R)/2`. Numa **reta** `L == R`, então `steer = 0` e trocar L↔R produz **o frame idêntico**. Um swap de software é literalmente um no-op aqui |
 
 ➡️ **O que dá para fazer sem troca nenhuma**, e com dado que o bag já grava:
@@ -168,15 +172,30 @@ como se você estivesse sentado no robô, olhando para onde ele vai.
    motoras à frente anda mais reto que o outro? Isso confirma ou derruba a
    premissa do §2 e a decisão 049.
 3. **O RPM por roda, do bag** (`/hoverboard/wheel_velocities`, já gravado).
-   Numa reta os dois setpoints são **iguais**, então:
-   - **rodas girando diferente** → a assimetria está na tração (roda, motor,
-     realimentação) **ou na carga sobre ela**;
-   - **rodas girando igual e o robô puxando** → a causa está **fora** da
-     tração: geometria, boba, raio de pneu, piso.
 
-   ⚠️ Isso **não** conclui "elétrico". Roda girando menos pode ser carga. Quem
-   separa canal de carga é **trocar os conectores dos motores** — ensaio físico
-   à parte, com o robô desligado para a troca.
+   🔴 **E isto NÃO é ideia nova — já foi medido em 14-09**, e o ensaio novo tem
+   de bater contra aquilo em vez de fingir que começa do zero
+   (`docs/dados/2026-09-14-robo3-gnd-xbox-reta/`):
+
+   | condição | FL × FR |
+   |---|---|
+   | **no ar**, +250 | L = R (**−0,1 %**) |
+   | no ar, −250 | L **+2,7 %** |
+   | **no chão, cabos JÁ trocados**, frente | **+9,8 %** (3/3 corridas) |
+   | no chão, ré | **−1,8 %** |
+
+   ➡️ A leitura: **no ar os canais são simétricos; no chão, não** — e isso com
+   os conectores já trocados. Aponta para algo que **depende do contato com o
+   solo**, não para um desequilíbrio puramente eletrônico.
+
+   ⚠️ **Mas não fecha**, e é honesto dizer por quê: falta um **par controlado de
+   RPM antes/depois** da troca de conectores. O "antes" de 14-09 foi observação
+   a olho.
+
+   ⚠️ **E RPM iguais NÃO provam "causa fora da tração"** — a versão anterior
+   desta seção dizia isso e era exagero. Provam só que o puxão **não veio de
+   diferença de velocidade angular medida nos eixos**. Continuam de pé: raio
+   efetivo diferente, deformação do pneu, escorregamento e carga desigual.
 4. Se a dispersão dentro de um sentido for da ordem da diferença entre os
    sentidos, **não decide nada** — e a resposta honesta é "precisa de mais
    corridas ou de instrumentação melhor", não escolher a hipótese preferida.
