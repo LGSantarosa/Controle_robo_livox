@@ -4,6 +4,18 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-09-17 (dev, robô desligado) — ROBÔ 2: A POSE SÓ ANDA COM AS RODAS
+
+Pedido do dono: a pose pula no mapa com o robô parado. Decisão 050.
+
+- Eu afirmei que o robô 1 tinha essa trava **antes de ler**; ele perguntou "é
+  assim que o 1 faz??" e não era: no robô 1 o efeito vem do odom de encoder, não
+  de um gate. Fracasso de método, registrado.
+- Feito: `recovery_alpha` zerados (cópia do robô 1) e `congela_parado` no
+  `tf_odom`, ligado só pela `base.launch.py`. 4 testes novos verdes; a suíte
+  tem as mesmas 2 falhas de antes (`test_scan_2d`, `test_plano_suavizado`).
+- 🔴 Não testado no robô.
+
 ## 2026-09-17 (dev, robô desligado) — O PLANO DO NAV2 LEVOU UMA REVISÃO E CAIU
 
 Fracasso documentado, que aqui é resultado: o `PLANO_NAV2_ROBO3.md` escrito

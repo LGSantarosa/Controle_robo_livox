@@ -21,12 +21,14 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 def generate_launch_description():
     share = get_package_share_directory('robot_base')
 
-    def incluir(nome):
+    def incluir(nome, **args):
         return IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(os.path.join(share, 'launch', nome))
+            PythonLaunchDescriptionSource(os.path.join(share, 'launch', nome)),
+            launch_arguments=args.items(),
         )
 
     return LaunchDescription([
         incluir('tracao.launch.py'),
-        incluir('localizacao.launch.py'),
+        # Rodas paradas = odom parado, para o AMCL não pular (decisão 050).
+        incluir('localizacao.launch.py', congela_parado='true'),
     ])

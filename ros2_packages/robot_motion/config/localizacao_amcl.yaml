@@ -51,8 +51,11 @@ amcl:
     update_min_a: 0.20      # rad girados antes de reamostrar
     resample_interval: 1
     transform_tolerance: 1.0
-    recovery_alpha_slow: 0.001
-    recovery_alpha_fast: 0.1
+    # 0,0 = SEM injeção de partícula aleatória, como no robô 1 (padrão do
+    # AMCL). Com 0,001/0,1 o filtro espalhava partículas pelo mapa ao
+    # reamostrar, e a pose pulava (decisão 050).
+    recovery_alpha_slow: 0.0
+    recovery_alpha_fast: 0.0
     tf_broadcast: true
 
     # ── a pose inicial VEM POR PARÂMETRO, e isto não é conveniência ──────

@@ -1,13 +1,22 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-09-16** (dev — robô 3 ganhou o
+> Versionado na `main`. Atualizado em **2026-09-17** (dev — robô 3 ganhou o
 > `frente:=-1.0` para trocar frente e ré; não testado no robô).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+---
+
+## 📍 17-09 dev — ROBÔ 2: AMCL SÓ CORRIGE COM AS RODAS ANDANDO
+
+- Contra a pose pulando parado: `recovery_alpha` = 0 e `tf_odom` com
+  `congela_parado` (ligado só na `base.launch.py`). Decisão 050.
+- 🔴 **NÃO TESTADO NO ROBÔ.** Ensaio: parar 1 min com `localizacao:=amcl` e ver
+  se a pose fica quieta; depois andar e ver se não dá degrau.
 
 ---
 

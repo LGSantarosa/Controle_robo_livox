@@ -58,8 +58,10 @@ from geometry_msgs.msg import TransformStamped
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy
+from std_msgs.msg import Float64
 from tf2_ros import Buffer, TransformBroadcaster, TransformListener
 
+from robot_base.congela_parado import CongelaParado
 from robot_base.transformadas import compoe, inverte
 
 
@@ -74,8 +76,21 @@ class TfOdom(Node):
             # FAST-LIO vier com um child_frame_id que não existe na árvore do
             # URDF (já aconteceu de upstream mandar 'body').
             ('frame_da_pose', ''),
+            # Robô 2 só (decisão 050): com as rodas paradas a TF não se mexe,
+            # e o AMCL não reamostra com o robô parado — o pulo no mapa.
+            ('congela_parado', False),
         ])
         self.par = {x.name: x.value for x in p}
+        self.congela = None
+        if self.par['congela_parado']:
+            self.congela = CongelaParado()
+            self.v = [0.0, 0.0]
+            for i, lado in enumerate(('left', 'right')):
+                self.create_subscription(
+                    Float64, f'/hoverboard/{lado}_wheel/velocity',
+                    lambda m, i=i: self.roda(i, m.data), 10)
+            self.get_logger().warn(
+                'congela_parado: rodas paradas = odom->base_link parado.')
         self.buffer = Buffer()
         self.listener = TransformListener(self.buffer, self)
         self.br = TransformBroadcaster(self)
@@ -89,6 +104,13 @@ class TfOdom(Node):
             f"{self.par['frame_pai']} -> {self.par['frame_filho']}. "
             'A pose do LIO é do SENSOR; a composição com o URDF é o que impede '
             'os 42 cm do Mid-360 de virarem erro silencioso de navegação.')
+
+    def agora(self):
+        return self.get_clock().now().nanoseconds * 1e-9
+
+    def roda(self, i, v):
+        self.v[i] = v
+        self.congela.rodas(self.agora(), *self.v)
 
     def uma_vez(self, chave, msg):
         """Loga uma vez por causa — este callback roda a 10 Hz."""
@@ -155,6 +177,9 @@ class TfOdom(Node):
             # existe porque em rampa a mesma conta não é uma subtração.
             t_i, q_i = inverte(t_s, q_s)
             t, q = compoe(t_i, q_i, t, q)
+
+        if self.congela is not None:
+            t, q = self.congela.passo(self.agora(), t, q)
 
         msg = TransformStamped()
         msg.header.stamp = m.header.stamp

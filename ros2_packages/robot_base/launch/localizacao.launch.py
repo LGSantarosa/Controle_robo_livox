@@ -33,6 +33,7 @@ from launch.actions import (
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 
 _COMO_RESOLVER = (
     'Esses pacotes não são versionados neste repo (upstream de terceiros, em '
@@ -102,6 +103,12 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'frame_da_pose', default_value='livox_frame',
             description='Frame do URDF a que a pose do FAST-LIO corresponde.'),
+        # Robô 2 só (decisão 050): congela o odom com as rodas paradas, para o
+        # AMCL não pular no mapa. Quem liga é a `base.launch.py`; o robô 3 lê
+        # outras rodas e sobe esta launch direto, com o padrão desligado.
+        DeclareLaunchArgument(
+            'congela_parado', default_value='false',
+            description='Congela odom->base_link com as rodas do hover paradas.'),
         LogInfo(msg=f'[livox]    {livox_launch}'),
         LogInfo(msg=f'[fast_lio] {fastlio_launch} (cfg: {fastlio_cfg})'),
         IncludeLaunchDescription(PythonLaunchDescriptionSource(livox_launch)),
@@ -118,6 +125,8 @@ def generate_launch_description():
              output='both',
              parameters=[{
                  'frame_da_pose': LaunchConfiguration('frame_da_pose'),
+                 'congela_parado': ParameterValue(
+                     LaunchConfiguration('congela_parado'), value_type=bool),
              }]),
         # A nuvem que a percepção consegue ler. O driver publica `CustomMsg`
         # (é o que o FAST-LIO come); costmaps e `collision_monitor` falam
