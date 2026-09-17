@@ -149,8 +149,10 @@ O protocolo resolve a medição sem pose — o robô 3 **terá** o Mid-360, ele 
 ainda **não está montado** (e a pose dele no URDF é provisória). Até lá: desvio
 medido **no chão** contra uma fita, virando curvatura por `κ ≈ 2d/L²`.
 
-🔴 **Mas o discriminador do protocolo está QUEBRADO e não pode ser rodado como
-está** (achado de 17-09): eu escrevi que inverter `left_wheel_sign` e
+🔴 **Mas o DISCRIMINADOR DE CANAL está quebrado** (achado de 17-09) — ⚠️ e só
+ele: a parte A × B do protocolo (curvatura por sentido) **roda normalmente**, e
+é ela que responde à decisão 049. O que fica de fora é a separação de causa.
+Eu escrevi que inverter `left_wheel_sign` e
 `right_wheel_sign` juntos troca os canais L/R. **Não troca** — aquilo é espelho
 (inverte frente e giro), e é o que o `cmd_vel_to_wheels.py` diz em texto escrito
 no mesmo dia. E **um parâmetro novo também não resolveria** — não é falta de
@@ -187,9 +189,11 @@ era a tabela que discordava. Grave porque é dela que a etapa 3 copia o contorno
 para o `nav2.yaml`: sairia um footprint **9 cm mais largo por lado**, e footprint
 inflado não dá erro — só faz o planejador recusar vão por onde o robô passa.
 Corrigido, e conferido que ninguém tinha copiado os números velhos para código. **Etapa 1** = fechar a placa e a
-geometria por trena. **Etapa 2** = o ensaio frente/ré, agora com protocolo
-objetivo (o bag de hoje **não grava pose**, porque o Mid-360 ainda não está
-montado no robô 3; até lá não há desvio lateral sem régua). **O Livox só sobe na etapa 7** — até lá o robô 2 continua navegando.
+geometria por trena. **Etapa 2** = o ensaio frente/ré, com protocolo objetivo (o
+bag **não grava pose**, porque o Mid-360 ainda não está montado; até lá o desvio
+se mede com régua). ⚠️ Ele mede **curvatura por sentido** — **não decide a causa**
+sozinho; separar canal de carga precisa de troca física de conectores com par
+controlado de RPM. **O Livox só sobe na etapa 7** — até lá o robô 2 continua navegando.
 - ⚠️ **Não é o `sinal:=-1.0`** que já existia: aquele é espelho (inverte o giro
   junto, reprovado em 14-09). `frente` é rotação. Decisão 049.
 - 🔴 **NÃO TESTADO NO ROBÔ.** Falta subir e rodar LB + direcional cima/baixo.

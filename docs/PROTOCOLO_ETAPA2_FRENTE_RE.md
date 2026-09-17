@@ -7,10 +7,10 @@
 > promessa a mais. Separar canal de carga exige troca física de conectores com
 > par controlado de RPM antes/depois, que não existe (§1).
 >
-> 🔴 **Não começa sem os dois pré-requisitos**, e um deles ainda falta:
+> 🔴 **Não começa sem os três pré-requisitos**, e um deles ainda falta:
 > - ✅ placa decidida (17-09);
-> - 🔴 **parada física independente do Xbox**;
-> - 🔴 **modo de medir o desvio** — este documento resolve.
+> - ✅ **modo de medir o desvio** — este documento resolve (§2);
+> - 🔴 **parada física independente do Xbox** — o que falta.
 
 ---
 
@@ -33,10 +33,21 @@ Assimetria de roda, de carga e o transiente das bobas dão o mesmo sinal.
 
 O discriminador honesto é outro, e é barato: **trocar os canais L/R e repetir.**
 
-| o puxão segue… | causa | o que fazer |
-|---|---|---|
-| o **canal** (troca de lado quando L/R trocam) | roda, motor, realimentação ou cabo — é **elétrico/mecânico de um lado** | conserta na origem; o contorno de 049 não resolve |
-| o **sentido** (fica no mesmo lado do corpo, apesar da troca) | **geometria**: bobas arrastadas × empurradas | a hipótese do plano se confirma, e 049 é o conserto certo |
+🔴 **Tabela corrigida em 17-09 — a anterior era forte demais.** Ela dizia que
+"segue o canal → roda, motor, realimentação ou cabo", juntando num balde só
+coisas que a troca de conectores **separa**: trocar conectores move qual **canal
+da placa** aciona qual motor, mas o **motor e a roda continuam no mesmo lado do
+corpo**. Então um motor ruim **não** segue o canal.
+
+| depois de trocar os conectores, o puxão… | o que isso indica |
+|---|---|
+| **troca de lado do corpo** (segue o canal) | o defeito está **do lado da placa**: canal, cabo ou realimentação |
+| **fica no mesmo lado do corpo** | o defeito está **do lado da máquina**: motor, roda, raio efetivo, carga. ⚠️ A troca **não separa esses entre si** |
+| **depende do SENTIDO** (muda entre A e B, não com a troca) | aponta para **geometria/bobas** — a hipótese do plano, e o terreno da decisão 049 |
+
+⚠️ E nenhuma das três linhas é conclusiva sozinha com **n = 1 troca**: sem o par
+controlado de RPM antes/depois, "trocou de lado" e "ficou" se confundem com a
+dispersão entre corridas.
 
 🔴 **ERRO GRAVE DESTA SEÇÃO, corrigido em 17-09 — leia antes de executar.**
 
@@ -47,9 +58,12 @@ diz o contrário, em texto escrito no mesmo dia: inverter os dois é um
 *Rotação ≠ reflexão* (decisão 049). Nenhum dos dois troca qual roda física
 recebe qual setpoint, e **não existe parâmetro de swap L/R no nó**.
 
-➡️ **Consequência: o discriminador do §1 NÃO é executável hoje**, e este
-protocolo não deve ser rodado como se fosse. Trocar canal de verdade exige uma
-das duas:
+➡️ **Consequência: o discriminador de canal NÃO é executável hoje.** ⚠️ Isso
+**não** invalida o protocolo inteiro — a parte A × B (curvatura por sentido, §6)
+roda normalmente e é ela que responde à decisão 049. O que fica de fora é só a
+separação de causa.
+
+Trocar canal de verdade tem **um** caminho viável, e um que parecia haver:
 
 | caminho | avaliação |
 |---|---|
