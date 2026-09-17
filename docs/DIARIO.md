@@ -126,12 +126,33 @@ etapa 9; e o teste só ganha dente **depois** dela, validando a estratégia
 escolhida. Entra na etapa 0 também o comentário do `scan_2d.yaml:48`, que afirma
 como regra (*"`range_min` 0,35 > raio do robô"*) o que esta rodada derrubou.
 
-**O padrão das cinco rodadas**, e é a lição do dia para o artigo: as duas
+### Sexta rodada (v2.5) — "teste diagnóstico" é teste que não afirma nada
+
+A última achou o excesso que eu tinha deixado ao consertar o excesso anterior.
+Para não petrificar o corte, a v2.4 mandou a etapa 0 calcular a envolvente
+"só como diagnóstico, sem asserção". Dois problemas: **(a)** a coerência que
+isso protegeria **já é testada** — `test_o_alcance_do_amcl_bate_com_o_do_SCAN`
+exige *igualdade* entre `laser_min_range` e `range_min` (e entre os `max`),
+cruzando `robot_motion` e `robot_base`, e passa hoje; **(b)** um teste que não
+afirma nada é código a manter com **aparência** de rigor — pior que não ter.
+
+A etapa 0 ficou no osso: remover o teste inválido, corrigir o texto dele e o
+comentário categórico do `scan_2d.yaml:48`, manter o de coerência. O cálculo da
+envolvente — a parte cara — espera haver estratégia de filtragem para validar.
+
+E a etapa 9 deixou de fechar na escolha: ela está **incompleta** enquanto os
+testes da estratégia escolhida não existirem. Chamar aquilo de "depois da 9"
+deixava a etapa terminar com uma decisão tomada e nada travando, que é como
+escolha vira folclore aqui.
+
+**O padrão das seis rodadas**, e é a lição do dia para o artigo: as duas
 primeiras acharam erro de arquitetura (não li o código antes de planejar), a
-terceira um número herdado de outra máquina, a quarta incoerência de texto, e a
-quinta — a mais sutil — **uma trava que eu mesmo inventei e que impedia a
-solução certa**. Nenhuma das cinco achou erro de direção. O plano estava indo
-para o lugar certo desde a v1; o que faltava era ele ser verdadeiro nos detalhes.
+terceira um número herdado de outra máquina, a quarta incoerência de texto, a
+quinta **uma trava que eu mesmo inventei e que impedia a solução certa**, e a
+sexta **uma proteção que não protegia**. Nenhuma das seis achou erro de direção.
+O plano estava indo para o lugar certo desde a v1; o que faltava era ele ser
+verdadeiro nos detalhes — e três das seis correções foram contra excesso meu,
+não contra falta.
 
 ## 2026-09-16 (dev, robô desligado) — CONTORNAR: A RÉ VIRA A FRENTE
 

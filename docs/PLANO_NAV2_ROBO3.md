@@ -1,14 +1,16 @@
-# Plano — adaptar o Nav2 para o robô 3 (v2.4)
+# Plano — adaptar o Nav2 para o robô 3 (v2.5)
 
 > **Status: nada implementado. Aguardando a aprovação do dono.**
-> **Cinco** revisões cruzadas em dois dias, e cada uma achou coisa real:
+> **Seis** revisões cruzadas em dois dias, e cada uma achou coisa real:
 >
 > - **v1** (2026-09-16) — a primeira revisão **derrubou duas etapas inteiras**
 >   (§1): a pilha não subia sobre o simulador do robô 3 e a localização não
 >   tinha TF.
-> - **v2** (2026-09-17) — a segunda pediu cinco ajustes, todos aplicados:
->   classificação de parâmetros; a fronteira `TwistStamped → Twist` passa a ser
->   **decidida** na etapa 5 e não adiada (§4); parada física virou
+> - **v2** (2026-09-17) — reescrita inteira depois da primeira revisão: ordem
+>   nova, bringup do robô 3 como etapa própria, Livox adiado para a etapa 7.
+> - **v2.1** (mesmo dia) — a segunda revisão pediu cinco ajustes, todos
+>   aplicados: classificação de parâmetros; a fronteira `TwistStamped → Twist`
+>   passa a ser **decidida** na etapa 5 e não adiada (§4); parada física virou
 >   **pré-requisito das etapas 2, 8, 9 e 10**; a contradição do
 >   `ESTADO_PROJETO` corrigida (trocar o lado do puxão **não** prova causa de
 >   canal); validação do LIO ampliada para a pose 6D.
@@ -38,6 +40,15 @@
 >   o teste da etapa 0 **vetaria** a saída por filtro espacial antes de a etapa 9
 >   poder avaliá-la. A relação certa é `autorretorno visível máximo ≤ envolvente`
 >   — cota **superior** do autorretorno, não piso do corte (§8).
+>
+> - **v2.5** (ainda 17-09) — a sexta enxugou a etapa 0: a coerência
+>   `range_min`↔`laser_min_range` **já é testada** (e com igualdade) em
+>   `test_configs_coerentes.py`, então calcular a envolvente "só como
+>   diagnóstico" seria **teste que não afirma nada** — saiu. A etapa 0 fica em:
+>   remover o teste inválido, corrigir os textos, manter o de coerência. E a
+>   etapa 9 passa a estar **incompleta** até os testes da estratégia escolhida
+>   existirem, em vez de "depois da 9". Editorial: o histórico omitia a **v2.1**
+>   e atribuía os ajustes dela à v2 — corrigido acima.
 >
 > O que sobreviveu de todas: consertar o teste da etapa 0 **não é** trocar
 > `robot_radius` por footprint — isso reprovaria o robô 2 (0,447 m contra
@@ -258,7 +269,7 @@ Uma etapa por sessão. Nenhuma começa sem a anterior fechada.
 
 | # | etapa | prova / entrega | precisa do robô? |
 |---|---|---|---|
-| 0 | Consertar `test_scan_2d.py` (vermelho por `robot_radius` da 032) — tirar a dependência, **envolvente só como diagnóstico** (§8) | "suíte verde" volta a ser critério válido de etapa, **sem petrificar o corte** | não |
+| 0 | Consertar `test_scan_2d.py` (vermelho por `robot_radius` da 032) — **escopo enxuto do §8**: remover o teste inválido, corrigir os textos, manter o de coerência que já passa | "suíte verde" volta a ser critério válido, **sem petrificar o corte e sem teste que não afirma nada** | não |
 | 1 | Fechar **a placa** (§5.1 da revisão cruzada) e a geometria física autoritativa (trena) | sem isso a etapa 8 recomeça do zero | sim, desligado |
 | 2 | Repetir o ensaio frente/ré com o protocolo do §7 | confirma ou derruba a premissa do §2 | sim, ligado |
 | 3 | URDF completo girado (§3) + `robot_state_publisher` + footprints + testes reescritos | modelo e marcha concordam; o Nav2 passa a ter contorno | não |
@@ -267,7 +278,7 @@ Uma etapa por sessão. Nenhuma começa sem a anterior fechada.
 | 6 | Ensinar a `pilha` a escolher `sim_robo3` (`robo:=3`, `use_sim_time`, qual atuador encerra) | a etapa 3 da v1, agora possível | não |
 | 7 | Montar o Livox, medir a pose **6D** e validar o LIO por inteiro (abaixo) | a árvore de TF fecha com medida, não com chute | sim |
 | 8 | Calibrar escala e dinâmica (§6); depois rumo e curvatura | os números do Nav2 passam a ter lastro físico | sim |
-| 9 | Validar percepção e reflexo (`scan_2d`, `collision_monitor`) — **os dois lados do `range_min`, ver §8** | o robô enxerga e freia antes de planejar, **e não fica cego na frente** | sim |
+| 9 | Validar percepção e reflexo (`scan_2d`, `collision_monitor`) — **os dois lados do `range_min`** (§8), escolher a estratégia **e escrever os testes dela** | o robô enxerga e freia antes de planejar, **e não fica cego na frente**. 🔴 Não fecha só com a escolha | sim |
 | 10 | Nav2 `mapa:=nenhum`, espaço livre, **parada física independente do Xbox** | objetivo curto | sim |
 
 ⚠️ A ordem mudou de verdade em relação à v1: **o Livox só sobe na etapa 7**, e
@@ -317,22 +328,36 @@ autoritativa do robô 3 só fecha nas etapas **1** (trena) e **3** (URDF girado)
 Prometer "por robô" na etapa 0 é prometer contra coisa que ainda não existe.
 Então:
 
-- **etapa 0**: **remove a dependência do `robot_radius`** (é o que destrava
-  "suíte verde" como critério), confere **coerência de configuração**, e calcula
-  a envolvente **só como diagnóstico** — sem exigir `range_min` maior que ela.
-  Entra também a correção do comentário ainda categórico do
-  `scan_2d.yaml:48` (*"`range_min` 0,35 > raio do robô (0,32)"*), que afirma
-  como regra o que a v2.4 acabou de derrubar e cita um `robot_radius` que não
-  existe mais;
-- **etapa 9**: mede o autorretorno **real** e escolhe entre corte radial e
-  filtro espacial;
-- **depois da 9**: o teste passa a validar a **estratégia escolhida**, incluindo
-  a visibilidade logo fora do contorno;
+**Etapa 0 — escopo enxuto (v2.5), e é só isto:**
+
+1. **remover** `test_o_robo_nao_se_enxerga_como_parede`, que é inválido: ele
+   afirma uma desigualdade que a v2.4 derrubou e depende de um `robot_radius`
+   que saiu na decisão 032;
+2. **corrigir o texto** que sobra dele e o **comentário do `scan_2d.yaml:48`**
+   (*"`range_min` 0,35 > raio do robô (0,32)"*), categórico e citando o mesmo
+   parâmetro extinto;
+3. **manter** o teste de coerência AMCL↔fatia que **já existe e já passa** —
+   `test_o_alcance_do_amcl_bate_com_o_do_SCAN`, parametrizado em
+   (`laser_min_range`,`range_min`) e (`laser_max_range`,`range_max`), exigindo
+   **igualdade** entre `robot_motion` e `robot_base`.
+
+🔴 **O que NÃO entra: calcular a envolvente "como diagnóstico".** Um teste que
+não afirma nada não protege nada — é código a manter com aparência de rigor. A
+coerência que a v2.4 queria proteger **já está coberta** pelo item 3. O cálculo
+da envolvente espera haver uma **estratégia concreta de filtragem** para validar.
+
+- **etapa 9**: mede o autorretorno **real** e **escolhe** entre corte radial e
+  filtro espacial. ⚠️ Ela **não fecha** na escolha: só está completa quando os
+  **testes da estratégia escolhida** estiverem escritos (§8, abaixo);
 - **etapa 4**: quando os perfis existirem, tudo isso passa a valer **por robô**.
 
-⚠️ **E não é "uma linha".** Calcular a envolvente a partir do URDF exige
-interpretar caixas, rodas, alturas e as transformações até o `base_link`. Eu
-disse "uma linha" no §9 da v2.2 — estava errado, e a correção está lá.
+⚠️ **Sobre o custo disto, e a conta mudou duas vezes.** Calcular a envolvente a
+partir do URDF exige interpretar caixas, rodas, alturas e as transformações até
+o `base_link` — não é "uma linha", como eu havia escrito na v2.2. Mas na **v2.5
+esse cálculo saiu da etapa 0** (acima): sem estratégia de filtragem para
+validar, ele não protegeria nada. Então a etapa 0 **voltou a ser pequena**, e o
+aviso de custo passa a valer para **quando a envolvente for de fato calculada**,
+na etapa 9 ou depois — não para agora.
 
 🔴 **Erro da v2.1, corrigido aqui (17-09):** eu escrevi que a envolvente do robô
 3 era 0,196 m, que é a meia-diagonal em torno do **centro da caixa**. Errado: o
@@ -392,11 +417,15 @@ radial** — é **filtro espacial/angular de autorretorno** (descartar por *onde
 ponto está no `base_link`, não por *quão perto* ele está). Fica registrado aqui
 para não ser reinventado no susto, no meio da etapa 9.
 
-➡️ **E só DEPOIS da etapa 9 o teste ganha dente**: ele passa a validar a
-estratégia que foi escolhida — se o corte é radial, que ele cubra o autorretorno
-medido; se é filtro espacial, que o filtro pegue o autorretorno **e** que a
-visibilidade logo fora do contorno continue de pé. Antes disso o teste não tem
-o que travar, e fingir que tem foi o erro da v2.3.
+➡️ **E o teste só ganha dente com a estratégia escolhida** — se o corte é radial,
+que ele cubra o autorretorno medido; se é filtro espacial, que o filtro pegue o
+autorretorno **e** que a visibilidade logo fora do contorno continue de pé.
+Antes disso o teste não tem o que travar, e fingir que tem foi o erro da v2.3.
+
+🔴 **Isso é parte da etapa 9, não "depois" dela (v2.5).** Chamar de "depois"
+deixava a etapa fechar com uma decisão tomada e nada travando — que é
+exatamente como uma escolha vira folclore no projeto. **A etapa 9 está
+incompleta enquanto os testes da estratégia escolhida não existirem.**
 
 **Validação do LIO na etapa 7 (a v1 pedia só x, y e yaw):**
 z, roll e pitch; **deriva com o robô parado**; **sentido positivo do yaw**
@@ -417,7 +446,7 @@ z, roll e pitch; **deriva com o robô parado**; **sentido positivo do yaw**
 3. **Só LIO no começo**, deixando IMU e optical flow da MEGA de fora: um sensor
    a mais sem necessidade é um modo de falha a mais.
 4. **Quero fazer a etapa 0 agora?** Não toca o robô, e sem ela não dá para usar
-   "suíte verde" como critério. ⚠️ **Não é "uma linha"**, como esta lista dizia
-   até a v2.2: calcular a envolvente do URDF exige interpretar caixas, rodas,
-   alturas e transformações. E ela vale **só para o robô 2 de hoje** — a versão
-   "por robô" é etapa 4 (§8). Pendente de "pode".
+   "suíte verde" como critério. Com o escopo enxuto da v2.5 ela **voltou a ser
+   pequena**: remover um teste inválido e corrigir dois textos — o cálculo da
+   envolvente, que era a parte cara, saiu de cena até haver estratégia de
+   filtragem para validar (§8). Pendente de "pode".
