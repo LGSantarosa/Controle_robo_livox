@@ -244,6 +244,39 @@ tinha, medido e escrito, e que eu não fui procurar antes de propor. Antes de
 desenhar ensaio novo, **ler o que já foi medido** — este repo guarda tudo em
 `docs/dados/` exatamente para isso.
 
+### 🔴 E aí eu li o dado errado: comparação de duas variáveis ao mesmo tempo
+
+Mal incorporei o RPM de 14-09 e tirei dele a conclusão *"no ar simétrico, no chão
+não, logo depende do contato com o solo"*. **Não segue.** As duas condições
+diferem em **duas** variáveis:
+
+```
+no ar    speed = ±250
+no chão  dpad 0,30 m/s × escala 400 = ±120
+```
+
+A placa tem zona morta e resposta não linear — o salto de −0,1 % para +9,8 %
+pode ser da **magnitude do comando**, não do solo. Confirmei a escala no
+`teleop_xbox_robo3.yaml` (que já traz o comentário *"→ 120 unidades na placa"*)
+e no CSV, onde `dpad_x` só assume ±0,3.
+
+O enunciado certo, e é o que ficou nos três documentos: **os dados são
+compatíveis com efeito de carga/contato, mas estão confundidos por comandos
+diferentes.** Separar é barato — repetir no ar e no chão com o mesmo setpoint,
+tensão e configuração, no mesmo dia do ensaio.
+
+**E um segundo dataset que eu de novo não fui ver antes de propor:**
+`docs/dados/2026-09-15-robo3-pivo-parcial/`. No pivô, **nos dois sentidos a roda
+que gira fisicamente para trás é a mais rápida** (L −125,9 × R +78,9; depois
+R −122,5 × L +91,0). O próprio registro se marca NÃO CONCLUSIVO — pivô esquerdo
+com `speed` contaminado, direito com 21 amostras —, mas aponta para **sentido de
+rotação da roda**, não para canal. Ensaio novo que ignore isso nasce no escuro.
+
+**O padrão, agora nomeado:** eu corro para a conclusão assim que aparece um dado.
+Duas vezes seguidas com o mesmo conjunto — primeiro não fui buscá-lo, depois o
+li sem controlar as variáveis. A pergunta que faltou nas duas é a mesma e é
+barata: *"o que mais mudou entre as duas condições?"*
+
 ### 📏 Lista de medidas da etapa 1 — e a tabela-resumo estava velha
 
 Escrita a `ETAPA1_MEDIDAS_ROBO3.md`: o dono passa a trena e anota, eu comparo e

@@ -275,15 +275,16 @@ medida de desvio lateral sem régua ou câmera externa.
 
 O ensaio só vale com: distância e velocidade fixas, orientação inicial marcada,
 **alinhamento prévio das bobas** (elas têm memória do movimento anterior), ordem
-**alternada** entre os dois sentidos, tensão da bateria anotada a cada corrida, e
-uma medida objetiva de curvatura — não "andou tortinho".
+**contrabalanceada** (blocos `ABBA`/`BAAB`) entre os dois sentidos, tensão da
+bateria anotada a cada corrida, e uma medida objetiva de curvatura — não "andou
+tortinho".
 
 ➡️ **Escrito por inteiro em `docs/PROTOCOLO_ETAPA2_FRENTE_RE.md`** (17-09), que
 resolve o pré-requisito da medição: com o Mid-360 **ainda não montado**, o bag
 não grava pose, então o desvio se mede **no chão** e vira curvatura por
 `κ ≈ 2d/L²` — número comparável com o `curv_frente` do robô 2.
 
-⚠️ Duas coisas mudaram em relação ao que este §7 dizia antes:
+⚠️ Três coisas mudaram em relação ao que este §7 dizia antes:
 
 1. **Ordem contrabalanceada em blocos `ABBA`/`BAAB`**, não "alternada" e não
    sorteada. `A B A B` parece alternar mas põe **A sempre antes de B**, então a
@@ -306,14 +307,22 @@ não grava pose, então o desvio se mede **no chão** e vira curvatura por
    | no chão, **cabos já trocados**, frente | **+9,8 %** (3/3) |
    | no chão, ré | −1,8 % |
 
-   **No ar simétrico, no chão não** — e com os conectores já trocados uma vez.
-   Aponta para algo que depende do **contato com o solo**.
+   🔴 **Mas a comparação ar × chão NÃO é controlada** — eu li como "depende do
+   contato" e não segue: no ar o comando foi `speed ±250`, no chão `±120`
+   (dpad 0,30 × escala 400). Com zona morta e resposta não linear, a magnitude
+   sozinha pode explicar. **Compatível com carga/contato, confundido por
+   comandos diferentes.** Separar é barato: repetir no ar e no chão com o
+   **mesmo setpoint, tensão e configuração**.
 
-   ⚠️ **Não fecha:** falta par controlado de RPM antes/depois da troca (o
-   "antes" de 14-09 foi a olho). E **RPM iguais não provam "causa fora da
+   ⚠️ Falta também o par controlado de RPM antes/depois da troca de conectores
+   (o "antes" de 14-09 foi a olho). E **RPM iguais não provam "causa fora da
    tração"** — provam só que o puxão não veio de diferença angular **medida nos
-   eixos**; raio efetivo, deformação do pneu, escorregamento e carga desigual
-   continuam possíveis.
+   eixos**.
+
+   **Terceiro dado anterior, que também entra** (`docs/dados/2026-09-15-robo3-pivo-parcial/`):
+   no pivô, nos dois sentidos **a roda que gira para trás é a mais rápida**.
+   NÃO CONCLUSIVO pelo próprio registro, mas aponta para **sentido de rotação**,
+   não para canal.
 
 ---
 

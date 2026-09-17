@@ -57,9 +57,10 @@ das duas:
 | ~~parâmetro `swap_lr` no `cmd_vel_to_wheels`~~ | 🔴 **NÃO FUNCIONARIA, e não é falta de código — é aritmética.** O `mega_bridge` manda para a placa `speed = (L+R)/2` e `steer = (L−R)/2`. Numa **reta** `L == R`, então `steer = 0` e trocar L↔R produz **o frame idêntico**. Um swap de software é literalmente um no-op aqui |
 
 ➡️ **O que dá para fazer sem troca nenhuma**, e com dado que o bag já grava:
-ler o **RPM por roda** (`/hoverboard/wheel_velocities`). Com os setpoints
-iguais, ele separa "a tração está assimétrica" de "a tração está simétrica e o
-robô puxa mesmo assim". Ver §6.
+ler o **RPM por roda** (`/hoverboard/wheel_velocities`). Ele mostra se houve
+**diferença de velocidade angular medida nos eixos** — e só isso. ⚠️ RPM iguais
+**não** provam que a causa está fora da tração: raio efetivo, deformação do
+pneu, escorregamento e carga desigual não aparecem no RPM. Ver §6.
 
 ⚠️ O ensaio mede a **curvatura por sentido** (A × B) — o que já responde a
 pergunta da decisão 049 — e o RPM estreita a causa. O que continua fora de
@@ -118,7 +119,7 @@ propriedade da máquina, e é comparável com o `curv_frente` do robô 2 (−0,8
 
 ---
 
-## 4. A ordem, e por que ela é alternada
+## 4. A ordem, e por que ela é contrabalanceada
 
 **6 corridas por sentido, em blocos CONTRABALANCEADOS** (ABBA / BAAB):
 
@@ -184,13 +185,33 @@ como se você estivesse sentado no robô, olhando para onde ele vai.
    | **no chão, cabos JÁ trocados**, frente | **+9,8 %** (3/3 corridas) |
    | no chão, ré | **−1,8 %** |
 
-   ➡️ A leitura: **no ar os canais são simétricos; no chão, não** — e isso com
-   os conectores já trocados. Aponta para algo que **depende do contato com o
-   solo**, não para um desequilíbrio puramente eletrônico.
+   🔴 **CUIDADO COM A LEITURA — esta comparação NÃO é controlada.** A versão
+   anterior desta seção dizia "no ar simétrico, no chão não, logo depende do
+   contato". **Não segue**: as duas condições diferem em **duas** variáveis.
 
-   ⚠️ **Mas não fecha**, e é honesto dizer por quê: falta um **par controlado de
-   RPM antes/depois** da troca de conectores. O "antes" de 14-09 foi observação
-   a olho.
+   ```
+   no ar    speed = ±250
+   no chão  dpad 0,30 m/s × escala 400 = ±120
+   ```
+
+   A placa tem **zona morta e resposta não linear**, então a diferença
+   −0,1 % → +9,8 % pode ser efeito da **magnitude do comando**, não do solo.
+
+   ➡️ Conclusão honesta: **os dados são compatíveis com efeito de carga/contato,
+   mas estão confundidos por comandos diferentes.** Para separar, repetir no ar
+   e no chão com **o mesmo setpoint, a mesma tensão e a mesma configuração** —
+   e isso é barato, cabe no mesmo dia do ensaio.
+
+   ⚠️ E falta também o **par controlado de RPM antes/depois** da troca de
+   conectores; o "antes" de 14-09 foi observação a olho.
+
+   **E há um terceiro dado anterior, que também precisa constar**
+   (`docs/dados/2026-09-15-robo3-pivo-parcial/`): no pivô, **nos dois sentidos a
+   roda que gira fisicamente para trás é a mais rápida** (L −125,9 × R +78,9;
+   depois R −122,5 × L +91,0). Marcado **NÃO CONCLUSIVO** pelo próprio registro
+   — pivô esquerdo com `speed` contaminado, direito com 21 amostras. Mas aponta
+   para **sentido de rotação da roda**, não para canal, e um ensaio novo que o
+   ignore está desenhado no escuro.
 
    ⚠️ **E RPM iguais NÃO provam "causa fora da tração"** — a versão anterior
    desta seção dizia isso e era exagero. Provam só que o puxão **não veio de

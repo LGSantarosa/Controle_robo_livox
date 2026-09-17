@@ -160,10 +160,18 @@ software na reta é no-op.
 
 Trocar canal de verdade é **físico**, nos conectores dos motores — e ⚠️ **isso já
 foi feito uma vez, em 14-09**. O RPM por roda daquele dia
-(`docs/dados/2026-09-14-robo3-gnd-xbox-reta/`) mostra **no ar simétrico (−0,1 %)
-e no chão assimétrico (frente +9,8 %, ré −1,8 %)**, já com os cabos trocados —
-aponta para algo dependente do **contato com o solo**. Não fecha porque falta
-par controlado de RPM antes/depois; o "antes" foi a olho.
+(`docs/dados/2026-09-14-robo3-gnd-xbox-reta/`) mostra no ar **−0,1 %** e no chão
+**frente +9,8 %, ré −1,8 %**, já com os cabos trocados.
+
+🔴 **Mas essa comparação NÃO é controlada, e eu li errado:** no ar o comando foi
+`speed ±250` e no chão `±120` (dpad 0,30 × escala 400). Com zona morta e resposta
+não linear, a magnitude sozinha pode explicar o salto. O certo: **compatível com
+carga/contato, confundido por comandos diferentes** — separar exige repetir no ar
+e no chão com o mesmo setpoint, tensão e configuração.
+
+⚠️ E há um terceiro dado (`docs/dados/2026-09-15-robo3-pivo-parcial/`): no pivô,
+nos dois sentidos **a roda que gira para trás é a mais rápida** — NÃO CONCLUSIVO,
+mas aponta para sentido de rotação, não para canal.
 
 ### 📏 A lista que originou isto: `docs/ETAPA1_MEDIDAS_ROBO3.md` (robô DESLIGADO)
 
