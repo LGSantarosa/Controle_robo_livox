@@ -270,8 +270,24 @@ desvio lateral sem régua ou câmera externa.
 
 O ensaio só vale com: distância e velocidade fixas, orientação inicial marcada,
 **alinhamento prévio das bobas** (elas têm memória do movimento anterior), ordem
-**aleatorizada** entre os dois sentidos, tensão da bateria anotada a cada
-corrida, e uma medida objetiva de curvatura — não "andou tortinho".
+**alternada** entre os dois sentidos, tensão da bateria anotada a cada corrida, e
+uma medida objetiva de curvatura — não "andou tortinho".
+
+➡️ **Escrito por inteiro em `docs/PROTOCOLO_ETAPA2_FRENTE_RE.md`** (17-09), que
+resolve o pré-requisito da medição: sem Livox no robô 3 o bag não grava pose,
+então o desvio se mede **no chão** e vira curvatura por `κ ≈ 2d/L²` — número
+comparável com o `curv_frente` do robô 2.
+
+⚠️ Duas coisas mudaram em relação ao que este §7 dizia antes:
+
+1. **Ordem alternada, não aleatorizada.** Com N pequeno, alternar balanceia a
+   queda de bateria e o aquecimento de forma **estrita**; sortear só balanceia
+   em média, e é justamente com poucas corridas que a média não protege.
+2. **O discriminador é trocar os canais L/R**, não observar de que lado o robô
+   puxa. Se o desvio segue o canal → causa de lado (elétrica/mecânica); se segue
+   o sentido apesar da troca → causa geométrica, e a premissa do §2 se confirma.
+   Feito em software, invertendo `left_wheel_sign` e `right_wheel_sign` **juntos**
+   — não confundir com `frente:=`, que é rotação (decisão 049).
 
 ---
 
@@ -283,7 +299,7 @@ Uma etapa por sessão. Nenhuma começa sem a anterior fechada.
 |---|---|---|---|
 | 0 | ✅ **FEITA (17-09)** — teste inválido removido, textos corrigidos, o de coerência intacto | `test_scan_2d.py` **7/7 verde**; o corte não ficou petrificado e não entrou teste que não afirma nada | não |
 | 1 | ✅ **FEITA (17-09)** — placa respondida (*mesmo modelo do 1 e do 2, peça própria*) e geometria medida com trena | 4 valores do URDF corrigidos, **D3 e D4 encerradas**. ⚠️ A etapa 8 **continua sendo medição**: mesmo modelo não prova mesmo firmware, e a bitola ficou **nominal** | foi, desligado |
-| 2 | Repetir o ensaio frente/ré com o protocolo do §7 | confirma ou derruba a premissa do §2 | sim, ligado |
+| 2 | Ensaio frente/ré — **protocolo escrito em `PROTOCOLO_ETAPA2_FRENTE_RE.md`** | confirma ou derruba a premissa do §2. 🔴 Falta só a **parada física** | sim, ligado |
 | 3 | URDF completo girado (§3) + `robot_state_publisher` + footprints + testes reescritos | modelo e marcha concordam; o Nav2 passa a ter contorno | não |
 | 4 | Perfis `robo2`/`robo3` e **um bringup único** do robô 3 | RSP + MEGA + `cmd_vel_to_wheels` + Xbox/direcional + mux único num lugar só | não |
 | 5 | Unificar o contrato de mensagens (§4) e testar a cadeia **sem Gazebo** | comando atravessa de ponta a ponta, sem simulador para confundir | não |

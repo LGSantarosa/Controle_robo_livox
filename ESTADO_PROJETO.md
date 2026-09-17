@@ -119,9 +119,16 @@ direito.
 - **Ainda aberto:** `roda_raio` (fecha por corrida reta, etapa 8), Livox (etapa
   7) e massas (só depois de Livox e NUC subirem).
 
-➡️ **Próxima:** etapa 2 — o ensaio frente/ré. Ela tem três pré-requisitos, e o
-primeiro acabou de cair: placa decidida ✅, **parada física independente do Xbox**
-🔴 e **protocolo de régua/câmera** 🔴.
+➡️ **Próxima:** etapa 2 — o ensaio frente/ré. Dos três pré-requisitos, **dois já
+caíram**: placa decidida ✅, protocolo escrito ✅
+(`docs/PROTOCOLO_ETAPA2_FRENTE_RE.md`), e falta só a **parada física
+independente do Xbox** 🔴 — que é hardware, não documento.
+
+O protocolo resolve a medição sem pose (o robô 3 não tem Livox, o bag não grava
+pose): desvio medido **no chão** contra uma fita, virando curvatura por
+`κ ≈ 2d/L²`. E o discriminador não é "de que lado ele puxa" — é **trocar os
+canais L/R** e ver se o desvio segue o canal (causa elétrica/mecânica) ou o
+sentido (causa geométrica, a hipótese das bobas).
 
 ### 📏 A lista que originou isto: `docs/ETAPA1_MEDIDAS_ROBO3.md` (robô DESLIGADO)
 

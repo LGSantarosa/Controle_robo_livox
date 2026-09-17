@@ -87,6 +87,33 @@ virar hábito de invocação. Fica reforçado: **a suíte deste repo se roda da 
 sem passar caminho.** Quando o resultado for estranho, a primeira suspeita é a
 invocação, não a mudança.
 
+### 🔴 O TESTE DE REGRESSÃO ESCONDIA O BUG QUE ELE DEVIA PEGAR
+
+E o bug da trava precisou de **duas** voltas. A 1ª correção zerava o cronômetro
+dentro de `congelado()` — e o teste que escrevi para ela **chamava `congelado()`
+durante o apagão**. Era a própria chamada do teste que fazia a limpeza. Verde,
+convincente, e o defeito intacto: bastava ninguém consultar a trava (roda de um
+lado muda **e** LIO calado) para o primeiro pacote que voltasse congelar a TF
+com o robô possivelmente andando.
+
+Reproduzido antes de consertar, de novo. A correção certa mora no `_reavalia()`,
+que roda **a cada mensagem de roda**: durante um apagão de um lado, o lado vivo
+continua publicando e é ele quem derruba o cronômetro, sem depender do LIO. A
+limpeza no `congelado()` ficou também, para o caso de **todas** as rodas
+calarem — cinto e suspensório, cada um cobrindo o buraco do outro.
+
+**A lição, e é a melhor do dia:** *um teste que exercita o caminho do conserto
+pode esconder exatamente o defeito que ele deveria pegar.* O teste novo omite
+deliberadamente qualquer chamada durante o apagão — é o silêncio que é o caso
+adverso. Sempre que a correção e a verificação passarem pelo mesmo caminho,
+desconfiar.
+
+⚠️ Ficou ainda um exagero meu corrigido junto: eu tratei os 60 mm de largura da
+roda como se tivessem "derrubado" os 58 de catálogo. Não derrubaram — as duas
+leituras são "±", a meia-diferença carrega ~0,7 cm, e isso **engole** a distância
+de 2 mm entre os dois valores. Fica 0,060 por ser deste robô e não de catálogo
+genérico: **escolha declarada, não evidência.**
+
 ### 📏 Lista de medidas da etapa 1 — e a tabela-resumo estava velha
 
 Escrita a `ETAPA1_MEDIDAS_ROBO3.md`: o dono passa a trena e anota, eu comparo e

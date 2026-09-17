@@ -36,7 +36,7 @@ ssh bara@10.127.116.205
 cd ~/Controle_robo_livox
 bash bin/sobe-robo --mata            # derruba a pilha, se estiver de pé
 git reset --hard origin/main
-git log --oneline -1                 # tem de mostrar 1c3feb2 ou mais novo
+git log --oneline -1                 # 🔴 tem de ser 5b85011 OU MAIS NOVO
 source /opt/ros/jazzy/setup.bash
 colcon build --packages-select robot_base robot_motion
 ```

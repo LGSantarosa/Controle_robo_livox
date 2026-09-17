@@ -69,7 +69,16 @@ class CongelaParado:
         self._reavalia(agora)
 
     def _reavalia(self, agora):
-        if self._parado():
+        # 🔴 A FRESCURA ENTRA AQUI, e não só no `congelado()` (17-09, 2ª volta).
+        # A 1ª correção zerava o cronômetro apenas ao consultar `congelado()` —
+        # e isso só funciona se ALGUÉM consultar. Num apagão de um lado com o
+        # LIO também calado, ninguém consultava, o `parado_desde` sobrevivia, e
+        # o primeiro pacote da roda que voltava congelava na hora. O teste da 1ª
+        # correção MASCARAVA o defeito: era a própria chamada dele que limpava.
+        #
+        # Aqui roda a cada mensagem de roda, então o lado que continua vivo
+        # durante o apagão é quem derruba o cronômetro — sem depender do LIO.
+        if self._parado() and self._frescas(agora):
             if self.parado_desde is None:
                 self.parado_desde = agora
         else:

@@ -117,6 +117,39 @@ def test_roda_que_VOLTA_tem_de_reobservar_a_espera():
     assert not c.congelado(4.0), (
         'congelou no primeiro pacote que voltou: o cronômetro não zerou')
 
+
+def test_apagao_SEM_ninguem_consultar_tambem_zera_o_cronometro():
+    """🔴 Regressão da 2ª volta (17-09) — e o caso que o teste acima MASCARAVA.
+
+    A 1ª correção zerava o cronômetro dentro de `congelado()`. O teste de cima
+    chama `congelado()` durante o apagão, e era essa chamada que fazia a
+    limpeza — o defeito continuava de pé se ninguém consultasse.
+
+    Aqui o apagão é **silencioso dos dois lados**: a direita some E o LIO para
+    (nenhum `congelado()`, nenhum `passo()`). É o caso adverso de verdade:
+    justamente quando não se sabe se o robô andou.
+    """
+    c = CongelaParado(espera=0.5, validade=0.5)
+    for k in range(11):
+        c.roda(k * 0.1, 0, 0.0)
+        c.roda(k * 0.1, 1, 0.0)
+    c.passo(1.0, (0.0, 0.0, 0.0), yaw_q(0.0))
+    assert c.congelado(1.0)
+
+    # 3 s de apagão da direita — e NINGUÉM consulta a trava nesse intervalo.
+    for k in range(11, 41):
+        c.roda(k * 0.1, 0, 0.0)
+
+    c.roda(4.0, 1, 0.0)                       # a direita volta, um pacote
+    assert not c.congelado(4.0), (
+        'congelou no 1º pacote após apagão silencioso: a limpeza não pode '
+        'depender de alguém ter chamado congelado() durante o apagão')
+
+    for k in range(41, 47):                   # reobserva a espera
+        c.roda(k * 0.1, 0, 0.0)
+        c.roda(k * 0.1, 1, 0.0)
+    assert c.congelado(4.6)
+
     for k in range(41, 47):                   # 0,5 s com as duas de novo
         c.roda(k * 0.1, 0, 0.0)
         c.roda(k * 0.1, 1, 0.0)

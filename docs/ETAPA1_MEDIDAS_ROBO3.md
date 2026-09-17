@@ -3,9 +3,11 @@
 > ## ✅ RESPONDIDA EM 17-09 — trena do dono + 8 fotos
 >
 > **Parte A, a placa:** *"é o mesmo **modelo** da placa do 1 e do 2, mas não a
-> mesma, cada um tem a sua."* → saída 🟢: o modelo de atuador sobrevive, a
-> etapa 8 vira **conferência** e não levantamento novo. Ressalva: mesma
-> **classe**, peça diferente — os números entram como ponto de partida.
+> mesma, cada um tem a sua."* → saída 🟢: o modelo de atuador **não cai**.
+> 🔴 **Mas a etapa 8 CONTINUA sendo medição do atuador, não "conferência"**
+> (corrigido no mesmo dia): mesmo modelo não prova mesmo firmware, e a
+> configuração gravada nesta placa é desconhecida. Os números do
+> `MODELO_ROBO2.md` entram como ponto de partida.
 >
 > **Parte C, o que a trena mudou no URDF:**
 >

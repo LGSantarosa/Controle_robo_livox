@@ -42,15 +42,13 @@
 
        Com isso o centro de rotação É a origem, e `wz` puro não desloca nada.
        O preço: o contorno do robô deixa de ser simétrico em x (a traseira tem
-       8,35 cm e a frente 24,85), e comparar CSV com o robô 2 exige saber disso.
+       8,25 cm — o pneu, `roda_raio` — e a frente 24,85), e comparar CSV com o
+       robô 2 exige saber disso.
   -->
 
   <!-- ==================== NÚMEROS AJUSTÁVEIS ==================== -->
 
-  <!-- Caixa. 🟢 MEDIDA: 311 × 240 × 135 mm, fundo a 70 mm do chão.
-       ⚠️ D4 ABERTA: a boba com estrutura mede 60 mm e o fundo da caixa está a
-       70 mm. Se os dois estiverem certos, o robô fica 2,3° caído para a frente
-       ao longo do entre-eixos.
+  <!-- Caixa. 🟢 MEDIDA: 311 × 240 × 135 mm, fundo a 65 mm do chão.
 
        🟢 D4 ENCERRADA EM 17-09, e não havia caimento nenhum — havia um número
        errado. A trena do dono fecha sozinha:
@@ -120,8 +118,18 @@
        ⚠️ HONESTIDADE ESTATÍSTICA (corrigido no mesmo dia): um viés comum às
        duas leituras — fita apoiada torto — **cancela** nesta diferença, mas
        **soma** na média que dá a bitola. Então 6,0 é robusto a esse viés e
-       0,320 NÃO é: ver o comentário da `roda_separacao`. As duas entradas
-       continuam sendo "±1 cm" de trena, não medida de precisão. -->
+       0,320 NÃO é: ver o comentário da `roda_separacao`.
+
+       🔴 MAS ISSO NÃO TORNA 60 mm "MEDIDO CONTRA" OS 58 DE CATÁLOGO. As duas
+       entradas são "±" de trena; se cada uma carrega ~1 cm, a meia-diferença
+       carrega ~0,7 cm — que ENGOLE a distância de 2 mm entre 58 e 60. Os dois
+       valores são indistinguíveis com esta medida, e eu tinha escrito como se
+       o 60 tivesse derrubado o 58.
+
+       Fica 0,060 por ser derivado DESTE robô e não de catálogo genérico —
+       escolha declarada, não evidência. Na prática dá 1 mm por lado no
+       footprint. Se algum dia importar, quem separa os dois é paquímetro no
+       pneu, não trena no robô inteiro. -->
   <xacro:property name="roda_largura"   value="0.060"/>
   <!-- O cubo de metal da roda, 15 mm, virado para DENTRO. Não é decoração: é
        ele que vence o vão entre a lateral da caixa (y=0,120) e a face interna
