@@ -26,12 +26,11 @@ consigo mesmo não é evidência sobre o robô.
 import csv
 import math
 import os
-import re
-import subprocess
 import sys
 import time
 
 import rclpy
+from controller_manager_msgs.srv import ListControllers
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
 from rclpy.parameter import Parameter
@@ -78,6 +77,11 @@ class Escuta(Node):
                                  lambda m: self.odom.append(m), 10)
         self.tf = Buffer()
         self.tf_listener = TransformListener(self.tf, self)
+        # O SERVIÇO, e não o `ros2 control list_controllers`: o CLI vem do
+        # `ros2controlcli`, que não está instalado no PC de dev (18-09). Pela
+        # linha de comando o erro virava "ausente" e o item dava falso vermelho.
+        self.cli_controladores = self.create_client(
+            ListControllers, '/controller_manager/list_controllers')
 
     def limpa(self):
         self.nuvem.clear()
@@ -183,19 +187,14 @@ def item_tf(no):
     return PASSOU, ', '.join(ok)
 
 
-def item_controladores():
-    try:
-        saida = subprocess.run(['ros2', 'control', 'list_controllers'],
-                               capture_output=True, text=True, timeout=20).stdout
-        # O Jazzy pinta o estado com ANSI; sem limpar, 'active' nunca casa.
-        saida = re.sub(r'\x1b\[[0-9;]*m', '', saida)
-    except subprocess.TimeoutExpired:
-        return INCONC, '`ros2 control list_controllers` não respondeu em 20 s'
-    estado = {}
-    for linha in saida.splitlines():
-        for c in CONTROLADORES:
-            if linha.split() and linha.split()[0] == c:
-                estado[c] = 'active' if 'active' in linha.split() else linha.split()[-1]
+def item_controladores(no):
+    if not no.cli_controladores.wait_for_service(timeout_sec=10.0):
+        return INCONC, '/controller_manager/list_controllers não apareceu em 10 s'
+    fut = no.cli_controladores.call_async(ListControllers.Request())
+    rclpy.spin_until_future_complete(no, fut, timeout_sec=10.0)
+    if not fut.done() or fut.result() is None:
+        return INCONC, '/controller_manager/list_controllers não respondeu em 10 s'
+    estado = {c.name: c.state for c in fut.result().controller}
     txt = ', '.join(f'{c}={estado.get(c, "ausente")}' for c in CONTROLADORES)
     if all(estado.get(c) == 'active' for c in CONTROLADORES):
         return PASSOU, txt
@@ -234,7 +233,7 @@ def main():
         ('3 /scan', *item_scan(no.scan)),
         ('4 /Odometry', *item_odometria(no.odom)),
         ('5 TF', *item_tf(no)),
-        ('6 controladores ativos', *item_controladores()),
+        ('6 controladores ativos', *item_controladores(no)),
     ]
 
     icone = {PASSOU: '🟢', FALHOU: '🔴', INCONC: '🟡'}

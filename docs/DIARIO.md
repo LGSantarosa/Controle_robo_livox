@@ -25,6 +25,21 @@
 - Falta: o smoke do Gazebo com o dono olhando (só prova que continua subindo) e,
   separado, a envolvente varrida e os footprints.
 
+### Smoke pós-giro, 15:52 — aprovado (`docs/dados/2026-09-18-robo3-smoke-gazebo-pos-giro/`)
+
+Inspeção visual do dono correta; itens 1–5 PASSOU; controladores conferidos
+`active` à mão pelo dono; 0 erros no launch; encerramento limpo. Prova só que a
+cadeia continua subindo com o modelo girado — não a rotação.
+
+**A causa do falso vermelho do item 6 apareceu** (achada pelo dono): o
+`ros2 control` não existe neste PC — falta o `ros2controlcli`. Meu verificador
+chamava o CLI, não olhava o código de retorno nem o stderr, e escrevia
+"ausente". O dono tinha dito de manhã para não arrumar; agora pediu. Conserto:
+o verificador chama direto o serviço `/controller_manager/list_controllers`
+(`controller_manager_msgs`, instalado). Conferido contra um controller_manager
+fingido: sem serviço → INCONCLUSIVO, dois active → PASSOU, um inactive e um
+ausente → FALHOU. Falta vê-lo verde no próximo smoke real.
+
 ## 2026-09-18 (dev, sem robô) — SMOKE TEST DO ROBÔ 3 NO GAZEBO: A CADEIA SOBE INTEIRA
 
 Pedido do dono: preparar o smoke test da trilha §8-B (`PLANO_NAV2_ROBO3.md`),

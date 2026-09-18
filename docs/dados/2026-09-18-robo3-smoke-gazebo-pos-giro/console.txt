@@ -1,0 +1,26 @@
+== smoke test robô 3 no Gazebo — 20260918_155222 ==
+   commit: f6b6f48 18-09: URDF do robo 3 girado 180 -- motrizes na frente, testes do giro inteiro (decisao 051)
+   🔴 NÃO VALIDA: geometria, massas, curvatura, zona morta, placa, frente:=-1.0
+== 1/4 compilando robot_base (log em /home/rbe-luis/sim_robo3/smoke_20260918_155222/build.log) ==
+   🟢 install/ igual ao fonte nos arquivos do robô 3
+== 2/4 subindo o Gazebo (log em /home/rbe-luis/sim_robo3/smoke_20260918_155222/launch.log) ==
+   pid 449599 · mundo pista_obstaculos · pose (2.0, 5.0, 0)
+== 3/4 conferindo (espera o robô aparecer, 3 s para assentar, 10 s de janela) ==
+   janela: 10.0 s de parede, fator de tempo real 1.00
+   🟢 1 modelo assentado       PASSOU        z=-0.0000 m (variou 0.0 mm), |roll|max=0.00°, |pitch|max=0.00°, deriva xy=0.0 mm
+   🟢 2 /livox/pontos          PASSOU        9.3 Hz, 20000 pontos, frame livox_frame
+   🟢 3 /scan                  PASSOU        9.3 Hz, 360/360 feixes com alcance finito, frame base_link
+   🟢 4 /Odometry              PASSOU        50.0 Hz, odom -> base_link
+   🟢 5 TF                     PASSOU        odom->base_link, base_link->livox_frame, base_link->left_wheel, base_link->right_wheel
+   🔴 6 controladores ativos   FALHOU        joint_state_broadcaster=ausente, hoverboard_base_controller=ausente
+   linhas de ERROR/FATAL/died no launch.log: 0 (em erros_launch.txt)
+== 4/4 sua vez — olhe o Gazebo ==
+   • as duas rodas E as duas bobas tocam o chão?
+   • o corpo está parado e nivelado (não afunda, não quica, não tomba)?
+   Anote a sua leitura na coluna veredito_dono de /home/rbe-luis/sim_robo3/smoke_20260918_155222/resultado.csv,
+   ou só me diga na conversa.
+   ENTER para derrubar o simulador... == derrubando ==
+   🟢 limpo
+
+   🟡/🔴 verificador: nem tudo PASSOU — NÃO mexa em config; a pasta é a prova
+   pasta: /home/rbe-luis/sim_robo3/smoke_20260918_155222

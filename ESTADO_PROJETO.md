@@ -19,8 +19,11 @@
 - `frente:=-1.0` / `linear_sign` **intocados**; teste trava o par com o URDF.
 - `test_urdf_robo3.py` 25/25 · suíte **853 passed** (`pytest --ignore=ESTAGIO-2026`
   da raiz; a pasta é local deste PC, fora do git).
-- ⬜ **Smoke do Gazebo pós-giro** (`bash bin/smoke-gazebo-robo3`, dono olhando):
-  prova só que continua subindo — não prova a rotação.
+- ✅ **Smoke do Gazebo pós-giro** aprovado às 15:52 (visual, 1–5, controladores
+  à mão, 0 erros, limpo). Prova só que continua subindo — não prova a rotação.
+- 🔧 Item 6 do verificador consertado: consulta o serviço
+  `/controller_manager/list_controllers` (o CLI `ros2 control` não existe neste PC).
+  Testado com serviço fingido; ainda não visto verde num smoke real.
 - ⬜ **Próximo pedaço: envolvente varrida das bobas + footprints**, com teste
   geométrico próprio. O smoke não serve de prova disso.
 
