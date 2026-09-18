@@ -1,0 +1,120 @@
+#!/usr/bin/env bash
+# Smoke test do ROBÔ 3 no Gazebo — trilha §8-B do docs/PLANO_NAV2_ROBO3.md.
+#
+#   bash bin/smoke-gazebo-robo3            sobe com a janela do Gazebo (dono olhando)
+#   bash bin/smoke-gazebo-robo3 --mata     só derruba e confere que morreu
+#
+# Faz, em ordem: recompila o robot_base e confere que o install/ bate com o
+# fonte; sobe o sim_robo3 na pista_obstaculos; roda o verificador
+# (tools/smoke_gazebo_robo3.py) e classifica os seis itens; ESPERA o ENTER
+# para você olhar o modelo; derruba tudo e confere que não sobrou processo.
+#
+# Tudo o que aparece no terminal também vai para
+# ~/sim_robo3/smoke_<data>/console.txt. O launch vai para launch.log, e a
+# tabela para resultado.csv. Não precisa relatar nada: eu leio a pasta.
+#
+# 🔴 O QUE ESTE TESTE NÃO VALIDA: geometria (bitola, raio), massas, curvatura,
+# zona morta, dinâmica da placa, nem o `frente:=-1.0` no hardware. Ele prova
+# que a CADEIA DE SOFTWARE sobe; o Gazebo usa os números que nós demos.
+#
+# ⚠️ NÃO usa `pkill -f`: ele já matou a sessão ssh em outra máquina.
+set +u
+R="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+CARIMBO="$(date +%Y%m%d_%H%M%S)"
+SAIDA="$HOME/sim_robo3/smoke_$CARIMBO"
+MUNDO="$R/worlds/pista_obstaculos.sdf"
+# Mesma pose padrão da pilha nesta pista: sala livre, paredes ao alcance.
+POSE_X=2.0
+POSE_Y=5.0
+
+vivos() {
+  ps -eo pid,args | grep -E "ros2 launch robot_base sim_robo3|gz sim|parameter_bridge|\
+robot_state_publisher|placa_simulada|pointcloud_to_laserscan|controller_manager/spawner|\
+smoke_gazebo_robo3.py" | grep -v grep
+}
+
+mata() {
+  echo "== derrubando =="
+  if [ -n "$LAUNCH_PID" ] && kill -0 "$LAUNCH_PID" 2>/dev/null; then
+    # Grupo inteiro (setsid): o launch sozinho já deixou filho vivo em 14-09.
+    kill -INT -- "-$LAUNCH_PID" 2>/dev/null
+    for _ in $(seq 15); do kill -0 "$LAUNCH_PID" 2>/dev/null || break; sleep 1; done
+  fi
+  vivos | awk '{print $1}' | sort -u | xargs -r kill -INT
+  sleep 2
+  SOBRA="$(vivos)"
+  if [ -n "$SOBRA" ]; then
+    echo "   ⚠️  sobrou processo depois do SIGINT — kill -9 (fica anotado):"
+    echo "$SOBRA" | sed 's/^/      /'
+    echo "$SOBRA" | awk '{print $1}' | sort -u | xargs -r kill -9
+    sleep 1
+  fi
+  if [ "$(vivos | wc -l)" -eq 0 ]; then echo "   🟢 limpo"
+  else echo "   🔴 AINDA TEM COISA VIVA — não suba por cima"; vivos; return 1; fi
+}
+
+[ "$1" = "--mata" ] && { mata; exit $?; }
+
+mkdir -p "$SAIDA"
+exec > >(tee -a "$SAIDA/console.txt") 2>&1
+trap 'echo; echo "   Ctrl+C — derrubando antes de sair"; mata; exit 130' INT TERM
+
+echo "== smoke test robô 3 no Gazebo — $CARIMBO =="
+echo "   commit: $(git -C "$R" log -1 --format='%h %s')"
+[ -n "$(git -C "$R" status --porcelain)" ] && echo "   ⚠️  árvore com mudança não commitada"
+echo "   🔴 NÃO VALIDA: geometria, massas, curvatura, zona morta, placa, frente:=-1.0"
+
+cd "$R" || exit 1
+source /opt/ros/jazzy/setup.bash
+if [ -n "$(vivos)" ]; then
+  echo "   🔴 já tem simulador/ROS de pé — não subo por cima. Confira e rode:"
+  vivos | sed 's/^/      /'
+  echo "      bash bin/smoke-gazebo-robo3 --mata"
+  exit 1
+fi
+
+echo "== 1/4 compilando robot_base (log em $SAIDA/build.log) =="
+if ! colcon build --packages-select robot_base > "$SAIDA/build.log" 2>&1; then
+  echo "   🔴 build falhou — veja build.log"; exit 1
+fi
+source install/setup.bash
+DIF=0
+for f in description/robo3.urdf.xacro description/robo3.gazebo.xacro \
+         config/hoverboard_controllers_sim_robo3.yaml launch/sim_robo3.launch.py \
+         config/scan_2d.yaml; do
+  cmp -s "ros2_packages/robot_base/$f" "install/robot_base/share/robot_base/$f" \
+    || { echo "   🔴 install/ difere do fonte: $f"; DIF=1; }
+done
+[ "$DIF" -ne 0 ] && { echo "   🔴 validaria código velho — parando"; exit 1; }
+echo "   🟢 install/ igual ao fonte nos arquivos do robô 3"
+
+echo "== 2/4 subindo o Gazebo (log em $SAIDA/launch.log) =="
+setsid ros2 launch robot_base sim_robo3.launch.py \
+    mundo:="$MUNDO" x:=$POSE_X y:=$POSE_Y yaw:=0.0 gui:=true \
+    > "$SAIDA/launch.log" 2>&1 < /dev/null &
+LAUNCH_PID=$!
+echo "   pid $LAUNCH_PID · mundo pista_obstaculos · pose ($POSE_X, $POSE_Y, 0)"
+
+echo "== 3/4 conferindo (espera o robô aparecer, 3 s para assentar, 10 s de janela) =="
+python3 tools/smoke_gazebo_robo3.py "$SAIDA" 10
+AUTO=$?
+if ! kill -0 "$LAUNCH_PID" 2>/dev/null; then
+  echo "   🔴 o launch MORREU durante o teste — veja launch.log"
+fi
+grep -nE "\[ERROR\]|\[FATAL\]|process has died" "$SAIDA/launch.log" \
+  > "$SAIDA/erros_launch.txt"
+N_ERR=$(wc -l < "$SAIDA/erros_launch.txt")
+echo "   linhas de ERROR/FATAL/died no launch.log: $N_ERR (em erros_launch.txt)"
+
+echo "== 4/4 sua vez — olhe o Gazebo =="
+echo "   • as duas rodas E as duas bobas tocam o chão?"
+echo "   • o corpo está parado e nivelado (não afunda, não quica, não tomba)?"
+echo "   Anote a sua leitura na coluna veredito_dono de $SAIDA/resultado.csv,"
+echo "   ou só me diga na conversa."
+read -r -p "   ENTER para derrubar o simulador... " _ < /dev/tty
+
+mata
+echo
+[ "$AUTO" -eq 0 ] && echo "   🟢 verificador: 6/6 PASSOU" \
+                  || echo "   🟡/🔴 verificador: nem tudo PASSOU — NÃO mexa em config; a pasta é a prova"
+echo "   pasta: $SAIDA"

@@ -4,6 +4,35 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-09-18 (dev, sem robô) — SMOKE TEST DO ROBÔ 3 NO GAZEBO: PRONTO, NÃO RODADO
+
+Pedido do dono: preparar o smoke test da trilha §8-B (`PLANO_NAV2_ROBO3.md`),
+com saída no terminal e em arquivo, encerramento limpo, checklist objetivo e o
+aviso explícito do que ele não valida. Roda quando ele puder olhar a tela.
+
+- **Tropeço meu na abertura da sessão:** li o repo sem `git fetch` e resumi o
+  projeto como parado em 14-09, com 53 commits (15 a 17-09) no GitHub. O dono
+  corrigiu. Consequência que importa aqui: o `install/` deste PC era de
+  **09-09** e diferia do fonte no URDF e no YAML do robô 3 — o build de 17-09
+  foi em outra máquina. Por isso o script recompila e confere com `cmp` antes
+  de subir, e para se diferir.
+- `bin/smoke-gazebo-robo3` + `tools/smoke_gazebo_robo3.py`. Seis itens em
+  PASSOU / FALHOU / INCONCLUSIVO: modelo assentado, `/livox/pontos`, `/scan`,
+  `/Odometry`, TF, controladores. Taxas pelo carimbo (tempo de simulação),
+  com o fator de tempo real anotado. Saída em `~/sim_robo3/smoke_<data>/`.
+- **Mundo: `pista_obstaculos`, não o padrão `pista_livre`.** A livre não tem
+  parede, então o `/scan` sairia todo `inf` e o item 3 não provaria nada.
+  Pose (2,0 · 5,0), a mesma da pilha nessa pista.
+- O item "assentado" tem um INCONCLUSIVO de propósito: não sei se o
+  `OdometryPublisher` dá z absoluto ou relativo ao spawn. Se vier −0,05, a
+  palavra é do olho do dono, não do número.
+- Classificação conferida com mensagens fingidas (casos bons e ruins de cada
+  item). **O Gazebo não subiu** — regra da casa, só com o dono olhando.
+- 🔴 **O que o teste não valida**, e está impresso no próprio console:
+  geometria, massas, curvatura, zona morta, dinâmica da placa e o
+  `frente:=-1.0` — este nem está na cadeia do sim (é do `cmd_vel_to_wheels`;
+  o sim usa o `diff_drive_controller`).
+
 ## 2026-09-17 (dev, robô desligado) — ROBÔ 2: A POSE SÓ ANDA COM AS RODAS
 
 Pedido do dono: a pose pula no mapa com o robô parado. Decisão 050.

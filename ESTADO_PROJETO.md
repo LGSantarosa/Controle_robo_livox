@@ -1,13 +1,29 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-09-17** (dev — robô 3 ganhou o
-> `frente:=-1.0` para trocar frente e ré; não testado no robô).
+> Versionado na `main`. Atualizado em **2026-09-18** (dev — smoke test do
+> robô 3 no Gazebo pronto, esperando o dono olhar a tela).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+---
+
+## 🧪 18-09 dev — SMOKE TEST DO ROBÔ 3 NO GAZEBO (trilha §8-B), NÃO RODADO
+
+```bash
+bash bin/smoke-gazebo-robo3          # com o dono olhando a janela do Gazebo
+bash bin/smoke-gazebo-robo3 --mata   # se algo ficar de pé
+```
+
+Recompila o `robot_base` e confere o `install/` (neste PC ele era de 09-09),
+sobe na `pista_obstaculos`, classifica 6 itens (assentado, `/livox/pontos`,
+`/scan`, `/Odometry`, TF, controladores), espera o ENTER e derruba. Pasta:
+`~/sim_robo3/smoke_<data>/`. Se algo falhar: **preservar a pasta antes de mexer
+em qualquer config.** 🔴 Não valida geometria, massas, curvatura, zona morta,
+placa nem o `frente:=-1.0`.
 
 ---
 
