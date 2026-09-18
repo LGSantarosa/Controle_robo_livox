@@ -1,8 +1,8 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-09-18** (dev — etapa 3 do robô 3
-> FEITA: URDF girado (051) + footprint canônico sem padding (052)).
+> Versionado na `main`. Atualizado em **2026-09-18** (dev — etapa 3 FEITA (051,
+> 052); plano da etapa 4 aprovado, próximo é o passo 0 no Gazebo).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
@@ -31,7 +31,11 @@
 - ✅ **Etapa 3 FEITA**, com a **fronteira mudada no plano**: o Nav2 consumir o
   artefato, `footprint_padding` explícito, `collision_monitor`/meia largura/
   corredor de ré/para-choque e o `robot_state_publisher` são da **etapa 4**.
-- ⬜ **Próximo: etapa 4** (perfis `robo2`/`robo3` + bringup único do robô 3).
+- 📋 **Etapa 4: plano aprovado** em `docs/PLANO_ETAPA4_ROBO3.md` (D1–D5 decididas
+  pelo dono, §12–13). Trabalho na branch `etapa4-perfis`; **sem deploy** em robô.
+- ⬜ **Próximo: passo 0** — linha de base do robô 2 no Gazebo (parâmetros
+  normalizados por lista de nós, `footprint_padding` vivo). **Gazebo só com o
+  dono acompanhando.**
 
 ---
 

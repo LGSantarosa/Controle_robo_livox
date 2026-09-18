@@ -4,6 +4,29 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-09-18 (dev, sem robô) — PLANO DA ETAPA 4, REVISADO E APROVADO (sem código)
+
+`docs/PLANO_ETAPA4_ROBO3.md`. Lendo o código antes de planejar apareceram três
+coisas que mudaram o desenho: o `vao_frente()` usa o recuo TRASEIRO como avanço
+do para-choque dianteiro (simetria que o robô 3 não tem — 0,2913 contra 0,0825);
+o robô 2 não declara `footprint_padding` (roda com o padrão do Nav2, que
+ninguém escreveu); e a trava footprint = reflexo da decisão 032 é proibida para
+o robô 3 pela 052.
+
+Uma incoerência minha pega antes de mostrar: eu prometia medir o footprint vivo
+dos costmaps do robô 3, mas com a pilha recusando `robo:=3` nenhum deles roda na
+etapa 4. Ficou: YAML reescrito testado na 4, valor vivo na 6 (escrito lá).
+
+A revisão do dono **não aprovou de primeira**. Cinco correções e três ajustes:
+eram DUAS diferenças permitidas no robô 2, não uma; teste estático não resolve
+condição/include/`OpaqueFunction`, então a prova é o grafo em execução; diff de
+parâmetros semântico e normalizado, por lista de nós, com tudo ativo; nada de
+`reset --hard` na reversão; `PolygonApproach` e `PolygonStop` são funções de
+segurança diferentes e o meu "idem" as misturava. Ele fixou os valores da D3 e
+achou um defeito real no `sobe-robo3`: ele **mata** `joy_node`/`twist_mux` por
+nome genérico e derrubaria o robô 2 ou o simulador — virou o passo 6a. E faltava
+a dependência `robot_nav → robot_base`. Aprovado para começar pelo passo 0.
+
 ## 2026-09-18 (dev, sem robô) — ETAPA 3, PEDAÇO 2: A VARREDURA DAS BOBAS E O FOOTPRINT CANÔNICO (decisão 052)
 
 - Conta: raio varrido 0,04272 m, traseira varrida −0,29122, lateral das bobas
