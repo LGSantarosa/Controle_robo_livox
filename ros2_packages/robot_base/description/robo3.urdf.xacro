@@ -1,6 +1,13 @@
 <?xml version="1.0"?>
 <!--
-  Robô 3 — caixa menor, 2 rodas de hoverboard ATRÁS, 2 rodas bobas NA FRENTE.
+  Robô 3 — caixa menor, 2 rodas de hoverboard NA FRENTE, 2 rodas bobas ATRÁS.
+
+  🔄 GIRADO 180° EM 18-09 (etapa 3 do `docs/PLANO_NAV2_ROBO3.md`, §3). Até 17-09
+  este modelo tinha as motrizes atrás; o dono decidiu em 16-09 que, para
+  navegar, a frente é o lado das motrizes. O corpo girou em torno do
+  `base_link`, que continua no eixo (C8). Eletricamente a frente é a antiga ré:
+  isso é o `linear_sign: -1.0` (`frente:=-1.0`, decisão 049), e o teste
+  `test_urdf_girado_exige_frente_negativa_no_controle` trava os dois em par.
 
   Irmão do `robo2.urdf.xacro` e NÃO substituto: o robô 2 continua de pé porque é
   a linha de base contra a qual todo CSV histórico foi medido. Aqui muda a
@@ -35,14 +42,15 @@
        deslocamento lateral na origem — um acoplamento que ninguém escolheu e
        que esteve embaixo da lei de rumo o tempo todo.
 
-       Aqui o `base_link` vai no CENTRO DO EIXO TRASEIRO, no nível do chão:
+       Aqui o `base_link` vai no CENTRO DO EIXO DAS MOTRIZES, no nível do chão
+       — desde 18-09 o eixo DIANTEIRO:
 
-           x = 0 no eixo das motrizes      x cresce para a FRENTE
+           x = 0 no eixo das motrizes      x cresce para a FRENTE (motrizes)
            y = 0 no plano de simetria      z = 0 no chão
 
        Com isso o centro de rotação É a origem, e `wz` puro não desloca nada.
-       O preço: o contorno do robô deixa de ser simétrico em x (a traseira tem
-       8,25 cm — o pneu, `roda_raio` — e a frente 24,85), e comparar CSV com o
+       O preço: o contorno do robô deixa de ser simétrico em x (a frente tem
+       8,25 cm — o pneu, `roda_raio` — e a traseira 24,85), e comparar CSV com o
        robô 2 exige saber disso.
   -->
 
@@ -151,15 +159,16 @@
 
   <!-- Onde a caixa fica em relação ao eixo. 🟢 DERIVADO (C5, §5.4.4): dos
        33,1 cm de comprimento total contra 31,1 da caixa sobram 2,0 cm de roda
-       passando ATRÁS (confirmado por quem mediu). Então:
-            traseira da caixa = −roda_raio + 0,020 = −0,0625
-            centro da caixa   = −0,0625 + 0,311/2 = +0,093
-       Incerteza ±0,2 cm, vinda só do raio. -->
-  <xacro:property name="caixa_cx" value="${-roda_raio + 0.020 + caixa_x/2}"/>
+       passando da caixa (confirmado por quem mediu) — desde 18-09 na FRENTE:
+            frente da caixa = roda_raio − 0,020 = +0,0625
+            centro da caixa = +0,0625 − 0,311/2 = −0,093
+       Incerteza ±0,2 cm, vinda só do raio. Era +0,093 com as motrizes atrás. -->
+  <xacro:property name="caixa_cx" value="${roda_raio - 0.020 - caixa_x/2}"/>
 
-  <!-- Rodas bobas — DUAS, uma em cada quina da frente da caixa.
+  <!-- Rodas bobas — DUAS, uma em cada quina da TRASEIRA da caixa (desde o giro
+       de 18-09; o dono mediu quando essa ponta ainda se chamava frente).
        🟢 MEDIDO: trail 20 mm, e elas ficam "cada uma na ponta da frente da
-       caixa, uma em cada extremidade".
+       caixa, uma em cada extremidade" — a ponta oposta às motrizes.
        🟢 RAIO 20 mm MEDIDO EM 17-09 — o empate da §5.5.1 (40 contra 50 mm de
        diâmetro) acabou, e ganhou o 40: o dono mediu **chão até o centro da
        rodinha = 2,0 cm**, e com ela apoiada no chão essa altura É o raio.
@@ -178,17 +187,17 @@
   <xacro:property name="boba_trail" value="0.020"/>
   <!-- ONDE A BOBA FICA — "as pontas com as pontas" (dono, olhando o Gazebo).
        A regra NÃO é sobre o pivô, é sobre a SUPERFÍCIE do conjunto: a face
-       externa da rodinha fica rente à lateral da caixa, e a frente do garfo
-       rente à frente da caixa. Duas tentativas erradas antes desta:
+       externa da rodinha fica rente à lateral da caixa, e a ponta do garfo
+       rente à ponta da caixa (a traseira, desde 18-09). Duas tentativas erradas antes desta:
 
          pivô EM CIMA da quina  -> meia rodinha para fora da lateral
          pivô recuado 3 cm      -> conjunto boiando longe da borda
 
        Então o recuo lateral é meia largura da rodinha, e o longitudinal é
-       ZERO: o garfo cresce para TRÁS do pivô (é o trail), logo a ponta da
-       frente do conjunto É o pivô. -->
+       ZERO: o garfo cresce do pivô PARA O EIXO (é o trail, em repouso), logo a
+       ponta de trás do conjunto É o pivô. -->
   <xacro:property name="boba_largura" value="0.03"/>
-  <xacro:property name="boba_x"     value="${caixa_cx + caixa_x/2}"/>
+  <xacro:property name="boba_x"     value="${caixa_cx - caixa_x/2}"/>
   <xacro:property name="boba_y"     value="${caixa_y/2 - boba_largura/2}"/>
 
   <!-- ⚠️ MASSAS PROVISÓRIAS — NÃO MEDIDAS.
@@ -229,6 +238,11 @@
        cima de obstáculo e pegar mais móvel perto. Decidir antes de furar. -->
   <xacro:property name="livox_z_solo" value="0.24"/>
   <xacro:property name="livox_x"      value="${caixa_cx}"/>
+  <!-- 🟡 YAW 0 = CONVENÇÃO NOVA DE MONTAGEM, decidida pelo dono em 18-09, e
+       NÃO consequência do giro: o x do Mid-360 vai alinhado à frente nova (as
+       motrizes). Girar o chute antigo junto com o corpo daria π. Provisório
+       até a etapa 7 medir a pose 6D. -->
+  <xacro:property name="livox_yaw"    value="0.0"/>
 
   <!-- ==================== DERIVADOS (não editar) ==================== -->
   <xacro:property name="caixa_cz"    value="${altura_solo + caixa_z/2}"/>
@@ -270,7 +284,7 @@
                          ox="${caixa_cx}" oz="${caixa_cz}"/>
   </link>
 
-  <!-- ==================== MOTRIZES (ATRÁS) ====================
+  <!-- ==================== MOTRIZES (NA FRENTE desde 18-09) ====================
        Ficam na origem em x, por definição da convenção C8. E ficam ENCOSTADAS
        na caixa pelo cubo: lateral da caixa em 0,120, cubo até 0,135, pneu de
        0,135 a 0,185. Zero vão — foi o vão desenhado por engano que denunciou
@@ -308,7 +322,7 @@
   <xacro:roda_motriz lado="left"  reflect="1"/>
   <xacro:roda_motriz lado="right" reflect="-1"/>
 
-  <!-- ==================== BOBAS (DUAS, NA FRENTE) ====================
+  <!-- ==================== BOBAS (DUAS, ATRÁS) ====================
 
        🔴 QUATRO APOIOS RÍGIDOS, SEM MOLA (C3 confirmado, §5.6.2). O robô 2
        tinha 3 pontos, que por definição não balançam; este tem 4 num chassi
@@ -321,18 +335,22 @@
        numa boba, ou balancim que devolva o apoio a 3 pontos, é escolha
        mecânica do dono, e é mais barata antes de o Livox subir.
 
-       Cada boba é pivô vertical + roda deslocada `boba_trail` ATRÁS do pivô.
+       Cada boba é pivô vertical + roda deslocada `boba_trail` do pivô. Em
+       repouso a rodinha fica do lado do EIXO (+x desde o giro de 18-09): é a
+       posição física girada junto com o corpo, debaixo da caixa. Andando para a
+       frente ela vira 180° e sai da caixa — isso é a envolvente varrida (§3,
+       item 5), que este modelo em repouso não mostra.
        Trail zero = boba ideal = simulador que mente. -->
 
   <xacro:macro name="roda_boba" params="lado reflect">
     <link name="${lado}_caster_fork">
       <visual>
-        <origin xyz="${-boba_trail/2} 0 ${-boba_raio/2}"/>
+        <origin xyz="${boba_trail/2} 0 ${-boba_raio/2}"/>
         <geometry><box size="${boba_trail} ${boba_largura} ${boba_raio}"/></geometry>
         <material name="metal"><color rgba="0.5 0.5 0.55 1"/></material>
       </visual>
       <xacro:inercia_caixa m="${massa_garfo}" x="${boba_trail}" y="${boba_largura}" z="${boba_raio}"
-                           ox="${-boba_trail/2}" oz="${-boba_raio/2}"/>
+                           ox="${boba_trail/2}" oz="${-boba_raio/2}"/>
     </link>
 
     <joint name="${lado}_caster_swivel_joint" type="continuous">
@@ -359,7 +377,7 @@
     <joint name="${lado}_caster_wheel_joint" type="continuous">
       <parent link="${lado}_caster_fork"/>
       <child link="${lado}_caster_wheel"/>
-      <origin xyz="${-boba_trail} 0 ${-(boba_pivo_z - boba_raio)}"/>
+      <origin xyz="${boba_trail} 0 ${-(boba_pivo_z - boba_raio)}"/>
       <axis xyz="0 1 0"/>
     </joint>
   </xacro:macro>
@@ -379,7 +397,7 @@
   <joint name="livox_joint" type="fixed">
     <parent link="base_link"/>
     <child link="livox_frame"/>
-    <origin xyz="${livox_x} 0 ${livox_z}"/>
+    <origin xyz="${livox_x} 0 ${livox_z}" rpy="0 0 ${livox_yaw}"/>
   </joint>
 
   <!-- ==================== ros2_control ==================== -->

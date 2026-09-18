@@ -4,6 +4,27 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-09-18 (dev, sem robô) — ETAPA 3, PEDAÇO 1: O URDF DO ROBÔ 3 GIRA 180° (decisão 051)
+
+- Proposta minha: girar só x e trail primeiro e usar o smoke como prova. **O
+  dono recusou**, com razão: os itens 1–4 do §3 são acoplados, meia rotação é um
+  modelo intermediário, e o smoke não comanda movimento — não vê lado trocado
+  nem yaw errado, nem footprint.
+- Testes primeiro: 4 vermelhos / 21 verdes. Na revisão o dono pediu mais três
+  coisas, todas aplicadas: o trail testado também na origem visual e inercial do
+  garfo; o yaw 0 do Livox registrado como **convenção nova** (não consequência
+  do giro); o teste de coerência renomeado para
+  `test_urdf_girado_exige_frente_negativa_no_controle`, porque não observa roda
+  física. Mais: comprimento e porta por `max x − min x`, verdes nos dois lados.
+- Depois da transformação: `test_urdf_robo3.py` **25/25**; suíte da raiz
+  **853 passed** com `--ignore=ESTAGIO-2026`. ⚠️ Sem esse ignore aparecem 2
+  falhas de flake8/pep257 em `ESTAGIO-2026/`, que é pasta **local deste PC**,
+  fora do git (`.gitignore:97`) — não é código do projeto.
+- Valores renderizados conferidos: bobas em x −0,2485, caixa e Livox em −0,093,
+  garfo e rodinha em +x (lado do eixo), yaw 0 explícito.
+- Falta: o smoke do Gazebo com o dono olhando (só prova que continua subindo) e,
+  separado, a envolvente varrida e os footprints.
+
 ## 2026-09-18 (dev, sem robô) — SMOKE TEST DO ROBÔ 3 NO GAZEBO: A CADEIA SOBE INTEIRA
 
 Pedido do dono: preparar o smoke test da trilha §8-B (`PLANO_NAV2_ROBO3.md`),

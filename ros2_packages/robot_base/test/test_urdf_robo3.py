@@ -9,6 +9,7 @@ As medidas e a discussão de cada número estão em `docs/ROBO3_REVISAO_CRUZADA.
 
 import math
 import os
+import re
 import xml.etree.ElementTree as ET
 
 import pytest
@@ -23,6 +24,8 @@ import yaml
 AQUI = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 XACRO = os.path.join(AQUI, 'description', 'robo3.urdf.xacro')
 YAML_SIM = os.path.join(AQUI, 'config', 'hoverboard_controllers_sim_robo3.yaml')
+LAUNCH_CONTROLE = os.path.join(os.path.dirname(AQUI), 'robot_nav', 'launch',
+                               'controle_robo3.launch.py')
 
 pytestmark = pytest.mark.skipif(xacro is None, reason='xacro não disponível')
 
@@ -61,6 +64,27 @@ def _cilindro(urdf, link_nome, tag='collision'):
             assert cil is not None, f'{link_nome} não tem cilindro em {tag}'
             return float(cil.get('radius')), float(cil.get('length'))
     raise AssertionError(f'link {link_nome} não existe')
+
+
+def _link(urdf, nome):
+    for l in urdf.findall('link'):
+        if l.get('name') == nome:
+            return l
+    raise AssertionError(f'link {nome} não existe')
+
+
+def _envolvente_x(urdf):
+    """(min x, max x) da envolvente RÍGIDA em repouso: pneus e caixa.
+
+    Por extremos, e não por "frente do pneu menos traseira da caixa": assim a
+    conta não sabe para que lado o robô está virado, e fica igual antes e
+    depois do giro de 180° — que não muda a envolvente rígida, só a gira.
+    As bobas em repouso ficam por baixo da caixa e não estendem nada.
+    """
+    (cx, _cy, _cz), (ox, _oy, _oz) = _caixa(urdf)
+    r, _ = _cilindro(urdf, 'left_wheel')
+    eixo_x = _xyz(_junta(urdf, 'left_wheel_joint'))[0]
+    return min(eixo_x - r, ox - cx / 2), max(eixo_x + r, ox + cx / 2)
 
 
 def _caixa(urdf, link_nome='base_link'):
@@ -103,7 +127,17 @@ def test_sao_QUATRO_apoios(urdf):
         'left_wheel', 'right_wheel', 'left_caster_wheel', 'right_caster_wheel'])
 
 
-# -------------------------------------------------- a inversão da geometria
+# ------------------------------------------ o giro de 180° (etapa 3, 18-09)
+#
+# Até 17-09 este bloco travava "motrizes ATRÁS, bobas NA FRENTE". Em 16-09 o
+# dono decidiu o contrário para a navegação: frente = motrizes, traseira =
+# bobas (`docs/PLANO_NAV2_ROBO3.md`, §2 e §3). Os testes abaixo foram
+# REESCRITOS para o estado girado — de propósito e com registro, não apagados.
+#
+# O giro é do CORPO em relação ao `base_link`, que continua no eixo (C8). E ele
+# acopla quatro coisas que só fazem sentido juntas: posição em x, direção do
+# trail, qual roda física é a esquerda e o yaw do Livox. Inverter x sem o resto
+# não é rotação, é um modelo semanticamente intermediário.
 
 def test_base_link_esta_NO_EIXO(urdf):
     """Convenção C8: a origem é o centro do eixo motriz, não o centro da caixa.
@@ -116,18 +150,21 @@ def test_base_link_esta_NO_EIXO(urdf):
         assert abs(_xyz(_junta(urdf, f'{lado}_wheel_joint'))[0]) < TOL
 
 
-def test_motrizes_ATRAS_e_bobas_na_FRENTE(urdf):
-    """O contrário do robô 2, e é a mudança que define o robô 3."""
+def test_motrizes_na_FRENTE_e_bobas_ATRAS(urdf):
+    """Frente = motrizes (decisão do dono, 16-09). x cresce para as motrizes.
+
+    Reescrito em 18-09: até ali era `test_motrizes_ATRAS_e_bobas_na_FRENTE`.
+    """
     (cx, _cy, _cz), (ox, _oy, _oz) = _caixa(urdf)
     eixo_x = _xyz(_junta(urdf, 'left_wheel_joint'))[0]
     boba_x = _xyz(_junta(urdf, 'left_caster_swivel_joint'))[0]
-    assert eixo_x < ox < boba_x, 'a caixa tem de ficar ENTRE o eixo e as bobas'
-    # E o eixo fica atrás da traseira da caixa em projeção: a roda passa 2 cm.
-    traseira_caixa = ox - cx / 2
+    assert boba_x < ox < eixo_x, 'a caixa tem de ficar ENTRE as bobas (atrás) e o eixo'
+    # A roda passa 2 cm da ponta da caixa — agora a ponta da FRENTE.
+    frente_caixa = ox + cx / 2
     r, _ = _cilindro(urdf, 'left_wheel')
-    assert (eixo_x - r) < traseira_caixa, 'a roda tem de passar da traseira'
-    assert abs((traseira_caixa - (eixo_x - r)) - 0.020) < 1e-3, \
-        'os 2 cm de roda passando atrás foram medidos — ver C5'
+    assert (eixo_x + r) > frente_caixa, 'a roda tem de passar da frente da caixa'
+    assert abs(((eixo_x + r) - frente_caixa) - 0.020) < 1e-3, \
+        'os 2 cm de roda passando da caixa foram medidos — ver C5'
 
 
 def test_bobas_nas_quinas_mas_DEBAIXO_da_caixa(urdf):
@@ -144,7 +181,8 @@ def test_bobas_nas_quinas_mas_DEBAIXO_da_caixa(urdf):
     _r, larg_boba = _cilindro(urdf, 'left_caster_wheel')
     for lado, sinal in (('left', 1), ('right', -1)):
         bx, by, _bz = _xyz(_junta(urdf, f'{lado}_caster_swivel_joint'))
-        assert abs(bx - (ox + cx / 2)) < TOL, 'a frente do garfo é a frente da caixa'
+        # Girado em 18-09: a quina das bobas agora é a TRASEIRA da caixa.
+        assert abs(bx - (ox - cx / 2)) < TOL, 'a ponta do garfo é a ponta de trás da caixa'
         assert abs((abs(by) + larg_boba / 2) - cy / 2) < TOL, \
             'a face externa da rodinha é a lateral da caixa'
         assert by * sinal > 0, 'uma de cada lado'
@@ -159,8 +197,39 @@ def test_boba_tem_trail_e_ele_DOBROU(urdf, lado):
     prevê até 9,1° de perturbação de rumo contra 4,6° (C7). Se este número cair
     para o do robô 2, a previsão some junto e a ré volta a parecer barata.
     """
-    trail = -_xyz(_junta(urdf, f'{lado}_caster_wheel_joint'))[0]
+    trail = abs(_xyz(_junta(urdf, f'{lado}_caster_wheel_joint'))[0])
     assert trail > 0.015, 'trail do robô 3 é 20 mm, medido'
+
+
+@pytest.mark.parametrize('lado', ['left', 'right'])
+def test_trail_em_repouso_aponta_PARA_O_EIXO(urdf, lado):
+    """A rodinha, parada, fica do lado do eixo motor, debaixo da caixa.
+
+    É a posição física de repouso girada junto com o corpo, e é ela que
+    preserva a regra "as pontas com as pontas": a ponta do conjunto é o pivô,
+    rente à caixa. Escrito sem sinal de x de propósito — é a direção em relação
+    ao eixo que tem significado, não o lado do plano.
+
+    ⚠️ Andando para a frente (motrizes), cada rodinha gira 180° no pivô e passa
+    a sair 20 mm da caixa. Isso é a ENVOLVENTE VARRIDA, e não é este teste que
+    a cobre (item 5 do §3, com teste geométrico próprio).
+    """
+    pivo_x = _xyz(_junta(urdf, f'{lado}_caster_swivel_joint'))[0]
+    eixo_x = _xyz(_junta(urdf, f'{lado}_wheel_joint'))[0]
+    para_o_eixo = eixo_x - pivo_x
+    dx = _xyz(_junta(urdf, f'{lado}_caster_wheel_joint'))[0]
+    assert dx * para_o_eixo > 0, 'a rodinha tem de estar entre o pivô e o eixo'
+    assert abs(abs(dx) - 0.020) < TOL
+
+    # O garfo vai junto: desenho e centro de massa. Sem isto o CONTATO gira e
+    # o garfo fica desenhado e pesando do lado antigo, com a suíte verde.
+    garfo = _link(urdf, f'{lado}_caster_fork')
+    vis_x = _xyz(garfo.find('visual'))[0]
+    ine_x = _xyz(garfo.find('inertial'))[0]
+    assert vis_x * para_o_eixo > 0, 'o desenho do garfo tem de ir para o lado do eixo'
+    assert ine_x * para_o_eixo > 0, 'o centro de massa do garfo tem de ir para o lado do eixo'
+    assert abs(vis_x - dx / 2) < TOL and abs(ine_x - dx / 2) < TOL, \
+        'o garfo vai do pivô até a rodinha: meio do caminho'
 
 
 @pytest.mark.parametrize('lado', ['left', 'right'])
@@ -196,12 +265,14 @@ def test_a_LARGURA_vem_do_PNEU_e_nao_da_caixa(urdf):
 
 
 def test_o_COMPRIMENTO_vem_da_CAIXA_com_a_roda_passando(urdf):
-    """Total 33,2 cm: da traseira do pneu à ponta da caixa."""
-    (cx, _cy, _cz), (ox, _oy, _oz) = _caixa(urdf)
-    r, _ = _cilindro(urdf, 'left_wheel')
-    eixo_x = _xyz(_junta(urdf, 'left_wheel_joint'))[0]
-    comprimento = (ox + cx / 2) - (eixo_x - r)
-    assert abs(comprimento - 0.3315) < 1e-3
+    """Total 33,2 cm: caixa de 31,1 mais os 2 cm de pneu passando dela.
+
+    Por extremos (`_envolvente_x`) desde 18-09: é verde antes e depois do giro,
+    porque girar não muda o comprimento. Quem trava o LADO é
+    `test_motrizes_na_FRENTE_e_bobas_ATRAS`.
+    """
+    x_min, x_max = _envolvente_x(urdf)
+    assert abs((x_max - x_min) - 0.3315) < 1e-3
 
 
 def test_passa_na_porta_de_70_cm_em_QUALQUER_angulo(urdf):
@@ -212,14 +283,44 @@ def test_passa_na_porta_de_70_cm_em_QUALQUER_angulo(urdf):
     vão — 3,6 cm por lado, e passar virava sorte. Este robô é mais LARGO que o
     robô 2 (47,5 contra 45,5) e ganha por ser muito mais CURTO.
     """
-    (cx, _cy, _cz), (ox, _oy, _oz) = _caixa(urdf)
-    r, larg_roda = _cilindro(urdf, 'left_wheel')
-    eixo_x = _xyz(_junta(urdf, 'left_wheel_joint'))[0]
+    _r, larg_roda = _cilindro(urdf, 'left_wheel')
     larg = 2 * _xyz(_junta(urdf, 'left_wheel_joint'))[1] + larg_roda
-    comp = (ox + cx / 2) - (eixo_x - r)
+    x_min, x_max = _envolvente_x(urdf)
+    comp = x_max - x_min
     diagonal = math.hypot(larg, comp)
     assert diagonal < 0.70, 'não caberia na porta 2 nem de frente'
     assert (0.70 - diagonal) / 2 > 0.09, 'folga do pior caso: 10,0 cm por lado'
+
+
+def test_urdf_girado_exige_frente_negativa_no_controle(urdf):
+    """Coerência entre o URDF girado e o `frente:=-1.0` — NÃO observa roda física.
+
+    O nome é modesto de propósito: este teste não sabe qual roda está parafusada
+    onde. Ele só garante que as duas metades do giro andam juntas.
+
+    `left_wheel_joint` fica em +y sempre — é convenção do ROS e não gira. O que
+    a rotação de 180° troca é QUAL RODA FÍSICA está em +y. No robô 3 esse
+    mapeamento vive no `cmd_vel_to_wheels`: a decisão 049 provou que negar só a
+    linear (`linear_sign: -1.0`, exposto como `frente:=`) equivale ao giro de
+    180° COM a troca de lado.
+
+    Então os dois andam em par: URDF com motrizes na frente exige `frente`
+    -1.0 por padrão. Mudar um sem o outro volta ao modelo meio girado — o que
+    o simulador mostra deixa de ser o que o robô faz, sem erro nenhum.
+    """
+    for lado, sinal in (('left', 1), ('right', -1)):
+        assert _xyz(_junta(urdf, f'{lado}_wheel_joint'))[1] * sinal > 0, \
+            'left_wheel_joint fica em +y (convenção do ROS)'
+    eixo_x = _xyz(_junta(urdf, 'left_wheel_joint'))[0]
+    boba_x = _xyz(_junta(urdf, 'left_caster_swivel_joint'))[0]
+    assert eixo_x > boba_x, 'pré-condição: o URDF está com as motrizes na frente'
+
+    with open(LAUNCH_CONTROLE) as f:
+        texto = f.read()
+    m = re.search(r"'frente',\s*default_value='([^']+)'", texto)
+    assert m, 'controle_robo3.launch.py não declara o argumento `frente`'
+    assert float(m.group(1)) == -1.0, \
+        'URDF com motrizes na frente exige `frente` -1.0 (decisão 049)'
 
 
 # ------------------------------------------------- URDF e controlador em par
@@ -251,6 +352,23 @@ def test_teto_de_giro_cobre_o_patamar_da_placa(params):
 
 
 # ------------------------------------------------------------------- sensor
+
+def test_livox_no_centro_da_caixa_olhando_para_a_FRENTE(urdf):
+    """Posição: centro da caixa, como decidido em 16-09 (emprestado do robô 2).
+
+    🟡 Yaw 0 é uma CONVENÇÃO NOVA DE MONTAGEM, decidida pelo dono em 18-09 —
+    NÃO é consequência do giro: "o x do sensor será alinhado à frente nova (as
+    motrizes)". Girar rigidamente o chute antigo daria yaw π. Vale porque o
+    sensor ainda não está montado; é PROVISÓRIA até a etapa 7 medir a pose 6D.
+    """
+    (_cx, _cy, _cz), (ox, _oy, _oz) = _caixa(urdf)
+    j = _junta(urdf, 'livox_joint')
+    assert abs(_xyz(j)[0] - ox) < TOL, 'o Livox fica no centro da caixa'
+    assert abs(_xyz(j)[1]) < TOL
+    o = j.find('origin')
+    rpy = [float(v) for v in o.get('rpy', '0 0 0').split()]
+    assert all(abs(a) < TOL for a in rpy), 'yaw 0: x do sensor para a frente (motrizes)'
+
 
 def test_o_livox_e_o_ponto_mais_alto(urdf):
     (_cx, _cy, cz), (_ox, _oy, oz) = _caixa(urdf)

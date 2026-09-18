@@ -60,7 +60,7 @@ hoverboard_base_controller:
 
     # Quem localiza é /Odometry (pose verdadeira do Gazebo, papel do LIO). Esta
     # odometria fica publicada só para comparação: a diferença entre as duas É a
-    # derrapada. ⚠️ E aqui ela mede a pose do EIXO TRASEIRO, não do centro da
+    # derrapada. ⚠️ E aqui ela mede a pose do EIXO DAS MOTRIZES (dianteiro desde 18-09), não do centro da
     # caixa — o `base_link` mudou de lugar no robô 3 (C8).
     open_loop: false
     enable_odom_tf: false

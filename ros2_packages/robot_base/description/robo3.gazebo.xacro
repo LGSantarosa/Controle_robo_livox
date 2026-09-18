@@ -48,7 +48,7 @@
   </gazebo>
 
   <!-- Pose verdadeira como /Odometry — o papel do LIO no robô real.
-       ⚠️ Agora ela é a pose do EIXO TRASEIRO, não do centro da caixa (C8).
+       ⚠️ Agora ela é a pose do EIXO DAS MOTRIZES (dianteiro desde o giro de 18-09), não do centro da caixa (C8).
        Comparar com CSV do robô 2 exige saber disso. -->
   <gazebo>
     <plugin filename="gz-sim-odometry-publisher-system"

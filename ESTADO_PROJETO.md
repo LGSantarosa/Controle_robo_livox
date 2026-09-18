@@ -1,13 +1,28 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-09-18** (dev — smoke test do
-> robô 3 no Gazebo PASSOU: a cadeia de software sobe inteira).
+> Versionado na `main`. Atualizado em **2026-09-18** (dev — URDF do robô 3
+> girado 180°, motrizes na frente, decisão 051; smoke pós-giro pendente).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+---
+
+## 🔄 18-09 dev — ETAPA 3, PEDAÇO 1: URDF DO ROBÔ 3 GIRADO (decisão 051)
+
+- Motrizes na **frente**, bobas atrás; `base_link` no eixo como antes (C8).
+  Caixa e Livox em x −0,093, bobas em −0,2485, trail (junta + garfo) para o eixo.
+- Livox **yaw 0 = convenção nova, provisória até a etapa 7** (não é o giro).
+- `frente:=-1.0` / `linear_sign` **intocados**; teste trava o par com o URDF.
+- `test_urdf_robo3.py` 25/25 · suíte **853 passed** (`pytest --ignore=ESTAGIO-2026`
+  da raiz; a pasta é local deste PC, fora do git).
+- ⬜ **Smoke do Gazebo pós-giro** (`bash bin/smoke-gazebo-robo3`, dono olhando):
+  prova só que continua subindo — não prova a rotação.
+- ⬜ **Próximo pedaço: envolvente varrida das bobas + footprints**, com teste
+  geométrico próprio. O smoke não serve de prova disso.
 
 ---
 
