@@ -4,7 +4,7 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
-## 2026-09-18 (dev, sem robô) — SMOKE TEST DO ROBÔ 3 NO GAZEBO: PRONTO, NÃO RODADO
+## 2026-09-18 (dev, sem robô) — SMOKE TEST DO ROBÔ 3 NO GAZEBO: A CADEIA SOBE INTEIRA
 
 Pedido do dono: preparar o smoke test da trilha §8-B (`PLANO_NAV2_ROBO3.md`),
 com saída no terminal e em arquivo, encerramento limpo, checklist objetivo e o
@@ -32,6 +32,34 @@ aviso explícito do que ele não valida. Roda quando ele puder olhar a tela.
   geometria, massas, curvatura, zona morta, dinâmica da placa e o
   `frente:=-1.0` — este nem está na cadeia do sim (é do `cmd_vel_to_wheels`;
   o sim usa o `diff_drive_controller`).
+
+### Rodado às 14:51, com o dono olhando — 6/6 (dados em `docs/dados/2026-09-18-robo3-smoke-gazebo/`)
+
+| item | resultado |
+|---|---|
+| assentado | z 0,0000, roll/pitch 0,00°, deriva 0 mm; dono: *"parecia estar ótimo"* |
+| `/livox/pontos` | 9,5 Hz, 20 000 pontos, `livox_frame` |
+| `/scan` | 9,6 Hz, 359/360 feixes finitos |
+| `/Odometry` | 50,0 Hz, odom → base_link |
+| TF | as quatro presentes |
+| controladores | ativos pelo `launch.log` (linhas 69 e 82) |
+
+Fator de tempo real 1,00. Derrubou limpo com SIGINT, sem `kill -9`.
+
+**Dois defeitos meus no instrumento, não no simulador**, deixados como estão
+por decisão do dono ("não precisa arrumar esse teste"):
+
+- o item 6 do verificador disse "ausente" para os dois controladores com os
+  dois ativos — falso negativo. O próprio item 5 desmente (TF das rodas exige
+  `/joint_states`). A causa não se sabe: a saída crua do
+  `ros2 control list_controllers` não foi guardada.
+- o resumo disse "0 erros" no `launch.log`, mas ao derrubar a `placa_simulada`
+  morre com `RCLError: rcl_shutdown already called` (`placa_simulada.py:446`,
+  `rclpy.shutdown()` depois do sinal). É do encerramento, depois da janela; o
+  grep rodou antes do ENTER e não viu. Cosmético, anotado.
+
+➡️ Isto fecha só o que a trilha §8-B promete: **a cadeia de software do robô 3
+sobe no Gazebo**. Nenhuma etapa física muda de estado.
 
 ## 2026-09-17 (dev, robô desligado) — ROBÔ 2: A POSE SÓ ANDA COM AS RODAS
 

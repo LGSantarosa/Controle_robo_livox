@@ -2,7 +2,7 @@
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
 > Versionado na `main`. Atualizado em **2026-09-18** (dev — smoke test do
-> robô 3 no Gazebo pronto, esperando o dono olhar a tela).
+> robô 3 no Gazebo PASSOU: a cadeia de software sobe inteira).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
@@ -11,7 +11,7 @@
 
 ---
 
-## 🧪 18-09 dev — SMOKE TEST DO ROBÔ 3 NO GAZEBO (trilha §8-B), NÃO RODADO
+## 🧪 18-09 dev — SMOKE TEST DO ROBÔ 3 NO GAZEBO (trilha §8-B): 🟢 PASSOU
 
 ```bash
 bash bin/smoke-gazebo-robo3          # com o dono olhando a janela do Gazebo
@@ -24,6 +24,11 @@ sobe na `pista_obstaculos`, classifica 6 itens (assentado, `/livox/pontos`,
 `~/sim_robo3/smoke_<data>/`. Se algo falhar: **preservar a pasta antes de mexer
 em qualquer config.** 🔴 Não valida geometria, massas, curvatura, zona morta,
 placa nem o `frente:=-1.0`.
+
+**Resultado 14:51: 6/6**, dono conferiu na tela (`docs/dados/2026-09-18-robo3-smoke-gazebo/`).
+⚠️ O verificador tem dois defeitos conhecidos e **deixados** por decisão do dono:
+o item 6 dá falso "ausente" (conferir no `launch.log`, "Configured and
+activated"), e a `placa_simulada` morre com `RCLError` ao derrubar (cosmético).
 
 ---
 

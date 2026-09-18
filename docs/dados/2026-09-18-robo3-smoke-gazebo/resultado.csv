@@ -1,0 +1,8 @@
+item,veredito_auto,detalhe,veredito_dono
+1 modelo assentado,PASSOU,"z=-0.0000 m (variou 0.0 mm), |roll|max=0.00°, |pitch|max=0.00°, deriva xy=0.0 mm","PASSOU (olho do dono: ""parecia estar ótimo"")"
+2 /livox/pontos,PASSOU,"9.5 Hz, 20000 pontos, frame livox_frame",PASSOU
+3 /scan,PASSOU,"9.6 Hz, 359/360 feixes com alcance finito, frame base_link",PASSOU
+4 /Odometry,PASSOU,"50.0 Hz, odom -> base_link",PASSOU
+5 TF,PASSOU,"odom->base_link, base_link->livox_frame, base_link->left_wheel, base_link->right_wheel",PASSOU
+6 controladores ativos,FALHOU,"joint_state_broadcaster=ausente, hoverboard_base_controller=ausente",PASSOU pelo launch.log (linhas 69 e 82); FALHOU do verificador é falso negativo
+fator_tempo_real,,0.996,
