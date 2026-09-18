@@ -1,8 +1,8 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-09-18** (dev — URDF do robô 3
-> girado 180°, motrizes na frente, decisão 051; smoke pós-giro pendente).
+> Versionado na `main`. Atualizado em **2026-09-18** (dev — etapa 3 do robô 3
+> FEITA: URDF girado (051) + footprint canônico sem padding (052)).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
@@ -24,8 +24,14 @@
 - 🔧 Item 6 do verificador consertado: consulta o serviço
   `/controller_manager/list_controllers` (o CLI `ros2 control` não existe neste PC).
   Testado com serviço fingido; ainda não visto verde num smoke real.
-- ⬜ **Próximo pedaço: envolvente varrida das bobas + footprints**, com teste
-  geométrico próprio. O smoke não serve de prova disso.
+- ✅ **Envolvente varrida + footprint (decisão 052):** artefato
+  `robot_base/config/geometria_robo3.yaml`, sem padding,
+  `[[0.0825, ±0.19], [-0.2913, ±0.19]]` (caixa delimitadora; quina vazia ≠
+  margem). Testes: cobre corpo e varredura, não carrega folga (mordem: mutação).
+- ✅ **Etapa 3 FEITA**, com a **fronteira mudada no plano**: o Nav2 consumir o
+  artefato, `footprint_padding` explícito, `collision_monitor`/meia largura/
+  corredor de ré/para-choque e o `robot_state_publisher` são da **etapa 4**.
+- ⬜ **Próximo: etapa 4** (perfis `robo2`/`robo3` + bringup único do robô 3).
 
 ---
 

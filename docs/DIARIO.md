@@ -4,6 +4,27 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-09-18 (dev, sem robô) — ETAPA 3, PEDAÇO 2: A VARREDURA DAS BOBAS E O FOOTPRINT CANÔNICO (decisão 052)
+
+- Conta: raio varrido 0,04272 m, traseira varrida −0,29122, lateral das bobas
+  0,14772 < 0,190 (o pneu manda na largura). Conferida pelo dono à parte.
+- Eu propus travar o polígono só no teste e na decisão até a etapa 4. **O dono
+  condicionou**: polígono que só existe no teste é teste sem consumidor. Virou
+  artefato: `robot_base/config/geometria_robo3.yaml`, footprint **sem padding**,
+  declarado como caixa delimitadora (área vazia nas quinas ≠ margem).
+- Achado ao escrever: o −0,2912 que estava na mesa **não cobre** −0,29122.
+  Arredondado para fora: −0,2913.
+- 3 testes novos (varredura, cobertura, sem folga) → **28/28**. Mutação à mão
+  para ver que mordem: −0,2912, 5 cm embutidos e traseira na caixa, cada um
+  reprovado; original restaurado.
+- **Fronteira do plano mudada formalmente**: a etapa 3 fecha com URDF girado +
+  artefato; o consumo pelo Nav2, o `footprint_padding` explícito, os outros
+  consumidores de geometria e o `robot_state_publisher` passam para a etapa 4,
+  escritos na linha dela. O dono tinha avisado: não dá para fechar a 3 dizendo
+  que o consumidor dela nasce depois.
+- Erro meu pego na revisão da própria decisão: escrevi "~1 cm²" de área vazia;
+  é ~105 cm² na faixa de trás. Corrigido antes do commit.
+
 ## 2026-09-18 (dev, sem robô) — ETAPA 3, PEDAÇO 1: O URDF DO ROBÔ 3 GIRA 180° (decisão 051)
 
 - Proposta minha: girar só x e trail primeiro e usar o smoke como prova. **O

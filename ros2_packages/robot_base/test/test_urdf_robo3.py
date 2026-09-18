@@ -24,6 +24,7 @@ import yaml
 AQUI = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 XACRO = os.path.join(AQUI, 'description', 'robo3.urdf.xacro')
 YAML_SIM = os.path.join(AQUI, 'config', 'hoverboard_controllers_sim_robo3.yaml')
+GEOMETRIA = os.path.join(AQUI, 'config', 'geometria_robo3.yaml')
 LAUNCH_CONTROLE = os.path.join(os.path.dirname(AQUI), 'robot_nav', 'launch',
                                'controle_robo3.launch.py')
 
@@ -290,6 +291,105 @@ def test_passa_na_porta_de_70_cm_em_QUALQUER_angulo(urdf):
     diagonal = math.hypot(larg, comp)
     assert diagonal < 0.70, 'não caberia na porta 2 nem de frente'
     assert (0.70 - diagonal) / 2 > 0.09, 'folga do pior caso: 10,0 cm por lado'
+
+
+# ------------------------------- envolvente varrida e footprint (etapa 3, 18-09)
+
+def _varredura_bobas(urdf):
+    """[(pivô x, pivô y, raio varrido)] — tudo tirado do URDF.
+
+    A boba gira 360° no pivô. O ponto mais longe do pivô, em planta, é a quina
+    da rodinha: `trail + raio` ao longo e `largura/2` de lado. Esse é o raio do
+    círculo que ela varre — e é o que o contorno tem de cobrir, não o ponto
+    onde ela está parada (§3, item 5).
+    """
+    r, larg = _cilindro(urdf, 'left_caster_wheel')
+    out = []
+    for lado in ('left', 'right'):
+        px, py, _ = _xyz(_junta(urdf, f'{lado}_caster_swivel_joint'))
+        trail = abs(_xyz(_junta(urdf, f'{lado}_caster_wheel_joint'))[0])
+        out.append((px, py, math.hypot(trail + r, larg / 2)))
+    return out
+
+
+def _pontos_do_corpo(urdf):
+    """Quinas, em planta, de tudo o que é rígido: caixa e os dois pneus."""
+    (cx, cy, _cz), (ox, oy, _oz) = _caixa(urdf)
+    pts = [(ox + sx * cx / 2, oy + sy * cy / 2) for sx in (1, -1) for sy in (1, -1)]
+    r, larg = _cilindro(urdf, 'left_wheel')
+    for lado in ('left', 'right'):
+        wx, wy, _ = _xyz(_junta(urdf, f'{lado}_wheel_joint'))
+        pts += [(wx + sx * r, wy + sy * larg / 2) for sx in (1, -1) for sy in (1, -1)]
+    return pts
+
+
+def _dentro(poligono, x, y):
+    """Ponto dentro (ou na borda) de polígono CONVEXO, qualquer sentido."""
+    sinais = set()
+    n = len(poligono)
+    for i in range(n):
+        (x1, y1), (x2, y2) = poligono[i], poligono[(i + 1) % n]
+        c = (x2 - x1) * (y - y1) - (y2 - y1) * (x - x1)
+        if abs(c) > 1e-12:
+            sinais.add(c > 0)
+    return len(sinais) <= 1
+
+
+@pytest.fixture(scope='module')
+def footprint():
+    with open(GEOMETRIA) as f:
+        return [tuple(v) for v in yaml.safe_load(f)['footprint']['poligono']]
+
+
+def test_a_varredura_das_bobas_sai_4_cm_atras_e_nao_alarga(urdf):
+    """Raio varrido √((20+20)² + 15²) mm = 42,7 mm em torno de cada pivô.
+
+    Atrás: a traseira passa de −0,2485 (caixa) para −0,2912. De lado: 0,1477,
+    menos que a face do pneu (0,190) — quem manda na largura continua o pneu.
+    """
+    r, larg = _cilindro(urdf, 'left_wheel')
+    y_pneu = _xyz(_junta(urdf, 'left_wheel_joint'))[1] + larg / 2
+    for px, py, R in _varredura_bobas(urdf):
+        assert abs(R - 0.04272) < 1e-4
+        assert abs((px - R) - (-0.29122)) < 1e-4
+        assert abs(py) + R < y_pneu, 'a varredura não pode alargar o robô'
+
+
+def test_footprint_canonico_cobre_corpo_e_varredura(urdf, footprint):
+    """O polígono de `geometria_robo3.yaml` contém tudo o que o robô ocupa.
+
+    Corpo rígido pelas quinas; varredura amostrada no círculo inteiro de cada
+    boba. É o artefato que o perfil Nav2 consome na etapa 4.
+    """
+    for x, y in _pontos_do_corpo(urdf):
+        assert _dentro(footprint, x, y), f'corpo fora do footprint em ({x:.4f}, {y:.4f})'
+    for px, py, R in _varredura_bobas(urdf):
+        for k in range(360):
+            a = math.radians(k)
+            x, y = px + R * math.cos(a), py + R * math.sin(a)
+            assert _dentro(footprint, x, y), \
+                f'varredura da boba fora do footprint em ({x:.5f}, {y:.5f})'
+
+
+def test_footprint_canonico_NAO_carrega_folga(urdf, footprint):
+    """Geometria pura: cada lado encosta no extremo, a menos do arredondamento.
+
+    A folga é `footprint_padding`, classe (c), no perfil. Se ela entrar aqui
+    dentro, soma duas vezes e ninguém vê — foi o que aconteceu com o footprint
+    do robô 2 (decisão 032: corpo + ~5 cm dentro do polígono).
+    """
+    pts = _pontos_do_corpo(urdf)
+    for px, py, R in _varredura_bobas(urdf):
+        pts += [(px - R, py), (px + R, py), (px, py - R), (px, py + R)]
+    geo = (min(p[0] for p in pts), max(p[0] for p in pts),
+           min(p[1] for p in pts), max(p[1] for p in pts))
+    fp = (min(p[0] for p in footprint), max(p[0] for p in footprint),
+          min(p[1] for p in footprint), max(p[1] for p in footprint))
+    ARRED = 1e-4   # 4 casas, arredondando para FORA
+    assert geo[0] - ARRED <= fp[0] <= geo[0] + 1e-9
+    assert geo[1] - 1e-9 <= fp[1] <= geo[1] + ARRED
+    assert geo[2] - ARRED <= fp[2] <= geo[2] + 1e-9
+    assert geo[3] - 1e-9 <= fp[3] <= geo[3] + ARRED
 
 
 def test_urdf_girado_exige_frente_negativa_no_controle(urdf):

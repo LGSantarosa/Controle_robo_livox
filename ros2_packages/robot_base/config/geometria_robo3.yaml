@@ -1,0 +1,31 @@
+# Geometria canônica do ROBÔ 3 — fonte única do contorno, classe (b) do plano.
+#
+# Sai da trena e do URDF, NUNCA de CSV (`docs/PLANO_NAV2_ROBO3.md`, §5 (b)).
+# Frame: `base_link`, no eixo das motrizes, no chão (C8), motrizes na FRENTE
+# desde o giro de 18-09 (decisão 051). Decisão deste arquivo: 052.
+#
+# 🔴 QUEM CONSOME: na etapa 4 o perfil Nav2 do robô 3 lê ESTE arquivo, ou é
+# amarrado a ele por teste de igualdade. Os vértices NÃO se redigitam em outro
+# lugar. E o perfil tem de declarar `footprint_padding` EXPLÍCITO: ausente, o
+# Nav2 aplica o padrão dele (0,01 m) e isso vira margem escondida.
+#
+# `test_urdf_robo3.py` extrai a geometria do URDF e confere que este polígono
+# cobre o corpo rígido E a varredura das bobas, e que não carrega folga.
+
+footprint:
+  # SEM PADDING. Isto é geometria, não política: a folga de segurança é o
+  # `footprint_padding` do perfil (classe (c)), decidida à parte.
+  #
+  # ⚠️ É a CAIXA DELIMITADORA DOS EXTREMOS — envolvente retangular
+  # conservadora. Ela inclui área VAZIA nas quinas traseiras (entre a
+  # varredura circular das bobas e o canto do retângulo) e na frente, fora dos
+  # pneus. Isso é aproximação de forma, NÃO margem de segurança: não confundir
+  # depois com folga, e não descontar dela.
+  #
+  #   frente   x = +0,0825   frente do pneu (roda_raio)
+  #   traseira x = −0,2913   pivô das bobas −0,2485 − raio varrido 0,04272
+  #                          = −0,29122, ARREDONDADO PARA FORA (−0,2912 deixaria
+  #                          0,02 mm da varredura de fora)
+  #   lateral  y = ±0,1900   face externa do pneu (0,160 + 0,060/2); a varredura
+  #                          das bobas chega a 0,14772 e não alarga nada
+  poligono: [[0.0825, 0.1900], [0.0825, -0.1900], [-0.2913, -0.1900], [-0.2913, 0.1900]]
