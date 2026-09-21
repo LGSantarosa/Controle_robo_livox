@@ -1,0 +1,1 @@
+52bbffc0cbe09f6eb965a9c10f2352a79f32f371 regua: quatro ilegiveis do controller_manager, identificados na captura 1 da baseline v2

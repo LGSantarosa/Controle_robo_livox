@@ -1,0 +1,6 @@
+t_s,n_visiveis,duplicados,faltando,sobrando,nao_prontos,pronto
+0.0,0,,/bt_navigator /bt_navigator_navigate_to_pose_rclcpp_node /collision_monitor /compensador_rumo /controller_manager /controller_server /freeze_capture /global_costmap/global_costmap /gz_ros_control /heading_controller /hoverboard_base_controller /joint_state_broadcaster /lifecycle_manager_pilha /local_costmap/local_costmap /map_server /path_follower /placa_simulada /planner_server /robot_state_publisher /ros_gz_bridge /rosbag2_recorder /rviz2 /scan_2d /smoother_server /tf_map_odom /twist_mux,,,False
+2.4,29,,/path_follower,,,False
+4.6,30,,,,,True
+6.8,30,,,,,True
+9.0,30,,,,,True

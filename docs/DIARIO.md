@@ -4,6 +4,29 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-09-21 (dev + Gazebo, sem robô) — BASELINE v2: A RÉGUA ENXERGA O REFLEXO
+
+Captura 1 (commit `146216a`) **reprovou**, como o desenho mandava: quatro
+ilegíveis inesperados do `/controller_manager` (`fallback_controllers` e
+`node_options_args` dos dois controladores). O dono confirmou na pilha viva;
+eu reli só em leitura e versionei a saída — 48 nomes, **0 valores no lote**.
+Isso fecha a hipótese que estava aberta: foi o mesmo tudo-ou-nada que zerou o
+dump dele na baseline original. Cadastrados em `52bbffc`, com a pilha ainda de
+pé; simulados contra a captura 1 antes do commit (0 inesperados, 0 sem uso).
+
+Captura 2, mesma pilha: **APROVADA** — 25 dumps, nenhum vazio, seis ilegíveis
+todos cadastrados. Continuidade, conferida por mim e versionada como script:
+os 23 nós antigos idênticos ao passo 2 (normalizado e bruto); contra a
+original, só a permissão do passo 2; os dois nós novos com conteúdo, polígonos
+iguais ao YAML e `git diff` vazio das fontes deles desde a baseline original.
+`docs/dados/2026-09-21-baseline-v2-robo2/`.
+
+Anotado para depois, fora do caminho: no desligamento o `ros2 launch` e o
+`ros2 bag` precisaram de `kill -9` do wrapper.
+
+⬜ Próximo: **passo 3** (`perfil.py`), contra a v2 e **sem permissão** — o
+`avanco_para_choque` já está nela.
+
 ## 2026-09-21 (dev, sem robô) — ILEGÍVEIS CONHECIDOS: EXCEÇÃO EXATA, E EXCEÇÃO SEM USO REPROVA
 
 Decisão do dono sobre os dois `Polygon*.max_points` do Nav2: lista versionada

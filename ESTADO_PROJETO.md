@@ -2,12 +2,35 @@
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
 > Versionado na `main`. Atualizado em **2026-09-21** (dev, branch `etapa4-perfis`
-> — etapa 4: passos 0–2 fechados; régua consertada (dumps vazios); próximo é a baseline v2, ANTES do passo 3).
+> — etapa 4: passos 0–2 fechados; régua consertada; BASELINE v2 aprovada; próximo é o passo 3).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+---
+
+## ✅ 21-09 — BASELINE v2 APROVADA: A RÉGUA DOS PRÓXIMOS PASSOS
+
+- `docs/dados/2026-09-21-baseline-v2-robo2/02-baseline-v2-aprovada/` (commit
+  `52bbffc`): 30/30 nós, 25 dumps, **nenhum vazio**; `collision_monitor` e
+  `controller_manager` com conteúdo, polígonos do reflexo na régua.
+- Seis ilegíveis conhecidos, exatos, com evidência (2 do `collision_monitor`,
+  4 do `controller_manager`). A captura 1 reprovada ficou preservada.
+- Continuidade versionada (`continuidade.sh`): 23 nós antigos idênticos ao
+  passo 2; contra a original, só a permissão do passo 2.
+
+⬜ **Próximo: passo 3** (`perfil.py`, proposta revisada pelo dono: consumo
+estático de `parametros(2, pkg)`, `RoboSemPerfil`, `_recusa_robo` na pilha,
+`nav2_rewrites: {}`, 6 valores do `path_follower` na equivalência). Compara
+contra a **v2, sem nenhuma permissão**:
+
+```bash
+python3 tools/linha_de_base/normaliza.py compara \
+  docs/dados/2026-09-21-baseline-v2-robo2/02-baseline-v2-aprovada/parametros_normalizados.yaml \
+  <captura>/parametros_normalizados.yaml
+```
 
 ---
 
@@ -19,7 +42,7 @@
   polígonos do reflexo.** Nota no README dela.
 - Captura consertada: leitura nome a nome quando a contagem difere; ilegível e
   dump vazio **reprovam**; `ilegiveis.yaml` sempre gravado. Suíte **931**.
-- ⬜ **Próximo: baseline v2 no Gazebo** (dono acompanhando). Continuidade:
+- ✅ Baseline v2 feita (seção acima). Continuidade:
   v2 × passo 2 = os 23 nós antigos idênticos; v2 × original = só a permissão
   do passo 2; `collision_monitor`/`controller_manager` novos, com `git diff`
   vazio dos arquivos-fonte deles desde a baseline.

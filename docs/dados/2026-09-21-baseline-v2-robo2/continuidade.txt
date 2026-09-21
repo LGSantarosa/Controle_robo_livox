@@ -1,0 +1,18 @@
+$ bash docs/dados/2026-09-21-baseline-v2-robo2/continuidade.sh
+nós com dump na v2: 25 | antigos (sem os 2 novos): 23
+os 2 novos na original e no passo 2: {'/collision_monitor': 0, '/controller_manager': 0} {'/collision_monitor': 0, '/controller_manager': 0} (vazios: o furo)
+
+1) v2 x passo 2, 23 nós antigos, sem permissão:
+APROVADO
+   brutos, nós diferentes: []
+
+2) v2 x baseline original, 23 nós, com a permissão do passo 2:
+✅ permitida  entrou  /path_follower:avanco_para_choque  None → 0.28
+APROVADO
+
+3) conteúdo novo: {'/collision_monitor': 44, '/controller_manager': 34}
+   PolygonStop.points vivo == collision_monitor.yaml: True
+   PolygonApproach.points vivo == collision_monitor.yaml: True
+
+   fontes dos 2 nós desde a baseline original (feb064a) até a captura (52bbffc):
+   (fim do diff — vazio = nada mudou)

@@ -1,0 +1,11 @@
+t_s,n_visiveis,duplicados,faltando,sobrando,nao_prontos,pronto
+0.0,0,,/bt_navigator /bt_navigator_navigate_to_pose_rclcpp_node /collision_monitor /compensador_rumo /controller_manager /controller_server /freeze_capture /global_costmap/global_costmap /gz_ros_control /heading_controller /hoverboard_base_controller /joint_state_broadcaster /lifecycle_manager_pilha /local_costmap/local_costmap /map_server /path_follower /placa_simulada /planner_server /robot_state_publisher /ros_gz_bridge /rosbag2_recorder /rviz2 /scan_2d /smoother_server /tf_map_odom /twist_mux,,,False
+5.3,18,,/controller_manager /controller_server /gz_ros_control /hoverboard_base_controller /joint_state_broadcaster /local_costmap/local_costmap /path_follower /rviz2 /scan_2d,,/bt_navigator /collision_monitor /global_costmap/global_costmap /planner_server /smoother_server,False
+7.6,29,,/hoverboard_base_controller /joint_state_broadcaster,/spawner_joint_state_broadcaster,/bt_navigator /collision_monitor /controller_server /local_costmap/local_costmap,False
+9.9,29,,/hoverboard_base_controller /joint_state_broadcaster,/spawner_joint_state_broadcaster,,False
+12.0,29,,/hoverboard_base_controller /joint_state_broadcaster,/spawner_joint_state_broadcaster,,False
+14.1,29,,/hoverboard_base_controller /joint_state_broadcaster,/spawner_joint_state_broadcaster,,False
+16.4,30,,/hoverboard_base_controller,/spawner_hoverboard_base_controller,,False
+18.6,30,,,,,True
+20.8,30,,,,,True
+23.0,30,,,,,True

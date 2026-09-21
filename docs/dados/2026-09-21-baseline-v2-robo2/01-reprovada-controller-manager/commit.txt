@@ -1,0 +1,1 @@
+146216a30ce12974d9ef621130da4e34ab5b5571 regua: ilegiveis conhecidos por no + parametro exatos; excecao sem uso reprova
