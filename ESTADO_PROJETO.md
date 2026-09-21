@@ -2,7 +2,7 @@
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
 > Versionado na `main`. Atualizado em **2026-09-21** (dev, branch `etapa4-perfis`
-> — etapa 4: passos 0, 1 e 2 FECHADOS no Gazebo; próximo é o passo 3).
+> — etapa 4: passos 0, 1 e 2 FECHADOS no Gazebo + testes importando o fonte; próximo é o passo 3).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
@@ -18,10 +18,11 @@
 - Gazebo: uma única diferença contra a baseline, a permitida
   (`permitidas/passo2_robo2.yaml`: `entrou`, 0,28); grafo idêntico.
   `docs/dados/2026-09-21-passo2-robo2/`.
-- 🔴 **Armadilha:** com o overlay carregado, os testes do `robot_motion`
-  importam o `install/`, não o fonte. Depois de mexer em `.py`:
-  `colcon build --packages-select robot_motion` ANTES do `pytest`, senão a
-  suíte testa o código velho. Correção proposta num passo próprio.
+- ✅ **Armadilha corrigida** (commit de infra, depois do passo 2): o
+  `conftest.py` da raiz põe o fonte dos 4 pacotes na frente do `sys.path` e
+  impede o pytest de descer em `install/`/`log/`/`build/`. Testes por import
+  usam o FONTE sem build; `share/`, launches e Gazebo seguem no install/.
+  Travado por `test_import_do_fonte.py`. Suíte **918**.
 
 ⬜ **Próximo: passo 3** — `perfil.py` + a pilha montando o robô 2 por ele
 (`robo:=2` padrão). Prova: dump igual à baseline com a MESMA permissão do

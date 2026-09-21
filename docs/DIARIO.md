@@ -4,6 +4,36 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-09-21 (dev, sem robô) — OS TESTES PASSAM A IMPORTAR O FONTE (infra, antes do passo 3)
+
+Achado do passo 2: com o overlay carregado, os testes importavam a cópia do
+`install/`. Decisão do dono: corrigir antes do passo 3, em commit próprio, sem
+mexer em `AMENT_PREFIX_PATH` nem no `share/`.
+
+**Vermelho 1, isolado** (`pytest test_import_do_fonte.py`, overlay carregado):
+`robot_base`, `robot_motion` e `robot_nav` vinham de
+`install/<pkg>/lib/python3.12/site-packages/`; `robot_planning`, de `build/`.
+Na primeira versão o teste usava `realpath` e APROVAVA o `robot_planning`: o
+`build/` dele é `--symlink-install` de 28-07 apontando para o fonte — passaria
+por estado de build desta máquina. Passou a exigir o `__file__` literal: 4/4
+vermelhos; a guarda "o `share/` continua no install/" verde.
+
+**O `conftest.py` com os quatro fontes na frente do `sys.path` deixou o teste
+isolado verde — e a suíte inteira seguiu vermelha (vermelho 2: 3 falhas, 915
+passed).** Rastreado com uma sonda no `sys.path`: o pytest DESCE em `install/`
+(o padrão dele só pula `build/`), acha os `__init__.py` dos pacotes instalados,
+o plugin `launch_testing` do ROS os importa via `import_path`, e esse põe o
+site-packages do install/ na posição 0 — por cima do conftest. Sozinho o teste
+nunca fazia a coleta descer lá. Correção no mesmo `conftest.py`:
+`collect_ignore_glob` para `install`, `log`, `build` e o lixo de colcon dentro
+de pacotes. Nenhum teste some: a coleta segue 918.
+
+**Verde:** suíte **918** (913 + 5). E a prova de uso: voltar o `vao_frente()`
+para o recuo **só no fonte, sem build**, agora reprova o
+`test_o_vao_da_frente_usa_o_avanco` — antes passaria verde, testando o
+install/. Gazebo, console scripts e a trava dos launches continuam no install/,
+recompilado pelos wrappers.
+
 ## 2026-09-21 (dev + Gazebo, sem robô) — ETAPA 4, PASSO 2: O VÃO DA FRENTE MEDE DA FRENTE
 
 **`86ca1ed`.** `avanco_para_choque` (0,28) no `path_follower`; o `vao_frente()`
