@@ -24,9 +24,9 @@
   suíte testa o código velho. Correção proposta num passo próprio.
 
 ⬜ **Próximo: passo 3** — `perfil.py` + a pilha montando o robô 2 por ele
-(`robo:=2` padrão). Prova: dump igual à baseline (as duas diferenças já
-permitidas continuam; nenhuma nova) e o argumento `robo` como único novo da
-trava do §8.
+(`robo:=2` padrão). Prova: dump igual à baseline com a MESMA permissão do
+passo 2 (`avanco_para_choque`) e nenhuma nova — o passo 1 não gerou diferença
+— e o argumento `robo` como único novo da trava do §8.
 
 ---
 
