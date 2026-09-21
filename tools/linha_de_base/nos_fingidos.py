@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Nós fingidos para testar a captura sem Gazebo (usado só pelo test_captura).
 
-    python3 nos_fingidos.py --comum /ns/no --ciclo /a/b:ativo --ciclo /c/d:inativo
+    python3 nos_fingidos.py --comum /ns/no --ciclo /a/b:ativo --grafo /auxiliar
 
 Cada nó declara parâmetros de tipos variados (aninhado, bool, lista de int);
 os lifecycle declaram `footprint_padding`, como os costmaps do Nav2. Roda até
@@ -30,6 +30,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--comum', action='append', default=[])
     ap.add_argument('--ciclo', action='append', default=[])
+    ap.add_argument('--grafo', action='append', default=[],
+                    help='nó de grafo sem serviços de parâmetros')
     a = ap.parse_args()
 
     rclpy.init()
@@ -51,6 +53,9 @@ def main():
         if alvo == 'ativo':
             n.trigger_activate()
         nos.append(n)
+    for c in a.grafo:
+        nome, ns = separa(c)
+        nos.append(Node(nome, namespace=ns, start_parameter_services=False))
     for n in nos:
         ex.add_node(n)
 

@@ -5,12 +5,10 @@
 # 🔴 É PREVISÃO pela leitura do código (commit do passo 0c), NÃO observação.
 # Na sessão de Gazebo, a primeira divergência reprova e fica preservada na
 # pasta da captura; cada nó a mais é IDENTIFICADO antes de entrar aqui — nunca
-# copiar o grafo observado. Fora de propósito, e por decisão do dono:
-#   · `/launch_ros_<pid>` — só nasce sob demanda, e a pilha não usa as ações
-#     que o criam;
-#   · nós internos incertos do Nav2 e do RViz.
-# Se aparecer nome variável de verdade, entra num commit próprio: expressão
-# ancorada + cardinalidade + alias estável nos dumps.
+# copiar o grafo observado. `/launch_ros_<pid>` continua fora: só nasce sob
+# demanda, e a pilha não usa as ações que o criam. A captura 1 de 21-09 achou
+# cinco auxiliares internos reais do Nav2; eles entram abaixo com origem,
+# expressão ancorada, cardinalidade e alias estável.
 nos:
   # --- Nav2 (pilha.launch.py), servidores de ciclo de vida
   - /map_server            # com_mapa: o default do sim é o mapa da pista
@@ -45,3 +43,19 @@ nos:
   - /hoverboard_base_controller
   # Transitórios que NÃO entram (saem sozinhos; a estabilidade da captura os
   # espera sumir): ros_gz_sim `create` e os dois `spawner`.
+
+# Nós reais do grafo que, por desenho das bibliotecas do Nav2, não oferecem os
+# serviços list_parameters/get_parameters. Eles provam composição do grafo,
+# mas não têm dump a capturar. Observados e identificados na captura 1 de
+# 21-09; não foram copiados silenciosamente para `nos`.
+grafo_somente:
+  exatos:
+    # Criado por BtActionServer para a ação NavigateToPose. Nome montado em
+    # nav2_behavior_tree/bt_action_server_impl.hpp.
+    - /bt_navigator_navigate_to_pose_rclcpp_node
+  volateis:
+    # Quatro TransformListener internos: BT Navigator, Collision Monitor e os
+    # dois Costmap2DROS. O sufixo hexadecimal é endereço/identidade de runtime.
+    - padrao: '^/transform_listener_impl_[0-9a-f]+$'
+      quantidade: 4
+      alias: /transform_listener_impl_<hex>

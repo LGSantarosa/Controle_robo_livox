@@ -46,8 +46,10 @@ def test_oculto_so_pelo_ultimo_componente():
 
 def test_avalia_grafo():
     g = cap.avalia_grafo(['/a', '/b', '/b', '/x', '/_linha_de_base'], ['/a', '/b', '/c'])
-    assert g == {'visiveis': ['/a', '/b', '/x'], 'duplicados': ['/b'],
-                 'faltando': ['/c'], 'sobrando': ['/x']}
+    assert g['visiveis'] == ['/a', '/b', '/x']
+    assert g['duplicados'] == ['/b']
+    assert g['faltando'] == ['/c']
+    assert g['sobrando'] == ['/x']
 
 
 def test_pronto_exige_tudo():
@@ -79,6 +81,60 @@ def test_esperados_exige_nome_completo_e_unico(tmp_path):
         cap.le_esperados(str(arq))
 
 
+def test_grafo_somente_exato_e_volatil_com_cardinalidade(tmp_path):
+    arq = tmp_path / 'e.yaml'
+    arq.write_text(yaml.safe_dump({
+        'nos': ['/a'],
+        'grafo_somente': {
+            'exatos': ['/aux'],
+            'volateis': [{'padrao': r'^/listener_[0-9a-f]+$',
+                          'quantidade': 2, 'alias': '/listener_<hex>'}],
+        }}))
+    cfg = cap.le_configuracao(str(arq))
+    g = cap.avalia_grafo(['/a', '/aux', '/listener_12', '/listener_ab'],
+                         cfg['nos'], cfg['grafo_somente'])
+    assert not g['faltando'] and not g['sobrando'] and not g['volateis_invalidos']
+    assert g['somente_grafo'] == ['/aux', '/listener_12', '/listener_ab']
+    assert set(g['aliases'].values()) == {'/listener_<hex>'}
+    estados = {'/a': 'responde', '/aux': 'presente_sem_parametros',
+               '/listener_12': 'presente_sem_parametros',
+               '/listener_ab': 'presente_sem_parametros'}
+    assert cap.pronto(g, estados)
+
+    g = cap.avalia_grafo(['/a', '/aux', '/listener_12'],
+                         cfg['nos'], cfg['grafo_somente'])
+    assert g['volateis_invalidos'] and not cap.pronto(g, estados)
+
+
+@pytest.mark.parametrize('padrao', ['/listener_.*$', '^/listener_.*', '['])
+def test_regra_volatil_exige_regex_valida_e_ancorada(tmp_path, padrao):
+    arq = tmp_path / 'e.yaml'
+    arq.write_text(yaml.safe_dump({
+        'grafo_somente': {'volateis': [
+            {'padrao': padrao, 'quantidade': 1, 'alias': '/listener_<id>'}]}}))
+    with pytest.raises(ValueError):
+        cap.le_configuracao(str(arq))
+
+
+def test_nome_parecido_mas_fora_da_regex_continua_sobrando():
+    gs = {'exatos': [], 'volateis': [
+        {'padrao': r'^/listener_[0-9a-f]+$', 'quantidade': 1,
+         'alias': '/listener_<hex>'}]}
+    g = cap.avalia_grafo(['/a', '/listener_ab', '/listener_intruso'], ['/a'], gs)
+    assert g['sobrando'] == ['/listener_intruso']
+
+
+def test_regra_volatil_nao_pode_engolir_no_fixo(tmp_path):
+    arq = tmp_path / 'e.yaml'
+    arq.write_text(yaml.safe_dump({
+        'nos': ['/listener_ab'],
+        'grafo_somente': {'volateis': [
+            {'padrao': r'^/listener_[0-9a-f]+$',
+             'quantidade': 1, 'alias': '/listener_<hex>'}]}}))
+    with pytest.raises(ValueError, match='nó fixo'):
+        cap.le_configuracao(str(arq))
+
+
 def test_padding_ausente_e_motivo():
     n = {GC: {'footprint_padding': 0.01}, LC: {}}
     assert cap.resumo_padding(n) == {GC: 0.01, LC: 'AUSENTE'}
@@ -105,7 +161,8 @@ def ambiente():
 
     def captura(esperados, pasta, prazo):
         arq = pasta / 'esperados.yaml'
-        arq.write_text(yaml.safe_dump({'nos': esperados}))
+        config = esperados if isinstance(esperados, dict) else {'nos': esperados}
+        arq.write_text(yaml.safe_dump(config))
         r = subprocess.run([sys.executable, os.path.join(AQUI, 'captura.py'),
                             str(arq), str(pasta / 'saida'), '--prazo', str(prazo),
                             '--intervalo', '0.3', '--estavel', '3'],
@@ -144,6 +201,27 @@ def test_captura_aprovada_com_tudo_ativo(tmp_path, ambiente):
     linhas = (saida / 'consultas.csv').read_text().splitlines()[1:]
     prontas = [ln.endswith('True') for ln in linhas]
     assert prontas[-3:] == [True, True, True]
+
+
+def test_captura_aceita_auxiliares_sem_parametros_e_normaliza_nome(
+        tmp_path, ambiente):
+    sobe, captura = ambiente
+    sobe('--comum', '/comum', '--grafo', '/aux_fixo',
+         '--grafo', '/listener_12', '--grafo', '/listener_ab')
+    config = {
+        'nos': ['/comum'],
+        'grafo_somente': {
+            'exatos': ['/aux_fixo'],
+            'volateis': [{'padrao': r'^/listener_[0-9a-f]+$',
+                          'quantidade': 2, 'alias': '/listener_<hex>'}],
+        }}
+    rc, r, saida = captura(config, tmp_path, prazo=20)
+    assert rc == 0 and r['veredito'] == 'APROVADO', r['motivos']
+    assert r['nos_esperados'] == 4 and r['nos_com_parametros'] == 1
+    normalizado = (saida / 'grafo_normalizado.txt').read_text().splitlines()
+    assert normalizado == ['/aux_fixo', '/comum', '/listener_<hex> x2']
+    params = yaml.safe_load((saida / 'parametros_normalizados.yaml').read_text())
+    assert set(params) == {'/comum'}
 
 
 def test_nao_ativo_e_sobrando_reprovam_mas_o_dado_fica(tmp_path, ambiente):

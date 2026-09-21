@@ -4,7 +4,9 @@
     python3 tools/linha_de_base/captura.py <esperados.yaml> <pasta_saida>
             [--prazo 180] [--intervalo 2] [--estavel 3]
 
-`esperados.yaml` é `{nos: [/nome/completo, ...]}` — a lista explícita do passo 0.
+`esperados.yaml` separa os nós com parâmetros dos auxiliares que existem apenas
+no grafo. Estes últimos podem ser nomes exatos ou famílias de nome variável,
+sempre com expressão ancorada, cardinalidade e alias estável.
 
 Ordem, e por quê:
 
@@ -35,6 +37,7 @@ import argparse
 import csv
 import importlib.util
 import os
+import re
 import sys
 import time
 
@@ -43,7 +46,7 @@ import yaml
 AQUI = os.path.dirname(os.path.abspath(__file__))
 NOME_PROPRIO = '_linha_de_base'
 COSTMAPS = ('/global_costmap/global_costmap', '/local_costmap/local_costmap')
-PRONTOS = ('active', 'responde')
+PRONTOS = ('active', 'responde', 'presente_sem_parametros')
 TIMEOUT_SERVICO = 3.0
 
 
@@ -68,33 +71,104 @@ def oculto(nome):
     return nome.rsplit('/', 1)[-1].startswith('_')
 
 
-def le_esperados(caminho):
-    with open(caminho) as f:
-        nos = (yaml.safe_load(f) or {}).get('nos') or []
-    ruins = [n for n in nos if not isinstance(n, str) or not n.startswith('/')]
+def _valida_nomes(nomes, rotulo):
+    ruins = [n for n in nomes if not isinstance(n, str) or not n.startswith('/')]
     if ruins:
-        raise ValueError(f'nome não completo (tem de começar com /): {ruins}')
-    repetidos = sorted({n for n in nos if nos.count(n) > 1})
+        raise ValueError(f'{rotulo}: nome não completo (tem de começar com /): {ruins}')
+    repetidos = sorted({n for n in nomes if nomes.count(n) > 1})
     if repetidos:
-        raise ValueError(f'nome repetido na lista esperada: {repetidos}')
-    return sorted(nos)
+        raise ValueError(f'{rotulo}: nome repetido: {repetidos}')
 
 
-def avalia_grafo(vistos, esperados):
+def le_configuracao(caminho):
+    with open(caminho) as f:
+        bruto = yaml.safe_load(f) or {}
+    nos = bruto.get('nos') or []
+    gs = bruto.get('grafo_somente') or {}
+    exatos = gs.get('exatos') or []
+    volateis = gs.get('volateis') or []
+    _valida_nomes(nos, 'nos')
+    _valida_nomes(exatos, 'grafo_somente.exatos')
+    conflito = sorted(set(nos) & set(exatos))
+    if conflito:
+        raise ValueError(f'nó está em nos e grafo_somente.exatos: {conflito}')
+    aliases = []
+    for i, regra in enumerate(volateis):
+        if not isinstance(regra, dict):
+            raise ValueError(f'grafo_somente.volateis[{i}] não é dicionário')
+        padrao = regra.get('padrao')
+        alias = regra.get('alias')
+        quantidade = regra.get('quantidade')
+        if not isinstance(padrao, str) or not padrao.startswith('^') or not padrao.endswith('$'):
+            raise ValueError(f'padrão volátil tem de ser expressão ancorada: {padrao!r}')
+        try:
+            rx = re.compile(padrao)
+        except re.error as e:
+            raise ValueError(f'padrão volátil inválido {padrao!r}: {e}') from e
+        conflito = sorted(n for n in nos + exatos if rx.fullmatch(n))
+        if conflito:
+            raise ValueError(f'padrão volátil também casa com nó fixo: {conflito}')
+        if not isinstance(quantidade, int) or isinstance(quantidade, bool) or quantidade < 1:
+            raise ValueError(f'quantidade volátil inválida: {quantidade!r}')
+        _valida_nomes([alias], f'grafo_somente.volateis[{i}].alias')
+        aliases.append(alias)
+    if len(set(aliases)) != len(aliases):
+        raise ValueError('alias volátil repetido')
+    return {'nos': sorted(nos),
+            'grafo_somente': {'exatos': sorted(exatos), 'volateis': volateis}}
+
+
+def le_esperados(caminho):
+    """Compatibilidade: devolve somente os nós cujo dump é obrigatório."""
+    return le_configuracao(caminho)['nos']
+
+
+def _configuracao(esperados):
+    if isinstance(esperados, dict):
+        return esperados
+    return {'nos': sorted(esperados),
+            'grafo_somente': {'exatos': [], 'volateis': []}}
+
+
+def avalia_grafo(vistos, esperados, grafo_somente=None):
     """`vistos` pode ter repetição (é o que o grafo devolve). Ocultos saem."""
+    gs = grafo_somente or {'exatos': [], 'volateis': []}
     visiveis = [v for v in vistos if not oculto(v)]
     unicos = set(visiveis)
+    exatos = set(gs.get('exatos') or [])
+    casados = set()
+    aliases = {}
+    volateis_invalidos = []
+    for regra in gs.get('volateis') or []:
+        rx = re.compile(regra['padrao'])
+        achados = sorted(n for n in unicos if rx.fullmatch(n))
+        if len(achados) != regra['quantidade']:
+            volateis_invalidos.append({
+                'alias': regra['alias'], 'esperados': regra['quantidade'],
+                'encontrados': len(achados), 'nomes': achados})
+        for nome in achados:
+            if nome in casados:
+                volateis_invalidos.append({
+                    'alias': regra['alias'], 'erro': f'{nome} casa com mais de uma regra'})
+            casados.add(nome)
+            aliases[nome] = regra['alias']
+    fixos = set(esperados) | exatos
+    somente_grafo = exatos | casados
     return {
         'visiveis': sorted(unicos),
         'duplicados': sorted({v for v in visiveis if visiveis.count(v) > 1}),
-        'faltando': sorted(set(esperados) - unicos),
-        'sobrando': sorted(unicos - set(esperados)),
+        'faltando': sorted(fixos - unicos),
+        'sobrando': sorted(unicos - fixos - casados),
+        'somente_grafo': sorted(somente_grafo),
+        'aliases': aliases,
+        'volateis_invalidos': volateis_invalidos,
     }
 
 
 def pronto(grafo, estados):
     return (not grafo['duplicados'] and not grafo['faltando']
             and not grafo['sobrando']
+            and not grafo.get('volateis_invalidos')
             and all(estados.get(n) in PRONTOS for n in grafo['visiveis']))
 
 
@@ -110,6 +184,8 @@ def motivos(grafo, estados, estabilizou, erros, padding):
         m.append(f"faltando: {grafo['faltando']}")
     if grafo['sobrando']:
         m.append(f"sobrando: {grafo['sobrando']}")
+    if grafo.get('volateis_invalidos'):
+        m.append(f"cardinalidade/nome volátil: {grafo['volateis_invalidos']}")
     nao = {n: e for n, e in estados.items() if e not in PRONTOS}
     if nao:
         m.append(f'não ativos/sem resposta: {nao}')
@@ -196,6 +272,9 @@ class Captura:
 
 def captura(esperados, pasta, prazo, intervalo, n_estavel):
     import rclpy
+    config = _configuracao(esperados)
+    esperados = config['nos']
+    grafo_somente = config['grafo_somente']
     os.makedirs(pasta, exist_ok=True)
     rclpy.init()
     node = rclpy.create_node(NOME_PROPRIO)
@@ -209,10 +288,12 @@ def captura(esperados, pasta, prazo, intervalo, n_estavel):
                     'nao_prontos', 'pronto'])
         while True:
             vistos = cap.vistos()
-            grafo = avalia_grafo(vistos, esperados)
+            grafo = avalia_grafo(vistos, esperados, grafo_somente)
             # Duplicado: nem pergunta estado — a resposta seria de um qualquer.
-            estados = ({} if grafo['duplicados']
-                       else {n: cap.estado(n) for n in grafo['visiveis']})
+            estados = ({} if grafo['duplicados'] else {
+                n: ('presente_sem_parametros' if n in grafo['somente_grafo']
+                    else cap.estado(n))
+                for n in grafo['visiveis']})
             p = pronto(grafo, estados)
             historico.append((tuple(grafo['visiveis']), tuple(sorted(estados.items())), p))
             nao = sorted(n for n, e in estados.items() if e not in PRONTOS)
@@ -230,6 +311,11 @@ def captura(esperados, pasta, prazo, intervalo, n_estavel):
     with open(os.path.join(pasta, 'grafo.txt'), 'w') as f:
         for v in sorted(vistos):
             f.write(f"{v}{'   (oculto, fora da comparação)' if oculto(v) else ''}\n")
+    with open(os.path.join(pasta, 'grafo_normalizado.txt'), 'w') as f:
+        for v in sorted(set(grafo['visiveis']) - set(grafo['aliases'])):
+            f.write(f'{v}\n')
+        for regra in grafo_somente.get('volateis') or []:
+            f.write(f"{regra['alias']} x{regra['quantidade']}\n")
     with open(os.path.join(pasta, 'estado_nos.csv'), 'w', newline='') as f:
         w = csv.writer(f)
         w.writerow(['no', 'estado'])
@@ -238,7 +324,7 @@ def captura(esperados, pasta, prazo, intervalo, n_estavel):
 
     brutos, erros = {}, {}
     if not grafo['duplicados']:
-        for n in grafo['visiveis']:
+        for n in sorted(set(grafo['visiveis']) - set(grafo['somente_grafo'])):
             try:
                 brutos[n] = {'ros__parameters': cap.parametros(n)}
             except Exception as e:  # o dado dos outros nós fica
@@ -255,7 +341,10 @@ def captura(esperados, pasta, prazo, intervalo, n_estavel):
         'veredito': 'REPROVADO' if m else 'APROVADO',
         'motivos': m,
         'footprint_padding': padding,
-        'nos_esperados': len(esperados),
+        'nos_esperados': (len(esperados) + len(grafo_somente.get('exatos') or [])
+                          + sum(r['quantidade']
+                                for r in grafo_somente.get('volateis') or [])),
+        'nos_com_parametros': len(esperados),
         'nos_visiveis': len(grafo['visiveis']),
         'consultas': len(historico),
         'segundos': round(time.monotonic() - inicio, 1),
@@ -275,7 +364,7 @@ def main(argv=None):
     ap.add_argument('--intervalo', type=float, default=2.0)
     ap.add_argument('--estavel', type=int, default=3)
     a = ap.parse_args(argv)
-    r = captura(le_esperados(a.esperados), a.pasta, a.prazo, a.intervalo, a.estavel)
+    r = captura(le_configuracao(a.esperados), a.pasta, a.prazo, a.intervalo, a.estavel)
     print(yaml.safe_dump(r, sort_keys=False, allow_unicode=True, width=1000))
     return 0 if r['veredito'] == 'APROVADO' else 1
 
