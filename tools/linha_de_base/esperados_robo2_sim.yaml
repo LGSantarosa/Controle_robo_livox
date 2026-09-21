@@ -1,0 +1,47 @@
+# Nós esperados de `ros2 launch robot_motion pilha.launch.py sim:=true`, com
+# todos os outros argumentos no default (mapa da pista, localizacao:=fixa,
+# rviz, bag e gui ligados). Etapa 4, passo 0.
+#
+# 🔴 É PREVISÃO pela leitura do código (commit do passo 0c), NÃO observação.
+# Na sessão de Gazebo, a primeira divergência reprova e fica preservada na
+# pasta da captura; cada nó a mais é IDENTIFICADO antes de entrar aqui — nunca
+# copiar o grafo observado. Fora de propósito, e por decisão do dono:
+#   · `/launch_ros_<pid>` — só nasce sob demanda, e a pilha não usa as ações
+#     que o criam;
+#   · nós internos incertos do Nav2 e do RViz.
+# Se aparecer nome variável de verdade, entra num commit próprio: expressão
+# ancorada + cardinalidade + alias estável nos dumps.
+nos:
+  # --- Nav2 (pilha.launch.py), servidores de ciclo de vida
+  - /map_server            # com_mapa: o default do sim é o mapa da pista
+  - /planner_server
+  - /global_costmap/global_costmap   # criado pelo planner_server
+  - /smoother_server
+  - /controller_server
+  - /local_costmap/local_costmap     # criado pelo controller_server
+  - /bt_navigator
+  - /collision_monitor
+  - /lifecycle_manager_pilha         # a versão com_mapa_fixa
+  # --- TF provisória (localizacao:=fixa)
+  - /tf_map_odom
+  # --- os nossos (pilha.launch.py); nenhum cria nó interno (conferido)
+  - /heading_controller
+  - /twist_mux
+  - /compensador_rumo      # a versão IfCondition(sim)
+  - /path_follower
+  - /freeze_capture
+  # --- ferramentas ligadas por padrão
+  - /rviz2                 # rviz: default segue o sim
+  - /rosbag2_recorder      # bag: true; nome estável no Jazzy instalado
+  # --- simulador (robot_base/sim.launch.py e scan_2d.launch.py)
+  - /robot_state_publisher
+  - /placa_simulada
+  - /ros_gz_bridge         # parameter_bridge
+  - /scan_2d
+  # --- dentro do processo do Gazebo (plugin gz_ros2_control)
+  - /gz_ros_control        # nó do plugin (string no .so; no log de 18-09 como logger)
+  - /controller_manager
+  - /joint_state_broadcaster
+  - /hoverboard_base_controller
+  # Transitórios que NÃO entram (saem sozinhos; a estabilidade da captura os
+  # espera sumir): ros_gz_sim `create` e os dois `spawner`.

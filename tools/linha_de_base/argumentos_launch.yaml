@@ -1,0 +1,67 @@
+# Argumentos declarados dos launches do §8 da etapa 4, antes da
+# etapa (passo 0). Gerado por argumentos_launch.py --escreve;
+# conferido por test_argumentos_launch.py. NÃO regerar para
+# fazer teste passar: mudança aqui é mudança de comando antigo.
+ros2_packages/robot_base/launch/base.launch.py:
+  congela_parado: 'false'
+ros2_packages/robot_base/launch/sim_robo3.launch.py:
+  debug_env: 'false'
+  debugger: 'false'
+  gui: 'true'
+  gz_args: ''
+  gz_version: '8'
+  ign_args: ''
+  ign_version: ''
+  mundo: <share:robot_base>/worlds/pista_livre.sdf
+  on_exit_shutdown: 'false'
+  placa: medido
+  use_sim_time: 'false'
+  x: '0.0'
+  y: '0.0'
+  yaw: '0.0'
+ros2_packages/robot_motion/launch/joystick.launch.py:
+  dev: auto
+ros2_packages/robot_motion/launch/pilha.launch.py:
+  bag: 'true'
+  curv_frente: '-0.817'
+  curv_medido_em: HERDADO
+  curv_re: '-0.098'
+  debug_env: 'false'
+  debugger: 'false'
+  desvio_taxa_deg_s: '15.0'
+  ganho_wz: PythonExpr(''0.45' if '' + LaunchConfig('sim') + '' == 'true' else '1.0'', ['math'])
+  gargalo: 'false'
+  gui: 'true'
+  gz_args: ''
+  gz_version: '8'
+  ign_args: ''
+  ign_version: ''
+  k_lat: '0.0'
+  localizacao: fixa
+  log_dir: ~/logs_robo2
+  lookahead_piso: '0.30'
+  mapa: PythonExpr(''' + '<repo>/maps/pista_obstaculos.yaml' + '' if '' + LaunchConfig('sim') + '' == 'true' else 'nenhum'', ['math'])
+  mundo: <repo>/worlds/pista_obstaculos.sdf
+  on_exit_shutdown: 'false'
+  placa: medido
+  planta: normal
+  pose_x: '2.0'
+  pose_y: '5.0'
+  pose_yaw: '0.0'
+  re_exige_objetivo: 'true'
+  re_habilitada: 'true'
+  re_max_seguidas: '2'
+  retencao_giro_s: ''
+  rviz: PythonExpr(''true' if '' + LaunchConfig('sim') + '' == 'true' else 'false'', ['math'])
+  sim: 'false'
+  tolerancia_entra_rumo: ''
+  use_sim_time: 'false'
+  x: '0.0'
+  y: '0.0'
+  yaw: '0.0'
+ros2_packages/robot_nav/launch/controle_robo3.launch.py:
+  bitola: '0.320'
+  escala: '400.0'
+  frente: '-1.0'
+  porta: /dev/ttyACM0
+  sinal: '1.0'

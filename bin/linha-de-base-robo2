@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+# Linha de base do ROBÔ 2 no Gazebo — etapa 4, passo 0 (docs/PLANO_ETAPA4_ROBO3.md §9).
+#
+#   bash bin/linha-de-base-robo2            sobe a pilha no Gazebo (dono olhando)
+#   bash bin/linha-de-base-robo2 --mata     só derruba e confere que morreu
+#
+# Faz, em ordem: recompila robot_base, robot_motion e robot_nav e confere que o
+# install/ bate com o fonte (os parâmetros vêm das configs do share/: install
+# velho = linha de base de código velho); sobe `pilha.launch.py sim:=true` SEM
+# nenhum outro argumento — é o comando do §8; roda a captura
+# (tools/linha_de_base/captura.py) contra a lista esperada; e espera você:
+#
+#   r + ENTER   repete SÓ a captura, com a mesma pilha de pé, numa pasta nova
+#               (captura_2, captura_3...). Para depois de eu corrigir a lista
+#               de nós; a captura_1 fica intocada como achado.
+#   ENTER       derruba tudo e confere que não sobrou processo.
+#
+# Pasta: ~/sim_robo2/linha_de_base_<data>/ — console.txt, launch.log, build.log
+# e uma captura_N/ por captura. Não precisa relatar nada: eu leio a pasta.
+#
+# ⚠️ O bag vem LIGADO (é o default da pilha, e a linha de base é do default):
+# grava em ~/logs_robo2 enquanto a pilha estiver de pé. Não demore no ENTER.
+# ⚠️ NÃO usa `pkill -f`: ele já matou a sessão ssh em outra máquina.
+# 🔴 O QUE ISTO NÃO PROVA: desempenho, geometria, nada de hardware. É só o
+# conjunto de parâmetros e de nós do robô 2 ANTES da etapa 4.
+set +u
+R="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+CARIMBO="$(date +%Y%m%d_%H%M%S)"
+SAIDA="$HOME/sim_robo2/linha_de_base_$CARIMBO"
+ESPERADOS="$R/tools/linha_de_base/esperados_robo2_sim.yaml"
+PRAZO=240   # s até o grafo ficar pronto: Gazebo + Smac (~16 s) + folga larga
+
+vivos() {
+  ps -eo pid,args | grep -E "ros2 launch robot_motion pilha|gz sim|parameter_bridge|\
+robot_state_publisher|placa_simulada|pointcloud_to_laserscan|controller_manager/spawner|\
+nav2_|map_server|planner_server|smoother_server|controller_server|bt_navigator|\
+collision_monitor|lifecycle_manager|static_transform_publisher|heading_controller|\
+compensador_rumo|path_follower|freeze_capture|twist_mux|rviz2|ros2 bag record|\
+linha_de_base/captura.py" | grep -v grep
+}
+
+mata() {
+  echo "== derrubando =="
+  if [ -n "$LAUNCH_PID" ] && kill -0 "$LAUNCH_PID" 2>/dev/null; then
+    # Grupo inteiro (setsid): o launch sozinho já deixou filho vivo em 14-09.
+    kill -INT -- "-$LAUNCH_PID" 2>/dev/null
+    for _ in $(seq 20); do kill -0 "$LAUNCH_PID" 2>/dev/null || break; sleep 1; done
+  fi
+  vivos | awk '{print $1}' | sort -u | xargs -r kill -INT
+  sleep 2
+  SOBRA="$(vivos)"
+  if [ -n "$SOBRA" ]; then
+    echo "   ⚠️  sobrou processo depois do SIGINT — kill -9 (fica anotado):"
+    echo "$SOBRA" | sed 's/^/      /'
+    echo "$SOBRA" | awk '{print $1}' | sort -u | xargs -r kill -9
+    sleep 1
+  fi
+  if [ "$(vivos | wc -l)" -eq 0 ]; then echo "   🟢 limpo"
+  else echo "   🔴 AINDA TEM COISA VIVA — não suba por cima"; vivos; return 1; fi
+}
+
+[ "$1" = "--mata" ] && { mata; exit $?; }
+
+mkdir -p "$SAIDA"
+exec > >(tee -a "$SAIDA/console.txt") 2>&1
+trap 'echo; echo "   Ctrl+C — derrubando antes de sair"; mata; exit 130' INT TERM
+
+echo "== linha de base robô 2 no Gazebo — $CARIMBO =="
+echo "   commit: $(git -C "$R" log -1 --format='%h %s')"
+[ -n "$(git -C "$R" status --porcelain)" ] && echo "   ⚠️  árvore com mudança não commitada"
+echo "   🔴 NÃO PROVA: desempenho, geometria, hardware — só parâmetros e nós"
+
+cd "$R" || exit 1
+source /opt/ros/jazzy/setup.bash
+if [ -n "$(vivos)" ]; then
+  echo "   🔴 já tem simulador/ROS de pé — não subo por cima. Confira e rode:"
+  vivos | sed 's/^/      /'
+  echo "      bash bin/linha-de-base-robo2 --mata"
+  exit 1
+fi
+
+echo "== 1/4 compilando robot_base robot_motion robot_nav (log em $SAIDA/build.log) =="
+if ! colcon build --packages-select robot_base robot_motion robot_nav \
+     > "$SAIDA/build.log" 2>&1; then
+  echo "   🔴 build falhou — veja build.log"; exit 1
+fi
+source install/setup.bash
+# Espelha o `data_files` de cada setup.py, só com arquivo VERSIONADO: há lixo
+# de colcon dentro de robot_base/description/ que não é instalado nem é fonte.
+# (Em 21-09 o install/ do robot_motion neste PC era de 12-08.)
+DIF=0
+while read -r pkg padroes; do
+  for p in $padroes; do
+    while IFS= read -r f; do
+      rel="${f#ros2_packages/$pkg/}"
+      cmp -s "$f" "install/$pkg/share/$pkg/$rel" \
+        || { echo "   🔴 install/ difere do fonte: $pkg/$rel"; DIF=1; }
+    done < <(git ls-files "ros2_packages/$pkg/$p")
+  done
+done <<'EOF'
+robot_base launch/*.py config/* description/*.xacro
+robot_motion config/*.yaml launch/*.py rviz/*.rviz behavior_trees/*.xml
+robot_nav launch/*.py urdf/* config/* behavior_trees/*.xml
+EOF
+[ "$DIF" -ne 0 ] && { echo "   🔴 capturaria config velha — parando"; exit 1; }
+echo "   🟢 install/ igual ao fonte (o que os setup.py instalam)"
+
+echo "== 2/4 subindo a pilha no Gazebo (log em $SAIDA/launch.log) =="
+setsid ros2 launch robot_motion pilha.launch.py sim:=true \
+    > "$SAIDA/launch.log" 2>&1 < /dev/null &
+LAUNCH_PID=$!
+echo "   pid $LAUNCH_PID · comando do §8, sem outro argumento"
+
+N=0
+captura() {
+  N=$((N + 1))
+  echo "== 3/4 captura $N (espera o grafo pronto e estável, prazo ${PRAZO} s) =="
+  python3 tools/linha_de_base/captura.py "$ESPERADOS" "$SAIDA/captura_$N" \
+      --prazo "$PRAZO"
+  RC=$?
+  if ! kill -0 "$LAUNCH_PID" 2>/dev/null; then
+    echo "   🔴 o launch MORREU — veja launch.log"
+  fi
+  [ "$RC" -eq 0 ] && echo "   🟢 captura $N APROVADA" \
+                  || echo "   🔴 captura $N REPROVADA — NÃO mexa em nada; a pasta é o achado"
+}
+captura
+
+echo "== 4/4 sua vez =="
+while true; do
+  read -r -p "   r + ENTER repete só a captura · ENTER derruba: " RESP < /dev/tty
+  [ "$RESP" = "r" ] || break
+  grep -nE "\[ERROR\]|\[FATAL\]|process has died" "$SAIDA/launch.log" \
+    > "$SAIDA/erros_launch_ate_captura_$((N + 1)).txt"
+  captura
+done
+
+grep -nE "\[ERROR\]|\[FATAL\]|process has died" "$SAIDA/launch.log" > "$SAIDA/erros_launch.txt"
+echo "   linhas de ERROR/FATAL/died no launch.log: $(wc -l < "$SAIDA/erros_launch.txt")"
+mata
+echo "   pasta: $SAIDA"
