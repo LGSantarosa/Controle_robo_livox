@@ -1,0 +1,7 @@
+$ python3 docs/dados/2026-09-21-controller-manager-ilegiveis/le_ilegiveis.py   # 2026-09-21 11:44, pilha de pé em ~/sim_robo2/linha_de_base_20260921_114203 (commit 146216a)
+serviços: True
+list_parameters: 48 nomes; get_parameters em lote: 0 valores
+ILEGIVEL /controller_manager:hoverboard_base_controller.fallback_controllers -> 0 valor(es)
+ILEGIVEL /controller_manager:hoverboard_base_controller.node_options_args -> 0 valor(es)
+ILEGIVEL /controller_manager:joint_state_broadcaster.fallback_controllers -> 0 valor(es)
+ILEGIVEL /controller_manager:joint_state_broadcaster.node_options_args -> 0 valor(es)

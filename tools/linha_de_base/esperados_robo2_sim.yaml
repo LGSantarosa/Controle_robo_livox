@@ -64,8 +64,8 @@ grafo_somente:
 # é tudo-ou-nada: um desses zera o lote inteiro). Exceção por nó + parâmetro
 # EXATOS: ilegível fora daqui reprova, e exceção daqui que não aparecer (ficou
 # legível ou sumiu) também reprova. Cada uma aponta para a reprodução.
-# O /controller_manager NÃO entra por precaução: só depois de a captura
-# registrar o que ele não lê e cada entrada ser identificada.
+# O /controller_manager entrou SÓ depois de a captura 1 da baseline v2 (21-09)
+# registrar os quatro nomes que ele não lê, cada um confirmado na pilha viva.
 # ⚠️ 'no' ENTRE ASPAS: sem elas o YAML 1.1 lê a chave como o booleano False.
 ilegiveis_permitidos:
   - 'no': /collision_monitor
@@ -74,3 +74,15 @@ ilegiveis_permitidos:
   - 'no': /collision_monitor
     parametro: PolygonStop.max_points
     origem: 'reprodução isolada com collision_monitor ativo: docs/dados/2026-09-21-collision-monitor-ilegiveis/saida.txt'
+  - 'no': /controller_manager
+    parametro: hoverboard_base_controller.fallback_controllers
+    origem: 'captura 1 da baseline v2 + releitura na pilha viva: docs/dados/2026-09-21-controller-manager-ilegiveis/saida.txt'
+  - 'no': /controller_manager
+    parametro: hoverboard_base_controller.node_options_args
+    origem: 'captura 1 da baseline v2 + releitura na pilha viva: docs/dados/2026-09-21-controller-manager-ilegiveis/saida.txt'
+  - 'no': /controller_manager
+    parametro: joint_state_broadcaster.fallback_controllers
+    origem: 'captura 1 da baseline v2 + releitura na pilha viva: docs/dados/2026-09-21-controller-manager-ilegiveis/saida.txt'
+  - 'no': /controller_manager
+    parametro: joint_state_broadcaster.node_options_args
+    origem: 'captura 1 da baseline v2 + releitura na pilha viva: docs/dados/2026-09-21-controller-manager-ilegiveis/saida.txt'
