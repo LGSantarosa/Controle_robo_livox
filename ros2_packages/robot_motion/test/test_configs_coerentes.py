@@ -1505,3 +1505,37 @@ def test_a_inflacao_TEM_de_passar_do_raio_senao_nao_HA_gradiente(qual):
     assert inflacao > raio + 0.05, (
         f'{qual}: inflação {inflacao} não abre faixa graduada sobre o raio '
         f'{raio} — sem gradiente o caminho cola na parede')
+
+
+# --------------------------------------------------------------------------
+# footprint_padding EXPLÍCITO (etapa 4, passo 1).
+#
+# Até 21-09 o robô 2 rodava com o padding PADRÃO do Nav2, que ninguém escreveu.
+# O passo 0 mediu o valor vivo nos dois costmaps: 0.009999999776482582, que é
+# exatamente float32(0.01) promovido a double (o Nav2 declara `0.01f`). O YAML
+# declara ESSE número, não 0.01: com 0.01 o parâmetro vivo mudaria (2e-10) e a
+# comparação com a linha de base acusaria diferença — decisão do dono, passo 1
+# sem nenhuma permissão. O Nav2 guarda o valor num `float footprint_padding_`
+# (costmap_2d_ros.hpp), então o float32 do declarado tem de ser o de hoje.
+BASELINE_ROBO2 = os.path.join(RAIZ, 'docs', 'dados', '2026-09-21-baseline-robo2',
+                              '02-baseline-aprovada', 'parametros_normalizados.yaml')
+
+
+def _float32(x):
+    import struct
+    return struct.unpack('f', struct.pack('f', x))[0]
+
+
+@pytest.mark.parametrize('costmap', ['global_costmap', 'local_costmap'])
+def test_footprint_padding_declarado(costmap):
+    import yaml
+    params = _nav2()[costmap][costmap]['ros__parameters']
+    assert 'footprint_padding' in params, \
+        f'{costmap}: footprint_padding não declarado — roda com o padrão do Nav2'
+    declarado = params['footprint_padding']
+    vivo = yaml.safe_load(open(BASELINE_ROBO2))[
+        f'/{costmap}/{costmap}']['footprint_padding']
+    assert declarado == vivo, \
+        f'{costmap}: {declarado!r} ≠ valor vivo da linha de base {vivo!r}'
+    assert _float32(declarado) == _float32(0.01) == vivo, \
+        f'{costmap}: float32 do declarado ≠ float32(0.01) que o Nav2 usa hoje'
