@@ -1,0 +1,11 @@
+$ python3 tools/linha_de_base/normaliza.py compara docs/dados/2026-09-21-baseline-robo2/02-baseline-aprovada/parametros_normalizados.yaml docs/dados/2026-09-21-passo2-robo2/captura/parametros_normalizados.yaml --permitidas tools/linha_de_base/permitidas/passo2_robo2.yaml
+✅ permitida  entrou  /path_follower:avanco_para_choque  None → 0.28
+APROVADO
+rc=0
+
+$ diff docs/dados/2026-09-21-baseline-robo2/02-baseline-aprovada/grafo_normalizado.txt docs/dados/2026-09-21-passo2-robo2/captura/grafo_normalizado.txt
+(sem diferença)
+
+$ diff docs/dados/2026-09-21-baseline-robo2/02-baseline-aprovada/parametros_brutos.yaml docs/dados/2026-09-21-passo2-robo2/captura/parametros_brutos.yaml
+493a494
+>     avanco_para_choque: 0.28

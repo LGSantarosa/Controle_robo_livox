@@ -4,6 +4,30 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-09-21 (dev + Gazebo, sem robô) — ETAPA 4, PASSO 2: O VÃO DA FRENTE MEDE DA FRENTE
+
+**`86ca1ed`.** `avanco_para_choque` (0,28) no `path_follower`; o `vao_frente()`
+passa a usá-lo em vez do recuo de TRÁS. Troca de um argumento só — conferido
+lendo `vao_frente()` e `vao_no_corredor_frontal` antes. Testes vermelhos antes:
+vão frontal dava 0,720 (= 1,0 − recuo) com avanço 0,10, e o parâmetro não
+existia; mais uma guarda de que o `vao_traseiro()` continua no recuo. Suíte 913.
+
+**Tropeços:** a guarda chamava `vao_atras`, que não existe, e falhou pelo motivo
+errado — corrigido para `vao_traseiro` antes da mudança. E um **achado que já
+existia**: com o overlay carregado, os testes do `robot_motion` importam a cópia
+do `install/`, não o fonte. O teste seguiu vermelho com o código já certo até
+eu recompilar. "Suíte verde" em código Python só vale depois do build — a
+correção fica para um passo próprio, não misturada com este.
+
+**Gazebo (dono olhando), commit `86ca1ed`:** APROVADO, 30/30, 25 dumps. Contra a
+baseline do passo 0, com a permissão versionada ANTES da captura: uma única
+diferença, a permitida (`entrou`, 0,28); grafo idêntico; dump bruto com uma
+linha nova e mais nada. Conferido por mim a partir da pasta.
+`docs/dados/2026-09-21-passo2-robo2/`. Bag de 285 MB para a lixeira pelo dono.
+
+⬜ Próximo: **passo 3** — `perfil.py` e a pilha montando o robô 2 por ele
+(`robo:=2` padrão); vermelho `test_perfil_robo2_identico_a_linha_de_base`.
+
 ## 2026-09-21 (dev + Gazebo, sem robô) — ETAPA 4, PASSO 1: O PADDING ESCRITO, ZERO DIFERENÇA
 
 **Achado antes de escrever o YAML:** o padding vivo da baseline,

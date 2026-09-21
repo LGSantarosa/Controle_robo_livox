@@ -1,0 +1,1 @@
+86ca1ed52c5a904cfe4d49e39d2923f4e51b2e69 etapa 4 passo 2: avanco_para_choque no path_follower; vao_frente mede do para-choque da frente

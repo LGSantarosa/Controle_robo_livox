@@ -2,12 +2,31 @@
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
 > Versionado na `main`. Atualizado em **2026-09-21** (dev, branch `etapa4-perfis`
-> — etapa 4: passos 0 e 1 FECHADOS no Gazebo; próximo é o passo 2).
+> — etapa 4: passos 0, 1 e 2 FECHADOS no Gazebo; próximo é o passo 3).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+---
+
+## ✅ 21-09 — ETAPA 4, PASSO 2 FECHADO: `avanco_para_choque`
+
+- `path_follower`: `avanco_para_choque` (0,28); `vao_frente()` mede dele, não
+  do recuo de trás (`86ca1ed`). Suíte **913**.
+- Gazebo: uma única diferença contra a baseline, a permitida
+  (`permitidas/passo2_robo2.yaml`: `entrou`, 0,28); grafo idêntico.
+  `docs/dados/2026-09-21-passo2-robo2/`.
+- 🔴 **Armadilha:** com o overlay carregado, os testes do `robot_motion`
+  importam o `install/`, não o fonte. Depois de mexer em `.py`:
+  `colcon build --packages-select robot_motion` ANTES do `pytest`, senão a
+  suíte testa o código velho. Correção proposta num passo próprio.
+
+⬜ **Próximo: passo 3** — `perfil.py` + a pilha montando o robô 2 por ele
+(`robo:=2` padrão). Prova: dump igual à baseline (as duas diferenças já
+permitidas continuam; nenhuma nova) e o argumento `robo` como único novo da
+trava do §8.
 
 ---
 
