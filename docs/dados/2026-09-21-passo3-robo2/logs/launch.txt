@@ -1,0 +1,636 @@
+[INFO] [launch]: All log files can be found below /home/rbe-luis/.ros/log/2026-09-21-14-46-32-427804-rbe-luis-20429-161054
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [launch.user]: PILHA subindo — espere os servidores ativarem (o Smac leva ~16 s montando a heurística) e então clique "2D Goal Pose" no RViz.
+[INFO] [gazebo-1]: process started with pid [161508]
+[INFO] [robot_state_publisher-2]: process started with pid [161509]
+[INFO] [placa_simulada-3]: process started with pid [161511]
+[INFO] [parameter_bridge-4]: process started with pid [161512]
+[INFO] [create-5]: process started with pid [161527]
+[INFO] [pointcloud_to_laserscan_node-6]: process started with pid [161550]
+[INFO] [map_server-7]: process started with pid [161555]
+[INFO] [planner_server-8]: process started with pid [161556]
+[INFO] [smoother_server-9]: process started with pid [161557]
+[INFO] [controller_server-10]: process started with pid [161570]
+[INFO] [bt_navigator-11]: process started with pid [161571]
+[INFO] [lifecycle_manager-12]: process started with pid [161572]
+[INFO] [static_transform_publisher-13]: process started with pid [161573]
+[INFO] [heading_controller-14]: process started with pid [161574]
+[INFO] [collision_monitor-15]: process started with pid [161575]
+[INFO] [twist_mux-16]: process started with pid [161576]
+[INFO] [compensador_rumo-17]: process started with pid [161577]
+[INFO] [path_follower-18]: process started with pid [161578]
+[INFO] [freeze_capture-19]: process started with pid [161579]
+[INFO] [rviz2-20]: process started with pid [161580]
+[INFO] [ros2-21]: process started with pid [161584]
+[placa_simulada-3] [WARN] [1790012800.925319242] [placa_simulada]: placa MEDIDA (31-07): patamar de 0.008 a 0.838 m/s de comando vira SEMPRE 0.298 m/s de borda. Nessa faixa cmd_vel escolhe sentido, não módulo.
+[placa_simulada-3] [WARN] [1790012800.926114317] [placa_simulada]: latência 0.27 s, escala real 0.0372 rad/s/unidade (2.8x menor que a assumida pelo driver).
+[placa_simulada-3] [WARN] [1790012800.926818584] [placa_simulada]: atraso de DESLIGA 0.52 s: depois do comando zerar a placa CONTINUA empurrando (04-08, n=3). Num pulso curto quase todo o movimento acontece aí — pivô de 0,2 s gira 35,8° no robô, dos quais 35,4° com o comando já em zero.
+[placa_simulada-3] [WARN] [1790012800.927569264] [placa_simulada]: o robô ARCA (04-08): curvatura -0.817 1/m de frente, -0.098 de ré — 8.3x de assimetria. Não espere reta deste robô.
+[placa_simulada-3] [WARN] [1790012800.928374250] [placa_simulada]: para isso a esquerda entrega +26.9% de frente e -2.8% de ré (derivado, com rendimento de giro do Gazebo em 0.93). O encoder do robô mediu 11-12% / ~0%: a diferença é o termo de CORPO entrando disfarçado de roda. Modelo FENOMENOLÓGICO.
+[twist_mux-16] [INFO] [1790012801.188769645] [twist_mux]: Topic handler 'topics.autonomia' subscribed to topic 'auto_vel': timeout = 0.500000s , priority = 10.
+[bt_navigator-11] [INFO] [1790012801.229892819] [bt_navigator]: 
+[bt_navigator-11] 	bt_navigator lifecycle node launched. 
+[bt_navigator-11] 	Waiting on external lifecycle transitions to activate
+[bt_navigator-11] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[collision_monitor-15] [INFO] [1790012801.231989567] [collision_monitor]: 
+[collision_monitor-15] 	collision_monitor lifecycle node launched. 
+[collision_monitor-15] 	Waiting on external lifecycle transitions to activate
+[collision_monitor-15] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[map_server-7] [INFO] [1790012801.232144481] [map_server]: 
+[map_server-7] 	map_server lifecycle node launched. 
+[map_server-7] 	Waiting on external lifecycle transitions to activate
+[map_server-7] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[map_server-7] [INFO] [1790012801.232300209] [map_server]: Creating
+[planner_server-8] [INFO] [1790012801.232927424] [planner_server]: 
+[planner_server-8] 	planner_server lifecycle node launched. 
+[planner_server-8] 	Waiting on external lifecycle transitions to activate
+[planner_server-8] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[smoother_server-9] [INFO] [1790012801.233377160] [smoother_server]: 
+[smoother_server-9] 	smoother_server lifecycle node launched. 
+[smoother_server-9] 	Waiting on external lifecycle transitions to activate
+[smoother_server-9] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[controller_server-10] [INFO] [1790012801.234299407] [controller_server]: 
+[controller_server-10] 	controller_server lifecycle node launched. 
+[controller_server-10] 	Waiting on external lifecycle transitions to activate
+[controller_server-10] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[twist_mux-16] [INFO] [1790012801.369520615] [twist_mux]: Topic handler 'topics.desencalhe' subscribed to topic 'unstuck_vel': timeout = 0.500000s , priority = 30.
+[twist_mux-16] [INFO] [1790012801.370486841] [twist_mux]: Topic handler 'topics.joystick' subscribed to topic 'joy_vel': timeout = 0.500000s , priority = 100.
+[twist_mux-16] [INFO] [1790012801.371681153] [twist_mux]: Topic handler 'topics.teclado' subscribed to topic 'key_vel': timeout = 0.500000s , priority = 90.
+[twist_mux-16] [INFO] [1790012801.372897284] [twist_mux]: Topic handler 'topics.web' subscribed to topic 'web_vel': timeout = 0.500000s , priority = 50.
+[static_transform_publisher-13] [INFO] [1790012801.391028324] [tf_map_odom]: Spinning until stopped - publishing transform
+[static_transform_publisher-13] translation: ('0.000000', '0.000000', '0.000000')
+[static_transform_publisher-13] rotation: ('0.000000', '0.000000', '0.000000', '1.000000')
+[static_transform_publisher-13] from 'map' to 'odom'
+[compensador_rumo-17] [WARN] [1790012801.605703564] [compensador_rumo]: compensador de rumo (decisão 011): ff -0.817 1/m frente, -0.098 ré; kp=0.25 ki=0.12, correção limitada a ±0.60 rad/s. Curva pedida (|wz|≥0.05) passa intocada.
+[compensador_rumo-17] [WARN] [1790012801.606254062] [compensador_rumo]: GANHO DA CADEIA 0.45 (decisão 038): o que a lei quer de giro sai dividido por ele, porque o robô entrega só essa fração do que se pede. Com 1,00 o nó volta ao comportamento de antes — e 1,00 é o que o ROBÔ REAL usa até alguém medir o ganho lá.
+[compensador_rumo-17] [WARN] [1790012801.606711755] [compensador_rumo]: FREIO LINEAR LIGADO (decisão 038): comando cortado com o robô andando vira contra-torque, soltando em 0.25 m/s, teto 1.0 s. Sem ele a placa segura 0,52 s e o robô anda +0,10 m depois do corte — foi a batida de 13-08, com o reflexo tendo cortado a 0,30 m da parede.
+[compensador_rumo-17] [WARN] [1790012801.607162269] [compensador_rumo]: ⚠️ ff HERDADO: curv_frente -0.8170 NÃO foi medido nesta sessão. A planta muda ~13,5% entre dias (04-08: −0,8031 · 05-08: −0,9116, faixas que não se tocam), e o resíduo disso é maior que o critério de aceitação da 011. Protocolo (decisão 013): três corridas SEM compensador, `medir.py --resumo curvatura`, e subir a pilha com `curv_frente:=<média> curv_medido_em:=<data>`.
+[heading_controller-14] [WARN] [1790012801.607959516] [heading_controller]: parâmetros NÃO MEDIDOS neste robô — a_dec=0.3 rad/s², zona_morta=0.1 m/s, bitola=0.27 m. Rodar tools/banco/ e corrigir (BO-3).
+[heading_controller-14] [INFO] [1790012801.608912373] [heading_controller]: pivô DISPONÍVEL acima de 0.74 rad/s — o robô consegue virar no próprio eixo
+[lifecycle_manager-12] [INFO] [1790012801.687580346] [lifecycle_manager_pilha]: Creating
+[create-5] [INFO] [1790012801.864150585] [ros_gz_sim]: Requesting list of world names.
+[path_follower-18] [INFO] [1790012802.184488745] [path_follower]: log da corrida -> /home/rbe-luis/logs_robo2/seguidor_2026-09-21_144642.csv
+[path_follower-18] [INFO] [1790012802.185386584] [path_follower]: seguidor de pé — raio da máquina 0.37 m, mira 0.37 m em curva e 1.00 m em reta (040), piso de linear 0.203 m/s
+[path_follower-18] [INFO] [1790012802.186220399] [path_follower]: raio de chegada 0.25 m (mínimo viável 0.07 m)
+[parameter_bridge-4] [INFO] [1790012802.288491376] [ros_gz_bridge]: Creating GZ->ROS Bridge: [/clock (gz.msgs.Clock) -> /clock (rosgraph_msgs/msg/Clock)] (Lazy 0)
+[parameter_bridge-4] [INFO] [1790012802.290807649] [ros_gz_bridge]: Creating GZ->ROS Bridge: [/Odometry (gz.msgs.Odometry) -> /Odometry (nav_msgs/msg/Odometry)] (Lazy 0)
+[parameter_bridge-4] [INFO] [1790012802.455349974] [ros_gz_bridge]: Creating GZ->ROS Bridge: [/tf_odom (gz.msgs.Pose_V) -> /tf_odom (tf2_msgs/msg/TFMessage)] (Lazy 0)
+[parameter_bridge-4] [INFO] [1790012802.462259758] [ros_gz_bridge]: Creating GZ->ROS Bridge: [/livox/lidar/points (gz.msgs.PointCloudPacked) -> /livox/lidar/points (sensor_msgs/msg/PointCloud2)] (Lazy 0)
+[lifecycle_manager-12] [INFO] [1790012802.475744546] [lifecycle_manager_pilha]: [34m[1mCreating and initializing lifecycle service clients[0m[0m
+[lifecycle_manager-12] [INFO] [1790012802.513203721] [lifecycle_manager_pilha]: [34m[1mStarting managed nodes bringup...[0m[0m
+[lifecycle_manager-12] [INFO] [1790012802.513329852] [lifecycle_manager_pilha]: [34m[1mConfiguring map_server[0m[0m
+[map_server-7] [INFO] [1790012802.513999289] [map_server]: Configuring
+[map_server-7] [INFO] [1790012802.514114189] [map_io]: Loading yaml file: /home/rbe-luis/Workspace/Controle_robo_livox/maps/pista_obstaculos.yaml
+[map_server-7] [INFO] [1790012802.514668934] [map_io]: resolution: 0.05
+[map_server-7] [INFO] [1790012802.514689335] [map_io]: origin[0]: 0
+[map_server-7] [INFO] [1790012802.514701103] [map_io]: origin[1]: 0
+[map_server-7] [INFO] [1790012802.514710044] [map_io]: origin[2]: 0
+[map_server-7] [INFO] [1790012802.514721215] [map_io]: free_thresh: 0.196
+[map_server-7] [INFO] [1790012802.514730685] [map_io]: occupied_thresh: 0.65
+[map_server-7] [INFO] [1790012802.514741864] [map_io]: mode: trinary
+[map_server-7] [INFO] [1790012802.514752384] [map_io]: negate: 0
+[robot_state_publisher-2] [WARN] [1790012802.519808361] [kdl_parser]: The root link base_link has an inertia specified in the URDF, but KDL does not support a root link with an inertia.  As a workaround, you can add an extra dummy link to your URDF.
+[robot_state_publisher-2] [INFO] [1790012802.519973282] [robot_state_publisher]: Robot initialized
+[map_server-7] [INFO] [1790012802.672834181] [map_io]: Loading image_file: /home/rbe-luis/Workspace/Controle_robo_livox/maps/pista_obstaculos.pgm
+[map_server-7] [INFO] [1790012802.676913180] [map_io]: Read map /home/rbe-luis/Workspace/Controle_robo_livox/maps/pista_obstaculos.pgm: 240 X 160 map @ 0.05 m/cell
+[lifecycle_manager-12] [INFO] [1790012802.704380522] [lifecycle_manager_pilha]: [34m[1mConfiguring planner_server[0m[0m
+[smoother_server-9] [INFO] [1790012802.852328466] [smoother_server]: Creating smoother server
+[bt_navigator-11] [INFO] [1790012802.852337864] [bt_navigator]: Creating
+[planner_server-8] [INFO] [1790012802.852453583] [planner_server]: Creating
+[controller_server-10] [INFO] [1790012802.860126585] [controller_server]: Creating controller server
+[controller_server-10] [INFO] [1790012802.891726450] [local_costmap.local_costmap]: 
+[controller_server-10] 	local_costmap lifecycle node launched. 
+[controller_server-10] 	Waiting on external lifecycle transitions to activate
+[controller_server-10] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[planner_server-8] [INFO] [1790012802.894469185] [global_costmap.global_costmap]: 
+[planner_server-8] 	global_costmap lifecycle node launched. 
+[planner_server-8] 	Waiting on external lifecycle transitions to activate
+[planner_server-8] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[freeze_capture-19] [INFO] [1790012802.900010667] [freeze_capture]: freeze_capture: chain=/home/rbe-luis/logs_robo2/freeze_capture.csv diag=/home/rbe-luis/logs_robo2/freeze_diag.csv
+[controller_server-10] [INFO] [1790012802.958769919] [local_costmap.local_costmap]: Creating Costmap
+[planner_server-8] [INFO] [1790012802.958782332] [global_costmap.global_costmap]: Creating Costmap
+[planner_server-8] [INFO] [1790012802.962103572] [planner_server]: Configuring
+[planner_server-8] [INFO] [1790012802.962163653] [global_costmap.global_costmap]: Configuring
+[planner_server-8] [INFO] [1790012802.977858086] [global_costmap.global_costmap]: Using plugin "static_layer"
+[planner_server-8] [INFO] [1790012803.149855020] [global_costmap.global_costmap]: Subscribing to the map topic (/map) with transient local durability
+[planner_server-8] [INFO] [1790012803.157566713] [global_costmap.global_costmap]: Initialized plugin "static_layer"
+[planner_server-8] [INFO] [1790012803.157665861] [global_costmap.global_costmap]: Using plugin "obstacle_layer"
+[planner_server-8] [INFO] [1790012803.159699082] [global_costmap.global_costmap]: Subscribed to Topics: livox
+[planner_server-8] [INFO] [1790012803.178918592] [global_costmap.global_costmap]: Initialized plugin "obstacle_layer"
+[planner_server-8] [INFO] [1790012803.179010880] [global_costmap.global_costmap]: Using plugin "inflation_layer"
+[planner_server-8] [INFO] [1790012803.181315571] [global_costmap.global_costmap]: Initialized plugin "inflation_layer"
+[planner_server-8] [INFO] [1790012803.613955330] [planner_server]: Created global planner plugin GridBased of type nav2_smac_planner::SmacPlanner2D
+[planner_server-8] [INFO] [1790012803.614061178] [planner_server]: Configuring GridBased of type SmacPlanner2D
+[planner_server-8] [INFO] [1790012803.619036574] [planner_server]: Configured plugin GridBased of type SmacPlanner2D with tolerance 0.25, maximum iterations 1000000, max on approach iterations 1000, and not allowing unknown traversal.
+[planner_server-8] [INFO] [1790012803.619132226] [planner_server]: Planner Server has GridBased  planners available.
+[lifecycle_manager-12] [INFO] [1790012803.695064387] [lifecycle_manager_pilha]: [34m[1mConfiguring smoother_server[0m[0m
+[smoother_server-9] [INFO] [1790012803.695474361] [smoother_server]: Configuring smoother server
+[pointcloud_to_laserscan_node-6] [INFO] [1790012803.773147232] [scan_2d]: Got a subscriber to laserscan, starting pointcloud subscriber
+[ros2-21] stdin is not a terminal device. Keyboard handling disabled.[INFO] [1790012804.073843137] [rosbag2_recorder]: Press SPACE for pausing/resuming
+[ros2-21] [INFO] [1790012804.073918726] [rosbag2_recorder]: Event publisher thread: Started
+[ros2-21] [INFO] [1790012804.089994706] [rosbag2_recorder]: Starting recording to '/home/rbe-luis/logs_robo2/corrida_2026-09-21_144632'
+[smoother_server-9] [INFO] [1790012804.297305251] [smoother_server]: Created smoother : suave of type nav2_constrained_smoother/ConstrainedSmoother
+[smoother_server-9] [INFO] [1790012804.311194751] [smoother_server]: Created smoother : simples of type nav2_smoother::SimpleSmoother
+[smoother_server-9] [INFO] [1790012804.319060755] [smoother_server]: Created smoother : savgol of type nav2_smoother::SavitzkyGolaySmoother
+[smoother_server-9] [INFO] [1790012804.319337165] [smoother_server]: Smoother Server has suave simples savgol  smoothers available.
+[lifecycle_manager-12] [INFO] [1790012804.330212019] [lifecycle_manager_pilha]: [34m[1mConfiguring controller_server[0m[0m
+[controller_server-10] [INFO] [1790012804.330811074] [controller_server]: Configuring controller interface
+[controller_server-10] [INFO] [1790012804.330846893] [controller_server]: getting progress checker plugins..
+[controller_server-10] [INFO] [1790012804.331064635] [controller_server]: getting goal checker plugins..
+[controller_server-10] [INFO] [1790012804.331574358] [controller_server]: Controller frequency set to 5.0000Hz
+[controller_server-10] [INFO] [1790012804.331674861] [local_costmap.local_costmap]: Configuring
+[controller_server-10] [INFO] [1790012804.342390991] [local_costmap.local_costmap]: Using plugin "static_layer"
+[controller_server-10] [INFO] [1790012804.346136466] [local_costmap.local_costmap]: Subscribing to the map topic (/map) with transient local durability
+[controller_server-10] [INFO] [1790012804.348573415] [local_costmap.local_costmap]: Initialized plugin "static_layer"
+[controller_server-10] [INFO] [1790012804.348626957] [local_costmap.local_costmap]: Using plugin "obstacle_layer"
+[controller_server-10] [INFO] [1790012804.349180484] [local_costmap.local_costmap]: Subscribed to Topics: livox
+[controller_server-10] [INFO] [1790012804.361239475] [local_costmap.local_costmap]: Initialized plugin "obstacle_layer"
+[controller_server-10] [INFO] [1790012804.361298306] [local_costmap.local_costmap]: Using plugin "inflation_layer"
+[controller_server-10] [INFO] [1790012804.362206183] [local_costmap.local_costmap]: Initialized plugin "inflation_layer"
+[ros2-21] [INFO] [1790012804.398946214] [rosbag2_recorder]: Subscribed to topic '/rosout'
+[ros2-21] [INFO] [1790012804.401253684] [rosbag2_recorder]: Subscribed to topic '/parameter_events'
+[controller_server-10] [INFO] [1790012804.422927904] [controller_server]: Created progress_checker : progress_checker of type nav2_controller::SimpleProgressChecker
+[controller_server-10] [INFO] [1790012804.423271748] [controller_server]: Controller Server has progress_checker  progress checkers available.
+[controller_server-10] [INFO] [1790012804.425018995] [controller_server]: Created goal checker : goal_checker of type nav2_controller::SimpleGoalChecker
+[controller_server-10] [INFO] [1790012804.425417528] [controller_server]: Controller Server has goal_checker  goal checkers available.
+[controller_server-10] [INFO] [1790012804.526717383] [controller_server]: Created controller : FollowPath of type nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[controller_server-10] [INFO] [1790012804.545707829] [controller_server]: Controller Server has FollowPath  controllers available.
+[ros2-21] [INFO] [1790012804.554987865] [rosbag2_recorder]: Subscribed to topic '/events/write_split'
+[ros2-21] [INFO] [1790012804.555250571] [rosbag2_recorder]: Listening for topics...
+[ros2-21] [INFO] [1790012804.555275830] [rosbag2_recorder]: Recording...
+[ros2-21] [INFO] [1790012804.555283031] [rosbag2_recorder]: Topics discovery started.
+[lifecycle_manager-12] [INFO] [1790012804.568224871] [lifecycle_manager_pilha]: [34m[1mConfiguring bt_navigator[0m[0m
+[bt_navigator-11] [INFO] [1790012804.568828694] [bt_navigator]: Configuring
+[bt_navigator-11] [INFO] [1790012804.582337651] [bt_navigator]: Creating navigator id navigate_to_pose of type nav2_bt_navigator::NavigateToPoseNavigator
+[ros2-21] [INFO] [1790012804.779494914] [rosbag2_recorder]: Subscribed to topic '/compensador_rumo/cmd_vel'
+[ros2-21] [INFO] [1790012804.821165307] [rosbag2_recorder]: Subscribed to topic '/diagnostics'
+[ros2-21] [INFO] [1790012804.873996399] [rosbag2_recorder]: Subscribed to topic '/tf_static'
+[bt_navigator-11] [WARN] [1790012804.935787517] [bt_navigator]: Error_code parameters were not set. Using default values of: follow_path_error_code compute_path_error_code
+[bt_navigator-11] Make sure these match your BT and there are not other sources of error codes youreported to your application
+[ros2-21] [INFO] [1790012804.946033812] [rosbag2_recorder]: Subscribed to topic '/robot_description'
+[ros2-21] [INFO] [1790012804.947700940] [rosbag2_recorder]: Subscribed to topic '/tf'
+[rviz2-20] [INFO] [1790012804.985000215] [rviz2]: Stereo is NOT SUPPORTED
+[rviz2-20] [INFO] [1790012804.985248427] [rviz2]: OpenGl version: 4.6 (GLSL 4.6)
+[rviz2-20] [INFO] [1790012805.424205562] [rviz2]: Stereo is NOT SUPPORTED
+[ros2-21] [INFO] [1790012806.066642238] [rosbag2_recorder]: Subscribed to topic '/scan'
+[ros2-21] [WARN] [1790012806.069726075] [ROSBAG2_TRANSPORT]: Hidden topics are not recorded. Enable them with --include-hidden-topics
+[ros2-21] [INFO] [1790012806.168301145] [rosbag2_recorder]: Subscribed to topic '/smoother_server/transition_event'
+[ros2-21] [INFO] [1790012806.175887849] [rosbag2_recorder]: Subscribed to topic '/map_server/transition_event'
+[ros2-21] [INFO] [1790012806.310444630] [rosbag2_recorder]: Subscribed to topic '/map'
+[ros2-21] [INFO] [1790012806.314080032] [rosbag2_recorder]: Subscribed to topic '/plan_smoothed'
+[ros2-21] [INFO] [1790012806.316717035] [rosbag2_recorder]: Subscribed to topic '/bt_navigator/transition_event'
+[ros2-21] [INFO] [1790012806.332069859] [rosbag2_recorder]: Subscribed to topic '/nav2_cmd_vel_ignorado'
+[ros2-21] [INFO] [1790012806.334955377] [rosbag2_recorder]: Subscribed to topic '/planner_server/transition_event'
+[ros2-21] [INFO] [1790012806.338116656] [rosbag2_recorder]: Subscribed to topic '/plan'
+[ros2-21] [INFO] [1790012806.341712568] [rosbag2_recorder]: Subscribed to topic '/lookahead_point'
+[ros2-21] [INFO] [1790012806.409368242] [rosbag2_recorder]: Subscribed to topic '/local_costmap/static_layer_raw_updates'
+[ros2-21] [INFO] [1790012806.411861107] [rosbag2_recorder]: Subscribed to topic '/global_costmap/clearing_endpoints'
+[ros2-21] [INFO] [1790012806.413560063] [rosbag2_recorder]: Subscribed to topic '/local_costmap/static_layer'
+[ros2-21] [INFO] [1790012806.415485239] [rosbag2_recorder]: Subscribed to topic '/local_costmap/obstacle_layer_raw_updates'
+[ros2-21] [INFO] [1790012806.417356786] [rosbag2_recorder]: Subscribed to topic '/global_costmap/static_layer_raw_updates'
+[ros2-21] [INFO] [1790012806.421072421] [rosbag2_recorder]: Subscribed to topic '/local_costmap/obstacle_layer_raw'
+[ros2-21] [INFO] [1790012806.422801675] [rosbag2_recorder]: Subscribed to topic '/livox/pontos'
+[ros2-21] [INFO] [1790012806.517544629] [rosbag2_recorder]: Subscribed to topic '/local_costmap/obstacle_layer_updates'
+[ros2-21] [INFO] [1790012806.519295635] [rosbag2_recorder]: Subscribed to topic '/local_costmap/obstacle_layer'
+[ros2-21] [INFO] [1790012806.520989424] [rosbag2_recorder]: Subscribed to topic '/local_costmap/costmap_updates'
+[ros2-21] [INFO] [1790012806.522729269] [rosbag2_recorder]: Subscribed to topic '/local_costmap/costmap_raw_updates'
+[ros2-21] [INFO] [1790012806.524478985] [rosbag2_recorder]: Subscribed to topic '/global_costmap/costmap_updates'
+[ros2-21] [INFO] [1790012806.570849113] [rosbag2_recorder]: Subscribed to topic '/local_costmap/voxel_grid'
+[ros2-21] [INFO] [1790012806.572802091] [rosbag2_recorder]: Subscribed to topic '/local_costmap/clearing_endpoints'
+[ros2-21] [INFO] [1790012806.574908552] [rosbag2_recorder]: Subscribed to topic '/global_costmap/costmap_raw_updates'
+[ros2-21] [INFO] [1790012806.576835668] [rosbag2_recorder]: Subscribed to topic '/global_costmap/costmap'
+[ros2-21] [INFO] [1790012806.579027090] [rosbag2_recorder]: Subscribed to topic '/global_costmap/obstacle_layer_raw_updates'
+[ros2-21] [INFO] [1790012806.580882785] [rosbag2_recorder]: Subscribed to topic '/global_costmap/obstacle_layer_raw'
+[ros2-21] [INFO] [1790012806.582707742] [rosbag2_recorder]: Subscribed to topic '/global_costmap/global_costmap/transition_event'
+[ros2-21] [INFO] [1790012806.584545081] [rosbag2_recorder]: Subscribed to topic '/received_global_plan'
+[ros2-21] [INFO] [1790012806.586494967] [rosbag2_recorder]: Subscribed to topic '/global_costmap/static_layer_updates'
+[ros2-21] [INFO] [1790012806.588205024] [rosbag2_recorder]: Subscribed to topic '/global_costmap/obstacle_layer_updates'
+[ros2-21] [INFO] [1790012806.590115019] [rosbag2_recorder]: Subscribed to topic '/unsmoothed_plan'
+[ros2-21] [INFO] [1790012806.592191501] [rosbag2_recorder]: Subscribed to topic '/global_costmap/static_layer'
+[ros2-21] [INFO] [1790012806.595909694] [rosbag2_recorder]: Subscribed to topic '/local_costmap/published_footprint'
+[ros2-21] [INFO] [1790012806.597959185] [rosbag2_recorder]: Subscribed to topic '/local_costmap/costmap'
+[ros2-21] [INFO] [1790012806.652209345] [rosbag2_recorder]: Subscribed to topic '/is_rotating_to_heading'
+[ros2-21] [INFO] [1790012806.654962930] [rosbag2_recorder]: Subscribed to topic '/global_costmap/published_footprint'
+[ros2-21] [INFO] [1790012806.657704266] [rosbag2_recorder]: Subscribed to topic '/controller_server/transition_event'
+[ros2-21] [INFO] [1790012806.660196220] [rosbag2_recorder]: Subscribed to topic '/local_costmap/static_layer_updates'
+[ros2-21] [INFO] [1790012806.662652608] [rosbag2_recorder]: Subscribed to topic '/curvature_lookahead_point'
+[ros2-21] [INFO] [1790012806.665294435] [rosbag2_recorder]: Subscribed to topic '/local_costmap/static_layer_raw'
+[ros2-21] [INFO] [1790012806.858425209] [rosbag2_recorder]: Subscribed to topic '/clock'
+[ros2-21] [INFO] [1790012806.863063658] [rosbag2_recorder]: Subscribed to topic '/lookahead_collision_arc'
+[create-5] [INFO] [1790012806.864954547] [ros_gz_sim]: Requesting list of world names.
+[ros2-21] [INFO] [1790012806.868047085] [rosbag2_recorder]: Subscribed to topic '/global_costmap/costmap_raw'
+[ros2-21] [INFO] [1790012806.872671728] [rosbag2_recorder]: Subscribed to topic '/collision_monitor/transition_event'
+[ros2-21] [INFO] [1790012806.877460153] [rosbag2_recorder]: Subscribed to topic '/hoverboard_base_controller/cmd_vel'
+[ros2-21] [INFO] [1790012806.882504491] [rosbag2_recorder]: Subscribed to topic '/global_costmap/obstacle_layer'
+[ros2-21] [INFO] [1790012806.931198552] [rosbag2_recorder]: Subscribed to topic '/Odometry'
+[ros2-21] [INFO] [1790012806.935166794] [rosbag2_recorder]: Subscribed to topic '/global_costmap/static_layer_raw'
+[ros2-21] [INFO] [1790012806.938473268] [rosbag2_recorder]: Subscribed to topic '/local_costmap/local_costmap/transition_event'
+[ros2-21] [INFO] [1790012806.941783975] [rosbag2_recorder]: Subscribed to topic '/local_costmap/costmap_raw'
+[ros2-21] [INFO] [1790012806.959181518] [rosbag2_recorder]: Subscribed to topic '/auto_vel_raw'
+[ros2-21] [INFO] [1790012806.961176214] [rosbag2_recorder]: Subscribed to topic '/unstuck_vel'
+[ros2-21] [INFO] [1790012806.964699221] [rosbag2_recorder]: Subscribed to topic '/heading_controller/rumo_alvo'
+[ros2-21] [INFO] [1790012806.966948560] [rosbag2_recorder]: Subscribed to topic '/path_follower/plano_aceito'
+[ros2-21] [INFO] [1790012806.968884137] [rosbag2_recorder]: Subscribed to topic '/heading_controller/velocidade_alvo'
+[ros2-21] [INFO] [1790012806.970681494] [rosbag2_recorder]: Subscribed to topic '/cmd_vel_bruto'
+[ros2-21] [INFO] [1790012807.069389253] [rosbag2_recorder]: Subscribed to topic '/initialpose'
+[ros2-21] [INFO] [1790012807.072434402] [rosbag2_recorder]: Subscribed to topic '/goal_pose'
+[lifecycle_manager-12] [INFO] [1790012807.881758364] [lifecycle_manager_pilha]: [34m[1mConfiguring collision_monitor[0m[0m
+[collision_monitor-15] [INFO] [1790012807.882485531] [collision_monitor]: Configuring
+[collision_monitor-15] [INFO] [1790012807.895220281] [collision_monitor]: [livox]: Creating PointCloud
+[collision_monitor-15] [INFO] [1790012807.899659990] [collision_monitor]: [PolygonApproach]: Creating Polygon
+[collision_monitor-15] [INFO] [1790012807.905744775] [collision_monitor]: [PolygonStop]: Creating Polygon
+[ros2-21] [INFO] [1790012807.927485056] [rosbag2_recorder]: Subscribed to topic '/polygon_stop'
+[ros2-21] [INFO] [1790012807.929170173] [rosbag2_recorder]: Subscribed to topic '/auto_vel'
+[ros2-21] [INFO] [1790012807.930984680] [rosbag2_recorder]: Subscribed to topic '/polygon_approach'
+[lifecycle_manager-12] [INFO] [1790012807.984663443] [lifecycle_manager_pilha]: [34m[1mActivating map_server[0m[0m
+[map_server-7] [INFO] [1790012807.985020166] [map_server]: Activating
+[map_server-7] [INFO] [1790012807.985454222] [map_server]: Creating bond (map_server) to lifecycle manager.
+[planner_server-8] [INFO] [1790012807.985759573] [global_costmap.global_costmap]: StaticLayer: Resizing costmap to 240 X 160 at 0.050000 m/pix
+[controller_server-10] [INFO] [1790012807.985954967] [local_costmap.local_costmap]: StaticLayer: Resizing static layer to 240 X 160 at 0.050000 m/pix
+[rviz2-20] [INFO] [1790012807.998938986] [rviz2]: Trying to create a map of size 240 x 160 using 1 swatches
+[ros2-21] [INFO] [1790012808.028248707] [rosbag2_recorder]: Subscribed to topic '/collision_monitor_state'
+[rviz2-20] [ERROR] [1790012808.081542347] [rviz2]: rviz/glsl120/indexed_8bit_image.vert
+[rviz2-20] rviz/glsl120/indexed_8bit_image.frag
+[rviz2-20]  GLSL link result : 
+[rviz2-20] active samplers with a different type refer to the same texture image unit
+[lifecycle_manager-12] [INFO] [1790012808.127395228] [lifecycle_manager_pilha]: Server map_server connected with bond.
+[lifecycle_manager-12] [INFO] [1790012808.127523240] [lifecycle_manager_pilha]: [34m[1mActivating planner_server[0m[0m
+[planner_server-8] [INFO] [1790012808.128047567] [planner_server]: Activating
+[planner_server-8] [INFO] [1790012808.128107298] [global_costmap.global_costmap]: Activating
+[planner_server-8] [INFO] [1790012808.128121987] [global_costmap.global_costmap]: Checking transform
+[planner_server-8] [INFO] [1790012808.128192758] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Could not find a connection between 'map' and 'base_link' because they are not part of the same tree.Tf has two or more unconnected trees.
+[ros2-21] [INFO] [1790012808.399394324] [rosbag2_recorder]: Subscribed to topic '/collision_monitor/collision_points_marker'
+[ros2-21] [INFO] [1790012808.478537353] [rosbag2_recorder]: Subscribed to topic '/bond'
+[planner_server-8] [INFO] [1790012808.628315104] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Could not find a connection between 'map' and 'base_link' because they are not part of the same tree.Tf has two or more unconnected trees.
+[planner_server-8] [INFO] [1790012809.128293856] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Could not find a connection between 'map' and 'base_link' because they are not part of the same tree.Tf has two or more unconnected trees.
+[planner_server-8] [INFO] [1790012809.628273327] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Could not find a connection between 'map' and 'base_link' because they are not part of the same tree.Tf has two or more unconnected trees.
+[create-5] [INFO] [1790012810.120189233] [ros_gz_sim]: Waiting messages on topic [robot_description].
+[planner_server-8] [INFO] [1790012810.128259147] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Could not find a connection between 'map' and 'base_link' because they are not part of the same tree.Tf has two or more unconnected trees.
+[create-5] [INFO] [1790012810.132370959] [ros_gz_sim]: Entity creation successful.
+[gazebo-1] [1;33mWarning [Utils.cc:132][0m [/sdf/model[@name="robo2"]/link[@name="livox_frame"]/sensor[@name="livox_mid360"]/gz_frame_id:<urdf-string>:L0]: XML Element[gz_frame_id], child of element[sensor], not defined in SDF. Copying[gz_frame_id] as children of [sensor].
+[INFO] [create-5]: process has finished cleanly [pid 161527]
+[INFO] [spawner-22]: process started with pid [162851]
+[planner_server-8] [INFO] [1790012810.628260897] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Could not find a connection between 'map' and 'base_link' because they are not part of the same tree.Tf has two or more unconnected trees.
+[gazebo-1] [INFO] [1790012810.748670214] [gz_ros_control]: [gz_ros2_control] Fixed joint ['livox_joint'] (Entity='75') is skipped.
+[gazebo-1] [INFO] [1790012810.848207688] [gz_ros_control]: Loading controller_manager
+[planner_server-8] [INFO] [1790012811.128252360] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Could not find a connection between 'map' and 'base_link' because they are not part of the same tree.Tf has two or more unconnected trees.
+[spawner-22] [INFO] [1790012811.444139220] [spawner_joint_state_broadcaster]: waiting for service /controller_manager/list_controllers to become available...
+[gazebo-1] [INFO] [1790012811.598400097] [controller_manager]: Using ROS clock for triggering controller manager cycles.
+[planner_server-8] [INFO] [1790012811.628245101] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Could not find a connection between 'map' and 'base_link' because they are not part of the same tree.Tf has two or more unconnected trees.
+[gazebo-1] [INFO] [1790012811.638655880] [controller_manager]: Subscribing to '/robot_description' topic for robot description.
+[ros2-21] [INFO] [1790012811.650410595] [rosbag2_recorder]: Subscribed to topic '/controller_manager/activity'
+[gazebo-1] [WARN] [1790012811.655297252] [gz_ros_control]: Waiting RM to load and initialize hardware...
+[ros2-21] [INFO] [1790012811.663512796] [rosbag2_recorder]: Subscribed to topic '/controller_manager/introspection_data/full'
+[ros2-21] [INFO] [1790012811.675866229] [rosbag2_recorder]: Subscribed to topic '/controller_manager/statistics/values'
+[ros2-21] [INFO] [1790012811.677832757] [rosbag2_recorder]: Subscribed to topic '/controller_manager/introspection_data/values'
+[ros2-21] [INFO] [1790012811.680660076] [rosbag2_recorder]: Subscribed to topic '/controller_manager/introspection_data/names'
+[ros2-21] [INFO] [1790012811.682791395] [rosbag2_recorder]: Subscribed to topic '/controller_manager/statistics/names'
+[ros2-21] [INFO] [1790012811.684971435] [rosbag2_recorder]: Subscribed to topic '/controller_manager/statistics/full'
+[planner_server-8] [INFO] [1790012812.128302003] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Could not find a connection between 'map' and 'base_link' because they are not part of the same tree.Tf has two or more unconnected trees.
+[planner_server-8] [INFO] [1790012812.628260651] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Could not find a connection between 'map' and 'base_link' because they are not part of the same tree.Tf has two or more unconnected trees.
+[gazebo-1] [WARN] [1790012812.637694409] [controller_manager]: Waiting for data on 'robot_description' topic to finish initialization
+[planner_server-8] [INFO] [1790012813.128237994] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Could not find a connection between 'map' and 'base_link' because they are not part of the same tree.Tf has two or more unconnected trees.
+[gazebo-1] [INFO] [1790012813.296553809] [controller_manager]: Received robot description from topic.
+[gazebo-1] [INFO] [1790012813.296737591] [controller_manager]: Enforcing command limits is disabled. Command limits from URDF will be ignored.
+[gazebo-1] [INFO] [1790012813.376734463] [gz_ros_control]: The position_proportional_gain has been set to: 0.1
+[gazebo-1] [INFO] [1790012813.376912963] [gz_ros_control]: Loading joint: left_wheel_joint
+[gazebo-1] [INFO] [1790012813.376944145] [gz_ros_control]: 	State:
+[gazebo-1] [INFO] [1790012813.376964056] [gz_ros_control]: 		 position
+[gazebo-1] [INFO] [1790012813.376975284] [gz_ros_control]: 		 velocity
+[gazebo-1] [INFO] [1790012813.376992786] [gz_ros_control]: 	Command:
+[gazebo-1] [INFO] [1790012813.377001845] [gz_ros_control]: 		 velocity
+[gazebo-1] [INFO] [1790012813.377080925] [gz_ros_control]: Loading joint: right_wheel_joint
+[gazebo-1] [INFO] [1790012813.377098637] [gz_ros_control]: 	State:
+[gazebo-1] [INFO] [1790012813.377110518] [gz_ros_control]: 		 position
+[gazebo-1] [INFO] [1790012813.377124115] [gz_ros_control]: 		 velocity
+[gazebo-1] [INFO] [1790012813.377135397] [gz_ros_control]: 	Command:
+[gazebo-1] [INFO] [1790012813.377146875] [gz_ros_control]: 		 velocity
+[gazebo-1] [INFO] [1790012813.377514611] [controller_manager]: Initialize hardware 'GazeboSimSystem' 
+[gazebo-1] [WARN] [1790012813.377595360] [controller_manager.hardware_component.system.GazeboSimSystem]: Executor is not available during hardware component initialization for 'GazeboSimSystem'. Skipping node creation!
+[gazebo-1] [INFO] [1790012813.377738840] [controller_manager]: Successful initialization of hardware 'GazeboSimSystem'
+[gazebo-1] [INFO] [1790012813.377967897] [controller_manager]: Activating component 'GazeboSimSystem'.
+[gazebo-1] [INFO] [1790012813.378012536] [resource_manager]: 'configure' hardware 'GazeboSimSystem' 
+[gazebo-1] [INFO] [1790012813.378030193] [gz_ros_control]: System Successfully configured!
+[gazebo-1] [INFO] [1790012813.378046035] [resource_manager]: Successful 'configure' of hardware 'GazeboSimSystem'
+[gazebo-1] [INFO] [1790012813.378068736] [resource_manager]: 'activate' hardware 'GazeboSimSystem' 
+[gazebo-1] [INFO] [1790012813.378117137] [resource_manager]: Successful 'activate' of hardware 'GazeboSimSystem'
+[gazebo-1] [WARN] [1790012813.378347650] [controller_manager]: Component 'GazeboSimSystem' does not have read or write statistics initialized, skipping registration.
+[gazebo-1] [INFO] [1790012813.378381688] [controller_manager]: Resource Manager has been successfully initialized. Starting Controller Manager services...
+[planner_server-8] [INFO] [1790012813.628302868] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Could not find a connection between 'map' and 'base_link' because they are not part of the same tree.Tf has two or more unconnected trees.
+[gazebo-1] [WARN] [1790012813.768974490] [gz_ros_control]:  Desired controller update period (0.1 s) is slower than the gazebo simulation period (0.001 s).
+[gazebo-1] [1;33mWarning [Utils.cc:132][0m [/sdf/model[@name="robo2"]/link[@name="livox_frame"]/sensor[@name="livox_mid360"]/gz_frame_id:<data-string>:L311]: XML Element[gz_frame_id], child of element[sensor], not defined in SDF. Copying[gz_frame_id] as children of [sensor].
+[spawner-22] [INFO] [1790012813.950622793] [spawner_joint_state_broadcaster]: waiting for service /controller_manager/load_controller to become available...
+[planner_server-8] [INFO] [1790012814.128235730] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Could not find a connection between 'map' and 'base_link' because they are not part of the same tree.Tf has two or more unconnected trees.
+[planner_server-8] [INFO] [1790012814.628403759] [global_costmap.global_costmap]: start
+[gazebo-1] [INFO] [1790012814.952956362] [controller_manager]: Loading controller : 'joint_state_broadcaster' of type 'joint_state_broadcaster/JointStateBroadcaster'
+[gazebo-1] [INFO] [1790012814.954003361] [controller_manager]: Loading controller 'joint_state_broadcaster'
+[gazebo-1] [INFO] [1790012815.024568077] [controller_manager]: Controller 'joint_state_broadcaster' node arguments: --ros-args --params-file /home/rbe-luis/Workspace/Controle_robo_livox/install/robot_base/share/robot_base/config/hoverboard_controllers_sim.yaml -p use_sim_time:=true --param use_sim_time:=true 
+[spawner-22] [INFO] [1790012815.107031948] [spawner_joint_state_broadcaster]: Loaded joint_state_broadcaster
+[ros2-21] [INFO] [1790012815.108617645] [rosbag2_recorder]: Subscribed to topic '/joint_state_broadcaster/transition_event'
+[gazebo-1] [INFO] [1790012815.112679019] [controller_manager]: Configuring controller: 'joint_state_broadcaster'
+[gazebo-1] [INFO] [1790012815.113901321] [joint_state_broadcaster]: 'joints' or 'interfaces' parameter is empty. All available state interfaces will be published
+[ros2-21] [INFO] [1790012815.164064012] [rosbag2_recorder]: Subscribed to topic '/joint_states'
+[gazebo-1] [INFO] [1790012815.229562362] [controller_manager]: Activating controllers: [ joint_state_broadcaster ]
+[ros2-21] [INFO] [1790012815.296552914] [rosbag2_recorder]: Subscribed to topic '/dynamic_joint_states'
+[gazebo-1] [INFO] [1790012815.332507773] [controller_manager]: Successfully switched controllers!
+[spawner-22] [INFO] [1790012815.448693296] [spawner_joint_state_broadcaster]: Configured and activated joint_state_broadcaster
+[planner_server-8] [INFO] [1790012815.683827953] [planner_server]: Activating plugin GridBased of type SmacPlanner2D
+[planner_server-8] [INFO] [1790012815.689884112] [planner_server]: Creating bond (planner_server) to lifecycle manager.
+[INFO] [spawner-22]: process has finished cleanly [pid 162851]
+[INFO] [spawner-23]: process started with pid [163459]
+[planner_server-8] [WARN] [1790012815.801058979] [planner_server.rclcpp]: failed to send response to /planner_server/get_state (timeout): client will not receive response, at ./src/rmw_response.cpp:153, at ./src/rcl/service.c:400
+[lifecycle_manager-12] [INFO] [1790012815.908707771] [lifecycle_manager_pilha]: Server planner_server connected with bond.
+[lifecycle_manager-12] [INFO] [1790012815.909871242] [lifecycle_manager_pilha]: [34m[1mActivating smoother_server[0m[0m
+[smoother_server-9] [INFO] [1790012815.910809751] [smoother_server]: Activating
+[smoother_server-9] [INFO] [1790012815.910881819] [smoother_server]: Activating smoother: suave of type nav2_constrained_smoother::ConstrainedSmoother
+[smoother_server-9] [INFO] [1790012815.910944152] [smoother_server]: Creating bond (smoother_server) to lifecycle manager.
+[lifecycle_manager-12] [INFO] [1790012816.020409401] [lifecycle_manager_pilha]: Server smoother_server connected with bond.
+[lifecycle_manager-12] [INFO] [1790012816.020619343] [lifecycle_manager_pilha]: [34m[1mActivating controller_server[0m[0m
+[controller_server-10] [INFO] [1790012816.023143558] [controller_server]: Activating
+[controller_server-10] [INFO] [1790012816.023504442] [local_costmap.local_costmap]: Activating
+[controller_server-10] [INFO] [1790012816.023587802] [local_costmap.local_costmap]: Checking transform
+[controller_server-10] [INFO] [1790012816.023831693] [local_costmap.local_costmap]: start
+[controller_server-10] [INFO] [1790012816.278534641] [controller_server]: Activating controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[controller_server-10] [INFO] [1790012816.278614061] [controller_server]: Creating bond (controller_server) to lifecycle manager.
+[lifecycle_manager-12] [INFO] [1790012816.415189612] [lifecycle_manager_pilha]: Server controller_server connected with bond.
+[lifecycle_manager-12] [INFO] [1790012816.415358511] [lifecycle_manager_pilha]: [34m[1mActivating bt_navigator[0m[0m
+[bt_navigator-11] [INFO] [1790012816.416041538] [bt_navigator]: Activating
+[bt_navigator-11] [INFO] [1790012816.526469736] [bt_navigator]: Creating bond (bt_navigator) to lifecycle manager.
+[ros2-21] [INFO] [1790012816.616955694] [rosbag2_recorder]: Subscribed to topic '/behavior_tree_log'
+[lifecycle_manager-12] [INFO] [1790012816.643605246] [lifecycle_manager_pilha]: Server bt_navigator connected with bond.
+[lifecycle_manager-12] [INFO] [1790012816.643744536] [lifecycle_manager_pilha]: [34m[1mActivating collision_monitor[0m[0m
+[collision_monitor-15] [INFO] [1790012816.645504105] [collision_monitor]: Activating
+[collision_monitor-15] [INFO] [1790012816.648072020] [collision_monitor]: Creating bond (collision_monitor) to lifecycle manager.
+[lifecycle_manager-12] [INFO] [1790012816.775487194] [lifecycle_manager_pilha]: Server collision_monitor connected with bond.
+[lifecycle_manager-12] [INFO] [1790012816.775622742] [lifecycle_manager_pilha]: [34m[1mManaged nodes are active[0m[0m
+[lifecycle_manager-12] [INFO] [1790012816.775646643] [lifecycle_manager_pilha]: [34m[1mCreating bond timer...[0m[0m
+[spawner-23] [INFO] [1790012817.001596418] [spawner_hoverboard_base_controller]: waiting for service /controller_manager/list_controllers to become available...
+[gazebo-1] [INFO] [1790012817.790027064] [controller_manager]: Loading controller : 'hoverboard_base_controller' of type 'diff_drive_controller/DiffDriveController'
+[gazebo-1] [INFO] [1790012817.790950994] [controller_manager]: Loading controller 'hoverboard_base_controller'
+[gazebo-1] [INFO] [1790012817.827848449] [controller_manager]: Controller 'hoverboard_base_controller' node arguments: --ros-args --params-file /home/rbe-luis/Workspace/Controle_robo_livox/install/robot_base/share/robot_base/config/hoverboard_controllers_sim.yaml -p use_sim_time:=true --param use_sim_time:=true 
+[ros2-21] [INFO] [1790012817.937923703] [rosbag2_recorder]: Subscribed to topic '/hoverboard_base_controller/transition_event'
+[spawner-23] [INFO] [1790012817.946171219] [spawner_hoverboard_base_controller]: Loaded hoverboard_base_controller
+[gazebo-1] [INFO] [1790012817.954323863] [controller_manager]: Configuring controller: 'hoverboard_base_controller'
+[gazebo-1] [WARN] [1790012817.955675524] [hoverboard_base_controller]: [deprecated] has_jerk_limits parameter is deprecated, instead set the respective limits to NAN
+[gazebo-1] [WARN] [1790012817.955810327] [hoverboard_base_controller]: [deprecated] has_jerk_limits parameter is deprecated, instead set the respective limits to NAN
+[gazebo-1] [WARN] [1790012817.980496952] [hoverboard_base_controller]: Can't accept new commands. subscriber is inactive
+[ros2-21] [INFO] [1790012818.007287896] [rosbag2_recorder]: Subscribed to topic '/hoverboard_base_controller/odom'
+[gazebo-1] [WARN] [1790012818.032585256] [hoverboard_base_controller]: Can't accept new commands. subscriber is inactive
+[gazebo-1] [INFO] [1790012818.076660887] [controller_manager]: Activating controllers: [ hoverboard_base_controller ]
+[gazebo-1] [WARN] [1790012818.105404332] [hoverboard_base_controller]: Can't accept new commands. subscriber is inactive
+[gazebo-1] [WARN] [1790012818.152788803] [hoverboard_base_controller]: Can't accept new commands. subscriber is inactive
+[gazebo-1] [INFO] [1790012818.184496234] [controller_manager]: Successfully switched controllers!
+[spawner-23] [INFO] [1790012818.297983575] [spawner_hoverboard_base_controller]: Configured and activated hoverboard_base_controller
+[INFO] [spawner-23]: process has finished cleanly [pid 163459]
+[controller_server-10] [WARN] [1790012821.425139632] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.66 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790012821.425286501] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.66 seconds, and it should be updated every 0.50 seconds.
+[collision_monitor-15] [WARN] [1790012824.307676774] [rclcpp]: Failed to get parameters: parameter 'PolygonApproach.max_points' is not initialized
+[collision_monitor-15] [WARN] [1790012824.314080054] [rclcpp]: Failed to get parameters: parameter 'PolygonApproach.max_points' is not initialized
+[collision_monitor-15] [WARN] [1790012824.333374988] [rclcpp]: Failed to get parameters: parameter 'PolygonStop.max_points' is not initialized
+[gazebo-1] [WARN] [1790012824.476953342] [rclcpp]: Failed to get parameters: parameter 'hoverboard_base_controller.fallback_controllers' is not initialized
+[gazebo-1] [WARN] [1790012824.549989050] [rclcpp]: Failed to get parameters: parameter 'hoverboard_base_controller.fallback_controllers' is not initialized
+[gazebo-1] [WARN] [1790012824.552337142] [rclcpp]: Failed to get parameters: parameter 'hoverboard_base_controller.node_options_args' is not initialized
+[gazebo-1] [WARN] [1790012824.555867943] [rclcpp]: Failed to get parameters: parameter 'joint_state_broadcaster.fallback_controllers' is not initialized
+[gazebo-1] [WARN] [1790012824.558488627] [rclcpp]: Failed to get parameters: parameter 'joint_state_broadcaster.node_options_args' is not initialized
+[controller_server-10] [WARN] [1790012828.825159037] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.51 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790012828.827814320] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.51 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790012829.025101214] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.68 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790012829.025799349] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.68 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790012846.625146277] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.54 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790012846.625553170] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.54 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790012846.629139911] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.54 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790012846.629284043] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.54 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790012846.825063329] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.72 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790012846.825178091] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.72 seconds, and it should be updated every 0.50 seconds.
+[rviz2-20] [INFO] [1790012859.148813395] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[smoother_server-9] [INFO] [1790012859.149147277] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[smoother_server-9] [INFO] [1790012859.149264529] [smoother_server]: Running Nav2 LifecycleNode rcl preshutdown (smoother_server)
+[smoother_server-9] [INFO] [1790012859.149429737] [smoother_server]: Deactivating
+[smoother_server-9] [INFO] [1790012859.149455257] [smoother_server]: Deactivating smoother: suave of type nav2_constrained_smoother::ConstrainedSmoother
+[smoother_server-9] [INFO] [1790012859.149473810] [smoother_server]: Destroying bond (smoother_server) to lifecycle manager.
+[map_server-7] [INFO] [1790012859.149151537] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[map_server-7] [INFO] [1790012859.149304069] [map_server]: Running Nav2 LifecycleNode rcl preshutdown (map_server)
+[map_server-7] [INFO] [1790012859.149438678] [map_server]: Deactivating
+[map_server-7] [INFO] [1790012859.149494660] [map_server]: Destroying bond (map_server) to lifecycle manager.
+[lifecycle_manager-12] [INFO] [1790012859.149540778] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[lifecycle_manager-12] [INFO] [1790012859.149658250] [lifecycle_manager_pilha]: Running Nav2 LifecycleManager rcl preshutdown (lifecycle_manager_pilha)
+[lifecycle_manager-12] [INFO] [1790012859.149737483] [lifecycle_manager_pilha]: [34m[1mTerminating bond timer...[0m[0m
+[pointcloud_to_laserscan_node-6] [INFO] [1790012859.149564809] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[planner_server-8] [INFO] [1790012859.149713940] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[planner_server-8] [INFO] [1790012859.149812622] [planner_server]: Running Nav2 LifecycleNode rcl preshutdown (planner_server)
+[planner_server-8] [INFO] [1790012859.149930532] [planner_server]: Deactivating
+[planner_server-8] [INFO] [1790012859.149972743] [global_costmap.global_costmap]: Deactivating
+[robot_state_publisher-2] [INFO] [1790012859.149752172] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[parameter_bridge-4] [INFO] [1790012859.149792311] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[twist_mux-16] [INFO] [1790012859.150086836] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[collision_monitor-15] [INFO] [1790012859.150286214] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[collision_monitor-15] [INFO] [1790012859.150399646] [collision_monitor]: Running Nav2 LifecycleNode rcl preshutdown (collision_monitor)
+[collision_monitor-15] [INFO] [1790012859.150518017] [collision_monitor]: Deactivating
+[collision_monitor-15] [INFO] [1790012859.150546100] [collision_monitor]: Destroying bond (collision_monitor) to lifecycle manager.
+[bt_navigator-11] [INFO] [1790012859.151404285] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[bt_navigator-11] [INFO] [1790012859.151593776] [bt_navigator]: Running Nav2 LifecycleNode rcl preshutdown (bt_navigator)
+[static_transform_publisher-13] [INFO] [1790012859.151507828] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[bt_navigator-11] [INFO] [1790012859.152122230] [bt_navigator]: Deactivating
+[bt_navigator-11] [INFO] [1790012859.152174614] [bt_navigator]: Destroying bond (bt_navigator) to lifecycle manager.
+[controller_server-10] [INFO] [1790012859.152422705] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[controller_server-10] [INFO] [1790012859.152526785] [controller_server]: Running Nav2 LifecycleNode rcl preshutdown (controller_server)
+[controller_server-10] [INFO] [1790012859.152853689] [controller_server]: Deactivating
+[controller_server-10] [INFO] [1790012859.152999291] [controller_server]: Deactivating controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[controller_server-10] [INFO] [1790012859.153335682] [local_costmap.local_costmap]: Deactivating
+[map_server-7] [INFO] [1790012859.160179951] [map_server]: Cleaning up
+[map_server-7] [INFO] [1790012859.160314276] [map_server]: Destroying bond (map_server) to lifecycle manager.
+[collision_monitor-15] [INFO] [1790012859.160995361] [collision_monitor]: Cleaning up
+[collision_monitor-15] [INFO] [1790012859.161058320] [collision_monitor]: [PolygonApproach]: Destroying Polygon
+[collision_monitor-15] [INFO] [1790012859.161077922] [collision_monitor]: [PolygonStop]: Destroying Polygon
+[collision_monitor-15] [INFO] [1790012859.161091262] [collision_monitor]: [livox]: Destroying PointCloud
+[smoother_server-9] [INFO] [1790012859.162170679] [smoother_server]: Cleaning up
+[smoother_server-9] [INFO] [1790012859.162240300] [smoother_server]: Cleaning up smoother: suave of type nav2_constrained_smoother::ConstrainedSmoother
+[bt_navigator-11] [INFO] [1790012859.165080176] [bt_navigator]: Cleaning up
+[collision_monitor-15] [INFO] [1790012859.179382871] [collision_monitor]: Destroying bond (collision_monitor) to lifecycle manager.
+[map_server-7] [INFO] [1790012859.207879962] [map_server]: Destroying
+[smoother_server-9] [INFO] [1790012859.208207911] [smoother_server]: Destroying bond (smoother_server) to lifecycle manager.
+[smoother_server-9] [INFO] [1790012859.220706324] [smoother_server]: Destroying
+[controller_server-10] [INFO] [1790012859.227924073] [controller_server]: Destroying bond (controller_server) to lifecycle manager.
+[collision_monitor-15] [INFO] [1790012859.235457380] [collision_monitor]: Destroying
+[controller_server-10] [INFO] [1790012859.241651965] [controller_server]: Cleaning up
+[controller_server-10] [INFO] [1790012859.241707547] [controller_server]: Cleaning up controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[controller_server-10] [INFO] [1790012859.241795036] [local_costmap.local_costmap]: Cleaning up
+[heading_controller-14] Traceback (most recent call last):
+[heading_controller-14]   File "/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_motion/lib/python3.12/site-packages/robot_motion/heading_controller.py", line 528, in main
+[heading_controller-14]     rclpy.spin(no)
+[heading_controller-14]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/__init__.py", line 247, in spin
+[heading_controller-14]     executor.spin_once()
+[heading_controller-14]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 926, in spin_once
+[heading_controller-14]     self._spin_once_impl(timeout_sec)
+[heading_controller-14]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 907, in _spin_once_impl
+[heading_controller-14]     handler, entity, node = self.wait_for_ready_callbacks(
+[heading_controller-14]                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[heading_controller-14]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 877, in wait_for_ready_callbacks
+[heading_controller-14]     return next(self._cb_iter)
+[heading_controller-14]            ^^^^^^^^^^^^^^^^^^^
+[heading_controller-14]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 785, in _wait_for_ready_callbacks
+[heading_controller-14]     raise ExternalShutdownException()
+[heading_controller-14] rclpy.executors.ExternalShutdownException
+[heading_controller-14] 
+[heading_controller-14] During handling of the above exception, another exception occurred:
+[heading_controller-14] 
+[heading_controller-14] Traceback (most recent call last):
+[heading_controller-14]   File "/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_motion/lib/robot_motion/heading_controller", line 33, in <module>
+[heading_controller-14]     sys.exit(load_entry_point('robot-motion==0.1.0', 'console_scripts', 'heading_controller')())
+[heading_controller-14]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[heading_controller-14]   File "/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_motion/lib/python3.12/site-packages/robot_motion/heading_controller.py", line 533, in main
+[heading_controller-14]     no.publica(0.0, 0.0)
+[heading_controller-14]   File "/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_motion/lib/python3.12/site-packages/robot_motion/heading_controller.py", line 521, in publica
+[heading_controller-14]     self.pub.publish(m)
+[heading_controller-14]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/publisher.py", line 70, in publish
+[heading_controller-14]     self.__publisher.publish(msg)
+[heading_controller-14] rclpy._rclpy_pybind11.RCLError: Failed to publish: publisher's context is invalid, at ./src/rcl/publisher.c:423
+[placa_simulada-3] Traceback (most recent call last):
+[placa_simulada-3]   File "/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_base/lib/python3.12/site-packages/robot_base/placa_simulada.py", line 441, in main
+[placa_simulada-3]     rclpy.spin(no)
+[placa_simulada-3]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/__init__.py", line 247, in spin
+[placa_simulada-3]     executor.spin_once()
+[placa_simulada-3]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 926, in spin_once
+[placa_simulada-3]     self._spin_once_impl(timeout_sec)
+[placa_simulada-3]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 907, in _spin_once_impl
+[placa_simulada-3]     handler, entity, node = self.wait_for_ready_callbacks(
+[placa_simulada-3]                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[placa_simulada-3]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 877, in wait_for_ready_callbacks
+[placa_simulada-3]     return next(self._cb_iter)
+[placa_simulada-3]            ^^^^^^^^^^^^^^^^^^^
+[placa_simulada-3]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 757, in _wait_for_ready_callbacks
+[placa_simulada-3]     wait_set = _rclpy.WaitSet(
+[placa_simulada-3]                ^^^^^^^^^^^^^^^
+[placa_simulada-3] rclpy._rclpy_pybind11.RCLError: failed to initialize wait set: the given context is not valid, either rcl_init() was not called or rcl_shutdown() was called., at ./src/rcl/wait.c:130
+[placa_simulada-3] 
+[placa_simulada-3] During handling of the above exception, another exception occurred:
+[placa_simulada-3] 
+[placa_simulada-3] Traceback (most recent call last):
+[placa_simulada-3]   File "/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_base/lib/robot_base/placa_simulada", line 33, in <module>
+[placa_simulada-3]     sys.exit(load_entry_point('robot-base==0.1.0', 'console_scripts', 'placa_simulada')())
+[placa_simulada-3]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[placa_simulada-3]   File "/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_base/lib/python3.12/site-packages/robot_base/placa_simulada.py", line 446, in main
+[placa_simulada-3]     rclpy.shutdown()
+[placa_simulada-3]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/__init__.py", line 134, in shutdown
+[placa_simulada-3]     _shutdown(context=context)
+[placa_simulada-3]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/utilities.py", line 82, in shutdown
+[placa_simulada-3]     context.shutdown()
+[placa_simulada-3]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/context.py", line 129, in shutdown
+[placa_simulada-3]     self.__context.shutdown()
+[placa_simulada-3] rclpy._rclpy_pybind11.RCLError: failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:333
+[bt_navigator-11] [INFO] [1790012859.330419732] [bt_navigator]: Completed Cleaning up
+[lifecycle_manager-12] [INFO] [1790012859.331184981] [lifecycle_manager_pilha]: Destroying lifecycle_manager_pilha
+[INFO] [parameter_bridge-4]: process has finished cleanly [pid 161512]
+[bt_navigator-11] [INFO] [1790012859.331201740] [bt_navigator]: Destroying bond (bt_navigator) to lifecycle manager.
+[freeze_capture-19] Traceback (most recent call last):
+[freeze_capture-19]   File "/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_nav/lib/robot_nav/freeze_capture", line 33, in <module>
+[path_follower-18] Traceback (most recent call last):
+[path_follower-18]   File "/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_motion/lib/python3.12/site-packages/robot_motion/path_follower.py", line 1628, in main
+[freeze_capture-19]     sys.exit(load_entry_point('robot-nav==0.1.0', 'console_scripts', 'freeze_capture')())
+[freeze_capture-19]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[freeze_capture-19]   File "/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_nav/lib/python3.12/site-packages/robot_nav/freeze_capture.py", line 295, in main
+[freeze_capture-19]     rclpy.shutdown()
+[freeze_capture-19]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/__init__.py", line 134, in shutdown
+[freeze_capture-19]     _shutdown(context=context)
+[freeze_capture-19]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/utilities.py", line 82, in shutdown
+[freeze_capture-19]     context.shutdown()
+[freeze_capture-19]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/context.py", line 129, in shutdown
+[freeze_capture-19]     self.__context.shutdown()
+[freeze_capture-19] rclpy._rclpy_pybind11.RCLError: failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:333
+[path_follower-18]     rclpy.spin(no)
+[path_follower-18]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/__init__.py", line 247, in spin
+[path_follower-18]     executor.spin_once()
+[path_follower-18]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 926, in spin_once
+[path_follower-18]     self._spin_once_impl(timeout_sec)
+[path_follower-18]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 907, in _spin_once_impl
+[compensador_rumo-17] Traceback (most recent call last):
+[compensador_rumo-17]   File "/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_motion/lib/python3.12/site-packages/robot_motion/compensador_rumo.py", line 408, in main
+[INFO] [static_transform_publisher-13]: process has finished cleanly [pid 161573]
+[compensador_rumo-17]     rclpy.spin(no)
+[compensador_rumo-17]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/__init__.py", line 247, in spin
+[path_follower-18]     handler, entity, node = self.wait_for_ready_callbacks(
+[path_follower-18]                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[path_follower-18]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 877, in wait_for_ready_callbacks
+[compensador_rumo-17]     executor.spin_once()
+[compensador_rumo-17]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 926, in spin_once
+[compensador_rumo-17]     self._spin_once_impl(timeout_sec)
+[compensador_rumo-17]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 907, in _spin_once_impl
+[compensador_rumo-17]     handler, entity, node = self.wait_for_ready_callbacks(
+[compensador_rumo-17]                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[compensador_rumo-17]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 877, in wait_for_ready_callbacks
+[compensador_rumo-17]     return next(self._cb_iter)
+[compensador_rumo-17]            ^^^^^^^^^^^^^^^^^^^
+[compensador_rumo-17]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 785, in _wait_for_ready_callbacks
+[compensador_rumo-17]     raise ExternalShutdownException()
+[compensador_rumo-17] rclpy.executors.ExternalShutdownException
+[compensador_rumo-17] 
+[compensador_rumo-17] During handling of the above exception, another exception occurred:
+[compensador_rumo-17] 
+[path_follower-18]     return next(self._cb_iter)
+[path_follower-18]            ^^^^^^^^^^^^^^^^^^^
+[path_follower-18]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 785, in _wait_for_ready_callbacks
+[path_follower-18]     raise ExternalShutdownException()
+[path_follower-18] rclpy.executors.ExternalShutdownException
+[path_follower-18] 
+[path_follower-18] During handling of the above exception, another exception occurred:
+[path_follower-18] 
+[path_follower-18] Traceback (most recent call last):
+[path_follower-18]   File "/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_motion/lib/robot_motion/path_follower", line 33, in <module>
+[path_follower-18]     sys.exit(load_entry_point('robot-motion==0.1.0', 'console_scripts', 'path_follower')())
+[path_follower-18]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[path_follower-18]   File "/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_motion/lib/python3.12/site-packages/robot_motion/path_follower.py", line 1634, in main
+[bt_navigator-11] [INFO] [1790012859.342532169] [bt_navigator]: Destroying
+[compensador_rumo-17] Traceback (most recent call last):
+[compensador_rumo-17]   File "/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_motion/lib/robot_motion/compensador_rumo", line 33, in <module>
+[compensador_rumo-17]     sys.exit(load_entry_point('robot-motion==0.1.0', 'console_scripts', 'compensador_rumo')())
+[compensador_rumo-17]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[compensador_rumo-17]   File "/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_motion/lib/python3.12/site-packages/robot_motion/compensador_rumo.py", line 413, in main
+[path_follower-18]     rclpy.shutdown()
+[path_follower-18]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/__init__.py", line 134, in shutdown
+[path_follower-18]     _shutdown(context=context)
+[path_follower-18]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/utilities.py", line 82, in shutdown
+[path_follower-18]     context.shutdown()
+[path_follower-18]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/context.py", line 129, in shutdown
+[path_follower-18]     self.__context.shutdown()
+[compensador_rumo-17]     rclpy.shutdown()
+[compensador_rumo-17]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/__init__.py", line 134, in shutdown
+[compensador_rumo-17]     _shutdown(context=context)
+[compensador_rumo-17]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/utilities.py", line 82, in shutdown
+[compensador_rumo-17]     context.shutdown()
+[compensador_rumo-17]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/context.py", line 129, in shutdown
+[compensador_rumo-17]     self.__context.shutdown()
+[compensador_rumo-17] rclpy._rclpy_pybind11.RCLError: failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:333
+[path_follower-18] rclpy._rclpy_pybind11.RCLError: failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:333
+[controller_server-10] [INFO] [1790012859.359689417] [controller_server]: Destroying bond (controller_server) to lifecycle manager.
+[controller_server-10] [INFO] [1790012859.368728038] [local_costmap.local_costmap]: Destroying
+[INFO] [twist_mux-16]: process has finished cleanly [pid 161576]
+[controller_server-10] [INFO] [1790012859.387384150] [controller_server]: Destroying
+[INFO] [robot_state_publisher-2]: process has finished cleanly [pid 161509]
+[INFO] [pointcloud_to_laserscan_node-6]: process has finished cleanly [pid 161550]
+[INFO] [map_server-7]: process has finished cleanly [pid 161555]
+[INFO] [smoother_server-9]: process has finished cleanly [pid 161557]
+[INFO] [collision_monitor-15]: process has finished cleanly [pid 161575]
+[INFO] [lifecycle_manager-12]: process has finished cleanly [pid 161572]
+[INFO] [bt_navigator-11]: process has finished cleanly [pid 161571]
+[INFO] [rviz2-20]: process has finished cleanly [pid 161580]
+[INFO] [controller_server-10]: process has finished cleanly [pid 161570]
+[ERROR] [heading_controller-14]: process has died [pid 161574, exit code 1, cmd '/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_motion/lib/robot_motion/heading_controller --ros-args -r __node:=heading_controller --params-file /home/rbe-luis/Workspace/Controle_robo_livox/install/robot_motion/share/robot_motion/config/movimentacao_sim.yaml --params-file /tmp/launch_params_cf94pmgh -r /hoverboard_base_controller/cmd_vel:=/auto_vel_raw'].
+[ERROR] [placa_simulada-3]: process has died [pid 161511, exit code 1, cmd '/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_base/lib/robot_base/placa_simulada --ros-args -r __node:=placa_simulada --params-file /tmp/launch_params_dobq8p8g'].
+[ERROR] [compensador_rumo-17]: process has died [pid 161577, exit code 1, cmd '/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_motion/lib/robot_motion/compensador_rumo --ros-args -r __node:=compensador_rumo --params-file /tmp/launch_params_yt4vqrbz --params-file /tmp/launch_params_bmc687io --params-file /tmp/launch_params_vhef1np1 -r /hoverboard_base_controller/cmd_vel:=/cmd_vel_bruto'].
+[ERROR] [path_follower-18]: process has died [pid 161578, exit code 1, cmd '/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_motion/lib/robot_motion/path_follower --ros-args -r __node:=path_follower --params-file /tmp/launch_params_7c4m09gj --params-file /tmp/launch_params_epzl31hn --params-file /tmp/launch_params_s4t_00fb --params-file /tmp/launch_params_mg78gl99 --params-file /tmp/launch_params_719y119c --params-file /tmp/launch_params_18qch0iy --params-file /tmp/launch_params_v2l3m3eg --params-file /tmp/launch_params_i_6ydi7t --params-file /tmp/launch_params_p1izswfs -r /path_follower/rumo_alvo:=/heading_controller/rumo_alvo -r /path_follower/velocidade_alvo:=/heading_controller/velocidade_alvo'].
+[ERROR] [freeze_capture-19]: process has died [pid 161579, exit code 1, cmd '/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_nav/lib/robot_nav/freeze_capture --ros-args -r __node:=freeze_capture --params-file /tmp/launch_params_r9t3loey'].
+[planner_server-8] [INFO] [1790012859.629210845] [planner_server]: Deactivating plugin GridBased of type SmacPlanner2D
+[planner_server-8] [INFO] [1790012859.629340678] [planner_server]: Destroying bond (planner_server) to lifecycle manager.
+[planner_server-8] [INFO] [1790012859.639645397] [planner_server]: Cleaning up
+[planner_server-8] [INFO] [1790012859.650854416] [global_costmap.global_costmap]: Cleaning up
+[planner_server-8] [INFO] [1790012859.657782305] [planner_server]: Cleaning up plugin GridBased of type SmacPlanner2D
+[planner_server-8] [INFO] [1790012859.658069417] [planner_server]: Destroying plugin GridBased of type SmacPlanner2D
+[planner_server-8] [INFO] [1790012859.674372022] [planner_server]: Destroying bond (planner_server) to lifecycle manager.
+[planner_server-8] [INFO] [1790012859.680925817] [global_costmap.global_costmap]: Destroying
+[planner_server-8] [INFO] [1790012859.692205337] [planner_server]: Destroying
+[INFO] [planner_server-8]: process has finished cleanly [pid 161556]
+[gazebo-1] [INFO] [1790012860.113346910] [controller_manager.pal_statistics]: Async messages lost 0
+[gazebo-1] [INFO] [1790012860.113455604] [controller_manager.pal_statistics]: publish_async_failures_ 0
+[gazebo-1] [INFO] [1790012860.116512030] [controller_manager.pal_statistics]: Async messages lost 0
+[gazebo-1] [INFO] [1790012860.116614039] [controller_manager.pal_statistics]: publish_async_failures_ 11
+[INFO] [gazebo-1]: process has finished cleanly [pid 161508]

@@ -4,6 +4,50 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-09-21 (dev + Gazebo, sem robô) — ETAPA 4, PASSO 3: O ROBÔ 2 PASSA PELO PERFIL, ZERO DIFERENÇA
+
+**`5659dd2`.** `robot_motion/perfil.py` (`parametros(2, share)`, puro, sem
+ROS; `RoboSemPerfil` para qualquer outro) e a pilha montando o robô 2 por ele,
+estático: `nav2` e `collision_monitor` saem do perfil; `nav2_rewrites` não
+vazio derruba a subida (a pilha ainda não as aplica — seria costmap lendo o
+arquivo sem a reescrita, em silêncio); a sobreposição do `path_follower` só
+entra se existir. Argumento novo `robo` (default `"2"`) e `_recusa_robo`
+antes de qualquer ação: texto exato, sem aparar nem converter (`" 2"`, `"02"`,
+`"2.0"` recusam). Testes: `test_perfil.py` (inclui o
+`test_perfil_robo2_identico_a_linha_de_base` do §9) e `test_pilha_robo.py`
+(launch real num `LaunchContext`: ordem da recusa, perfil consumido de
+verdade, lista do `path_follower` intacta). Suíte **978** (948 + 30). O
+código foi escrito na sessão anterior; o vermelho não ficou registrado lá.
+
+⚠️ **Antecipação em relação ao plano, registrada:** a mensagem própria e o
+teste de recusa do `robo:=3` estavam no **passo 4** da tabela do §9
+(`test_pilha_recusa_robo3_ate_a_etapa6`, `PLANO_ETAPA4_ROBO3.md:278`) e
+entraram aqui. Motivo: o argumento `robo` nasce neste passo, e nascer aberto
+(aceitando "3" sem dizer nada) seria pior do que já nascer fechado. O passo 4
+fica com o perfil do robô 3; a recusa da pilha já está pronta e testada.
+
+**Tropeço de ambiente, não de código:** a suíte rodada sem carregar o
+`install/setup.bash` deste repo falhou no `test_import_do_fonte` — o shell
+deste PC vem com o overlay do repo do robô 1 no `AMENT_PREFIX_PATH`. Com o
+overlay certo, verde. Reproduzido também pelo revisor.
+
+**Build + trava do §8:** `colcon build --packages-select robot_motion`; a
+extração dos argumentos contra `argumentos_launch.yaml` (sem regerar) difere
+só em `robo: '2'` na pilha.
+
+**Gazebo (dono rodou o wrapper), commit `5659dd2`:** APROVADO, 30/30, 25
+dumps, nenhum vazio, os seis ilegíveis conhecidos e nenhum outro. Contra a v2,
+**sem permissão**: normalizado sem diferença, grafo idêntico, e até o dump
+bruto e o `ilegiveis.yaml` idênticos. Conferido por mim a partir da pasta e
+revisado pelo revisor. As duas anotações do console (shader do RViz; `kill -9`
+no `ros2 launch` e no `ros2 bag`) são as mesmas da v2.
+`docs/dados/2026-09-21-passo3-robo2/`. Bag de 417 MB em
+`~/logs_robo2/corrida_2026-09-21_144632`, sem uso — pode ir para a lixeira.
+
+⬜ Próximo: **passo 4** — `perfil_robo3.yaml` e o ramo do robô 3 no
+`perfil.py` (footprint = artefato da 052 sem vértice redigitado, padding
+declarado, valores próprios do §5); a pilha continua recusando `robo:=3`.
+
 ## 2026-09-21 (dev + Gazebo, sem robô) — BASELINE v2: A RÉGUA ENXERGA O REFLEXO
 
 Captura 1 (commit `146216a`) **reprovou**, como o desenho mandava: quatro

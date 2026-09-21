@@ -1,0 +1,8 @@
+Starting >>> robot_base
+Starting >>> robot_nav
+Finished <<< robot_nav [1.85s]
+Finished <<< robot_base [1.88s]
+Starting >>> robot_motion
+Finished <<< robot_motion [1.52s]
+
+Summary: 3 packages finished [3.71s]

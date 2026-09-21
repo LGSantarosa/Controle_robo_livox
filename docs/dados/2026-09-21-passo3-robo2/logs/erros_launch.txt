@@ -1,0 +1,1 @@
+252:[rviz2-20] [ERROR] [1790012808.081542347] [rviz2]: rviz/glsl120/indexed_8bit_image.vert

@@ -1,0 +1,12 @@
+$ python3 tools/linha_de_base/normaliza.py compara docs/dados/2026-09-21-baseline-v2-robo2/02-baseline-v2-aprovada/parametros_normalizados.yaml docs/dados/2026-09-21-passo3-robo2/captura/parametros_normalizados.yaml
+APROVADO
+rc=0
+
+$ diff docs/dados/2026-09-21-baseline-v2-robo2/02-baseline-v2-aprovada/grafo_normalizado.txt docs/dados/2026-09-21-passo3-robo2/captura/grafo_normalizado.txt
+(sem diferença)
+
+$ diff docs/dados/2026-09-21-baseline-v2-robo2/02-baseline-v2-aprovada/parametros_brutos.yaml docs/dados/2026-09-21-passo3-robo2/captura/parametros_brutos.yaml
+(sem diferença)
+
+$ diff docs/dados/2026-09-21-baseline-v2-robo2/02-baseline-v2-aprovada/ilegiveis.yaml docs/dados/2026-09-21-passo3-robo2/captura/ilegiveis.yaml
+(sem diferença)

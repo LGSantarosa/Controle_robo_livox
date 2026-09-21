@@ -1,0 +1,1 @@
+5659dd27eb692616147905922f5610abfb7301bd etapa 4 passo 3: perfil.py monta o robo 2 (estatico); pilha ganha robo:=2 e recusa qualquer outro na subida

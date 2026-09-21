@@ -2,12 +2,34 @@
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
 > Versionado na `main`. Atualizado em **2026-09-21** (dev, branch `etapa4-perfis`
-> — etapa 4: passos 0–2 fechados; régua consertada; BASELINE v2 aprovada; próximo é o passo 3).
+> — etapa 4: passos 0–3 fechados; baseline v2 é a régua; próximo é o passo 4).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+---
+
+## ✅ 21-09 — ETAPA 4, PASSO 3 FECHADO: O ROBÔ 2 MONTADO PELO PERFIL
+
+- `robot_motion/perfil.py` (`parametros(2, share)`, puro; `RoboSemPerfil`) e a
+  pilha montando o robô 2 por ele, estático; argumento `robo` (default `"2"`)
+  com `_recusa_robo` antes de tudo (`5659dd2`). Suíte **978**.
+- Gazebo: APROVADO contra a v2 **sem permissão** — normalizado, grafo, dump
+  bruto e `ilegiveis.yaml` idênticos. Trava do §8: só `robo: '2'` de novo.
+  `docs/dados/2026-09-21-passo3-robo2/`.
+- ⚠️ Antecipado do passo 4: a recusa de `robo:=3` na pilha (mensagem + teste)
+  já está pronta. Registrado no DIARIO.
+- ⚠️ Neste PC, rodar a suíte **depois** de `source install/setup.bash` deste
+  repo: o shell vem com o overlay do repo do robô 1.
+
+⬜ **Próximo: passo 4** — `perfil_robo3.yaml` + ramo `3` do `perfil.py`
+(plano §3–§5): footprint lido do artefato da 052 (sem vértice redigitado)
+para os dois costmaps via YAML reescrito, `footprint_padding` declarado (D2),
+reflexo Approach/Stop e demais consumidores com (b) calculado e (c) em chaves
+separadas. A pilha continua recusando `robo:=3`. Teste vermelho antes; prova é
+suíte verde (nenhum costmap do robô 3 roda nesta etapa).
 
 ---
 
