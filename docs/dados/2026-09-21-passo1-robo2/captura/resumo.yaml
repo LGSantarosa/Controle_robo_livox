@@ -1,0 +1,10 @@
+veredito: APROVADO
+motivos: []
+footprint_padding:
+  /global_costmap/global_costmap: 0.009999999776482582
+  /local_costmap/local_costmap: 0.009999999776482582
+nos_esperados: 30
+nos_com_parametros: 25
+nos_visiveis: 30
+consultas: 7
+segundos: 17.1

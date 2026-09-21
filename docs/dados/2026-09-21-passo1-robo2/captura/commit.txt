@@ -1,0 +1,1 @@
+f6e661f3a6dfa41f213ad1be28da4823113e7099 etapa 4 passo 1: footprint_padding explicito nos dois costmaps do robo 2

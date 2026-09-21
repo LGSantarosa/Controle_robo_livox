@@ -1,0 +1,9 @@
+$ python3 tools/linha_de_base/normaliza.py compara docs/dados/2026-09-21-baseline-robo2/02-baseline-aprovada/parametros_normalizados.yaml docs/dados/2026-09-21-passo1-robo2/captura/parametros_normalizados.yaml
+APROVADO
+rc=0
+
+$ diff docs/dados/2026-09-21-baseline-robo2/02-baseline-aprovada/grafo_normalizado.txt docs/dados/2026-09-21-passo1-robo2/captura/grafo_normalizado.txt
+(sem diferença)
+
+$ diff docs/dados/2026-09-21-baseline-robo2/02-baseline-aprovada/parametros_brutos.yaml docs/dados/2026-09-21-passo1-robo2/captura/parametros_brutos.yaml
+(sem diferença — nem no bruto, antes de normalizar)

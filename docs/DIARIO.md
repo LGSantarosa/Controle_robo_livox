@@ -4,6 +4,32 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-09-21 (dev + Gazebo, sem robô) — ETAPA 4, PASSO 1: O PADDING ESCRITO, ZERO DIFERENÇA
+
+**Achado antes de escrever o YAML:** o padding vivo da baseline,
+`0.009999999776482582`, é exatamente `float32(0.01)` — o Nav2 declara `0.01f`
+e guarda num `float footprint_padding_` (`costmap_2d_ros.hpp:397`). A nuance
+do dono no passo 0 (declarar o valor que vigora dá zero diferença) vale **só
+com o número vivo inteiro**: escrito como `0.01`, o parâmetro vivo mudaria em
+~2e-10 e a comparação acusaria `mudou`, embora o float32 que o Nav2 usa fosse o
+mesmo. Propus (A) `0.01` com permissão exata; o dono escolheu (B): declarar o
+valor vivo inteiro e fechar o passo **sem nenhuma permissão**.
+
+**`f6e661f`.** Teste vermelho antes (`test_footprint_padding_declarado`, chave
+ausente nos dois costmaps). Ele exige igualdade exata com a baseline
+VERSIONADA (lê o YAML de `docs/dados/`) e float32 igual ao de hoje; mutação com
+`0.01` morde. Suíte **910**.
+
+**Gazebo (dono olhando), captura no commit `f6e661f`:** APROVADO, 30/30 nós, 25
+dumps. Contra a baseline: zero diferença normalizada, sem permissão; grafo
+normalizado idêntico; e o dump **bruto** idêntico byte a byte — a
+normalização não precisou esconder nada. Conferi eu mesmo a partir da pasta, não
+só pelo relato. Único erro no launch: o shader GLSL do RViz de sempre. Bag de
+288 MB para a lixeira pelo dono. `docs/dados/2026-09-21-passo1-robo2/`.
+
+⬜ Próximo: **passo 2** — `avanco_para_choque` (0,28) no `path_follower`, teste
+vermelho antes; é a primeira diferença PERMITIDA do §1.
+
 ## 2026-09-21 (dev, sem robô) — ETAPA 4, PASSO 0: LINHA DE BASE DO ROBÔ 2
 
 Branch `etapa4-perfis`. Três commits, só ferramenta, nenhum arquivo de produção:

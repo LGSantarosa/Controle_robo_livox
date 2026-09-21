@@ -2,12 +2,33 @@
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
 > Versionado na `main`. Atualizado em **2026-09-21** (dev, branch `etapa4-perfis`
-> — passo 0 da etapa 4 concluído; próximo é o passo 1).
+> — etapa 4: passos 0 e 1 FECHADOS no Gazebo; próximo é o passo 2).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+---
+
+## ✅ 21-09 — ETAPA 4, PASSO 1 FECHADO: PADDING EXPLÍCITO, ZERO DIFERENÇA
+
+- `footprint_padding: 0.009999999776482582` nos dois costmaps do `nav2.yaml`
+  do robô 2 (`f6e661f`) — o valor vivo exato, float32(0.01) do Nav2; **não**
+  0.01, que mudaria o dump em 2e-10 (decisão do dono: passo sem permissão).
+- Gazebo: APROVADO, zero diferença contra a baseline, grafo idêntico, dump
+  bruto idêntico. `docs/dados/2026-09-21-passo1-robo2/`. Suíte **910**.
+
+⬜ **Próximo: passo 2** — `avanco_para_choque` (0,28) no `path_follower`;
+`vao_frente()` passa a usá-lo; teste vermelho antes. Primeira diferença
+PERMITIDA do §1: no Gazebo, a comparação leva uma permissão exata
+(`/path_follower:avanco_para_choque`, `entrou`, 0,28) e nada mais.
+
+```bash
+python3 tools/linha_de_base/normaliza.py compara \
+  docs/dados/2026-09-21-baseline-robo2/02-baseline-aprovada/parametros_normalizados.yaml \
+  <captura>/parametros_normalizados.yaml [--permitidas <arquivo.yaml>]
+```
 
 ---
 

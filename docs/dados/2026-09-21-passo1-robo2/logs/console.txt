@@ -1,0 +1,29 @@
+== linha de base robô 2 no Gazebo — 20260921_105919 ==
+   commit: f6e661f etapa 4 passo 1: footprint_padding explicito nos dois costmaps do robo 2
+   🔴 NÃO PROVA: desempenho, geometria, hardware — só parâmetros e nós
+== 1/4 compilando robot_base robot_motion robot_nav (log em /home/rbe-luis/sim_robo2/linha_de_base_20260921_105919/build.log) ==
+   🟢 install/ igual ao fonte em todos os data_files (menos o marcador do ament)
+== 2/4 subindo a pilha no Gazebo (log em /home/rbe-luis/sim_robo2/linha_de_base_20260921_105919/launch.log) ==
+   pid 280079 · comando do §8, sem outro argumento
+== 3/4 captura 1 (espera o grafo pronto e estável, prazo 240 s) ==
+veredito: APROVADO
+motivos: []
+footprint_padding:
+  /global_costmap/global_costmap: 0.009999999776482582
+  /local_costmap/local_costmap: 0.009999999776482582
+nos_esperados: 30
+nos_com_parametros: 25
+nos_visiveis: 30
+consultas: 7
+segundos: 17.1
+
+   🟢 captura 1 APROVADA
+== 4/4 sua vez ==
+   r + ENTER repete só a captura · ENTER derruba:    linhas de ERROR/FATAL/died no launch.log: 1
+== derrubando ==
+   ⚠️  sobrou processo depois do SIGINT — kill -9 (fica anotado):
+       280079 /usr/bin/python3 /opt/ros/jazzy/bin/ros2 launch robot_motion pilha.launch.py sim:=true
+       280181 /usr/bin/python3 /opt/ros/jazzy/bin/ros2 bag record -o /home/rbe-luis/logs_robo2/corrida_2026-09-21_105925 --all-topics --storage-preset-profile fastwrite
+bin/linha-de-base-robo2: line 42: 280079 Killed                  setsid ros2 launch robot_motion pilha.launch.py sim:=true > "$SAIDA/launch.log" 2>&1 < /dev/null
+   🟢 limpo
+   pasta: /home/rbe-luis/sim_robo2/linha_de_base_20260921_105919
