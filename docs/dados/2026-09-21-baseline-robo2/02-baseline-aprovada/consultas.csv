@@ -1,0 +1,7 @@
+t_s,n_visiveis,duplicados,faltando,sobrando,nao_prontos,pronto
+0.0,0,,/bt_navigator /bt_navigator_navigate_to_pose_rclcpp_node /collision_monitor /compensador_rumo /controller_manager /controller_server /freeze_capture /global_costmap/global_costmap /gz_ros_control /heading_controller /hoverboard_base_controller /joint_state_broadcaster /lifecycle_manager_pilha /local_costmap/local_costmap /map_server /path_follower /placa_simulada /planner_server /robot_state_publisher /ros_gz_bridge /rosbag2_recorder /rviz2 /scan_2d /smoother_server /tf_map_odom /twist_mux,,,False
+5.1,13,,/bt_navigator /bt_navigator_navigate_to_pose_rclcpp_node /controller_manager /controller_server /gz_ros_control /heading_controller /hoverboard_base_controller /joint_state_broadcaster /lifecycle_manager_pilha /local_costmap/local_costmap /map_server /path_follower /rosbag2_recorder /rviz2 /twist_mux,,/collision_monitor /global_costmap/global_costmap /planner_server /smoother_server,False
+7.8,29,,/hoverboard_base_controller,,/bt_navigator /collision_monitor /controller_server /local_costmap/local_costmap,False
+10.0,30,,,,,True
+12.1,30,,,,,True
+14.3,30,,,,,True

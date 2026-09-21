@@ -4,7 +4,7 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
-## 2026-09-21 (dev, sem robô) — ETAPA 4, PASSO 0: A RÉGUA DA LINHA DE BASE (sem Gazebo ainda)
+## 2026-09-21 (dev, sem robô) — ETAPA 4, PASSO 0: LINHA DE BASE DO ROBÔ 2
 
 Branch `etapa4-perfis`. Três commits, só ferramenta, nenhum arquivo de produção:
 `ceb18c2` normalizador/comparador, `115c75c` captura, `19d946d` trava dos
@@ -52,7 +52,30 @@ alias estável, em commit próprio.
 `geometria_robo3.yaml` da 052). Uma linha de base sem build teria medido config
 velha. O wrapper recompila e confere antes de subir.
 
-⬜ Próximo: **passo 0d**, `bash bin/linha-de-base-robo2` com o dono olhando.
+**Sessão de Gazebo, com o dono olhando.** Uma primeira subida foi interrompida
+por um mal-entendido operacional antes de terminar a captura e não virou dado.
+Na subida seguinte, a ferramenta fez o que devia: reprovou porque os 25 nós
+previstos estavam presentes, mas havia cinco auxiliares internos não previstos
+e sem serviços de parâmetros. O fixo
+`/bt_navigator_navigate_to_pose_rclcpp_node` vem do `BtActionServer`; os quatro
+`/transform_listener_impl_<hex>` vêm do BT Navigator, Collision Monitor e dos
+dois `Costmap2DROS`. O achado ficou preservado antes da correção.
+
+O commit `feb064a` separou nós com parâmetros de nós somente de grafo. Para os
+listeners, aceita apenas `^/transform_listener_impl_[0-9a-f]+$`, exatamente
+quatro ocorrências, e grava alias estável; nome parecido ou cardinalidade
+diferente reprova. Sete testes novos cobrem a regra, inclusive ponta a ponta
+contra nós sem serviços. Suíte da raiz: **908/908**.
+
+**Captura final aprovada:** 30/30 nós visíveis, 25 dumps, todos os lifecycle em
+`active`, nós comuns respondendo, nenhum duplicado/faltando/sobrando. O
+`footprint_padding` vivo é **`0.009999999776482582` nos dois costmaps**. A única
+linha de erro do launch é o shader GLSL do RViz; o RViz e a pilha permaneceram
+de pé e a captura não foi afetada. Evidência completa, inclusive a primeira
+reprovação, em `docs/dados/2026-09-21-baseline-robo2/`.
+
+⬜ Próximo: **passo 1** — declarar esse padding no `nav2.yaml`, começando pelo
+teste vermelho, e comparar o dump vivo contra esta linha de base.
 
 ## 2026-09-18 (dev, sem robô) — PLANO DA ETAPA 4, REVISADO E APROVADO (sem código)
 

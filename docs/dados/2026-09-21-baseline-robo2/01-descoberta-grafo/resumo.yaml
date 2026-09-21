@@ -1,0 +1,13 @@
+veredito: REPROVADO
+motivos:
+- 'sobrando: [''/bt_navigator_navigate_to_pose_rclcpp_node'', ''/transform_listener_impl_58e2a8b6cfe0'', ''/transform_listener_impl_5b4194984c20'', ''/transform_listener_impl_61f020ddf1a0'', ''/transform_listener_impl_63495f80f930'']'
+- 'não ativos/sem resposta: {''/bt_navigator_navigate_to_pose_rclcpp_node'': ''sem_resposta'', ''/transform_listener_impl_58e2a8b6cfe0'': ''sem_resposta'', ''/transform_listener_impl_5b4194984c20'': ''sem_resposta'', ''/transform_listener_impl_61f020ddf1a0'': ''sem_resposta'', ''/transform_listener_impl_63495f80f930'': ''sem_resposta''}'
+- grafo não ficou estável dentro do prazo
+- 'erro lendo parâmetros: {''/bt_navigator_navigate_to_pose_rclcpp_node'': ''list_parameters sem resposta'', ''/transform_listener_impl_58e2a8b6cfe0'': ''serviços de parâmetro ausentes'', ''/transform_listener_impl_5b4194984c20'': ''serviços de parâmetro ausentes'', ''/transform_listener_impl_61f020ddf1a0'': ''serviços de parâmetro ausentes'', ''/transform_listener_impl_63495f80f930'': ''serviços de parâmetro ausentes''}'
+footprint_padding:
+  /global_costmap/global_costmap: 0.009999999776482582
+  /local_costmap/local_costmap: 0.009999999776482582
+nos_esperados: 25
+nos_visiveis: 30
+consultas: 15
+segundos: 255.7

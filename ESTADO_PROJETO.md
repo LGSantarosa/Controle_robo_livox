@@ -2,7 +2,7 @@
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
 > Versionado na `main`. Atualizado em **2026-09-21** (dev, branch `etapa4-perfis`
-> — passo 0 da etapa 4: ferramenta pronta, falta a sessão de Gazebo).
+> — passo 0 da etapa 4 concluído; próximo é o passo 1).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
@@ -11,7 +11,7 @@
 
 ---
 
-## 📏 21-09 dev — ETAPA 4, PASSO 0: A RÉGUA PRONTA, FALTA O GAZEBO
+## 📏 21-09 dev — ETAPA 4, PASSO 0: LINHA DE BASE DO ROBÔ 2 CONCLUÍDA
 
 🔴 **Trabalho na branch `etapa4-perfis`, não na `main`** (plano §9/§11). A
 `main` só recebe a etapa inteira. Nenhum deploy em robô durante a etapa.
@@ -19,27 +19,23 @@
 - `tools/linha_de_base/`: `normaliza.py` (dump → `{nó: {param: valor}}`, bool ≠
   número, exclusões escritas, comparação por caminho exato com permissões),
   `captura.py` (espera o grafo pronto e estável; duplicado reprova antes de
-  consultar), `argumentos_launch.yaml` (trava do §8) e `esperados_robo2_sim.yaml`
-  (25 nós **previstos** pelo código — não observados).
-- Suíte da raiz: **901** (`pytest --ignore=ESTAGIO-2026`). A base antes da
+  consultar), `argumentos_launch.yaml` (trava do §8) e `esperados_robo2_sim.yaml`.
+- Suíte da raiz: **908** (`pytest --ignore=ESTAGIO-2026`). A base antes da
   etapa era **856**; o "853" abaixo é anterior aos testes da 052.
-- ⚠️ O `install/` do `robot_motion` neste PC era de 12-08. O wrapper recompila
-  e confere contra o `data_files` dos `setup.py` antes de subir.
+- ✅ Build dos três pacotes e conferência de todos os `data_files` passaram.
+- ✅ Primeira captura reprovou honestamente por cinco auxiliares internos não
+  previstos: o nó fixo do `BtActionServer` e quatro `TransformListener` de nome
+  variável. Foram identificados e entraram no commit `feb064a` como nós somente
+  de grafo, com regex ancorada, cardinalidade 4 e alias estável.
+- ✅ Captura final: **30/30 nós**, 25 dumps, lifecycle todos `active`, nós comuns
+  respondendo, nenhuma duplicidade ou sobra.
+- ✅ `footprint_padding` vivo: **`0.009999999776482582` nos dois costmaps**.
+- Evidência versionada em
+  `docs/dados/2026-09-21-baseline-robo2/` (a reprovação inicial também ficou).
 
-⬜ **Próximo: passo 0d — com o dono olhando o Gazebo** (robô desligado, só PC):
-
-```bash
-bash bin/linha-de-base-robo2          # build, sobe pilha sim:=true, captura
-#   r + ENTER  repete SÓ a captura (depois de eu corrigir a lista)
-#   ENTER      derruba
-bash bin/linha-de-base-robo2 --mata   # se algo ficar de pé
-```
-
-Pasta: `~/sim_robo2/linha_de_base_<data>/captura_N/`. A primeira divergência
-de nós reprova e **fica** como achado; cada nó a mais é identificado antes de
-entrar na lista. O bag vem ligado (é o default): grava enquanto estiver de pé.
-Depois do build, rodar a suíte de novo (a trava dos argumentos foi gerada com
-o `install/` antigo do `robot_base` de 18-09 servindo os includes).
+⬜ **Próximo: passo 1 da etapa 4** — declarar o `footprint_padding` do robô 2
+com o valor vivo, primeiro com o teste vermelho, e provar dump idêntico à linha
+de base. Continua sem deploy em robô físico.
 
 ---
 
