@@ -28,10 +28,15 @@ veredito REPROVADO e o motivo.
 O nó desta ferramenta é oculto (`_linha_de_base`), e nós ocultos (nome que
 começa com `_`) ficam fora da comparação do grafo, como no `ros2 node list`.
 
+A leitura NÃO confia no lote do `get_parameters` (tudo-ou-nada no rclcpp): se
+a contagem difere da pedida, lê nome a nome. Parâmetro listado e ilegível
+(sem valor, ou PARAMETER_NOT_SET) e dump vazio de nó da lista REPROVAM.
+
 Saída na pasta: `resumo.yaml` (veredito, motivos, footprint_padding dos dois
-costmaps), `consultas.csv` (uma linha por consulta ao grafo),
-`estado_nos.csv`, `grafo.txt`, `parametros_brutos.yaml` e
-`parametros_normalizados.yaml`. Sai com código 1 se reprovar.
+costmaps, ilegíveis e dumps vazios), `consultas.csv` (uma linha por consulta ao
+grafo), `estado_nos.csv`, `grafo.txt`, `parametros_brutos.yaml`,
+`parametros_normalizados.yaml` e `ilegiveis.yaml` (sempre gravado; `{}` é a
+afirmação de que não houve nenhum). Sai com código 1 se reprovar.
 """
 import argparse
 import csv
@@ -176,7 +181,34 @@ def estavel(historico, n):
     return len(historico) >= n and all(h == historico[-1] for h in historico[-n:])
 
 
-def motivos(grafo, estados, estabilizou, erros, padding):
+PARAMETER_NOT_SET = 0   # rcl_interfaces/ParameterType
+
+
+def _legivel(v):
+    return v is not None and getattr(v, 'type', PARAMETER_NOT_SET) != PARAMETER_NOT_SET
+
+
+def resolve_lote(nomes, lote, le_um):
+    """Casa nomes com valores SEM confiar que o lote veio inteiro.
+
+    O `get_parameters` do rclcpp é tudo-ou-nada: um nome que falha zera o lote
+    (o `collision_monitor` com `Polygon*.max_points`, 21-09). Qualquer contagem
+    diferente da pedida — não só lote vazio — leva à leitura nome a nome, e
+    cada leitura tem de devolver EXATAMENTE um valor. PARAMETER_NOT_SET é
+    ilegível. Devolve ({nome: valor}, [ilegíveis]).
+    """
+    if lote is not None and len(lote) == len(nomes):
+        pares = list(zip(nomes, lote))
+    else:
+        pares = []
+        for n in nomes:
+            um = le_um(n)
+            pares.append((n, um[0] if um is not None and len(um) == 1 else None))
+    ok = {n: v for n, v in pares if _legivel(v)}
+    return ok, [n for n, v in pares if not _legivel(v)]
+
+
+def motivos(grafo, estados, estabilizou, erros, padding, ilegiveis=None, vazios=None):
     m = []
     if grafo['duplicados']:
         m.append(f"nome duplicado: {grafo['duplicados']}")
@@ -193,6 +225,10 @@ def motivos(grafo, estados, estabilizou, erros, padding):
         m.append('grafo não ficou estável dentro do prazo')
     if erros:
         m.append(f'erro lendo parâmetros: {erros}')
+    if ilegiveis:
+        m.append(f'parâmetros listados e ilegíveis: {ilegiveis}')
+    if vazios:
+        m.append(f'dump vazio (todo nó expõe ao menos use_sim_time): {vazios}')
     sem = [c for c, v in padding.items() if v == 'AUSENTE']
     if sem:
         m.append(f'footprint_padding ausente em: {sem}')
@@ -263,11 +299,16 @@ class Captura:
         if lista is None:
             raise RuntimeError('list_parameters sem resposta')
         nomes = sorted(lista.result.names)
-        r = self._espera(cli.get_parameters(nomes)) if nomes else None
-        if nomes and r is None:
-            raise RuntimeError('get_parameters sem resposta')
-        valores = r.values if r else []
-        return {n: self._valor(v) for n, v in zip(nomes, valores)}
+        if not nomes:
+            return {}, []
+        r = self._espera(cli.get_parameters(nomes))
+
+        def le_um(n):
+            um = self._espera(cli.get_parameters([n]))
+            return list(um.values) if um is not None else None
+
+        ok, ilegiveis = resolve_lote(nomes, list(r.values) if r else None, le_um)
+        return {n: self._valor(v) for n, v in ok.items()}, ilegiveis
 
 
 def captura(esperados, pasta, prazo, intervalo, n_estavel):
@@ -322,25 +363,35 @@ def captura(esperados, pasta, prazo, intervalo, n_estavel):
         for n in sorted(estados):
             w.writerow([n, estados[n]])
 
-    brutos, erros = {}, {}
+    brutos, erros, ilegiveis = {}, {}, {}
     if not grafo['duplicados']:
         for n in sorted(set(grafo['visiveis']) - set(grafo['somente_grafo'])):
             try:
-                brutos[n] = {'ros__parameters': cap.parametros(n)}
+                valores, ruins = cap.parametros(n)
+                brutos[n] = {'ros__parameters': valores}
+                if ruins:
+                    ilegiveis[n] = sorted(ruins)
             except Exception as e:  # o dado dos outros nós fica
                 erros[n] = str(e)
         with open(os.path.join(pasta, 'parametros_brutos.yaml'), 'w') as f:
             yaml.safe_dump(brutos, f, sort_keys=True, allow_unicode=True, width=1000)
+    # Sempre gravado, mesmo vazio: "nenhum ilegível" é afirmação, não silêncio.
+    with open(os.path.join(pasta, 'ilegiveis.yaml'), 'w') as f:
+        yaml.safe_dump(ilegiveis, f, sort_keys=True, allow_unicode=True, width=1000)
+    vazios = sorted(n for n in esperados
+                    if n in brutos and not brutos[n]['ros__parameters'])
     normalizado = nz.normaliza(brutos)
     if brutos:
         nz.grava(normalizado, os.path.join(pasta, 'parametros_normalizados.yaml'))
 
     padding = resumo_padding(normalizado)
-    m = motivos(grafo, estados, ok, erros, padding)
+    m = motivos(grafo, estados, ok, erros, padding, ilegiveis, vazios)
     resumo = {
         'veredito': 'REPROVADO' if m else 'APROVADO',
         'motivos': m,
         'footprint_padding': padding,
+        'ilegiveis': ilegiveis,
+        'dumps_vazios': vazios,
         'nos_esperados': (len(esperados) + len(grafo_somente.get('exatos') or [])
                           + sum(r['quantidade']
                                 for r in grafo_somente.get('volateis') or [])),

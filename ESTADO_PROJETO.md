@@ -2,12 +2,30 @@
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
 > Versionado na `main`. Atualizado em **2026-09-21** (dev, branch `etapa4-perfis`
-> — etapa 4: passos 0, 1 e 2 FECHADOS no Gazebo + testes importando o fonte; próximo é o passo 3).
+> — etapa 4: passos 0–2 fechados; régua consertada (dumps vazios); próximo é a baseline v2, ANTES do passo 3).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+---
+
+## 🔴 21-09 — A BASELINE TINHA DOIS DUMPS VAZIOS; RÉGUA CONSERTADA, FALTA A v2
+
+- `/collision_monitor` e `/controller_manager` saíram com `{}` na baseline: o
+  `get_parameters` é tudo-ou-nada e o `collision_monitor` lista
+  `Polygon*.max_points` sem conseguir lê-los. **A baseline não cobre os
+  polígonos do reflexo.** Nota no README dela.
+- Captura consertada: leitura nome a nome quando a contagem difere; ilegível e
+  dump vazio **reprovam**; `ilegiveis.yaml` sempre gravado. Suíte **931**.
+- ⬜ **Próximo: baseline v2 no Gazebo** (dono acompanhando). Continuidade:
+  v2 × passo 2 = os 23 nós antigos idênticos; v2 × original = só a permissão
+  do passo 2; `collision_monitor`/`controller_manager` novos, com `git diff`
+  vazio dos arquivos-fonte deles desde a baseline.
+- ⚠️ **Decisão pendente antes do Gazebo:** os 2 `max_points` do Nav2 vão
+  reprovar sempre com "ilegível reprova".
+- 🔴 **`perfil.py` (passo 3) só depois da v2 fechada.**
 
 ---
 

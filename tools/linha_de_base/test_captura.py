@@ -6,6 +6,7 @@ nós fingidos em subprocessos, num ROS_DOMAIN_ID próprio e só em localhost —
 para não conversar com nenhuma pilha que esteja de pé neste PC.
 """
 import importlib.util
+from types import SimpleNamespace
 import os
 import signal
 import subprocess
@@ -246,3 +247,83 @@ def test_duplicado_reprova_sem_consultar_parametros(tmp_path, ambiente):
     # Nem o estado é perguntado: a resposta viria de um dos dois, sem dizer qual.
     assert (saida / 'estado_nos.csv').read_text().splitlines() == ['no,estado']
     assert r['footprint_padding'] == {}
+
+
+# ─── cardinalidade da leitura (conserto da régua, 21-09) ─────────────────────
+#
+# O `get_parameters` do rclcpp é tudo-ou-nada: um nome que falha zera o lote.
+# O `collision_monitor` lista `Polygon*.max_points` e não consegue lê-los; a
+# captura fazia zip(55 nomes, 0 valores) e gravava dump VAZIO sem erro — e a
+# baseline aprovada ficou sem os polígonos. (O `ros2 param dump` tem o mesmo
+# defeito.) Agora: contagem diferente → leitura nome a nome; ilegível
+# registrado e reprova; dump vazio reprova.
+
+NOT_SET, INT = 0, 2
+
+
+def _v(tipo=INT):
+    return SimpleNamespace(type=tipo)
+
+
+def test_lote_completo_nao_le_um_a_um():
+    lidos = []
+    ok, ruins = cap.resolve_lote(['a', 'b'], [_v(), _v()], lambda n: lidos.append(n))
+    assert list(ok) == ['a', 'b'] and ruins == [] and lidos == []
+
+
+@pytest.mark.parametrize('lote', [[], [_v()], None])
+def test_qualquer_contagem_diferente_le_um_a_um(lote):
+    # Não só o lote vazio: 1 de 2 também dispara o fallback.
+    ok, ruins = cap.resolve_lote(['a', 'b'], lote, lambda n: [_v()])
+    assert list(ok) == ['a', 'b'] and ruins == []
+
+
+def test_not_set_no_lote_e_ilegivel():
+    ok, ruins = cap.resolve_lote(['a', 'b'], [_v(), _v(NOT_SET)], lambda n: [_v(NOT_SET)])
+    assert list(ok) == ['a'] and ruins == ['b']
+
+
+@pytest.mark.parametrize('resposta', [None, [], [_v(), _v()], [_v(NOT_SET)]])
+def test_leitura_individual_tem_de_dar_exatamente_um_valor_legivel(resposta):
+    ok, ruins = cap.resolve_lote(['a', 'b'], [], lambda n: resposta if n == 'b' else [_v()])
+    assert list(ok) == ['a'] and ruins == ['b']
+
+
+def test_ilegivel_e_dump_vazio_sao_motivos():
+    g = cap.avalia_grafo(['/a'], ['/a'])
+    m = cap.motivos(g, {'/a': 'responde'}, True, {}, {},
+                    ilegiveis={'/a': ['x']}, vazios=['/a'])
+    assert any('ilegíve' in x for x in m) and any('vazio' in x for x in m)
+
+
+def test_ilegivel_preserva_os_demais_registra_e_reprova(tmp_path, ambiente):
+    sobe, captura = ambiente
+    sobe('--param-falso', '/falso:ilegivel')
+    rc, r, saida = captura(['/falso'], tmp_path, prazo=6)
+    assert rc == 1 and r['veredito'] == 'REPROVADO'
+    assert r['ilegiveis'] == {'/falso': ['ruim']}
+    assert any('ilegíve' in m for m in r['motivos'])
+    bruto = yaml.safe_load((saida / 'parametros_brutos.yaml').read_text())
+    assert bruto['/falso']['ros__parameters'] == {'use_sim_time': False, 'a': 1}
+    assert yaml.safe_load((saida / 'ilegiveis.yaml').read_text()) == {'/falso': ['ruim']}
+
+
+def test_lote_que_falha_mas_responde_um_a_um_e_recuperado(tmp_path, ambiente):
+    sobe, captura = ambiente
+    sobe('--param-falso', '/falso:lote_falha')
+    rc, r, saida = captura(['/falso'], tmp_path, prazo=10)
+    assert r['veredito'] == 'APROVADO', r['motivos']
+    assert rc == 0
+    bruto = yaml.safe_load((saida / 'parametros_brutos.yaml').read_text())
+    assert bruto['/falso']['ros__parameters'] == {'use_sim_time': False, 'a': 1, 'b': 0.5}
+    # A ausência de ilegíveis é EXPLÍCITA, no resumo e em arquivo.
+    assert r['ilegiveis'] == {}
+    assert yaml.safe_load((saida / 'ilegiveis.yaml').read_text()) == {}
+
+
+def test_lista_vazia_reprova(tmp_path, ambiente):
+    sobe, captura = ambiente
+    sobe('--param-falso', '/falso:vazio')
+    rc, r, saida = captura(['/falso'], tmp_path, prazo=6)
+    assert rc == 1
+    assert any('vazio' in m and '/falso' in m for m in r['motivos'])

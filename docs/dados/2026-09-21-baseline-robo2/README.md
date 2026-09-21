@@ -1,5 +1,16 @@
 # Linha de base do robô 2 no Gazebo — etapa 4, passo 0
 
+> 🔴 **FURO ACHADO DEPOIS (21-09, antes do passo 3).** Dos "25 dumps" desta
+> captura, **dois estão vazios**: `/collision_monitor` e `/controller_manager`
+> (`ros__parameters: {}`). O `get_parameters` do rclcpp é tudo-ou-nada, e o
+> `collision_monitor` lista `PolygonApproach.max_points` e
+> `PolygonStop.max_points` sem conseguir lê-los — o lote inteiro voltava com
+> zero valores, e a captura gravava vazio sem erro (o `ros2 param dump` faz o
+> mesmo). Portanto esta linha de base **não cobre** os polígonos do reflexo nem
+> o `controller_manager`; vale para os outros 23 nós. A régua foi consertada
+> (leitura nome a nome, ilegível e dump vazio reprovam) e esta captura fica
+> como está, como registro. A régua dos passos seguintes é a baseline v2.
+
 Capturada em 2026-09-21 com o robô físico desligado e o comando antigo, sem
 argumentos adicionais:
 

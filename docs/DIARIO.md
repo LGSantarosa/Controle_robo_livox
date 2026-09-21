@@ -4,6 +4,47 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-09-21 (dev, sem robô) — A RÉGUA TINHA UM FURO: DOIS DUMPS VAZIOS NA BASELINE
+
+Achado lendo a baseline para a proposta do passo 3: `/collision_monitor` e
+`/controller_manager` com **zero** parâmetros — nem `use_sim_time`. Os "25
+dumps" aprovados incluíam dois vazios, e os polígonos Stop/Approach, que o §1
+manda manter "como estão", nunca estiveram na régua.
+
+**Causa, reproduzida sem Gazebo** (`collision_monitor` sozinho, domínio
+isolado, `configure` + `activate` à mão): ativo, ele LISTA 55 parâmetros, mas
+`PolygonApproach.max_points` e `PolygonStop.max_points` não são legíveis. O
+`get_parameters` do rclcpp é tudo-ou-nada: um nome que falha zera o lote. A
+captura fazia `zip(55 nomes, 0 valores)` → dump `{}` sem erro. O `ros2 param
+dump` tem o MESMO defeito (`ros__parameters: {}`): a ferramenta copiou o CLI
+fielmente, bug incluído. Inativo, com 5 parâmetros, tudo funcionava — o
+defeito só aparece com o nó configurado. O `controller_manager` (dentro do
+Gazebo) é quase certamente o mesmo mecanismo; não confirmado ainda.
+
+**Conserto (critérios do dono):** qualquer contagem diferente da pedida — não
+só lote vazio — leva à leitura nome a nome; cada leitura tem de dar exatamente
+um valor; `PARAMETER_NOT_SET` é ilegível; os legíveis continuam gravados; os
+ilegíveis ficam por nó e nome em `ilegiveis.yaml` (SEMPRE gravado — `{}` é
+afirmação) e no `resumo.yaml`, e **reprovam**; dump vazio de nó da lista
+reprova. Eu tinha proposto que ilegível não reprovasse; o dono decidiu que
+reprova.
+
+Testes vermelhos antes: 10 puros (`resolve_lote`, motivos) e os 3 pedidos, de
+ponta a ponta, contra um nó fingido com os seis serviços de parâmetro escritos à
+mão imitando o tudo-ou-nada — o do "lote que falha mas responde um a um"
+REPRODUZIU o dump `{}` da baseline. Tropeço meu: a primeira versão do nó
+fingido não tinha a classe (uma substituição procurou uma linha duplicada que
+só existia na minha leitura sobreposta do arquivo) e dois testes falharam pelo
+motivo errado — pego olhando o `nos_visiveis: 0`, corrigido antes da
+implementação. 5 mutações mordem. Contra o `collision_monitor` real: 53
+legíveis, os 2 `max_points` ilegíveis, polígonos lidos. Suíte **931**.
+
+⚠️ **Consequência para a baseline v2:** com "ilegível reprova", o
+`collision_monitor` do Nav2 vai reprovar SEMPRE por `max_points` — defeito
+dele, não nosso. Decisão pendente do dono antes do Gazebo.
+
+A baseline original ganhou nota do furo no README e fica como está.
+
 ## 2026-09-21 (dev, sem robô) — OS TESTES PASSAM A IMPORTAR O FONTE (infra, antes do passo 3)
 
 Achado do passo 2: com o overlay carregado, os testes importavam a cópia do
