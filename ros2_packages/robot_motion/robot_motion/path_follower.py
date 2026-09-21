@@ -504,6 +504,11 @@ class PathFollower(Node):
             # Do centro do robô ao para-choque traseiro [m]. Mesma referência
             # do polígono do reflexo, que vai a −0,28.
             ('re_recuo_para_choque', 0.28),
+            # Do centro do robô ao para-choque da FRENTE [m] — o vão frontal da
+            # mira adaptativa (040) mede daqui. Até a etapa 4 o `vao_frente()`
+            # usava o recuo de trás no lugar dele: no robô 2 dá o mesmo (0,28),
+            # no robô 3 não (frente 0,0825, trás 0,2913 — decisão 052).
+            ('avanco_para_choque', 0.28),
             # `/scan` mais velho que isto = traseira BLOQUEADA, não "livre".
             # Leitura que não existiu não pode virar permissão para recuar.
             #
@@ -1010,7 +1015,7 @@ class PathFollower(Node):
             return None
         return vao_no_corredor_frontal(
             self.scan.ranges, self.scan.angle_min, self.scan.angle_increment,
-            self.par['re_largura'], self.par['re_recuo_para_choque'],
+            self.par['re_largura'], self.par['avanco_para_choque'],
             alcance_max=self.scan.range_max)
 
     def vao_giro(self):

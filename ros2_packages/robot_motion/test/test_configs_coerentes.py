@@ -1539,3 +1539,12 @@ def test_footprint_padding_declarado(costmap):
         f'{costmap}: {declarado!r} ≠ valor vivo da linha de base {vivo!r}'
     assert _float32(declarado) == _float32(0.01) == vivo, \
         f'{costmap}: float32 do declarado ≠ float32(0.01) que o Nav2 usa hoje'
+
+
+# --------------------------------------------------------------------------
+# avanço do para-choque da FRENTE (etapa 4, passo 2). No robô 2 ele nasce
+# igual ao recuo de trás (0,28), que é o número que o `vao_frente()` usava até
+# aqui — o comportamento do robô 2 não muda; só o robô 3 tem os dois diferentes.
+def test_avanco_para_choque_nasce_com_o_valor_de_hoje():
+    assert _default_do_seguidor('avanco_para_choque') == 0.28
+    assert _default_do_seguidor('re_recuo_para_choque') == 0.28

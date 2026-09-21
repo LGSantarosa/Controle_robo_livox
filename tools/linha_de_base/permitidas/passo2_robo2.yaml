@@ -1,0 +1,7 @@
+# Diferenças PERMITIDAS contra a linha de base do robô 2 no passo 2 da etapa 4
+# (plano §1, item 2). Uma só: o parâmetro novo do seguidor, com o valor que o
+# vão frontal já usava (0,28, via re_recuo_para_choque). Qualquer outra
+# diferença reprova.
+- caminho: '/path_follower:avanco_para_choque'
+  tipo: entrou
+  depois: 0.28
