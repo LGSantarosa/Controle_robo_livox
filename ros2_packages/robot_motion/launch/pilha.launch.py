@@ -97,10 +97,31 @@ from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 
+from robot_motion import perfil
+
 RAIZ = os.path.abspath(os.path.join(
     get_package_share_directory('robot_motion'), '..', '..', '..', '..'))
 MAPA_PADRAO = os.path.join(RAIZ, 'maps', 'pista_obstaculos.yaml')
 MUNDO_PADRAO = os.path.join(RAIZ, 'worlds', 'pista_obstaculos.sdf')
+
+
+def _recusa_robo(contexto, *_args, **_kwargs):
+    """Robô que esta pilha não sobe morre AQUI, antes de qualquer processo.
+
+    Só o texto exato "2" passa — sem aparar espaço nem converter número: " 2",
+    "02" e "2.0" não são o robô 2, e aceitar por conversão é escolher robô por
+    acidente. O robô 3 tem resposta própria (D1 da etapa 4): o perfil dele
+    entra no passo 4, mas a pilha só aprende a subi-lo na etapa 6.
+    """
+    robo = LaunchConfiguration('robo').perform(contexto)
+    if robo == '2':
+        return []
+    if robo == '3':
+        raise RuntimeError(
+            'robo:=3 ainda não sobe nesta pilha: o perfil do robô 3 entra no '
+            'passo 4 da etapa 4, mas a pilha do robô 3 só é liberada na '
+            'etapa 6.')
+    raise RuntimeError(f'robo:={robo!r} não existe. Esta pilha sobe o robô "2".')
 
 
 def _recusa_combinacao_sem_sentido(contexto, *_args, **_kwargs):
@@ -145,10 +166,20 @@ def generate_launch_description():
     # em que não funciona, e o preço seria a corrida sem registro.
     CARIMBO = time.strftime('%Y-%m-%d_%H%M%S')
     pkg = get_package_share_directory('robot_motion')
-    nav2_params = os.path.join(pkg, 'config', 'nav2.yaml')
+    # O robô 2 é montado pelo perfil (etapa 4, passo 3) — ESTÁTICO: escolher o
+    # perfil pelo argumento `robo` é a etapa 6. Quem recusa outro robô é o
+    # `_recusa_robo`, na subida.
+    perfil_robo = perfil.parametros(2, pkg)
+    # Esta pilha ainda não sabe reescrever YAML. Reescrita pedida e não
+    # aplicada seria costmap lendo o arquivo sem ela, em silêncio.
+    if perfil_robo['nav2_rewrites']:
+        raise RuntimeError(
+            'o perfil pede nav2_rewrites, e esta pilha ainda não as aplica: '
+            f"{sorted(perfil_robo['nav2_rewrites'])}")
+    nav2_params = perfil_robo['nav2']
     amcl_params = os.path.join(pkg, 'config', 'localizacao_amcl.yaml')
     mux_params = os.path.join(pkg, 'config', 'twist_mux.yaml')
-    cm_params = os.path.join(pkg, 'config', 'collision_monitor.yaml')
+    cm_params = perfil_robo['collision_monitor']
     mov_params_real = os.path.join(pkg, 'config', 'movimentacao.yaml')
     mov_params_sim = os.path.join(pkg, 'config', 'movimentacao_sim.yaml')
     rviz_config = os.path.join(pkg, 'rviz', 'pilha.rviz')
@@ -315,6 +346,13 @@ def generate_launch_description():
         ]
 
     return LaunchDescription([
+        # Qual robô (etapa 4). Declarado e recusado ANTES de tudo: nada sobe
+        # para um robô que esta pilha não monta.
+        DeclareLaunchArgument(
+            'robo', default_value='2',
+            description='"2" (o único que esta pilha sobe). "3" recusa: a '
+                        'pilha do robô 3 é a etapa 6'),
+        OpaqueFunction(function=_recusa_robo),
         DeclareLaunchArgument('sim', default_value='false',
                               description='true sobe o Gazebo junto'),
         # 🔴 O DEFAULT SEGUE O `sim`, e isto é uma correção de 11-08.
@@ -728,7 +766,11 @@ def generate_launch_description():
              condition=UnlessCondition(sim)),
         Node(package='robot_motion', executable='path_follower',
              name='path_follower', output='both',
-             parameters=[*olhar, {'use_sim_time': sim}],
+             # A sobreposição do perfil vem por ÚLTIMO, e só se existir: vazia,
+             # a lista fica exatamente a de antes do perfil.
+             parameters=[*olhar, {'use_sim_time': sim},
+                         *([perfil_robo['path_follower']]
+                           if perfil_robo['path_follower'] else [])],
              remappings=[('/path_follower/rumo_alvo',
                           '/heading_controller/rumo_alvo'),
                          ('/path_follower/velocidade_alvo',
