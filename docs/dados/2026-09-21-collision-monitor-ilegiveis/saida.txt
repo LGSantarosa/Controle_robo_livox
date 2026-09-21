@@ -1,0 +1,11 @@
+$ bash docs/dados/2026-09-21-collision-monitor-ilegiveis/reproduz.sh   # 2026-09-21 11:37, commit 53fe9f0
+Transitioning successful
+Transitioning successful
+active [3]
+--- ros2 param dump (o CLI tem o mesmo defeito):
+/collision_monitor:
+  ros__parameters: {}
+
+--- list_parameters: 55 nomes; get_parameters em lote: 0 valores
+ILEGIVEL /collision_monitor:PolygonApproach.max_points -> 0 valor(es)
+ILEGIVEL /collision_monitor:PolygonStop.max_points -> 0 valor(es)

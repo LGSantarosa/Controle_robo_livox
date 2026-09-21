@@ -120,7 +120,39 @@ def le_configuracao(caminho):
     if len(set(aliases)) != len(aliases):
         raise ValueError('alias volátil repetido')
     return {'nos': sorted(nos),
-            'grafo_somente': {'exatos': sorted(exatos), 'volateis': volateis}}
+            'grafo_somente': {'exatos': sorted(exatos), 'volateis': volateis},
+            'ilegiveis_permitidos': _le_ilegiveis_permitidos(
+                bruto.get('ilegiveis_permitidos') or [], nos)}
+
+
+CHAVES_ILEGIVEL = ('no', 'parametro', 'origem')
+
+
+def _le_ilegiveis_permitidos(entradas, nos):
+    """Exceções EXATAS nó + parâmetro, cada uma com a evidência que a justifica.
+
+    Nada de padrão ou prefixo. O nó tem de estar em `nos` (nó só de grafo não
+    tem dump a ler) e cada par aparece uma vez.
+    """
+    vistos = set()
+    for i, e in enumerate(entradas):
+        if isinstance(e, dict) and any(not isinstance(k, str) for k in e):
+            # YAML 1.1: `no:` sem aspas vira o booleano False.
+            raise ValueError(f"ilegiveis_permitidos[{i}]: chave não-texto {e!r} — "
+                             "escreva 'no': com aspas")
+        if not isinstance(e, dict) or set(e) != set(CHAVES_ILEGIVEL):
+            raise ValueError(f'ilegiveis_permitidos[{i}] tem de ter exatamente '
+                             f'{CHAVES_ILEGIVEL}: {e!r}')
+        for chave in CHAVES_ILEGIVEL:
+            if not isinstance(e[chave], str) or not e[chave].strip():
+                raise ValueError(f'ilegiveis_permitidos[{i}].{chave} vazio ou não é texto')
+        if e['no'] not in nos:
+            raise ValueError(f"ilegiveis_permitidos[{i}]: {e['no']} não está em `nos`")
+        par = (e['no'], e['parametro'])
+        if par in vistos:
+            raise ValueError(f'ilegiveis_permitidos repetido: {par}')
+        vistos.add(par)
+    return list(entradas)
 
 
 def le_esperados(caminho):
@@ -130,9 +162,10 @@ def le_esperados(caminho):
 
 def _configuracao(esperados):
     if isinstance(esperados, dict):
-        return esperados
+        return {'ilegiveis_permitidos': [], **esperados}
     return {'nos': sorted(esperados),
-            'grafo_somente': {'exatos': [], 'volateis': []}}
+            'grafo_somente': {'exatos': [], 'volateis': []},
+            'ilegiveis_permitidos': []}
 
 
 def avalia_grafo(vistos, esperados, grafo_somente=None):
@@ -208,6 +241,26 @@ def resolve_lote(nomes, lote, le_um):
     return ok, [n for n, v in pares if not _legivel(v)]
 
 
+def avalia_ilegiveis(observados, permitidos):
+    """Confronta os ilegíveis observados com a lista versionada, por par exato.
+
+    Devolve os inesperados (reprovam), os permitidos que apareceram (só
+    registro) e as permissões sem uso — exceção cadastrada que ficou legível ou
+    sumiu, e que também reprova, para obrigar a revisar a exceção.
+    """
+    perm = {(p['no'], p['parametro']) for p in permitidos}
+    obs = {(no, n) for no, nomes in observados.items() for n in nomes}
+
+    def por_no(pares):
+        d = {}
+        for no, n in sorted(pares):
+            d.setdefault(no, []).append(n)
+        return d
+    return {'inesperados': por_no(obs - perm),
+            'permitidos_observados': por_no(obs & perm),
+            'permissoes_sem_uso': [f'{no}:{n}' for no, n in sorted(perm - obs)]}
+
+
 def motivos(grafo, estados, estabilizou, erros, padding, ilegiveis=None, vazios=None):
     m = []
     if grafo['duplicados']:
@@ -225,8 +278,11 @@ def motivos(grafo, estados, estabilizou, erros, padding, ilegiveis=None, vazios=
         m.append('grafo não ficou estável dentro do prazo')
     if erros:
         m.append(f'erro lendo parâmetros: {erros}')
-    if ilegiveis:
-        m.append(f'parâmetros listados e ilegíveis: {ilegiveis}')
+    if ilegiveis and ilegiveis['inesperados']:
+        m.append(f"parâmetros listados e ilegíveis, sem exceção: {ilegiveis['inesperados']}")
+    if ilegiveis and ilegiveis['permissoes_sem_uso']:
+        m.append('exceção de ilegível sem uso (ficou legível ou sumiu — revisar): '
+                 f"{ilegiveis['permissoes_sem_uso']}")
     if vazios:
         m.append(f'dump vazio (todo nó expõe ao menos use_sim_time): {vazios}')
     sem = [c for c, v in padding.items() if v == 'AUSENTE']
@@ -316,6 +372,7 @@ def captura(esperados, pasta, prazo, intervalo, n_estavel):
     config = _configuracao(esperados)
     esperados = config['nos']
     grafo_somente = config['grafo_somente']
+    permitidos = config['ilegiveis_permitidos']
     os.makedirs(pasta, exist_ok=True)
     rclpy.init()
     node = rclpy.create_node(NOME_PROPRIO)
@@ -385,12 +442,16 @@ def captura(esperados, pasta, prazo, intervalo, n_estavel):
         nz.grava(normalizado, os.path.join(pasta, 'parametros_normalizados.yaml'))
 
     padding = resumo_padding(normalizado)
-    m = motivos(grafo, estados, ok, erros, padding, ilegiveis, vazios)
+    avaliacao = avalia_ilegiveis(ilegiveis, permitidos)
+    m = motivos(grafo, estados, ok, erros, padding, avaliacao, vazios)
     resumo = {
         'veredito': 'REPROVADO' if m else 'APROVADO',
         'motivos': m,
         'footprint_padding': padding,
         'ilegiveis': ilegiveis,
+        'ilegiveis_permitidos_observados': avaliacao['permitidos_observados'],
+        'ilegiveis_inesperados': avaliacao['inesperados'],
+        'permissoes_ilegivel_sem_uso': avaliacao['permissoes_sem_uso'],
         'dumps_vazios': vazios,
         'nos_esperados': (len(esperados) + len(grafo_somente.get('exatos') or [])
                           + sum(r['quantidade']

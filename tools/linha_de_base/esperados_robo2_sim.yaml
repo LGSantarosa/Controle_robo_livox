@@ -59,3 +59,18 @@ grafo_somente:
     - padrao: '^/transform_listener_impl_[0-9a-f]+$'
       quantidade: 4
       alias: /transform_listener_impl_<hex>
+
+# Parâmetros que o nó LISTA mas não consegue LER (o `get_parameters` do rclcpp
+# é tudo-ou-nada: um desses zera o lote inteiro). Exceção por nó + parâmetro
+# EXATOS: ilegível fora daqui reprova, e exceção daqui que não aparecer (ficou
+# legível ou sumiu) também reprova. Cada uma aponta para a reprodução.
+# O /controller_manager NÃO entra por precaução: só depois de a captura
+# registrar o que ele não lê e cada entrada ser identificada.
+# ⚠️ 'no' ENTRE ASPAS: sem elas o YAML 1.1 lê a chave como o booleano False.
+ilegiveis_permitidos:
+  - 'no': /collision_monitor
+    parametro: PolygonApproach.max_points
+    origem: 'reprodução isolada com collision_monitor ativo: docs/dados/2026-09-21-collision-monitor-ilegiveis/saida.txt'
+  - 'no': /collision_monitor
+    parametro: PolygonStop.max_points
+    origem: 'reprodução isolada com collision_monitor ativo: docs/dados/2026-09-21-collision-monitor-ilegiveis/saida.txt'

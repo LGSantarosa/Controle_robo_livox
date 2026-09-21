@@ -23,8 +23,11 @@
   v2 × passo 2 = os 23 nós antigos idênticos; v2 × original = só a permissão
   do passo 2; `collision_monitor`/`controller_manager` novos, com `git diff`
   vazio dos arquivos-fonte deles desde a baseline.
-- ⚠️ **Decisão pendente antes do Gazebo:** os 2 `max_points` do Nav2 vão
-  reprovar sempre com "ilegível reprova".
+- ✅ Os 2 `Polygon*.max_points` do Nav2 estão em `ilegiveis_permitidos`
+  (exatos, com evidência em `docs/dados/2026-09-21-collision-monitor-ilegiveis/`).
+  Exceção sem uso também reprova. Suíte **948**.
+- ⚠️ Se o `/controller_manager` mostrar ilegíveis na v2: a captura reprova,
+  cada nome é identificado, e só então entra na lista e se recaptura.
 - 🔴 **`perfil.py` (passo 3) só depois da v2 fechada.**
 
 ---

@@ -292,7 +292,7 @@ def test_leitura_individual_tem_de_dar_exatamente_um_valor_legivel(resposta):
 def test_ilegivel_e_dump_vazio_sao_motivos():
     g = cap.avalia_grafo(['/a'], ['/a'])
     m = cap.motivos(g, {'/a': 'responde'}, True, {}, {},
-                    ilegiveis={'/a': ['x']}, vazios=['/a'])
+                    ilegiveis=cap.avalia_ilegiveis({'/a': ['x']}, []), vazios=['/a'])
     assert any('ilegíve' in x for x in m) and any('vazio' in x for x in m)
 
 
@@ -327,3 +327,96 @@ def test_lista_vazia_reprova(tmp_path, ambiente):
     rc, r, saida = captura(['/falso'], tmp_path, prazo=6)
     assert rc == 1
     assert any('vazio' in m and '/falso' in m for m in r['motivos'])
+
+
+# ─── ilegíveis conhecidos (lista versionada, exata) ──────────────────────────
+#
+# O `collision_monitor` do Nav2 lista `Polygon*.max_points` e não os lê — com
+# "ilegível reprova" a baseline reprovaria sempre. Contrato do dono: exceção
+# por nó + parâmetro EXATOS; ilegível fora da lista reprova; exceção que não
+# foi observada (ficou legível ou sumiu) TAMBÉM reprova — obriga a revisar.
+
+def _perm(no='/a', parametro='x', origem='reprodução isolada'):
+    return {'no': no, 'parametro': parametro, 'origem': origem}
+
+
+def test_ilegiveis_iguais_aos_permitidos_aprovam():
+    r = cap.avalia_ilegiveis({'/a': ['x', 'y']}, [_perm('/a', 'x'), _perm('/a', 'y')])
+    assert r == {'inesperados': {}, 'permitidos_observados': {'/a': ['x', 'y']},
+                 'permissoes_sem_uso': []}
+
+
+def test_ilegivel_inesperado_reprova_mesmo_com_outro_permitido():
+    r = cap.avalia_ilegiveis({'/a': ['x', 'z']}, [_perm('/a', 'x')])
+    assert r['inesperados'] == {'/a': ['z']}
+    g = cap.avalia_grafo(['/a'], ['/a'])
+    m = cap.motivos(g, {'/a': 'responde'}, True, {}, {}, ilegiveis=r)
+    assert any('ilegíve' in x and 'z' in x for x in m)
+
+
+def test_permissao_sem_uso_reprova():
+    r = cap.avalia_ilegiveis({}, [_perm('/a', 'x')])
+    assert r['permissoes_sem_uso'] == ['/a:x']
+    g = cap.avalia_grafo(['/a'], ['/a'])
+    m = cap.motivos(g, {'/a': 'responde'}, True, {}, {}, ilegiveis=r)
+    assert any('sem uso' in x for x in m)
+
+
+def test_correspondencia_exata_sem_prefixo():
+    r = cap.avalia_ilegiveis({'/a': ['x.y']}, [_perm('/a', 'x')])
+    assert r['inesperados'] == {'/a': ['x.y']} and r['permissoes_sem_uso'] == ['/a:x']
+
+
+@pytest.mark.parametrize('entradas', [
+    [_perm('/a', 'x'), _perm('/a', 'x')],             # duplicada
+    [_perm('/fora', 'x')],                            # nó fora de `nos`
+    [_perm('/aux', 'x')],                             # nó só de grafo: não tem dump
+    [{'no': '/a', 'parametro': 'x'}],                 # sem origem
+    [_perm('/a', 'x', origem='')],                    # origem vazia
+    [{**_perm(), 'extra': 1}],                        # chave desconhecida
+    [_perm('/a', '')],                                # parâmetro vazio
+    [_perm('a', 'x')],                                # nó sem nome completo
+    ['/a:x'],                                         # não é dicionário
+])
+def test_ilegiveis_permitidos_mal_formados_reprovam(tmp_path, entradas):
+    arq = tmp_path / 'e.yaml'
+    arq.write_text(yaml.safe_dump({'nos': ['/a'], 'grafo_somente': {'exatos': ['/aux']},
+                                   'ilegiveis_permitidos': entradas}))
+    with pytest.raises(ValueError):
+        cap.le_configuracao(str(arq))
+
+
+def test_ilegiveis_permitidos_lidos_da_configuracao(tmp_path):
+    arq = tmp_path / 'e.yaml'
+    arq.write_text(yaml.safe_dump({'nos': ['/a'], 'ilegiveis_permitidos': [_perm('/a', 'x')]}))
+    assert cap.le_configuracao(str(arq))['ilegiveis_permitidos'] == [_perm('/a', 'x')]
+
+
+def test_ilegivel_permitido_aprova_e_continua_registrado(tmp_path, ambiente):
+    sobe, captura = ambiente
+    sobe('--param-falso', '/falso:ilegivel')
+    rc, r, saida = captura({'nos': ['/falso'], 'ilegiveis_permitidos': [
+        _perm('/falso', 'ruim', 'teste: nó fingido')]}, tmp_path, prazo=10)
+    assert r['veredito'] == 'APROVADO', r['motivos']
+    assert rc == 0
+    assert r['ilegiveis'] == {'/falso': ['ruim']}
+    assert r['ilegiveis_permitidos_observados'] == {'/falso': ['ruim']}
+    assert yaml.safe_load((saida / 'ilegiveis.yaml').read_text()) == {'/falso': ['ruim']}
+
+
+def test_permissao_de_parametro_que_ficou_legivel_reprova(tmp_path, ambiente):
+    sobe, captura = ambiente
+    sobe('--param-falso', '/falso:lote_falha')   # tudo legível um a um
+    rc, r, _ = captura({'nos': ['/falso'], 'ilegiveis_permitidos': [
+        _perm('/falso', 'b', 'teste')]}, tmp_path, prazo=6)
+    assert rc == 1 and r['permissoes_ilegivel_sem_uso'] == ['/falso:b']
+
+
+def test_chave_no_sem_aspas_vira_false_e_reprova_com_mensagem(tmp_path):
+    # YAML 1.1: `no:` sem aspas é o booleano False. Escrito à mão, como no
+    # arquivo real — o safe_dump dos outros testes põe as aspas sozinho.
+    arq = tmp_path / 'e.yaml'
+    arq.write_text('nos: [/a]\nilegiveis_permitidos:\n'
+                   '  - no: /a\n    parametro: x\n    origem: y\n')
+    with pytest.raises(ValueError, match='aspas'):
+        cap.le_configuracao(str(arq))

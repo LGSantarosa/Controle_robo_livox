@@ -4,6 +4,33 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-09-21 (dev, sem robô) — ILEGÍVEIS CONHECIDOS: EXCEÇÃO EXATA, E EXCEÇÃO SEM USO REPROVA
+
+Decisão do dono sobre os dois `Polygon*.max_points` do Nav2: lista versionada
+`ilegiveis_permitidos` no arquivo de esperados, por nó + parâmetro EXATOS, cada
+um com `origem`. Ilegível fora da lista reprova; exceção cadastrada que não
+aparece (ficou legível ou sumiu) TAMBÉM reprova — eu tinha proposto só aviso.
+O `ilegiveis.yaml` segue registrando tudo, e o resumo separa permitidos
+observados, inesperados e exceções sem uso. O `/controller_manager` não entra
+por precaução: primeiro a captura mostra o que ele não lê.
+
+A `origem` aponta para evidência versionada: refiz a reprodução isolada como
+script (`docs/dados/2026-09-21-collision-monitor-ilegiveis/reproduz.sh`) e
+guardei a saída — CLI com dump `{}`, lote com 55 nomes e 0 valores, e cada
+`max_points` sozinho voltando 0 valores.
+
+**Tropeços:** o script abortou na primeira vez por `set -u` (o `setup.bash` do
+ROS usa variável não definida). E uma armadilha do YAML 1.1: a chave `no:` sem
+aspas vira o booleano `False` — os testes não pegaram porque o `safe_dump` põe
+as aspas sozinho, e o validador quebrava com `TypeError`. Agora a chave vai
+entre aspas no arquivo, e o validador recusa chave não-texto dizendo isso
+(teste em YAML escrito à mão; o vermelho dele foi o próprio arquivo real).
+
+Testes vermelhos antes: igual ao permitido aprova e registra; inesperado
+reprova; exceção sem uso reprova (pura e de ponta a ponta, com parâmetro que
+ficou legível); duplicada, nó fora de `nos`/só de grafo e formatos inválidos
+reprovam. 5 mutações mordem, inclusive casar por prefixo. Suíte **948**.
+
 ## 2026-09-21 (dev, sem robô) — A RÉGUA TINHA UM FURO: DOIS DUMPS VAZIOS NA BASELINE
 
 Achado lendo a baseline para a proposta do passo 3: `/collision_monitor` e
