@@ -4,6 +4,56 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-09-21 (dev, sem robô) — ETAPA 4, PASSO 0: A RÉGUA DA LINHA DE BASE (sem Gazebo ainda)
+
+Branch `etapa4-perfis`. Três commits, só ferramenta, nenhum arquivo de produção:
+`ceb18c2` normalizador/comparador, `115c75c` captura, `19d946d` trava dos
+argumentos + nós esperados + `bin/linha-de-base-robo2`. Suíte da raiz 856 → 901.
+
+**Garantias pedidas pelo dono na revisão do desenho**, e onde ficaram: bool
+nunca igual a número (em Python `True == 1`); `qos_overrides.*` excluído pela
+chave COMPLETA, lista versionada e travada por teste; permissão por caminho
+exato, com tipo e valor, e permissão sem uso avisada; leitura pelos mesmos
+serviços do `ros2 param dump` (`list_parameters` recursivo — conferido que o
+`depth=None` do cliente deixa o 0 da mensagem — e `get_parameters`); nome
+duplicado reprova ANTES de consultar estado ou parâmetro; grafo igual em N
+consultas seguidas; nó da ferramenta oculto; `footprint_padding` dos dois
+costmaps no normalizado e no resumo. Nuance dele, registrada para o passo 1:
+declarar o padding com o valor vivo deve dar **zero** diferença no dump (o Nav2
+já declara o padrão) — a mudança é no fonte; diferença viva de valor reprova.
+
+**Desvio de processo (registrado a pedido do dono):** no 0b escrevi a captura
+ANTES dos testes, invertendo a ordem do 0a. Compensado com 7 mutações; duas
+sobreviveram de primeira — consultar estado com nome duplicado e ignorar a
+estabilidade no laço — e mostraram buracos nos testes, não na ferramenta.
+Reforçados, as 7 mordem. O dono não viu motivo para refazer o commit.
+
+**Nós esperados — o que eu queria fazer e não fiz.** Propus aceitar nomes
+variáveis por prefixo (`/launch_ros_`). O dono barrou: o `launch_ros_<pid>` só
+nasce sob demanda e a pilha não usa as ações que o criam — não há evidência de
+que apareça; e prefixo, além de aceitar nome indevido, faria o PID diferente
+acusar nó removido + nó novo na comparação seguinte. Ficou a lista EXATA
+prevista pelo código (25 nós, com `/rosbag2_recorder`, nome estável no Jazzy);
+se nome variável aparecer mesmo, entra com expressão ancorada, cardinalidade e
+alias estável, em commit próprio.
+
+**Tropeços meus, pegos antes do commit:**
+- a primeira mutação do 0a não mordeu por ser a mutação errada (sem o ramo
+  `bool`, o valor cai no genérico que já rotula pelo tipo);
+- quase usei nome de LOGGER como prova de nó: o log do smoke de 18-09 tem
+  `resource_manager`, `rclcpp`, `kdl_parser` como loggers, e nenhum é nó. O
+  `/gz_ros_control` entrou pela string no `.so` do plugin, anotado como previsão;
+- a conferência do `install/` com `find` pegava lixo de colcon dentro de
+  `robot_base/description/` — passou a espelhar o `data_files` do `setup.py`
+  sobre `git ls-files`.
+
+**Achado:** o `install/` do `robot_motion` neste PC é de **12-08**
+(`joystick.launch.py`, `teleop_xbox.yaml` nem estão lá; falta também o
+`geometria_robo3.yaml` da 052). Uma linha de base sem build teria medido config
+velha. O wrapper recompila e confere antes de subir.
+
+⬜ Próximo: **passo 0d**, `bash bin/linha-de-base-robo2` com o dono olhando.
+
 ## 2026-09-18 (dev, sem robô) — PLANO DA ETAPA 4, REVISADO E APROVADO (sem código)
 
 `docs/PLANO_ETAPA4_ROBO3.md`. Lendo o código antes de planejar apareceram três

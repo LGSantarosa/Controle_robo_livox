@@ -1,13 +1,45 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-09-18** (dev — etapa 3 FEITA (051,
-> 052); plano da etapa 4 aprovado, próximo é o passo 0 no Gazebo).
+> Versionado na `main`. Atualizado em **2026-09-21** (dev, branch `etapa4-perfis`
+> — passo 0 da etapa 4: ferramenta pronta, falta a sessão de Gazebo).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+---
+
+## 📏 21-09 dev — ETAPA 4, PASSO 0: A RÉGUA PRONTA, FALTA O GAZEBO
+
+🔴 **Trabalho na branch `etapa4-perfis`, não na `main`** (plano §9/§11). A
+`main` só recebe a etapa inteira. Nenhum deploy em robô durante a etapa.
+
+- `tools/linha_de_base/`: `normaliza.py` (dump → `{nó: {param: valor}}`, bool ≠
+  número, exclusões escritas, comparação por caminho exato com permissões),
+  `captura.py` (espera o grafo pronto e estável; duplicado reprova antes de
+  consultar), `argumentos_launch.yaml` (trava do §8) e `esperados_robo2_sim.yaml`
+  (25 nós **previstos** pelo código — não observados).
+- Suíte da raiz: **901** (`pytest --ignore=ESTAGIO-2026`). A base antes da
+  etapa era **856**; o "853" abaixo é anterior aos testes da 052.
+- ⚠️ O `install/` do `robot_motion` neste PC era de 12-08. O wrapper recompila
+  e confere contra o `data_files` dos `setup.py` antes de subir.
+
+⬜ **Próximo: passo 0d — com o dono olhando o Gazebo** (robô desligado, só PC):
+
+```bash
+bash bin/linha-de-base-robo2          # build, sobe pilha sim:=true, captura
+#   r + ENTER  repete SÓ a captura (depois de eu corrigir a lista)
+#   ENTER      derruba
+bash bin/linha-de-base-robo2 --mata   # se algo ficar de pé
+```
+
+Pasta: `~/sim_robo2/linha_de_base_<data>/captura_N/`. A primeira divergência
+de nós reprova e **fica** como achado; cada nó a mais é identificado antes de
+entrar na lista. O bag vem ligado (é o default): grava enquanto estiver de pé.
+Depois do build, rodar a suíte de novo (a trava dos argumentos foi gerada com
+o `install/` antigo do `robot_base` de 18-09 servindo os includes).
 
 ---
 
