@@ -44,10 +44,11 @@ diferente continuam reprovando.
 
 ## Logs e limites
 
-`logs/` contém o build e o launch da captura aprovada. A única linha marcada
-como erro é do shader GLSL do RViz; ela não derrubou o RViz nem qualquer nó e
-não interferiu na captura de parâmetros. Os bags, por serem grandes e não
-fazerem parte desta prova, não foram copiados para o repositório.
+`logs/build.txt` e `logs/launch.txt` contêm o build e o launch da captura
+aprovada. A única linha marcada como erro é do shader GLSL do RViz; ela não
+derrubou o RViz nem qualquer nó e não interferiu na captura de parâmetros. Os
+bags, por serem grandes e não fazerem parte desta prova, não foram copiados
+para o repositório.
 
 Esta linha de base prova apenas o conjunto de nós e parâmetros efetivos do
 robô 2 antes dos perfis. Não prova desempenho, geometria nem hardware.
