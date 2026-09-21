@@ -67,7 +67,13 @@ trap 'echo; echo "   Ctrl+C — derrubando antes de sair"; mata; exit 130' INT T
 
 echo "== linha de base robô 2 no Gazebo — $CARIMBO =="
 echo "   commit: $(git -C "$R" log -1 --format='%h %s')"
-[ -n "$(git -C "$R" status --porcelain)" ] && echo "   ⚠️  árvore com mudança não commitada"
+# Árvore suja ABORTA: o build compilaria o que não está no commit, e a linha de
+# base sairia com proveniência errada (o commit anotado não seria o medido).
+if [ -n "$(git -C "$R" status --porcelain)" ]; then
+  echo "   🔴 árvore com mudança não commitada — commite ou descarte antes:"
+  git -C "$R" status --porcelain | sed 's/^/      /'
+  exit 1
+fi
 echo "   🔴 NÃO PROVA: desempenho, geometria, hardware — só parâmetros e nós"
 
 cd "$R" || exit 1
@@ -87,23 +93,35 @@ fi
 source install/setup.bash
 # Espelha o `data_files` de cada setup.py, só com arquivo VERSIONADO: há lixo
 # de colcon dentro de robot_base/description/ que não é instalado nem é fonte.
+# Linha = pacote, padrão do fonte (relativo ao repo), destino no share/.
+# Fora: só o marcador vazio do ament resource_index.
 # (Em 21-09 o install/ do robot_motion neste PC era de 12-08.)
 DIF=0
-while read -r pkg padroes; do
-  for p in $padroes; do
-    while IFS= read -r f; do
-      rel="${f#ros2_packages/$pkg/}"
-      cmp -s "$f" "install/$pkg/share/$pkg/$rel" \
-        || { echo "   🔴 install/ difere do fonte: $pkg/$rel"; DIF=1; }
-    done < <(git ls-files "ros2_packages/$pkg/$p")
-  done
-done <<'EOF'
-robot_base launch/*.py config/* description/*.xacro
-robot_motion config/*.yaml launch/*.py rviz/*.rviz behavior_trees/*.xml
-robot_nav launch/*.py urdf/* config/* behavior_trees/*.xml
-EOF
+while read -r pkg padrao destino; do
+  while IFS= read -r f; do
+    alvo="install/$pkg/share/$pkg/$destino/$(basename "$f")"
+    cmp -s "$f" "$alvo" \
+      || { echo "   🔴 install/ difere do fonte: $f"; DIF=1; }
+  done < <(git ls-files "$padrao")
+done <<'EOF_LISTA'
+robot_base   ros2_packages/robot_base/package.xml          .
+robot_base   ros2_packages/robot_base/launch/*.py          launch
+robot_base   ros2_packages/robot_base/config/*             config
+robot_base   ros2_packages/robot_base/description/*.xacro  description
+robot_base   worlds/*.sdf                                  worlds
+robot_motion ros2_packages/robot_motion/package.xml        .
+robot_motion ros2_packages/robot_motion/config/*.yaml      config
+robot_motion ros2_packages/robot_motion/launch/*.py        launch
+robot_motion ros2_packages/robot_motion/rviz/*.rviz        rviz
+robot_motion ros2_packages/robot_motion/behavior_trees/*.xml behavior_trees
+robot_nav    ros2_packages/robot_nav/package.xml           .
+robot_nav    ros2_packages/robot_nav/launch/*.py           launch
+robot_nav    ros2_packages/robot_nav/urdf/*                urdf
+robot_nav    ros2_packages/robot_nav/config/*              config
+robot_nav    ros2_packages/robot_nav/behavior_trees/*.xml  behavior_trees
+EOF_LISTA
 [ "$DIF" -ne 0 ] && { echo "   🔴 capturaria config velha — parando"; exit 1; }
-echo "   🟢 install/ igual ao fonte (o que os setup.py instalam)"
+echo "   🟢 install/ igual ao fonte em todos os data_files (menos o marcador do ament)"
 
 echo "== 2/4 subindo a pilha no Gazebo (log em $SAIDA/launch.log) =="
 setsid ros2 launch robot_motion pilha.launch.py sim:=true \
@@ -114,6 +132,8 @@ echo "   pid $LAUNCH_PID · comando do §8, sem outro argumento"
 N=0
 captura() {
   N=$((N + 1))
+  mkdir -p "$SAIDA/captura_$N"
+  git -C "$R" log -1 --format='%H %s' > "$SAIDA/captura_$N/commit.txt"
   echo "== 3/4 captura $N (espera o grafo pronto e estável, prazo ${PRAZO} s) =="
   python3 tools/linha_de_base/captura.py "$ESPERADOS" "$SAIDA/captura_$N" \
       --prazo "$PRAZO"
@@ -130,6 +150,13 @@ echo "== 4/4 sua vez =="
 while true; do
   read -r -p "   r + ENTER repete só a captura · ENTER derruba: " RESP < /dev/tty
   [ "$RESP" = "r" ] || break
+  # A lista corrigida tem de estar COMMITADA antes de recapturar: mesma regra
+  # de proveniência do início (a pilha de pé continua sendo a do commit inicial).
+  if [ -n "$(git -C "$R" status --porcelain)" ]; then
+    echo "   🔴 árvore suja — commite a correção da lista antes de recapturar:"
+    git -C "$R" status --porcelain | sed 's/^/      /'
+    continue
+  fi
   grep -nE "\[ERROR\]|\[FATAL\]|process has died" "$SAIDA/launch.log" \
     > "$SAIDA/erros_launch_ate_captura_$((N + 1)).txt"
   captura
