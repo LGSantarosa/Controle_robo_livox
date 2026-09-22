@@ -21,6 +21,8 @@
   <depend>xacro</depend>
   <depend>python3-serial</depend>
 
+  <!-- O `controle_robo3` lê o `robo3.urdf.xacro` do share/ dele (6b, D4). -->
+  <exec_depend>robot_base</exec_depend>
   <exec_depend>nav2_lifecycle_manager</exec_depend>
   <exec_depend>nav2_bringup</exec_depend>
   <exec_depend>nav2_map_server</exec_depend>

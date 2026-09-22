@@ -13,9 +13,13 @@ A cadeia (plano em docs/PLANO_CONTROLE_ROBO3.md):
 Segure o LB e mexa o analógico esquerdo. RB = turbo. Soltou o LB, o robô para.
 LB + direcional cima/baixo = reta pura, sem giro (dpad_reto).
 
-Sem URDF, sem estimador de pose, sem autonomia: o objetivo é só ver o robô
-responder. Os números são de partida e estão todos como argumento, para
-corrigir sentido no laboratório sem recompilar.
+Com URDF (etapa 4, passo 6b, D4): o `robot_state_publisher` publica a árvore
+FIXA do `robo3.urdf.xacro` do `robot_base` (`sim:=false`) — inclusive
+`base_link → livox_frame`, sem a qual nada do Livox chega ao corpo. Sem
+`joint_state_publisher`: rodas e bobas (juntas contínuas) ficam sem TF até
+alguém publicar `/joint_states`. Sem estimador de pose, sem autonomia: o
+objetivo é só ver o robô responder. Os números são de partida e estão todos
+como argumento, para corrigir sentido no laboratório sem recompilar.
 """
 import fcntl
 import glob
@@ -27,6 +31,7 @@ from launch.actions import DeclareLaunchArgument, LogInfo, OpaqueFunction
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
+import xacro
 
 # _IOR('j', 0x13, char[128]) — o ioctl que devolve o nome do joystick.
 JSIOCGNAME_128 = 0x80806A13
@@ -56,6 +61,12 @@ def escolhe_joystick():
 def _monta(contexto, *_a, **_k):
     pkg = get_package_share_directory('robot_nav')
     dev_id, motivo = escolhe_joystick()
+    # O mesmo xacro do simulador (`sim_robo3.launch.py`), com o hardware real.
+    urdf = xacro.process_file(
+        os.path.join(get_package_share_directory('robot_base'), 'description',
+                     'robo3.urdf.xacro'),
+        mappings={'sim': 'false'},
+    ).toxml()
     sinal = ParameterValue(LaunchConfiguration('sinal'), value_type=float)
     frente = ParameterValue(LaunchConfiguration('frente'), value_type=float)
 
@@ -120,6 +131,13 @@ def _monta(contexto, *_a, **_k):
             # analógico no mux. Velocidades iguais às do teleop.
             package='robot_nav', executable='dpad_reto', name='dpad_reto',
             output='screen',
+        ),
+        Node(
+            # Nome fixo: é o que o `sobe-robo3` procura no grafo para recusar
+            # conflito com o robô 2 ou o simulador.
+            package='robot_state_publisher', executable='robot_state_publisher',
+            name='robot_state_publisher', output='screen',
+            parameters=[{'robot_description': urdf}],
         ),
         Node(
             package='twist_mux', executable='twist_mux', name='twist_mux',
