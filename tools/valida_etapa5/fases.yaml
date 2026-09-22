@@ -1,0 +1,71 @@
+# Fases do /joy fingido e frames FT_SET_SPEED esperados — etapa 5
+# (docs/PLANO_ETAPA5_ROBO3.md §3.3). A MESMA tabela vale para a cadeia Twist
+# de hoje (caracterização) e para a TwistStamped (depois do corte): o contrato
+# muda, os números não.
+#
+# Frame = AA 55 01 08 <steer speed steer speed, int16 LE> <xor>. Comparação
+# exata, byte a byte. Os números são recalculados das configs por
+# test_valida_etapa5.py.
+#
+#   reproducao_14_09, padrao_hoje   regressão byte a byte contra o passo 7
+#   frente_mais_1                   par com padrao_hoje: IDÊNTICO em tudo menos
+#                                   `frente` → o speed inverte, o steer não
+#                                   (isola o linear_sign; as rodadas históricas
+#                                   mudam também sinal, bitola e eixo de giro)
+
+cenarios:
+  reproducao_14_09:
+    argumentos: ['sinal:=-1.0', 'frente:=1.0', 'bitola:=0.3225']
+    eixo_giro: 0.375
+    sequencia: basica
+    frames:
+      lb_frente:   {steer: 0,  speed: -120}
+      lb_esquerda: {steer: 97, speed: 0}
+  padrao_hoje:
+    argumentos: []
+    eixo_giro: 1.0
+    sequencia: completa
+    frames:
+      lb_frente:   {steer: 0,    speed: -120}
+      lb_esquerda: {steer: -256, speed: 0}
+      dpad:        {steer: 0,    speed: -120}   # 0,30 (vel do dpad_reto) × frente −1 × 400
+  frente_mais_1:
+    argumentos: ['frente:=1.0']
+    eixo_giro: 1.0
+    sequencia: basica
+    frames:
+      lb_frente:   {steer: 0,    speed: 120}
+      lb_esquerda: {steer: -256, speed: 0}
+
+# Cada fase: o que o /joy fingido publica (LB = botão 6; eixo 1 = frente,
+# eixo 0 = giro, eixo 7 = direcional cima) e a conferência:
+#   igual     depois da janela, TODOS os frames = frames[espera]
+#   zero      nenhum frame não-zero na janela, e o último até o fim = zero
+#   timeout   o primeiro frame da fase é o zero do dpad_reto ao soltar; depois
+#             SÓ frames[espera], o primeiro deles entre [0,2; 0,6] s depois do
+#             zero (a faixa `direcional` bloqueia a `joystick` por 0,3 s)
+#   perda     /joy para de chegar: nenhum frame depois de t0 + 0,25 s, e o
+#             último frame é frames[espera], NÃO-zero (só o firmware zeraria)
+sequencias:
+  basica:
+    - {nome: repouso,     duracao_s: 2.0, lb: false, confere: nada}
+    - {nome: lb_frente,   duracao_s: 3.0, lb: true, frente: true, confere: igual, espera: lb_frente}
+    - {nome: lb_solto,    duracao_s: 2.0, lb: false, confere: zero}
+    - {nome: lb_esquerda, duracao_s: 3.0, lb: true, giro: true, confere: igual, espera: lb_esquerda}
+    - {nome: lb_solto_2,  duracao_s: 2.0, lb: false, confere: zero}
+  completa:
+    - {nome: repouso,     duracao_s: 2.0, lb: false, confere: nada}
+    - {nome: lb_frente,   duracao_s: 3.0, lb: true, frente: true, confere: igual, espera: lb_frente}
+    - {nome: lb_solto,    duracao_s: 2.0, lb: false, confere: zero}
+    - {nome: lb_esquerda, duracao_s: 3.0, lb: true, giro: true, confere: igual, espera: lb_esquerda}
+    - {nome: lb_solto_2,  duracao_s: 2.0, lb: false, confere: zero}
+    - {nome: prioridade,  duracao_s: 3.0, lb: true, giro: true, dpad: true, confere: igual, espera: dpad}
+    - {nome: timeout_mux, duracao_s: 3.0, lb: true, giro: true, confere: timeout, espera: lb_esquerda}
+    - {nome: lb_solto_3,  duracao_s: 2.0, lb: false, confere: zero}
+    - {nome: lb_frente_2, duracao_s: 2.0, lb: true, frente: true, confere: igual, espera: lb_frente}
+    - {nome: perda,       duracao_s: 2.5, lb: true, frente: true, publica: false, confere: perda, espera: lb_frente}
+    - {nome: retoma,      duracao_s: 2.0, lb: false, confere: zero}
+janela_s: 0.6
+timeout_min_s: 0.2
+timeout_max_s: 0.6
+perda_margem_s: 0.25
