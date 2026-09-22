@@ -171,11 +171,12 @@ def generate_launch_description():
     # `_recusa_robo`, na subida.
     perfil_robo = perfil.parametros(2, pkg)
     # Esta pilha ainda não sabe reescrever YAML. Reescrita pedida e não
-    # aplicada seria costmap lendo o arquivo sem ela, em silêncio.
-    if perfil_robo['nav2_rewrites']:
-        raise RuntimeError(
-            'o perfil pede nav2_rewrites, e esta pilha ainda não as aplica: '
-            f"{sorted(perfil_robo['nav2_rewrites'])}")
+    # aplicada seria costmap (ou reflexo) lendo o arquivo sem ela, em silêncio.
+    for chave in ('nav2_rewrites', 'collision_monitor_rewrites'):
+        if perfil_robo[chave]:
+            raise RuntimeError(
+                f'o perfil pede {chave}, e esta pilha ainda não as aplica: '
+                f'{sorted(perfil_robo[chave])}')
     nav2_params = perfil_robo['nav2']
     amcl_params = os.path.join(pkg, 'config', 'localizacao_amcl.yaml')
     mux_params = os.path.join(pkg, 'config', 'twist_mux.yaml')

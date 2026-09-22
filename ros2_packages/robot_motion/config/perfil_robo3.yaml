@@ -1,0 +1,364 @@
+# Perfil do ROBÔ 3 — etapa 4, passo 4c (docs/PLANO_ETAPA4_ROBO3.md §§2–5).
+#
+# Só o que DIFERE da base do robô 2 (nav2.yaml, collision_monitor.yaml,
+# defaults do path_follower). Montado por `robot_motion/perfil.py`.
+#
+#   classe (b)  geometria: SÓ referência ao artefato da 052, nenhum número.
+#               Footprint, polígonos do reflexo e os seis do seguidor são
+#               CALCULADOS dele + da política abaixo — nunca redigitados.
+#   classe (c)  política: cada margem na sua chave, nunca somada à geometria.
+#
+# `herdados_provisorios` e `independentes_do_robo` fecham a PARTIÇÃO: toda
+# folha numérica da base que o perfil não sobrescreve está em uma das duas.
+# Herdado = medido, sintonizado ou derivado no robô 2, com a etapa que fecha
+# (7 pose do Livox; 8 dinâmica, rumo e curvatura; 9 percepção e reflexo;
+# 10 navegação). Parâmetro novo na base sem classificação reprova no teste.
+#
+# ⚠️ Perfil montável NÃO é robô liberado: a pilha recusa robo:=3 até a etapa 6.
+
+geometria:
+  classe: b
+  origem: artefato canônico do robô 3 (etapa 3)
+  arquivo: geometria_robo3.yaml
+  decisao: '052'
+footprint_padding:
+  classe: c
+  origem: 'D2: o valor vivo do robô 2, política herdada provisória'
+  valor: 0.009999999776482582
+  fecha: etapa 8
+approach_margem:
+  classe: c
+  origem: 'D3: + faces do footprint; time_before_collision do robô 2'
+  faces: 0.03
+  time_before_collision: 0.75
+  fecha: etapa 8
+stop_margem:
+  classe: c
+  origem: 'D3: as margens do Stop do robô 2 por face'
+  frente: 0.133
+  lados: 0.05
+  tras: 0.05
+  fecha: etapa 8
+passagem_margem:
+  classe: c
+  origem: herdada do robô 2 (margem geométrica por lado)
+  valor: 0.03
+  fecha: etapa 10
+desencalhe_pivo_margem:
+  classe: c
+  origem: herdada do robô 2 (0,334 − 0,314)
+  valor: 0.02
+  fecha: etapa 8
+
+# Herdado do robô 2 SEM medida no robô 3 — provisório, com a etapa que fecha.
+herdados_provisorios:
+- parametro: nav2:planner_server.ros__parameters.GridBased.tolerance
+  origem: 'robô 2: acoplado ao raio_chegada do seguidor (0,25)'
+  fecha: etapa 8
+- parametro: nav2:planner_server.ros__parameters.GridBased.cost_travel_multiplier
+  origem: 'robô 2: pesos do planejador/suavizador sintonizados na pista'
+  fecha: etapa 10
+- parametro: nav2:controller_server.ros__parameters.goal_checker.xy_goal_tolerance
+  origem: 'robô 2: acoplado ao raio_chegada do seguidor (0,25)'
+  fecha: etapa 8
+- parametro: nav2:controller_server.ros__parameters.FollowPath.desired_linear_vel
+  origem: 'robô 2: controlador do Nav2 sintonizado para a dinâmica do robô 2'
+  fecha: etapa 8
+- parametro: nav2:controller_server.ros__parameters.FollowPath.lookahead_dist
+  origem: 'robô 2: controlador do Nav2 sintonizado para a dinâmica do robô 2'
+  fecha: etapa 8
+- parametro: nav2:controller_server.ros__parameters.FollowPath.max_angular_accel
+  origem: 'robô 2: controlador do Nav2 sintonizado para a dinâmica do robô 2'
+  fecha: etapa 8
+- parametro: nav2:smoother_server.ros__parameters.suave.minimum_turning_radius
+  origem: 'robô 2: acoplado ao raio_min_curva do seguidor (0,37)'
+  fecha: etapa 8
+- parametro: nav2:smoother_server.ros__parameters.suave.w_curve
+  origem: 'robô 2: pesos do planejador/suavizador sintonizados na pista'
+  fecha: etapa 10
+- parametro: nav2:smoother_server.ros__parameters.suave.w_dist
+  origem: 'robô 2: pesos do planejador/suavizador sintonizados na pista'
+  fecha: etapa 10
+- parametro: nav2:smoother_server.ros__parameters.suave.w_smooth
+  origem: 'robô 2: pesos do planejador/suavizador sintonizados na pista'
+  fecha: etapa 10
+- parametro: nav2:smoother_server.ros__parameters.suave.w_cost
+  origem: 'robô 2: pesos do planejador/suavizador sintonizados na pista'
+  fecha: etapa 10
+- parametro: nav2:global_costmap.global_costmap.ros__parameters.obstacle_layer.origin_z
+  origem: 'robô 2: altura e pose do Livox no robô 2'
+  fecha: etapa 7
+- parametro: nav2:global_costmap.global_costmap.ros__parameters.obstacle_layer.z_resolution
+  origem: 'robô 2: altura e pose do Livox no robô 2'
+  fecha: etapa 7
+- parametro: nav2:global_costmap.global_costmap.ros__parameters.obstacle_layer.z_voxels
+  origem: 'robô 2: altura e pose do Livox no robô 2'
+  fecha: etapa 7
+- parametro: nav2:global_costmap.global_costmap.ros__parameters.obstacle_layer.livox.min_obstacle_height
+  origem: 'robô 2: altura e pose do Livox no robô 2'
+  fecha: etapa 7
+- parametro: nav2:global_costmap.global_costmap.ros__parameters.obstacle_layer.livox.max_obstacle_height
+  origem: 'robô 2: altura e pose do Livox no robô 2'
+  fecha: etapa 7
+- parametro: nav2:global_costmap.global_costmap.ros__parameters.obstacle_layer.livox.obstacle_max_range
+  origem: 'robô 2: alcance, taxa e ruído do sensor medidos no robô 2 e no simulador'
+  fecha: etapa 9
+- parametro: nav2:global_costmap.global_costmap.ros__parameters.obstacle_layer.livox.raytrace_max_range
+  origem: 'robô 2: alcance, taxa e ruído do sensor medidos no robô 2 e no simulador'
+  fecha: etapa 9
+- parametro: nav2:global_costmap.global_costmap.ros__parameters.obstacle_layer.livox.expected_update_rate
+  origem: 'robô 2: alcance, taxa e ruído do sensor medidos no robô 2 e no simulador'
+  fecha: etapa 9
+- parametro: nav2:global_costmap.global_costmap.ros__parameters.inflation_layer.inflation_radius
+  origem: 'robô 2: inflação sintonizada para centrar o robô 2 no vão'
+  fecha: etapa 10
+- parametro: nav2:global_costmap.global_costmap.ros__parameters.inflation_layer.cost_scaling_factor
+  origem: 'robô 2: inflação sintonizada para centrar o robô 2 no vão'
+  fecha: etapa 10
+- parametro: nav2:local_costmap.local_costmap.ros__parameters.obstacle_layer.origin_z
+  origem: 'robô 2: altura e pose do Livox no robô 2'
+  fecha: etapa 7
+- parametro: nav2:local_costmap.local_costmap.ros__parameters.obstacle_layer.z_resolution
+  origem: 'robô 2: altura e pose do Livox no robô 2'
+  fecha: etapa 7
+- parametro: nav2:local_costmap.local_costmap.ros__parameters.obstacle_layer.z_voxels
+  origem: 'robô 2: altura e pose do Livox no robô 2'
+  fecha: etapa 7
+- parametro: nav2:local_costmap.local_costmap.ros__parameters.obstacle_layer.livox.min_obstacle_height
+  origem: 'robô 2: altura e pose do Livox no robô 2'
+  fecha: etapa 7
+- parametro: nav2:local_costmap.local_costmap.ros__parameters.obstacle_layer.livox.max_obstacle_height
+  origem: 'robô 2: altura e pose do Livox no robô 2'
+  fecha: etapa 7
+- parametro: nav2:local_costmap.local_costmap.ros__parameters.obstacle_layer.livox.obstacle_max_range
+  origem: 'robô 2: alcance, taxa e ruído do sensor medidos no robô 2 e no simulador'
+  fecha: etapa 9
+- parametro: nav2:local_costmap.local_costmap.ros__parameters.obstacle_layer.livox.raytrace_max_range
+  origem: 'robô 2: alcance, taxa e ruído do sensor medidos no robô 2 e no simulador'
+  fecha: etapa 9
+- parametro: nav2:local_costmap.local_costmap.ros__parameters.obstacle_layer.livox.expected_update_rate
+  origem: 'robô 2: alcance, taxa e ruído do sensor medidos no robô 2 e no simulador'
+  fecha: etapa 9
+- parametro: nav2:local_costmap.local_costmap.ros__parameters.inflation_layer.inflation_radius
+  origem: 'robô 2: inflação sintonizada para centrar o robô 2 no vão'
+  fecha: etapa 10
+- parametro: nav2:local_costmap.local_costmap.ros__parameters.inflation_layer.cost_scaling_factor
+  origem: 'robô 2: inflação sintonizada para centrar o robô 2 no vão'
+  fecha: etapa 10
+- parametro: collision_monitor:collision_monitor.ros__parameters.source_timeout
+  origem: 'robô 2: alcance, taxa e ruído do sensor medidos no robô 2 e no simulador'
+  fecha: etapa 9
+- parametro: collision_monitor:collision_monitor.ros__parameters.PolygonApproach.min_points
+  origem: 'robô 2: alcance, taxa e ruído do sensor medidos no robô 2 e no simulador'
+  fecha: etapa 9
+- parametro: collision_monitor:collision_monitor.ros__parameters.PolygonStop.min_points
+  origem: 'robô 2: alcance, taxa e ruído do sensor medidos no robô 2 e no simulador'
+  fecha: etapa 9
+- parametro: collision_monitor:collision_monitor.ros__parameters.livox.min_height
+  origem: 'robô 2: altura e pose do Livox no robô 2'
+  fecha: etapa 7
+- parametro: collision_monitor:collision_monitor.ros__parameters.livox.max_height
+  origem: 'robô 2: altura e pose do Livox no robô 2'
+  fecha: etapa 7
+- parametro: path_follower:raio_min_curva
+  origem: 'robô 2: dinâmica e atuador do robô 2 (sintonia e medidas nele)'
+  fecha: etapa 8
+- parametro: path_follower:lookahead_fator
+  origem: 'robô 2: dinâmica e atuador do robô 2 (sintonia e medidas nele)'
+  fecha: etapa 8
+- parametro: path_follower:lookahead_piso
+  origem: 'robô 2: dinâmica e atuador do robô 2 (sintonia e medidas nele)'
+  fecha: etapa 8
+- parametro: path_follower:k_lat
+  origem: 'robô 2: dinâmica e atuador do robô 2 (sintonia e medidas nele)'
+  fecha: etapa 8
+- parametro: path_follower:desvio_v_ref
+  origem: 'robô 2: dinâmica e atuador do robô 2 (sintonia e medidas nele)'
+  fecha: etapa 8
+- parametro: path_follower:desvio_teto_deg
+  origem: 'robô 2: dinâmica e atuador do robô 2 (sintonia e medidas nele)'
+  fecha: etapa 8
+- parametro: path_follower:desvio_taxa_deg_s
+  origem: 'robô 2: dinâmica e atuador do robô 2 (sintonia e medidas nele)'
+  fecha: etapa 8
+- parametro: path_follower:v_max
+  origem: 'robô 2: dinâmica e atuador do robô 2 (sintonia e medidas nele)'
+  fecha: etapa 8
+- parametro: path_follower:a_lin
+  origem: 'robô 2: dinâmica e atuador do robô 2 (sintonia e medidas nele)'
+  fecha: etapa 8
+- parametro: path_follower:wz_max
+  origem: 'robô 2: dinâmica e atuador do robô 2 (sintonia e medidas nele)'
+  fecha: etapa 8
+- parametro: path_follower:passagem_v_max
+  origem: 'robô 2: dinâmica e atuador do robô 2 (sintonia e medidas nele)'
+  fecha: etapa 8
+- parametro: path_follower:v_piso
+  origem: 'robô 2, decisão 020: zona morta medida + wz_max·bitola/2 (bitola 0,270 do robô 2) + margem'
+  fecha: etapa 8
+- parametro: path_follower:raio_chegada
+  origem: 'robô 2: dinâmica e atuador do robô 2 (sintonia e medidas nele)'
+  fecha: etapa 8
+- parametro: path_follower:tolerancia_rumo_final
+  origem: 'robô 2: dinâmica e atuador do robô 2 (sintonia e medidas nele)'
+  fecha: etapa 8
+- parametro: path_follower:re_folga
+  origem: 'robô 2: dinâmica e atuador do robô 2 (sintonia e medidas nele)'
+  fecha: etapa 8
+- parametro: path_follower:re_avanco_min
+  origem: 'robô 2: dinâmica e atuador do robô 2 (sintonia e medidas nele)'
+  fecha: etapa 8
+- parametro: path_follower:re_orcamento_cego
+  origem: 'robô 2: dinâmica e atuador do robô 2 (sintonia e medidas nele)'
+  fecha: etapa 8
+- parametro: path_follower:desencalhe_pivo_angulo_deg
+  origem: 'robô 2: dinâmica e atuador do robô 2 (sintonia e medidas nele)'
+  fecha: etapa 8
+- parametro: path_follower:desencalhe_pivo_wz
+  origem: 'robô 2: dinâmica e atuador do robô 2 (sintonia e medidas nele)'
+  fecha: etapa 8
+- parametro: path_follower:re_scan_velho_s
+  origem: 'robô 2: latência do /scan medida no simulador do robô 2 (decisão 025)'
+  fecha: etapa 9
+- parametro: path_follower:mira_longa
+  origem: 'robô 2: mira adaptativa (decisão 040) sintonizada no robô 2'
+  fecha: etapa 10
+- parametro: path_follower:mira_tol_estica
+  origem: 'robô 2: mira adaptativa (decisão 040) sintonizada no robô 2'
+  fecha: etapa 10
+- parametro: path_follower:mira_tol_encolhe
+  origem: 'robô 2: mira adaptativa (decisão 040) sintonizada no robô 2'
+  fecha: etapa 10
+- parametro: path_follower:mira_rumo_estica_deg
+  origem: 'robô 2: mira adaptativa (decisão 040) sintonizada no robô 2'
+  fecha: etapa 10
+- parametro: path_follower:mira_rumo_encolhe_deg
+  origem: 'robô 2: mira adaptativa (decisão 040) sintonizada no robô 2'
+  fecha: etapa 10
+- parametro: path_follower:mira_rumo_passo
+  origem: 'robô 2: mira adaptativa (decisão 040) sintonizada no robô 2'
+  fecha: etapa 10
+- parametro: path_follower:mira_folga_min
+  origem: 'robô 2: mira adaptativa (decisão 040) sintonizada no robô 2'
+  fecha: etapa 10
+- parametro: path_follower:passagem_largura_min
+  origem: 'robô 2: passagem estreita sintonizada no robô 2'
+  fecha: etapa 10
+- parametro: path_follower:passagem_largura_max
+  origem: 'robô 2: passagem estreita sintonizada no robô 2'
+  fecha: etapa 10
+- parametro: path_follower:passagem_antecipacao
+  origem: 'robô 2: passagem estreita sintonizada no robô 2'
+  fecha: etapa 10
+- parametro: path_follower:passagem_saida
+  origem: 'robô 2: passagem estreita sintonizada no robô 2'
+  fecha: etapa 10
+- parametro: path_follower:passagem_liberacao
+  origem: 'robô 2: passagem estreita sintonizada no robô 2'
+  fecha: etapa 10
+- parametro: path_follower:passagem_alinha_lateral
+  origem: 'robô 2: passagem estreita sintonizada no robô 2'
+  fecha: etapa 10
+- parametro: path_follower:passagem_alinha_rumo_deg
+  origem: 'robô 2: passagem estreita sintonizada no robô 2'
+  fecha: etapa 10
+- parametro: path_follower:desencalhe_frente_dist
+  origem: 'robô 2: distâncias de desencalhe sintonizadas no robô 2'
+  fecha: etapa 10
+- parametro: path_follower:desencalhe_frente_folga
+  origem: 'robô 2: distâncias de desencalhe sintonizadas no robô 2'
+  fecha: etapa 10
+- parametro: path_follower:re_bloqueio_frente_max
+  origem: 'robô 2: distâncias de desencalhe sintonizadas no robô 2'
+  fecha: etapa 10
+
+# Não depende do robô: fica igual sem precisar de medida.
+independentes_do_robo:
+- parametro: nav2:bt_navigator.ros__parameters.bt_loop_duration
+  motivo: tempo ou frequência de software
+- parametro: nav2:bt_navigator.ros__parameters.default_server_timeout
+  motivo: tempo ou frequência de software
+- parametro: nav2:planner_server.ros__parameters.expected_planner_frequency
+  motivo: tempo ou frequência de software
+- parametro: nav2:planner_server.ros__parameters.GridBased.downsampling_factor
+  motivo: parâmetro de algoritmo (busca, suavização, quantização)
+- parametro: nav2:planner_server.ros__parameters.GridBased.max_iterations
+  motivo: parâmetro de algoritmo (busca, suavização, quantização)
+- parametro: nav2:planner_server.ros__parameters.GridBased.max_on_approach_iterations
+  motivo: parâmetro de algoritmo (busca, suavização, quantização)
+- parametro: nav2:planner_server.ros__parameters.GridBased.max_planning_time
+  motivo: tempo ou frequência de software
+- parametro: nav2:planner_server.ros__parameters.GridBased.angle_quantization_bins
+  motivo: parâmetro de algoritmo (busca, suavização, quantização)
+- parametro: nav2:planner_server.ros__parameters.GridBased.smoother.max_iterations
+  motivo: parâmetro de algoritmo (busca, suavização, quantização)
+- parametro: nav2:planner_server.ros__parameters.GridBased.smoother.w_smooth
+  motivo: parâmetro de algoritmo (busca, suavização, quantização)
+- parametro: nav2:planner_server.ros__parameters.GridBased.smoother.w_data
+  motivo: parâmetro de algoritmo (busca, suavização, quantização)
+- parametro: nav2:planner_server.ros__parameters.GridBased.smoother.tolerance
+  motivo: parâmetro de algoritmo (busca, suavização, quantização)
+- parametro: nav2:controller_server.ros__parameters.controller_frequency
+  motivo: tempo ou frequência de software
+- parametro: nav2:controller_server.ros__parameters.progress_checker.required_movement_radius
+  motivo: 'desligado: movement_time_allowance de 1e9 s'
+- parametro: nav2:controller_server.ros__parameters.progress_checker.movement_time_allowance
+  motivo: recurso desligado (1e9 s)
+- parametro: nav2:controller_server.ros__parameters.goal_checker.yaw_goal_tolerance
+  motivo: recurso desligado (3,15 rad aceita qualquer rumo)
+- parametro: nav2:smoother_server.ros__parameters.suave.path_downsampling_factor
+  motivo: parâmetro de algoritmo (busca, suavização, quantização)
+- parametro: nav2:smoother_server.ros__parameters.suave.path_upsampling_factor
+  motivo: parâmetro de algoritmo (busca, suavização, quantização)
+- parametro: nav2:smoother_server.ros__parameters.simples.tolerance
+  motivo: parâmetro de algoritmo (busca, suavização, quantização)
+- parametro: nav2:smoother_server.ros__parameters.simples.max_its
+  motivo: parâmetro de algoritmo (busca, suavização, quantização)
+- parametro: nav2:smoother_server.ros__parameters.savgol.refinement_num
+  motivo: parâmetro de algoritmo (busca, suavização, quantização)
+- parametro: nav2:global_costmap.global_costmap.ros__parameters.update_frequency
+  motivo: tempo ou frequência de software
+- parametro: nav2:global_costmap.global_costmap.ros__parameters.publish_frequency
+  motivo: tempo ou frequência de software
+- parametro: nav2:global_costmap.global_costmap.ros__parameters.resolution
+  motivo: resolução do mapa
+- parametro: nav2:global_costmap.global_costmap.ros__parameters.obstacle_layer.mark_threshold
+  motivo: parâmetro de algoritmo (busca, suavização, quantização)
+- parametro: nav2:global_costmap.global_costmap.ros__parameters.obstacle_layer.combination_method
+  motivo: parâmetro de algoritmo (busca, suavização, quantização)
+- parametro: nav2:local_costmap.local_costmap.ros__parameters.update_frequency
+  motivo: tempo ou frequência de software
+- parametro: nav2:local_costmap.local_costmap.ros__parameters.publish_frequency
+  motivo: tempo ou frequência de software
+- parametro: nav2:local_costmap.local_costmap.ros__parameters.resolution
+  motivo: resolução do mapa
+- parametro: nav2:local_costmap.local_costmap.ros__parameters.obstacle_layer.mark_threshold
+  motivo: parâmetro de algoritmo (busca, suavização, quantização)
+- parametro: nav2:local_costmap.local_costmap.ros__parameters.obstacle_layer.combination_method
+  motivo: parâmetro de algoritmo (busca, suavização, quantização)
+- parametro: nav2:local_costmap.local_costmap.ros__parameters.width
+  motivo: janela do costmap local
+- parametro: nav2:local_costmap.local_costmap.ros__parameters.height
+  motivo: janela do costmap local
+- parametro: collision_monitor:collision_monitor.ros__parameters.transform_tolerance
+  motivo: tempo ou frequência de software
+- parametro: collision_monitor:collision_monitor.ros__parameters.stop_pub_timeout
+  motivo: tempo ou frequência de software
+- parametro: collision_monitor:collision_monitor.ros__parameters.PolygonApproach.simulation_time_step
+  motivo: parâmetro de algoritmo (busca, suavização, quantização)
+- parametro: path_follower:re_max_sem_plano
+  motivo: contagem
+- parametro: path_follower:re_parado_s
+  motivo: tempo de supervisão de progresso (política de software)
+- parametro: path_follower:re_teto_s
+  motivo: teto de tempo da manobra (política de software)
+- parametro: path_follower:desencalhe_pivo_teto_s
+  motivo: teto de tempo da manobra (política de software)
+- parametro: path_follower:re_max_seguidas
+  motivo: contagem
+- parametro: path_follower:taxa
+  motivo: tempo ou frequência de software
+- parametro: path_follower:timeout_plano
+  motivo: tempo ou frequência de software
+- parametro: path_follower:log_periodo_s
+  motivo: tempo ou frequência de software

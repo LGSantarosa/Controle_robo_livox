@@ -150,7 +150,7 @@ def test_a_pilha_monta_pelo_perfil(monkeypatch, tmp_path):
     def falso(robo, share):
         chamadas.append((robo, share))
         return {'nav2': str(nav2), 'nav2_rewrites': {},
-                'collision_monitor': str(cm),
+                'collision_monitor': str(cm), 'collision_monitor_rewrites': {},
                 'path_follower': {'passagem_margem': 0.99}}
 
     monkeypatch.setattr(_perfil(), 'parametros', falso)
@@ -164,16 +164,17 @@ def test_a_pilha_monta_pelo_perfil(monkeypatch, tmp_path):
     assert _params(ctx, _nos(ld, 'path_follower')[0])[-1] == {'passagem_margem': 0.99}
 
 
-def test_reescrita_nao_vazia_nao_e_ignorada_em_silencio(monkeypatch):
-    """A pilha deste passo não aplica reescrita. Se o perfil pedir uma, ela
-    não pode sumir sem aviso — os costmaps leriam o arquivo sem ela."""
+@pytest.mark.parametrize('chave', ['nav2_rewrites', 'collision_monitor_rewrites'])
+def test_reescrita_nao_vazia_nao_e_ignorada_em_silencio(monkeypatch, chave):
+    """A pilha ainda não aplica reescrita. Se o perfil pedir uma, ela não pode
+    sumir sem aviso — os costmaps, ou o reflexo, leriam o arquivo sem ela."""
     real = _perfil().parametros
 
     def com_reescrita(robo, share):
-        return {**real(robo, share), 'nav2_rewrites': {'footprint': '[]'}}
+        return {**real(robo, share), chave: {('a', 'b'): '[]'}}
 
     monkeypatch.setattr(_perfil(), 'parametros', com_reescrita)
-    with pytest.raises(Exception, match='nav2_rewrites'):
+    with pytest.raises(Exception, match=chave):
         _descricao()
 
 

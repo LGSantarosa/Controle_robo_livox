@@ -4,8 +4,7 @@
 cada nó da pilha recebe (PLANO_ETAPA4_ROBO3.md §2.2). O robô 2 não tem arquivo
 de sobreposição: o perfil dele devolve os mesmos `nav2.yaml` e
 `collision_monitor.yaml` de sempre, nenhuma reescrita e nenhuma sobreposição do
-`path_follower`. O robô 3 só ganha perfil no passo 4; até lá, pedir o perfil
-dele é erro, e não um perfil vazio que parece funcionar.
+`path_follower`. O perfil do robô 3 (passo 4) está em `test_perfil_robo3.py`.
 
 A prova de equivalência é contra a BASELINE v2 (os valores VIVOS no Gazebo),
 não contra os arquivos — os arquivos são o que o perfil devolve, e teste que
@@ -40,7 +39,8 @@ def _perfil():
 def test_robo2_devolve_os_caminhos_de_hoje():
     share = '/qualquer/share/robot_motion'
     p = _perfil().parametros(2, share)
-    assert set(p) == {'nav2', 'nav2_rewrites', 'collision_monitor', 'path_follower'}
+    assert set(p) == {'nav2', 'nav2_rewrites', 'collision_monitor',
+                      'collision_monitor_rewrites', 'path_follower'}
     assert p['nav2'] == os.path.join(share, 'config', 'nav2.yaml')
     assert p['collision_monitor'] == os.path.join(share, 'config', 'collision_monitor.yaml')
 
@@ -48,13 +48,8 @@ def test_robo2_devolve_os_caminhos_de_hoje():
 def test_robo2_nao_reescreve_nem_sobrepoe_nada():
     p = _perfil().parametros(2, PKG)
     assert p['nav2_rewrites'] == {}
+    assert p['collision_monitor_rewrites'] == {}
     assert p['path_follower'] == {}
-
-
-def test_robo3_ainda_nao_tem_perfil():
-    """O perfil 3 entra no passo 4. Até lá: erro que diz isso."""
-    with pytest.raises(_perfil().RoboSemPerfil, match='passo 4'):
-        _perfil().parametros(3, PKG)
 
 
 @pytest.mark.parametrize('robo', [0, 1, 4, '2', 2.0, True, None])
@@ -99,6 +94,8 @@ def test_perfil_robo2_identico_a_linha_de_base():
     with open(BASELINE_V2) as f:
         vivo = yaml.safe_load(f)
     assert p['nav2_rewrites'] == {}, 'reescrita no robô 2 mudaria o que os costmaps leem'
+    assert p['collision_monitor_rewrites'] == {}, \
+        'reescrita no robô 2 mudaria os polígonos do reflexo'
 
     with open(p['nav2']) as f:
         nav2 = yaml.safe_load(f)

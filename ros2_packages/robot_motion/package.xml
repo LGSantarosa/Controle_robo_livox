@@ -13,6 +13,8 @@
   <depend>geometry_msgs</depend>
   <depend>nav_msgs</depend>
   <depend>std_msgs</depend>
+  <!-- `perfil.py` lê o perfil e a geometria do robô 3 em produção. -->
+  <exec_depend>python3-yaml</exec_depend>
 
   <!-- A pilha (`pilha.launch.py`) sobe o Nav2 e o simulador junto. Só em
        execução: nada aqui é compilado contra eles. -->
