@@ -4,6 +4,48 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-09-22 (dev, sem robô) — ETAPA 4, PASSO 5: O REFLEXO COERENTE POR PERFIL, E O TESTE NASCE VERDE
+
+`test_reflexo_por_perfil.py`, 15 casos, sobre o perfil **montado** (os dois
+YAMLs depois do `aplica_reescritas`), comparando geometria — vértices lidos
+do texto, contenção por semiplano (externo convexo exigido), área, e o mesmo
+polígono a menos do vértice de partida e do sentido (CW/CCW):
+
+- **robô 2:** a regra da 032 exatamente — o footprint dos dois costmaps é o
+  `PolygonStop`;
+- **robô 3:** Approach e Stop, cada um, contêm o footprint dos dois costmaps e
+  têm área maior. Entre Approach e Stop nada se exige (políticas distintas, D3).
+
+**Nasceu verde, e corretamente.** O comportamento que ele trava entrou no 4c
+(os polígonos do robô 3 já são footprint + margem). **Não houve vermelho
+fabricado**: escrever uma expectativa errada para ver o teste falhar não
+provaria nada sobre a coerência por perfil. Fica registrado como
+caracterização que o 4c já satisfazia — desvio honesto da coluna "vermelho
+antes" do §9.
+
+O que substitui o vermelho são **mutações no perfil de verdade**, cada uma
+revertida com `git checkout`:
+
+| mutação | reprovou |
+|---|---|
+| Approach com margem 0 | Approach "não é o footprint" (2) |
+| Stop com margens 0 | Stop "não é o footprint" (2) |
+| Stop 1 cm para dentro atrás | Stop "contém o footprint" (2) |
+| Approach 5 mm para dentro | Approach "contém" e "não é" (4) |
+| robô 2: Stop 1 cm maior na frente | robô 2, "footprint é o Stop" (2) |
+
+Detecta perda de margem, perda de contenção e regressão da regra 032. Os
+auxiliares geométricos têm testes próprios (quina vazando 1 mm, externo não
+convexo, CW × CCW, mesmos pontos em outro ciclo).
+
+**Achado que justifica a regra por perfil:** no robô 2 o `PolygonApproach` é o
+corpo + 3 cm (frente 0,2465) e **não contém** o footprint (frente 0,35). Uma
+regra única de contenção reprovaria o robô 2.
+
+Revisão do dono: aceitar a ordem inversa dos vértices em `_mesmo_poligono`
+(CW e CCW são o mesmo polígono) e corrigir D205/D209/D400 no docstring de
+`_contem`; `ament_flake8` limpo. Suíte **1029**.
+
 ## 2026-09-22 (dev, sem robô) — ETAPA 4, PASSO 4: O PERFIL DO ROBÔ 3, MONTADO E AINDA RECUSADO
 
 O código e os testes do passo 4 vieram escritos da sessão anterior, sem

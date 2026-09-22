@@ -2,12 +2,28 @@
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
 > Versionado na `main`. Atualizado em **2026-09-22** (dev, branch `etapa4-perfis`
-> — etapa 4: passos 0–4 fechados; baseline v2 é a régua; próximo é o passo 5).
+> — etapa 4: passos 0–5 fechados; baseline v2 é a régua; próximo é o passo 6a).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+---
+
+## ✅ 22-09 — ETAPA 4, PASSO 5 FECHADO: REFLEXO COERENTE POR PERFIL
+
+- `test_reflexo_por_perfil.py` sobre o perfil montado, por geometria: robô 2 =
+  regra da 032 (footprint = `PolygonStop`); robô 3 = Approach e Stop contêm o
+  footprint e são maiores. Suíte **1029**.
+- **Nasceu verde** (o 4c já montava os polígonos maiores); sem vermelho
+  fabricado. Mutações provaram que ele pega perda de margem, de contenção e
+  regressão da 032 (tabela no DIARIO).
+- No robô 2 o Approach **não** contém o footprint — por isso a regra é por perfil.
+
+⬜ **Próximo: passo 6a** — `sobe-robo3` por grupo de processo próprio: recusa
+conflito, `--mata` só o próprio grupo (D5). Vermelho antes: contra processos
+fingidos com os mesmos nomes, hoje ele os mata; depois, recusa e não mata.
 
 ---
 
@@ -23,9 +39,7 @@
   qualquer coisa do físico (margens herdadas até a etapa 8).
 - Branch de backup antes do passo: `backup/etapa4-antes-passo4` (local).
 
-⬜ **Próximo: passo 5** — coerência footprint ↔ reflexo **por perfil**: a
-regra da 032 continua só no robô 2; o robô 3 exige reflexo ⊇ footprint **e**
-≠ footprint. Teste novo do robô 3 vermelho antes; o do robô 2 inalterado.
+✅ Passo 5 fechado (seção acima).
 
 ---
 
