@@ -1,0 +1,41 @@
+# Nós esperados de `ros2 launch robot_base sim_robo3.launch.py` (os argumentos
+# do bin/smoke-gazebo-robo3: pista_obstaculos, pose 2,0/5,0/0, gui) — etapa 4,
+# passo 7 (§10.4, §10.6). Formato do tools/linha_de_base/captura.py.
+#
+# 🔴 É PREVISÃO pela leitura do sim_robo3.launch.py e do scan_2d.launch.py, e
+# pelo que o robô 2 mostrou no mesmo tipo de simulador (baseline v2), NÃO
+# observação do robô 3. Divergência reprova e fica na pasta; nó a mais é
+# IDENTIFICADO antes de entrar aqui. A captura roda ANTES do verificador do
+# smoke (o nó `/smoke_gazebo_robo3` dele não é oculto).
+nos:
+  - /robot_state_publisher
+  - /placa_simulada
+  - /ros_gz_bridge            # parameter_bridge
+  - /scan_2d
+  # --- dentro do processo do Gazebo (plugin gz_ros2_control)
+  - /gz_ros_control
+  - /controller_manager
+  - /joint_state_broadcaster
+  - /hoverboard_base_controller
+  # Transitórios que NÃO entram: ros_gz_sim `create` e os dois `spawner`.
+grafo_somente:
+  exatos: []
+  volateis: []
+
+# 🔴 PREVISÃO HERDADA, não observada no robô 3: mesmo plugin gz_ros2_control e
+# mesmos nomes de controlador (hoverboard_controllers_sim_robo3.yaml) que no
+# robô 2, onde estes quatro são ilegíveis identificados. Se o robô 3 não os
+# mostrar, a captura reprova ("exceção sem uso") — e a previsão cai.
+ilegiveis_permitidos:
+  - 'no': /controller_manager
+    parametro: hoverboard_base_controller.fallback_controllers
+    origem: 'herdado do robô 2: docs/dados/2026-09-21-controller-manager-ilegiveis/saida.txt'
+  - 'no': /controller_manager
+    parametro: hoverboard_base_controller.node_options_args
+    origem: 'herdado do robô 2: docs/dados/2026-09-21-controller-manager-ilegiveis/saida.txt'
+  - 'no': /controller_manager
+    parametro: joint_state_broadcaster.fallback_controllers
+    origem: 'herdado do robô 2: docs/dados/2026-09-21-controller-manager-ilegiveis/saida.txt'
+  - 'no': /controller_manager
+    parametro: joint_state_broadcaster.node_options_args
+    origem: 'herdado do robô 2: docs/dados/2026-09-21-controller-manager-ilegiveis/saida.txt'
