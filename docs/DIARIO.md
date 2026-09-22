@@ -4,6 +4,66 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-09-22 (dev + Gazebo, sem robô) — ETAPA 4, PASSO 7: A VALIDAÇÃO FINAL — UMA PREVISÃO FALSIFICADA E UM DEFEITO REAL
+
+Evidência completa em `docs/dados/2026-09-22-etapa4-passo7/` (sete pastas
+inteiras, `SHA256SUMS`, README com commit, papel e veredito de cada uma).
+
+**A bancada** (`bin/valida-etapa4`, `tools/valida_etapa4/`, roteiro
+`docs/ROTEIRO_PASSO7_ETAPA4.md`, preparo `cba7639`): três cenários separados,
+pasta nova por rodada, domínio ROS próprio e só localhost, `GZ_PARTITION`
+própria, marca `VALIDA_ETAPA4_MARCA` herdada por tudo o que ela lança. Sinal
+só com identidade: grupo classificado antes (líder com o STARTTIME
+registrado, ou órfão com todos os membros marcados), cada PID reconferido
+logo antes do kill; limpeza em `EXIT`; consulta ao grafo com erro reprova.
+Isso veio de uma revisão do dono antes da primeira execução, que achou
+cinco furos de isolamento na minha versão (sinal por PGID cru; varredura
+por PID que sinalizava sem reconfirmar marca e starttime; `bool` que só
+provava um grupo; `node list` com erro aprovado como vazio; saídas
+antecipadas sem limpeza) — corrigidos com casos dirigidos e mutação.
+
+**Robô 2 no Gazebo — APROVADO** (`125907`). Parâmetros: contra a v2 sem
+nenhuma permissão, zero diferença; contra a original, só a permissão do
+passo 2, usada; padding certo nos dois costmaps. `comparacao.yaml` é o diff
+normalizado do §10.2. Corrida até (6,24 · 3,51): chegou em 29,55 s a 0,133
+m (o coletor exibe o teto de 120 s — dívida conhecida), com dois timeouts de
+costmap transientes no meio. Smoke, não medida.
+
+**Robô 3 no Gazebo — a previsão falhou, e isso foi bom** (`130525`). A lista
+de nós esperada, escrita antes, não tinha um `/transform_listener_impl_*`. O
+resto passou, inclusive a previsão herdada dos 4 ilegíveis do
+`controller_manager`. Atribuição por execução isolada (`131343`: só o
+`scan_2d`, domínio 45, 3/3 consultas com exatamente um listener) e só depois
+a expectativa (`e3c69f4`, cardinalidade 1, testada); rodada nova aprovada
+(`131814`). Efeito colateral honesto: a atribuição dos 4 listeners do robô 2
+estava errada em um nome — corrigida só no comentário (`5e630a3`), os três
+do Nav2 "não atribuídos individualmente".
+
+**MEGA fingida — um defeito real do 6a** (`132801`). O `sobe-robo3`
+consultava o grafo pelo daemon; o daemon recém-nascido respondeu vazio com
+código 0, e ele subiu por cima dos quatro externos de mesmo nome (o wrapper,
+com `--no-daemon --spin-time 5`, os via). Interrompi; a limpeza pela marca
+recolheu tudo. Os testes do 6a cobriam erro e travamento da consulta, **não a
+resposta vazia com código 0 durante descoberta incompleta**. Conserto
+`4d640f4` com vermelho antes. Rodada corrigida **APROVADA 24/24** (`133847`):
+recusa real; frames exatos byte a byte nas duas condições (14-09 reproduzido
+sob condições efetivas equivalentes: −120 / 97 / 0; hoje: −120 / −256 / 0);
+TF viva `base_link → livox_frame` com yaw 0 e diferença 0 do URDF; só o grupo
+registrado morreu, externos vivos com o mesmo starttime.
+
+**Tropeços meus, anotados:** o `/dev/input/js0` que a pré-condição recusava é
+um mouse virtual (`mouce-library-fake-mouse`, sem `ID_INPUT_JOYSTICK`) — a
+regra "qualquer js* é controle" estava errada; virou a marca do udev
+(`b0121b7`). Desfiz uma mutação com `git checkout` e apaguei a edição não
+commitada junto (a suíte pegou; refeito com cópia). Afirmei que o `/joy` a
+9,8 Hz era contenção do laço, e a rodada seguinte deu 20 Hz — retirado, fica
+sem explicação. Antes de o dono corrigir, atribuí o daemon que sobrou a
+`topic echo`/`hz`; a evidência só diz "algum comando do ROS CLI posterior à
+consulta de conflitos".
+
+**O que não prova:** nada de hardware; a corrida é smoke; a TF prova a
+árvore fixa (rodas e bobas sem `/joint_states`). Suíte **1166**.
+
 ## 2026-09-22 (dev, sem robô) — ETAPA 4, PASSO 6b: O `controle_robo3` GANHA O RSP
 
 **Por quê (D4):** sem `robot_state_publisher` não existe `base_link →

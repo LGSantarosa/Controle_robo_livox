@@ -2,12 +2,39 @@
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
 > Versionado na `main`. Atualizado em **2026-09-22** (dev, branch `etapa4-perfis`
-> — etapa 4: passos 0–6b fechados; baseline v2 é a régua; próximo é o passo 7).
+> — etapa 4: ETAPA 4 FECHADA na branch — critérios do §10 cumpridos; falta levar à `main`).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+---
+
+## ✅ 22-09 — ETAPA 4 FECHADA NA BRANCH `etapa4-perfis` (passo 7, §10)
+
+Evidência: `docs/dados/2026-09-22-etapa4-passo7/` (README + `SHA256SUMS`).
+
+| §10 | critério | resultado |
+|---|---|---|
+| 1 | suíte da raiz verde | ✅ **1166** |
+| 2 | robô 2, parâmetros por lista explícita, normalizados, = baseline salvo as permissões | ✅ `comparacao.yaml`: v2 sem permissão; original só com a do passo 2 |
+| 3 | robô 2, corrida da pista chega | ✅ (6,24 · 3,51) em 29,55 s — smoke |
+| 4 | robô 3 no Gazebo, smoke 6/6 | ✅ `131814` (a `130525` reprovou por nó não previsto; atribuído e corrigido) |
+| 5 | robô 3 com MEGA fingida: TF yaw 0, frames, `--mata` limpo com externos vivos | ✅ `133847`, 24/24 (a `132801` achou o defeito do daemon, consertado em `4d640f4`) |
+| 6 | `uniq -d` vazio e lista = esperada em toda combinação | ✅ |
+| 7 | perfil do robô 3 | ✅ testes do passo 4 e 5 |
+| 8 | decisão, diário, estado | ✅ 053, DIARIO, este |
+
+- ⚠️ Anotados sem conclusão: `/joy` fingido a 9,8 Hz numa rodada e 20,0 Hz na
+  outra; a mensagem "caindo no js0" do launch engana (mouse virtual); o
+  `corrida_nav.py` exibe o teto em vez do tempo de chegada.
+- 🔴 **Não prova:** hardware nenhum. A etapa 4 não diz que o robô 3 navega
+  (etapa 6) nem unifica o contrato (etapa 5).
+
+⬜ **Próximo:** levar a `etapa4-perfis` à `main` (plano §9: a `main` só
+recebe a etapa inteira) — com o ok do dono; depois, deploy segue a regra do
+CLAUDE.md, e nada da etapa 4 foi para robô.
 
 ---
 
@@ -20,11 +47,7 @@
   TF viva ainda não provada — passo 7); rodas e bobas sem TF dinâmica até
   existir `/joint_states` — limite, não defeito.
 
-⬜ **Próximo: passo 7** — validação final (§10) e registro: robô 2 no Gazebo
-(dump idêntico à baseline salvo as permissões, corrida da pista), robô 3 no
-Gazebo (`smoke-gazebo-robo3` 6/6), robô 3 com MEGA fingida (TF `base_link →
-livox_frame` yaw 0, frames para a MEGA iguais aos de 14-09, `sobe-robo3 --mata`
-limpo com nós de mesmo nome fora do grupo vivos), `uniq -d` vazio em todas.
+✅ Passo 7 e etapa 4 fechados (seção acima).
 
 ---
 
