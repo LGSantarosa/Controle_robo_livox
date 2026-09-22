@@ -44,7 +44,7 @@ nos:
   # Transitórios que NÃO entram (saem sozinhos; a estabilidade da captura os
   # espera sumir): ros_gz_sim `create` e os dois `spawner`.
 
-# Nós reais do grafo que, por desenho das bibliotecas do Nav2, não oferecem os
+# Nós reais do grafo que, por desenho das bibliotecas (Nav2, tf2_ros), não oferecem os
 # serviços list_parameters/get_parameters. Eles provam composição do grafo,
 # mas não têm dump a capturar. Observados e identificados na captura 1 de
 # 21-09; não foram copiados silenciosamente para `nos`.
@@ -54,8 +54,17 @@ grafo_somente:
     # nav2_behavior_tree/bt_action_server_impl.hpp.
     - /bt_navigator_navigate_to_pose_rclcpp_node
   volateis:
-    # Quatro TransformListener internos: BT Navigator, Collision Monitor e os
-    # dois Costmap2DROS. O sufixo hexadecimal é endereço/identidade de runtime.
+    # Quatro TransformListener internos (o sufixo hexadecimal é
+    # endereço/identidade de runtime). Atribuição corrigida em 22-09, só no
+    # comentário (a contagem 4 é a observada e não muda):
+    #   - UM é do scan_2d (pointcloud_to_laserscan com target_frame), atribuído
+    #     por execução isolada — só scan_2d.launch.py, domínio 45, 3/3
+    #     consultas com /scan_2d + exatamente um listener
+    #     (~/validacao_etapa4/20260922_131343_scan2d-isolado/);
+    #   - os outros TRÊS são do Nav2, NÃO atribuídos individualmente. A lista
+    #     anterior (BT Navigator, Collision Monitor e os dois Costmap2DROS)
+    #     tinha quatro nomes para três listeners; qual deles não cria nó
+    #     próprio não foi provado.
     - padrao: '^/transform_listener_impl_[0-9a-f]+$'
       quantidade: 4
       alias: /transform_listener_impl_<hex>
