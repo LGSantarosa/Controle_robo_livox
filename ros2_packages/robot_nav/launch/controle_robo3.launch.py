@@ -5,7 +5,8 @@
     ros2 launch robot_nav controle_robo3.launch.py sinal:=-1.0       # inverte frente E giro
     ros2 launch robot_nav controle_robo3.launch.py porta:=/dev/ttyACM1
 
-A cadeia (plano em docs/PLANO_CONTROLE_ROBO3.md):
+A cadeia, toda em `geometry_msgs/TwistStamped` desde a etapa 5 (o
+`cmd_vel_to_wheels` converte na fronteira do atuador, por `use_stamped`):
 
     joy_node → teleop_twist_joy → twist_mux → cmd_vel_to_wheels → mega_bridge
       → MEGA (firmware/mega_bridge, 50 Hz fixos) → Serial1 → placa
@@ -98,6 +99,9 @@ def _monta(contexto, *_a, **_k):
                 # dirige). O `sinal` acima é espelho, este é rotação.
                 'linear_sign': frente,
                 'cmd_vel_topic': 'cmd_vel',
+                # Etapa 5: a cadeia do robô 3 é TwistStamped de ponta a ponta.
+                # O default do nó continua cru para o `robot.launch.py`.
+                'use_stamped': True,
             }],
         ),
         Node(

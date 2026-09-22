@@ -6,13 +6,16 @@
 # (0,5 s sem setpoint). E quando o Livox e a autonomia entrarem, eles ganham
 # faixa aqui abaixo do humano.
 #
-# ⚠️ O `bin/robot-key` deste repo publica TwistStamped e NÃO entra neste mux.
+# ⚠️ O `bin/robot-key` publica TwistStamped e, desde a etapa 5, o contrato
+# BATE — mas ele continua FORA deste mux por decisão (D3): faixa humana nova
+# no robô 3 é escopo próprio, não efeito colateral da unificação.
 twist_mux:
   ros__parameters:
     use_sim_time: false
-    # 🔴 Casa com `publish_stamped_twist: false` do teleop_xbox_robo3.yaml e
-    # com o Twist cru que o cmd_vel_to_wheels assina.
-    use_stamped: false
+    # 🔴 Casa com `publish_stamped_twist: true` do teleop_xbox_robo3.yaml, com
+    # o TwistStamped do dpad_reto e com o `use_stamped: true` que a launch dá
+    # ao cmd_vel_to_wheels (etapa 5).
+    use_stamped: true
 
     topics:
       # LB + direcional (dpad_reto): reta pura, manda sobre o analógico enquanto
