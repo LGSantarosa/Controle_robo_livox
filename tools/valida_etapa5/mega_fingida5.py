@@ -106,8 +106,12 @@ def _janela(frames, t0, t1):
     return [q for t, q in frames if t0 <= t <= t1]
 
 
-def confere(fase, t0, t1, frames, esperado, cfg):
-    """Um veredito por fase. frames: [(t, bytes)] só FT_SET_SPEED com chk ok."""
+def confere(fase, t0, t1, frames, esperado, cfg, anterior=None):
+    """Um veredito por fase. frames: [(t, bytes)] só FT_SET_SPEED com chk ok.
+
+    `anterior`: o frame esperado da fase anterior (só a conferência `timeout`
+    o usa — ver fases.yaml).
+    """
     tipo = fase['confere']
     alvo = frame_set_speed(**esperado) if esperado else None
     zero = frame_set_speed(**ZERO)
@@ -132,16 +136,23 @@ def confere(fase, t0, t1, frames, esperado, cfg):
         ok = not dif and bool(ate) and ate[-1] == zero
     elif tipo == 'timeout':
         fase_fr = [(t, q) for t, q in frames if t0 <= t <= t1]
-        ok, atraso = False, None
-        if fase_fr and fase_fr[0][1] == zero:
-            t_zero = fase_fr[0][0]
-            resto = fase_fr[1:]
-            outros = sorted({q.hex() for _, q in resto if q != alvo})
-            if resto and not outros:
-                atraso = resto[0][0] - t_zero
+        velho = frame_set_speed(**anterior) if anterior else None
+        limite = t0 + cfg['transito_s']
+        i_zero = next((i for i, (t, q) in enumerate(fase_fr)
+                       if q == zero and t <= limite), None)
+        ok, atraso, em_transito, outros = False, None, [], []
+        if i_zero is not None:
+            antes, t_zero = fase_fr[:i_zero], fase_fr[i_zero][0]
+            em_transito = [q.hex() for _, q in antes]
+            transito_ok = all(q == velho for _, q in antes)
+            depois = fase_fr[i_zero + 1:]
+            outros = sorted({q.hex() for _, q in depois if q != alvo})
+            if transito_ok and depois and not outros:
+                atraso = depois[0][0] - t_zero
                 ok = cfg['timeout_min_s'] <= atraso <= cfg['timeout_max_s']
-            r['diferentes_hex'] = outros
         r.update(primeiro_hex=fase_fr[0][1].hex() if fase_fr else None,
+                 em_transito_hex=em_transito, diferentes_hex=outros,
+                 zero_ate_o_limite=i_zero is not None,
                  atraso_da_volta_s=None if atraso is None else round(atraso, 3),
                  frames_na_fase=len(fase_fr))
     elif tipo == 'perda':
@@ -339,7 +350,8 @@ def main(pasta, cenario):
 
     with trava:
         fr = [(t, q) for t, q in frames if t <= reais[-1][2]]
-    resultado_fases = [confere(f, t0, t1, fr, caso['frames'].get(f.get('espera')), cfg)
+    resultado_fases = [confere(f, t0, t1, fr, caso['frames'].get(f.get('espera')), cfg,
+                               caso['frames'].get(f.get('anterior')))
                        for f, t0, t1 in reais]
 
     junta = junta_livox(_urdf_instalado())
