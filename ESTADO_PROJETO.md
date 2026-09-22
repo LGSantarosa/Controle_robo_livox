@@ -1,13 +1,46 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-09-22** (dev, branch `etapa4-perfis`
-> — etapa 4: ETAPA 4 FECHADA na branch — critérios do §10 cumpridos; falta levar à `main`).
+> Versionado na `main`. Atualizado em **2026-09-22** (dev, branch
+> `etapa5-contrato` — a etapa 4 JÁ ESTÁ NA `main` (`0c70691`); a etapa 5 está
+> com os passos 1–5 fechados na branch, e falta o passo 6: decisão 054 e
+> fechamento).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+---
+
+## 🔄 22-09 — ETAPA 5 (branch `etapa5-contrato`): PASSOS 1–5 FECHADOS
+
+**Para continuar em outro PC:** `git fetch origin && git switch etapa5-contrato`.
+A etapa 4 inteira já está na `main` (`0c70691`).
+
+- **O contrato:** a cadeia do robô 3 fala `TwistStamped` de ponta a ponta, e a
+  conversão acontece só na fronteira do atuador (`cmd_vel_to_wheels` com
+  `use_stamped`; **default cru**, o `robot.launch.py`/`launch.sh` intocado).
+- **Provado sem Gazebo** (`docs/dados/2026-09-22-etapa5-contrato/`, 13 pastas):
+  cadeia `Twist` 26/26 (baseline) e cadeia `TwistStamped` **26/26**, com os
+  MESMOS frames byte a byte nas três condições, prioridade, timeout do mux
+  (0,35 s), homem-morto, perda do controle e TF com yaw 0.
+- **Commits:** plano `9b26ec3`; coletor `6640a0f`; régua do timeout `8747c92`;
+  `cmd_vel_to_wheels` dual `f0ea415`; isolamento dos testes `199fe30`; corte
+  atômico `9c99c20`; verificador da placa `c914c1c`; evidência `e322fdf`;
+  diário `4a8beb6`.
+- 🔴 **D4 em aberto:** com o `/joy` sumindo, os frames cessam e o **último
+  fica não-zero**; quem para o robô é o watchdog do firmware. Watchdog no PC
+  seria decisão própria.
+- ⚠️ **D3 registrada:** o `bin/robot-key` agora TEM contrato compatível com o
+  mux do robô 3, mas segue fora dele de propósito.
+- ⚠️ Suíte da raiz: **1231**. Rodar com o código de saída conferido, sem
+  `| tail`, e com `--rootdir=.` quando for um arquivo só.
+
+⬜ **Próximo: passo 6** — decisão 054 (a fronteira escolhida e por quê),
+fechamento do DIARIO/ESTADO e o gate do §3.4 (`git diff 0c70691` sem tocar em
+`robot_motion/`, `robot_base/`, `robot.launch.py` nem
+`robot_nav/config/twist_mux.yaml`). Depois, a etapa 5 inteira vai à `main`.
 
 ---
 
