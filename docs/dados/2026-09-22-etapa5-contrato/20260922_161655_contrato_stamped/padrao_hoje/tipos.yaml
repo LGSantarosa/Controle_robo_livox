@@ -1,0 +1,34 @@
+/cmd_vel:
+  assinantes:
+  - - /cmd_vel_to_wheels
+    - geometry_msgs/msg/TwistStamped
+  - - /rosbag2_recorder
+    - geometry_msgs/msg/TwistStamped
+  publicadores:
+  - - /twist_mux
+    - geometry_msgs/msg/TwistStamped
+/dpad_vel:
+  assinantes:
+  - - /twist_mux
+    - geometry_msgs/msg/TwistStamped
+  publicadores:
+  - - /dpad_reto
+    - geometry_msgs/msg/TwistStamped
+/joy_vel:
+  assinantes:
+  - - /rosbag2_recorder
+    - geometry_msgs/msg/TwistStamped
+  - - /twist_mux
+    - geometry_msgs/msg/TwistStamped
+  publicadores:
+  - - /teleop_twist_joy_node
+    - geometry_msgs/msg/TwistStamped
+/wheel_vel_setpoints:
+  assinantes:
+  - - /mega_bridge
+    - wheel_msgs/msg/WheelSpeeds
+  - - /rosbag2_recorder
+    - wheel_msgs/msg/WheelSpeeds
+  publicadores:
+  - - /cmd_vel_to_wheels
+    - wheel_msgs/msg/WheelSpeeds

@@ -1,0 +1,10 @@
+== limpeza ==
+grupos do wrapper (PGID STARTTIME PAPEL):
+   1714091 2243654 mega_reproducao_14_09
+   1719707 2250929 mega_padrao_hoje
+   1726435 2259618 mega_frente_mais_1
+mega_reproducao_14_09 pgid=1714091: vazio — não sinalizado (0 membro(s) vivo(s))
+mega_padrao_hoje pgid=1719707: vazio — não sinalizado (0 membro(s) vivo(s))
+mega_frente_mais_1 pgid=1726435: vazio — não sinalizado (0 membro(s) vivo(s))
+processos marcados depois: 0
+domínio 46: nenhum nó (consulta com código 0)

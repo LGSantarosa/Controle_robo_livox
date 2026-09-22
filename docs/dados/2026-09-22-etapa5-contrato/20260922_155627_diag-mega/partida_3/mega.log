@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/home/rbe-luis/validacao_etapa5/20260922_155627_diag-mega/mega_instrumentada.py", line 402, in <module>
+    sys.exit(main(sys.argv[1], sys.argv[2]))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rbe-luis/validacao_etapa5/20260922_155627_diag-mega/mega_instrumentada.py", line 238, in main
+    cfg = yaml.safe_load(open(os.path.join(AQUI, 'fases.yaml')))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/home/rbe-luis/validacao_etapa5/20260922_155627_diag-mega/fases.yaml'

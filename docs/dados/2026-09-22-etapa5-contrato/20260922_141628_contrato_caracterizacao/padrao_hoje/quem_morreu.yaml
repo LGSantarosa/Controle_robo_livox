@@ -1,0 +1,35 @@
+veredito: APROVADO
+itens:
+  cada_grupo_registrado_valido_e_morto: true
+  nenhum_outro_processo_morreu: true
+  externos_estavam_vivos_antes: true
+  externos_vivos_depois_mesmo_starttime: true
+grupos:
+- pgid: 1188287
+  starttime: 1528591
+  papel: launch
+  classe: nosso
+  membros_antes: 8
+  membros_sem_marca: []
+  membros_vivos_depois: []
+  ok: true
+- pgid: 1188936
+  starttime: 1529395
+  papel: bag
+  classe: nosso
+  membros_antes: 1
+  membros_sem_marca: []
+  membros_vivos_depois: []
+  ok: true
+outros_que_morreram: []
+vida_curta_que_sumiu:
+- pid: 1193217
+  ppid: 1181615
+  pgid: 1181615
+  sid: 1181613
+  starttime: 1534971
+  estado: R
+  marcado: true
+  argv: python3 /home/rbe-luis/Workspace/Controle_robo_livox/tools/valida_etapa5/processos.py
+    foto /home/rbe-luis/validacao_etapa5/20260922_141628_contrato_caracterizacao/padrao_hoje/antes_mata.csv
+externos: []

@@ -1,0 +1,10 @@
+1584222 pgid=1584222 /usr/bin/python3 /opt/ros/jazzy/bin/ros2 launch robot_nav controle_robo3.launch.py porta:=/dev/pts/2 sinal:=-1.0 frente:=1.0 bitola:=0.3225
+1584230 pgid=1584222 /usr/bin/python3 /home/rbe-luis/Workspace/Controle_robo_livox/install/robot_nav/lib/robot_nav/mega_bridge --ros-args -r __node:=mega_bridge --params-file /tmp/l
+1584231 pgid=1584222 /usr/bin/python3 /home/rbe-luis/Workspace/Controle_robo_livox/install/robot_nav/lib/robot_nav/cmd_vel_to_wheels --ros-args -r __node:=cmd_vel_to_wheels --params
+1584232 pgid=1584222 /opt/ros/jazzy/lib/joy/joy_node --ros-args -r __node:=joy_node --params-file /tmp/launch_params_s0x_q0xu
+1584233 pgid=1584222 /opt/ros/jazzy/lib/teleop_twist_joy/teleop_node --ros-args -r __node:=teleop_twist_joy_node --params-file /home/rbe-luis/Workspace/Controle_robo_livox/install/r
+1584234 pgid=1584222 /usr/bin/python3 /home/rbe-luis/Workspace/Controle_robo_livox/install/robot_nav/lib/robot_nav/dpad_reto --ros-args -r __node:=dpad_reto
+1584235 pgid=1584222 /opt/ros/jazzy/lib/robot_state_publisher/robot_state_publisher --ros-args -r __node:=robot_state_publisher --params-file /tmp/launch_params_c90z7912
+1584236 pgid=1584222 /opt/ros/jazzy/lib/twist_mux/twist_mux --ros-args -r __node:=twist_mux --params-file /home/rbe-luis/Workspace/Controle_robo_livox/install/robot_nav/share/robot_
+1584859 pgid=1584859 /usr/bin/python3 /opt/ros/jazzy/bin/ros2 bag record -o /home/rbe-luis/bancada_robo3/controle_20260922_154822/bag /joy /joy_vel /cmd_vel /wheel_vel_setpoints /ho
+1585049 pgid=1585040 /usr/bin/python3 -c from ros2cli.daemon.daemonize import main; main() --name ros2-daemon --ros-domain-id 46 --rmw-implementation rmw_fastrtps_cpp

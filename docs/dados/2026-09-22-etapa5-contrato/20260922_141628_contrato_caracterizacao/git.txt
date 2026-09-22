@@ -1,0 +1,4 @@
+commit: 6640a0f9522d6e463844e5381cfd20efcdff9bf9
+6640a0f 2026-09-22 14:16:09 -0300 etapa 5 passo 2 (coletor): valida-etapa5 com a seguranca copiada da etapa 4 (congelada); fases de prioridade, timeout do mux, homem-morto e perda do controle; par frente +1/-1; tipos do grafo
+branch: etapa5-contrato
+status --porcelain (vazio = limpo):

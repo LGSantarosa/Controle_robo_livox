@@ -1,0 +1,14 @@
+/cmd_vel:
+  assinantes: []
+  publicadores: []
+/dpad_vel:
+  assinantes: []
+  publicadores: []
+/joy_vel:
+  assinantes: []
+  publicadores: []
+/wheel_vel_setpoints:
+  assinantes:
+  - - /mega_bridge
+    - wheel_msgs/msg/WheelSpeeds
+  publicadores: []

@@ -1,0 +1,4 @@
+commit: c914c1cd96c0bb93d6e02fd9a58aab058061c8bc
+c914c1c 2026-09-22 16:10:52 -0300 sobe-robo3: aviso de descoberta nao e diagnostico de placa — /battery/front com tipo explicito, sem daemon, repetido ate ter mensagem com present: (teto 10 s), cada tentativa em battery_check.log; quatro vereditos distintos
+branch: etapa5-contrato
+status --porcelain (vazio = limpo):

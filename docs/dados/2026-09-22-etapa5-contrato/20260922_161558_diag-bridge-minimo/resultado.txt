@@ -1,0 +1,9 @@
+commit: c914c1cd96c0bb93d6e02fd9a58aab058061c8bc
+dominio: 49, so localhost
+
+saida:
+pty /dev/pts/2
+bytes lidos do pty: 403
+primeiro frame: aa550108000088ff000088ff09  (steer=0, speed=-120)
+
+O frame bate com WheelSpeeds left=right=-120: steer=(L-R)/2=0, speed=(L+R)/2=-120.

@@ -1,0 +1,13 @@
+[INFO] [1790104277.934441757] [mega_bridge]: MegaBridge: /dev/pts/2@230400 | wheel_scale=1.0
+[WARN] [1790104311.504486125] [mega_bridge]: serial read falhou: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
+Traceback (most recent call last):
+  File "/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_nav/lib/robot_nav/mega_bridge", line 33, in <module>
+    sys.exit(load_entry_point('robot-nav==0.1.0', 'console_scripts', 'mega_bridge')())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_nav/lib/python3.12/site-packages/robot_nav/mega_bridge.py", line 499, in main
+    spin_node(node)
+  File "/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_nav/lib/python3.12/site-packages/robot_nav/utils.py", line 31, in spin_node
+    executor.spin()
+  File "<string>", line 2, in <module>
+rclpy.executors.ExternalShutdownException
+[ros2run]: Process exited with failure 1

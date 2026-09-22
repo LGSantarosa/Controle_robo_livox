@@ -1,0 +1,3 @@
+build + install/ igual ao fonte                            APROVADO 
+reproducao_14_09: sobe-robo3 subiu (placa, bateria, /joy)  REPROVADO (reproducao_14_09/sobe.txt)
+limpeza: nada marcado, domínios vazios                    APROVADO 

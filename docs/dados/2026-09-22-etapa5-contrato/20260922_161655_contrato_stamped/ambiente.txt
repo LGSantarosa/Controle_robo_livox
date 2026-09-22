@@ -1,0 +1,24 @@
+2026-09-22T16:17:00-03:00
+Linux rbe-luis-20429 7.0.0-31-generic #31~24.04.1-Ubuntu SMP PREEMPT_DYNAMIC Mon Aug 10 09:38:02 UTC 2 x86_64 x86_64 x86_64 GNU/Linux
+hostname: rbe-luis-20429
+ROS_DISTRO=jazzy
+ros2 no PATH: /opt/ros/jazzy/bin/ros2
+AMENT_PREFIX_PATH=/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_nav:/home/rbe-luis/Workspace/Controle_robo_livox/install/wheel_msgs:/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_planning:/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_motion:/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_base:/home/rbe-luis/Workspace/Controle_robo_livox/install/hoverboard_driver:/home/rbe-luis/Workspace/Controle_robo_web/install/robot_nav:/home/rbe-luis/Workspace/Controle_robo_web/install/wheel_msgs:/home/rbe-luis/Workspace/Controle_robo_web/install/teb_msgs:/home/rbe-luis/Workspace/Controle_robo_web/install/rf2o_laser_odometry:/home/rbe-luis/Workspace/Controle_robo_web/install/costmap_converter:/home/rbe-luis/Workspace/Controle_robo_web/install/costmap_converter_msgs:/opt/ros/jazzy
+COLCON_PREFIX_PATH=/home/rbe-luis/Workspace/Controle_robo_livox/install:/home/rbe-luis/Workspace/Controle_robo_web/install
+GZ_CONFIG_PATH=/opt/ros/jazzy/opt/gz_sim_vendor/share/gz:/opt/ros/jazzy/opt/sdformat_vendor/share/gz:/opt/ros/jazzy/opt/gz_gui_vendor/share/gz:/opt/ros/jazzy/opt/gz_transport_vendor/share/gz:/opt/ros/jazzy/opt/gz_rendering_vendor/share/gz:/opt/ros/jazzy/opt/gz_plugin_vendor/share/gz:/opt/ros/jazzy/opt/gz_fuel_tools_vendor/share/gz:/opt/ros/jazzy/opt/gz_msgs_vendor/share/gz:/opt/ros/jazzy/opt/gz_common_vendor/share/gz
+GZ_PARTITION=valida_etapa5_20260922_161655
+GZ_SIM_RESOURCE_PATH=/opt/ros/jazzy/share
+PYTHONPATH=/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_nav/lib/python3.12/site-packages:/home/rbe-luis/Workspace/Controle_robo_livox/install/wheel_msgs/lib/python3.12/site-packages:/home/rbe-luis/Workspace/Controle_robo_livox/build/robot_planning:/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_planning/lib/python3.12/site-packages:/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_motion/lib/python3.12/site-packages:/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_base/lib/python3.12/site-packages:/home/rbe-luis/Workspace/Controle_robo_web/build/robot_nav:/home/rbe-luis/Workspace/Controle_robo_web/install/robot_nav/lib/python3.12/site-packages:/home/rbe-luis/Workspace/Controle_robo_web/install/wheel_msgs/lib/python3.12/site-packages:/home/rbe-luis/Workspace/Controle_robo_web/install/teb_msgs/lib/python3.12/site-packages:/home/rbe-luis/Workspace/Controle_robo_web/install/costmap_converter_msgs/lib/python3.12/site-packages:/opt/ros/jazzy/lib/python3.12/site-packages
+ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
+ROS_DISTRO=jazzy
+ROS_DOMAIN_ID=46
+ROS_PYTHON_VERSION=3
+ROS_VERSION=2
+VALIDA_ETAPA4_MARCA=/home/rbe-luis/validacao_etapa5/20260922_161655_contrato_stamped
+--- /dev/input/js* (pré-condição do contrato):
+/dev/input/js0: veredito MOUSE
+   nome: mouce-library-fake-mouse · id 0003:2222:3333
+   sysfs: /sys/devices/virtual/input/input41
+   DEVNAME=/dev/input/js0
+   ID_INPUT=1
+   ID_INPUT_MOUSE=1

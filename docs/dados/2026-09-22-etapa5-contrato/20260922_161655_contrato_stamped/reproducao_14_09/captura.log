@@ -1,0 +1,14 @@
+veredito: APROVADO
+motivos: []
+footprint_padding: {}
+ilegiveis: {}
+ilegiveis_permitidos_observados: {}
+ilegiveis_inesperados: {}
+permissoes_ilegivel_sem_uso: []
+dumps_vazios: []
+nos_esperados: 8
+nos_com_parametros: 8
+nos_visiveis: 8
+consultas: 5
+segundos: 8.2
+

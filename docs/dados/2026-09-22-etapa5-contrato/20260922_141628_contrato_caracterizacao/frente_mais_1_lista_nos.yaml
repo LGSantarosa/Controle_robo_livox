@@ -1,0 +1,26 @@
+veredito: APROVADO
+uniq_d: []
+vistos:
+- /cmd_vel_to_wheels
+- /dpad_reto
+- /joy_node
+- /mega_bridge
+- /robot_state_publisher
+- /rosbag2_recorder
+- /teleop_twist_joy_node
+- /twist_mux
+aliases: {}
+duplicados: []
+faltando: []
+sobrando: []
+somente_grafo: []
+visiveis:
+- /cmd_vel_to_wheels
+- /dpad_reto
+- /joy_node
+- /mega_bridge
+- /robot_state_publisher
+- /rosbag2_recorder
+- /teleop_twist_joy_node
+- /twist_mux
+volateis_invalidos: []
