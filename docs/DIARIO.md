@@ -4,6 +4,43 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-09-22 (dev, sem robô) — ETAPA 4, PASSO 4: O PERFIL DO ROBÔ 3, MONTADO E AINDA RECUSADO
+
+O código e os testes do passo 4 vieram escritos da sessão anterior, sem
+commit e sem registro — **o vermelho de cada teste não ficou registrado**,
+como no passo 3. O dono revisou o diff e aprovou as margens (D2/D3) com uma
+correção: o `perfil.py` passou a importar YAML em produção, e o
+`robot_motion/package.xml` não declarava `python3-yaml` (funcionava por
+dependência transitiva do ambiente). Entrou no 4c. Decisão **053**; status da
+**052** atualizado (tem consumidor agora).
+
+Três commits, cada um com a suíte rodada **só com ele** (resto guardado com
+`git stash --keep-index`; o 4b exigiu montar à mão a versão intermediária do
+`perfil.py`):
+
+- **4a `ca973c9`** — `raio_varrido_pivo: 0.3125` no artefato da 052: as bobas
+  mandam (0,31249, arredondado para fora); o corpo rígido fica em 0,2760, e a
+  quina do footprint (0,348) é área vazia, não robô. Teste contra o URDF.
+  Suíte **979**.
+- **4b `7af0ce1`** — `aplica_reescritas`: troca só folha que existe, por
+  caminho completo; invalida reprova o lote sem efeito parcial. Suíte **991**.
+- **4c `d75b65f`** — ramo `3` do `perfil.py` + `perfil_robo3.yaml`: (b) só por
+  referência ao artefato, (c) em chaves próprias com classe/origem/etapa que
+  fecha, partição fechada das bases (`herdados_provisorios` e
+  `independentes_do_robo`). A pilha reprova também `collision_monitor_rewrites`
+  não aplicadas e segue recusando `robo:=3`. Suíte **1014**.
+
+**Build:** `colcon build --packages-select robot_motion robot_base`; o
+`perfil_robo3.yaml` e o `raio_varrido_pivo` chegam ao `install/`, e o perfil do
+robô 3 montado de lá (via `ament_index`) dá os números da revisão: Approach
+x +0,1125/−0,3213 y ±0,220; Stop x +0,2155/−0,3413 y ±0,240; `re_largura`
+0,480; recuo 0,2913; avanço 0,0825; pivô 0,3325.
+
+**O que isto NÃO prova:** que o Nav2 aceita o footprint e o padding reescritos
+— nenhum costmap do robô 3 roda nesta etapa. Fica para a etapa 6
+(`ros2 param get` vivo). E nada do físico: as margens são herdadas do robô 2
+até a etapa 8.
+
 ## 2026-09-21 (dev + Gazebo, sem robô) — ETAPA 4, PASSO 3: O ROBÔ 2 PASSA PELO PERFIL, ZERO DIFERENÇA
 
 **`5659dd2`.** `robot_motion/perfil.py` (`parametros(2, share)`, puro, sem

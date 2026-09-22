@@ -1,8 +1,9 @@
 # 052 — Geometria canônica do robô 3: footprint sem padding, num arquivo só
 
 **Data**: 2026-09-18 (PC de dev, robô desligado)
-**Status**: aplicada; **nenhum consumidor ainda** — ele nasce na etapa 4, por
-fronteira formal mudada no plano (abaixo).
+**Status**: aplicada. ~~Nenhum consumidor ainda~~ — **consumidor desde
+2026-09-22**: o perfil do robô 3 (decisão 053) lê o `poligono` e o
+`raio_varrido_pivo` deste artefato. A pilha ainda recusa `robo:=3` (etapa 6).
 **Toca**: `robot_base/config/geometria_robo3.yaml` (novo), `robot_base/test/test_urdf_robo3.py`,
 `docs/PLANO_NAV2_ROBO3.md` (linhas das etapas 3 e 4).
 **Vem de**: decisão 051 (URDF girado) e §3 item 5 / §5 (b) do plano.

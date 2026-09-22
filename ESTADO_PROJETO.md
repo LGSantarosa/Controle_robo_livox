@@ -1,13 +1,31 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-09-21** (dev, branch `etapa4-perfis`
-> — etapa 4: passos 0–3 fechados; baseline v2 é a régua; próximo é o passo 4).
+> Versionado na `main`. Atualizado em **2026-09-22** (dev, branch `etapa4-perfis`
+> — etapa 4: passos 0–4 fechados; baseline v2 é a régua; próximo é o passo 5).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+---
+
+## ✅ 22-09 — ETAPA 4, PASSO 4 FECHADO: PERFIL DO ROBÔ 3 (AINDA RECUSADO NA PILHA)
+
+- **4a `ca973c9`** `raio_varrido_pivo` 0,3125 (bobas) no artefato da 052;
+  **4b `7af0ce1`** `aplica_reescritas` (só folha existente, lote atômico);
+  **4c `d75b65f`** ramo `3` do `perfil.py` + `perfil_robo3.yaml`, (b) do
+  artefato e (c) em chaves próprias, partição fechada; `python3-yaml` no
+  `package.xml`. Decisão **053**. Suíte **1014**.
+- Revisão do dono: margens D2/D3 aprovadas; valores montados na 053 §3.
+- Não provado: Nav2 aceitando o footprint/padding reescritos (etapa 6) e
+  qualquer coisa do físico (margens herdadas até a etapa 8).
+- Branch de backup antes do passo: `backup/etapa4-antes-passo4` (local).
+
+⬜ **Próximo: passo 5** — coerência footprint ↔ reflexo **por perfil**: a
+regra da 032 continua só no robô 2; o robô 3 exige reflexo ⊇ footprint **e**
+≠ footprint. Teste novo do robô 3 vermelho antes; o do robô 2 inalterado.
 
 ---
 
