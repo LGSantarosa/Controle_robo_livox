@@ -4,6 +4,140 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-09-22 (lab, robô desligado, sessão da tarde) — ETAPA 5 FECHADA: O PASSO 6, E DUAS CORREÇÕES QUE TIVERAM DE SAIR DA BRANCH
+
+Sessão no laboratório, mas **inteiramente offline** — o robô ficou desligado e
+o NUC fora de alcance (este PC estava na `Visitantes`, não na
+`Trafico de banana`). Trabalho de fechamento da etapa 5: decisão 054, diário,
+estado e o gate do §3.4.
+
+### O gate reprovava, e não por causa da etapa 5
+
+Primeira coisa ao abrir o passo 6: rodar o gate do §3.4 (`git diff 0c70691`
+sem arquivo de `robot_motion/`, `robot_base/`, `robot.launch.py` nem
+`twist_mux.yaml`). **Reprovou**, num arquivo só:
+`robot_base/test/test_placa_simulada.py`, do commit `199fe30`.
+
+Tentação óbvia: "é arquivo de teste, não muda o robô, abre ressalva". O dono
+recusou — o gate vale ao pé da letra. Segunda tentação, minha: tirar o commit
+da branch e pronto. **Antes de cortar, medi**: revertendo só aquele arquivo e
+rodando a suíte inteira, **31 reprovações e 18 erros**, incluindo o canário
+`test_os_carregadores_nao_estragam_o_rclpy_dos_outros_testes`, que existe
+exatamente para isso. Ou seja: a correção não era penduricalho na branch, era
+**dependência** dela.
+
+Daí saiu o conflito de três pontas, que vale registrar porque é geral: *sair
+da ancestralidade da branch*, *suíte verde* e *gate literal contra um hash
+fixo* não cabem juntos, porque qualquer ancestral que contenha a correção
+aparece no `git diff` daquele hash. A saída foi mover a baseline: a correção
+virou commit próprio na `main` (`5e12f0e`) e a branch foi rebaseada em cima.
+**A baseline andou para não relaxar o gate** — é o contrário de afrouxar.
+
+Controle rodado antes de acreditar nisso, porque o vermelho podia ser meu:
+
+| rodada | resultado |
+|---|---|
+| `0c70691`, sem a correção | 21 failed, **1134** passed, 11 errors |
+| `main` com a correção | 21 failed, **1136** passed, 11 errors |
+
+Conjunto de falhas **idêntico** (conferido com `diff` das duas listas); a
+correção só soma os 2 canários. O vermelho era de ambiente, não dela.
+
+### O vermelho de ambiente: este PC nunca tinha compilado a etapa 4
+
+As 21+11 saíram de uma vez: `colcon build` neste PC (7 pacotes) e `source` do
+`install/` **deste** repo. O shell do lab vinha com `AMENT_PREFIX_PATH`
+apontando para o `Controle_robo_web` (robô 1) e para o `~/ros2_ws` — o overlay
+errado. De 21 falhas para **1**.
+
+Vale para o próximo handoff entre PCs: `git reset --hard` não basta, o
+`install/` é por máquina.
+
+### A falha que sobrou era a trava mentindo — e era defeito de verdade
+
+`test_os_argumentos_batem_com_a_trava` reprovava **aqui e não no outro PC**,
+com 6 argumentos "novos" na `base.launch.py`: `config_file`, `config_path`,
+`rviz`, `rviz_cfg`, `use_sim_time` e `frame_da_pose`.
+
+Causa medida: a `base.launch.py` inclui a `localizacao.launch.py`, que inclui
+o `fast_lio` e o `livox_ros_driver2`. **No PC onde a trava foi capturada esses
+pacotes não existiam**; a `localizacao.launch.py` estoura ao ser carregada sem
+eles (o `_share` levanta `RuntimeError`), o `get_launch_arguments` engole a
+exceção e pula o subárvore **calado**. A trava gravou só `congela_parado` — e
+**nunca viu o `frame_da_pose`**, que é NOSSO e existe desde 17-09 (decisão
+050). Aqui, com os pacotes instalados, o include resolve e tudo aparece.
+
+Quer dizer: a trava do passo 0 estava codificando a *ausência* do `fast_lio`,
+e deixou passar sem registro um argumento nosso. Defeito anterior à etapa 5 e
+já na `main` — então, de novo, correção isolada na `main` (`f23ac4f`), não na
+branch.
+
+**A regra nova**: a extração desce pelos launches dos nossos pacotes e **para
+no primeiro include de terceiro**; e roda com um **esqueleto fixo** de
+`ros_gz_sim`, `fast_lio` e `livox_ros_driver2` na frente do
+`AMENT_PREFIX_PATH`, para os nossos launches carregarem igual com ou sem o
+terceiro instalado. Invariância medida: com `fast_lio` visível e invisível, a
+linha de base sai **idêntica**.
+
+Preço assumido e escrito no extrator: upgrade do `ros_gz_sim` que mude
+`gz_args` não é mais pego por esta trava. Ela passa a responder só por
+argumento nosso, que é o que o §8 promete.
+
+### Duas armadilhas dentro dessa correção
+
+**1. A API do `launch` mente sobre a cadeia.** O
+`get_launch_arguments_with_include_launch_description_actions` devolve, para
+cada argumento, uma lista de includes — e eu ia filtrar por ela. Não dá: a
+lista é **um objeto só**, compartilhado entre os irmãos do mesmo nível e
+mutado depois de guardado. O `frame_da_pose` vinha com o `fast_lio` e o
+`livox` na "cadeia", sendo que os dois são includes **irmãos**, declarados
+DEPOIS dele no mesmo arquivo. Se eu tivesse confiado nisso, teria jogado fora
+exatamente o argumento que queria salvar — e o teste passaria. A caminhada
+passou a ser nossa, espelhando a do `launch`.
+
+**2. O esqueleto vazio fazia o teste passar com a fronteira quebrada.**
+Mutação M3 (voltar para a API poluída, sem fronteira nenhuma): **passou**.
+Motivo: com os esqueletos declarando zero argumentos, não havia nada de
+terceiro para ser cortado — a fronteira não estava sendo testada, só o
+esqueleto. O esqueleto agora declara um **canário**, e M3 morre.
+
+| mutação | quem pega |
+|---|---|
+| fronteira aberta (tudo vira "nosso") | `batem_com_a_trava`, `separa_o_nosso`, `canario` |
+| sem o esqueleto | `presente_ou_ausente_dao_a_mesma` |
+| volta para a API poluída do `launch` | `batem_com_a_trava`, `canario` |
+| include indecifrável vira "nosso" | `separa_o_nosso` |
+
+Detalhe que evitou um apagamento silencioso: reger o YAML inteiro promoveu o
+`robo: '2'` a argumento de sempre, matando o mecanismo de `NOVOS_PERMITIDOS`
+do §8. Tirei a linha à mão — o `robo` continua sendo adição deliberada da
+etapa 4, registrada como tal.
+
+### Fechamento
+
+- Baseline do gate: `0c70691` → `5e12f0e` → **`f23ac4f`**, dois commits, os
+  dois de infraestrutura de teste, nenhum toca comportamento de robô.
+- Gate do §3.4 contra `f23ac4f`: **passa ao pé da letra** — a etapa 5 só toca
+  `robot_nav/`, `tools/` e `docs/`.
+- Suíte: **1237 passed**, código de saída 0. Na `main`, 1174.
+- Decisão 054 escrita (a fronteira, as alternativas, o que não prova, e a
+  baseline).
+- Backup do estado anterior ao rebase: branch
+  `backup/etapa5-contrato-antes-rebase-22-09`, no GitHub.
+
+🔴 **Nada disto encostou em hardware.** A etapa 5 continua sendo prova de
+software; o robô 3 não navega (etapa 6) e o D4 segue em aberto.
+
+⚠️ Registrado sem conclusão: o `pytest` da raiz **pendura** no
+`ros2_packages/twist_mux` (vendorizado, no `.gitignore`, teste de `launch` de
+terceiro que faz `while priority is None: pass`). Antes da correção do
+carregador ele errava rápido; com o rclpy real, gira para sempre. As rodadas
+desta sessão usaram `--ignore=ros2_packages/twist_mux`. O diário de 21-09 já
+tratava esses 8 como "não são nossas" — agora eles custam a suíte inteira, e
+isso merece decisão própria (excluir de vez? `pytest-timeout`?).
+
+---
+
 ## 2026-09-22 (dev, sem robô) — ETAPA 5, PASSOS 1–5: A CADEIA DO ROBÔ 3 FALA `TwistStamped`
 
 Evidência: `docs/dados/2026-09-22-etapa5-contrato/` (13 pastas, README,

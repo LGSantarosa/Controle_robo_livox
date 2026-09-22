@@ -1,10 +1,9 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-09-22** (dev, branch
-> `etapa5-contrato` — a etapa 4 JÁ ESTÁ NA `main` (`0c70691`); a etapa 5 está
-> com os passos 1–5 fechados na branch, e falta o passo 6: decisão 054 e
-> fechamento).
+> Versionado na `main`. Atualizado em **2026-09-22** (lab, robô desligado,
+> branch `etapa5-contrato` — a etapa 4 JÁ ESTÁ NA `main`; a **etapa 5 está
+> FECHADA na branch**, passos 1–6, e falta o ok do dono para levá-la à `main`).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
@@ -13,34 +12,60 @@
 
 ---
 
-## 🔄 22-09 — ETAPA 5 (branch `etapa5-contrato`): PASSOS 1–5 FECHADOS
+## ✅ 22-09 — ETAPA 5 FECHADA NA BRANCH `etapa5-contrato` (passos 1–6)
 
-**Para continuar em outro PC:** `git fetch origin && git switch etapa5-contrato`.
-A etapa 4 inteira já está na `main` (`0c70691`).
+**Para continuar em outro PC:** `git fetch origin && git switch etapa5-contrato`
+— e **`colcon build` + `source install/setup.bash` neste PC**, que o `install/`
+não vem pelo git (custou 21 falsas reprovações em 22-09).
 
 - **O contrato:** a cadeia do robô 3 fala `TwistStamped` de ponta a ponta, e a
   conversão acontece só na fronteira do atuador (`cmd_vel_to_wheels` com
   `use_stamped`; **default cru**, o `robot.launch.py`/`launch.sh` intocado).
+  Decisão **054**.
 - **Provado sem Gazebo** (`docs/dados/2026-09-22-etapa5-contrato/`, 13 pastas):
   cadeia `Twist` 26/26 (baseline) e cadeia `TwistStamped` **26/26**, com os
   MESMOS frames byte a byte nas três condições, prioridade, timeout do mux
   (0,35 s), homem-morto, perda do controle e TF com yaw 0.
-- **Commits:** plano `9b26ec3`; coletor `6640a0f`; régua do timeout `8747c92`;
-  `cmd_vel_to_wheels` dual `f0ea415`; isolamento dos testes `199fe30`; corte
-  atômico `9c99c20`; verificador da placa `c914c1c`; evidência `e322fdf`;
-  diário `4a8beb6`.
+- **Gate do §3.4: passa ao pé da letra** contra `f23ac4f` — a etapa 5 só toca
+  `robot_nav/`, `tools/` e `docs/`. Nenhum arquivo de `robot_motion/`,
+  `robot_base/`, `robot.launch.py` ou `twist_mux.yaml`.
+- **Suíte: 1237 passed**, código de saída 0 (na `main`, 1174). Rodar com o
+  overlay do repo carregado, com o código de saída conferido, sem `| tail`, e
+  com `--ignore=ros2_packages/twist_mux` (ver o ⚠️ abaixo).
 - 🔴 **D4 em aberto:** com o `/joy` sumindo, os frames cessam e o **último
   fica não-zero**; quem para o robô é o watchdog do firmware. Watchdog no PC
   seria decisão própria.
 - ⚠️ **D3 registrada:** o `bin/robot-key` agora TEM contrato compatível com o
   mux do robô 3, mas segue fora dele de propósito.
-- ⚠️ Suíte da raiz: **1231**. Rodar com o código de saída conferido, sem
-  `| tail`, e com `--rootdir=.` quando for um arquivo só.
+- 🔴 **Não prova hardware nenhum.** O robô 3 não navega (etapa 6), e nada da
+  etapa 5 foi ao robô.
 
-⬜ **Próximo: passo 6** — decisão 054 (a fronteira escolhida e por quê),
-fechamento do DIARIO/ESTADO e o gate do §3.4 (`git diff 0c70691` sem tocar em
-`robot_motion/`, `robot_base/`, `robot.launch.py` nem
-`robot_nav/config/twist_mux.yaml`). Depois, a etapa 5 inteira vai à `main`.
+### A baseline do gate andou dois commits — e não foi para afrouxar
+
+Os dois são infraestrutura de teste, não rodam no robô, e por isso foram para
+a `main` **sozinhos** em vez de pegar carona na branch (senão reprovariam o
+gate, por morarem em `robot_base/`):
+
+| commit | o que é |
+|---|---|
+| `5e12f0e` | o carregador "sem ROS" do `test_placa_simulada.py` parou de escrever `object` por cima do `rclpy` do processo inteiro. **Dependência da suíte da etapa 5**: sem ele, 31 reprovações e 18 erros |
+| `f23ac4f` | a trava dos argumentos parou de descer em include de terceiro. Ela codificava a *ausência* do `fast_lio` e **nunca tinha visto o `frame_da_pose`**, que é nosso, desde 17-09 |
+
+Baseline: `0c70691` → `5e12f0e` → **`f23ac4f`**. Backup do estado anterior ao
+rebase: branch `backup/etapa5-contrato-antes-rebase-22-09`, no GitHub.
+
+### ⚠️ BO aberto: o `pytest` da raiz pendura no `twist_mux`
+
+`ros2_packages/twist_mux` é vendorizado (está no `.gitignore`) e o
+`test_joystick_relay.py` é teste de `launch` de terceiro que faz
+`while priority is None: pass`, **sem timeout**. Antes da correção do
+carregador ele errava rápido; com o rclpy real ele **gira para sempre** e leva
+a suíte junto. Contorno de hoje: `--ignore=ros2_packages/twist_mux`.
+Merece decisão própria (excluir de vez no `conftest.py`? `pytest-timeout`?).
+
+⬜ **Próximo:** levar a `etapa5-contrato` à `main` — **com o ok do dono**
+(plano §9: a `main` só recebe a etapa inteira). Depois, etapa 6: a `pilha` com
+`robo:=3`. Deploy segue a regra do CLAUDE.md, e nada da etapa 5 foi para robô.
 
 ---
 
