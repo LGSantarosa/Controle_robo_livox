@@ -1,0 +1,15 @@
+== 0/4 conflitos ==
+   🟢 nenhum
+== 1/4 MEGA ==
+   /dev/null presente
+== 2/4 subindo (log em /home/rbe-luis/bancada_robo3/controle_20260922_132813/launch.log) ==
+    controle em js0 — NENHUM Xbox; caindo no js0 ('mouce-library-fake-mouse') — confira os botões com scripts/js_mapping.py
+== 3/4 gravando bag ==
+== 4/4 conferências ==
+   placa responde:     🔴 NÃO (placa desligada, azul fora do 19, ou travada — religue a placa)
+   bateria das rodas:  🔴 sem leitura válida
+   controle (/joy):    🔴 mudo — controle ligado? (botão Xbox; ls /dev/input/js*)
+
+   gravando em: /home/rbe-luis/bancada_robo3/controle_20260922_132813
+   para derrubar:  bash bin/sobe-robo3 --mata
+   🔴 NÃO TESTE — resolva o que está vermelho acima

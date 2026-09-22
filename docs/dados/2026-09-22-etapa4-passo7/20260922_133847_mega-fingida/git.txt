@@ -1,0 +1,4 @@
+commit: 4d640f4297e29944dd264eed852472bf3f364638
+4d640f4 2026-09-22 13:38:32 -0300 sobe-robo3: consulta o grafo sem daemon (--no-daemon --spin-time 5); valida-etapa4 encerra o cenario se a recusa ou a subida falham
+branch: etapa4-perfis
+status --porcelain (vazio = limpo):

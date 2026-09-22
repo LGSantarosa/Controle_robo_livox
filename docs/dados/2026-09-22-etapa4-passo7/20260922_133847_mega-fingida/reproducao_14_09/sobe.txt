@@ -1,0 +1,16 @@
+== 0/4 conflitos ==
+   🟢 nenhum
+== 1/4 MEGA ==
+   /dev/pts/2 presente
+== 2/4 subindo (log em /home/rbe-luis/bancada_robo3/controle_20260922_133905/launch.log) ==
+    controle em js0 — NENHUM Xbox; caindo no js0 ('mouce-library-fake-mouse') — confira os botões com scripts/js_mapping.py
+== 3/4 gravando bag ==
+== 4/4 conferências ==
+   placa responde:     🟢 sim
+   bateria das rodas:  🟢 36.5 V
+   controle (/joy):    🟢 average rate: 9.813
+
+   gravando em: /home/rbe-luis/bancada_robo3/controle_20260922_133905
+   para derrubar:  bash bin/sobe-robo3 --mata
+   LB segurado + analógico esquerdo dirige · RB = turbo · soltou o LB, para
+   🔴 PRIMEIRO TESTE COM AS RODAS SUSPENSAS (roteiro no PLANO_CONTROLE_ROBO3)

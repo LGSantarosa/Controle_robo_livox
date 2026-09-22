@@ -1,0 +1,4 @@
+commit: b0121b785afe5e767a092d7eea069deb0064af73
+b0121b7 2026-09-22 13:27:59 -0300 etapa 4 passo 7: pre-condicao do mega-fingida pela marca do udev (joystick ou inconclusivo recusa; mouse sem ID_INPUT_JOYSTICK passa, registrado no ambiente)
+branch: etapa4-perfis
+status --porcelain (vazio = limpo):

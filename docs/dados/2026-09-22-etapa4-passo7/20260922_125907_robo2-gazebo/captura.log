@@ -1,0 +1,32 @@
+veredito: APROVADO
+motivos: []
+footprint_padding:
+  /global_costmap/global_costmap: 0.009999999776482582
+  /local_costmap/local_costmap: 0.009999999776482582
+ilegiveis:
+  /collision_monitor:
+  - PolygonApproach.max_points
+  - PolygonStop.max_points
+  /controller_manager:
+  - hoverboard_base_controller.fallback_controllers
+  - hoverboard_base_controller.node_options_args
+  - joint_state_broadcaster.fallback_controllers
+  - joint_state_broadcaster.node_options_args
+ilegiveis_permitidos_observados:
+  /collision_monitor:
+  - PolygonApproach.max_points
+  - PolygonStop.max_points
+  /controller_manager:
+  - hoverboard_base_controller.fallback_controllers
+  - hoverboard_base_controller.node_options_args
+  - joint_state_broadcaster.fallback_controllers
+  - joint_state_broadcaster.node_options_args
+ilegiveis_inesperados: {}
+permissoes_ilegivel_sem_uso: []
+dumps_vazios: []
+nos_esperados: 30
+nos_com_parametros: 25
+nos_visiveis: 30
+consultas: 11
+segundos: 32.3
+

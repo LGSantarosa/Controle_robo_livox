@@ -1,0 +1,16 @@
+veredito: REPROVADO
+motivos:
+- 'faltando: [''/cmd_vel_to_wheels'', ''/dpad_reto'', ''/joy_node'', ''/mega_bridge'', ''/robot_state_publisher'', ''/rosbag2_recorder'', ''/teleop_twist_joy_node'', ''/twist_mux'']'
+- grafo não ficou estável dentro do prazo
+footprint_padding: {}
+ilegiveis: {}
+ilegiveis_permitidos_observados: {}
+ilegiveis_inesperados: {}
+permissoes_ilegivel_sem_uso: []
+dumps_vazios: []
+nos_esperados: 8
+nos_com_parametros: 8
+nos_visiveis: 0
+consultas: 46
+segundos: 90.0
+

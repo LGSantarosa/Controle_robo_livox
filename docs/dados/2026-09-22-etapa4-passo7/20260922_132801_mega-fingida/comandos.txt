@@ -1,0 +1,9 @@
+13:28:02.053 [dominio 43] colcon build --packages-select robot_base robot_motion robot_nav > build.log
+13:28:07.576 [dominio 44] setsid bash -c exec -a "$0" python3 "$1" "$2" /opt/ros/jazzy/lib/joy/joy_node /home/rbe-luis/Workspace/Controle_robo_livox/tools/valida_etapa4/externo.py joy_node > externo_joy_node.log
+13:28:07.599 [dominio 44] setsid bash -c exec -a "$0" python3 "$1" "$2" /opt/ros/jazzy/lib/teleop_twist_joy/teleop_node /home/rbe-luis/Workspace/Controle_robo_livox/tools/valida_etapa4/externo.py teleop_twist_joy_node > externo_teleop_twist_joy_node.log
+13:28:07.668 [dominio 44] setsid bash -c exec -a "$0" python3 "$1" "$2" /opt/ros/jazzy/lib/twist_mux/twist_mux /home/rbe-luis/Workspace/Controle_robo_livox/tools/valida_etapa4/externo.py twist_mux > externo_twist_mux.log
+13:28:07.684 [dominio 44] setsid bash -c exec -a "$0" python3 "$1" "$2" /opt/ros/jazzy/lib/robot_state_publisher/robot_state_publisher /home/rbe-luis/Workspace/Controle_robo_livox/tools/valida_etapa4/externo.py robot_state_publisher > externo_robot_state_publisher.log
+13:28:13.507 [dominio 44] bash bin/sobe-robo3 porta:=/dev/null > recusa.txt
+13:28:34.218 [dominio 43] setsid python3 /home/rbe-luis/Workspace/Controle_robo_livox/tools/valida_etapa4/mega_fingida.py /home/rbe-luis/validacao_etapa4/20260922_132801_mega-fingida/reproducao_14_09 reproducao_14_09 > mega.log
+13:28:34.720 [dominio 43] bash bin/sobe-robo3 porta:=/dev/pts/2 sinal:=-1.0 frente:=1.0 bitola:=0.3225 > sobe.txt
+13:28:35.511 [dominio 43] python3 tools/linha_de_base/captura.py /home/rbe-luis/Workspace/Controle_robo_livox/tools/valida_etapa4/esperados_robo3_mega.yaml /home/rbe-luis/validacao_etapa4/20260922_132801_mega-fingida/reproducao_14_09/captura --prazo 90 > captura.log

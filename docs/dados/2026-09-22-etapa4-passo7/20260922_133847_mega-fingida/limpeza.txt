@@ -1,0 +1,20 @@
+== limpeza ==
+grupos do wrapper (PGID STARTTIME PAPEL):
+   1018642 1294869 externo_joy_node
+   1018648 1294870 externo_teleop_twist_joy_node
+   1018654 1294872 externo_twist_mux
+   1018663 1294874 externo_robot_state_publisher
+   1019647 1296093 mega_reproducao_14_09
+   1025984 1304211 mega_padrao_hoje
+externo_joy_node pgid=1018642 (nosso) pid=1018642: sinalizado
+externo_teleop_twist_joy_node pgid=1018648 (nosso) pid=1018648: sinalizado
+externo_twist_mux pgid=1018654 (nosso) pid=1018654: sinalizado
+externo_robot_state_publisher pgid=1018663 (nosso) pid=1018663: sinalizado
+mega_reproducao_14_09 pgid=1019647: vazio — não sinalizado (0 membro(s) vivo(s))
+mega_padrao_hoje pgid=1025984: vazio — não sinalizado (0 membro(s) vivo(s))
+sobras com a marca desta rodada:
+   1021070 pgid=1021065 /usr/bin/python3 -c from ros2cli.daemon.daemonize import main; main() --name ros2-daemon --ros-domain-id 43 --rmw-implementation rmw_fastrtps_cpp
+marcado pid=1021070 pgid=1021065 /usr/bin/python3 -c from ros2cli.daemon.daemonize import main; main() --name ros2-daemon --ros-domain-id 43 --rmw-implem: sinalizado
+processos marcados depois: 0
+domínio 43: nenhum nó (consulta com código 0)
+domínio 44: nenhum nó (consulta com código 0)

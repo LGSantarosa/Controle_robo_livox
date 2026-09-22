@@ -1,0 +1,2 @@
+scan_2d isolado: /scan_2d + 1 transform_listener_impl, 3/3 consultas APROVADO 
+limpeza: nada marcado, domínios vazios                    APROVADO 

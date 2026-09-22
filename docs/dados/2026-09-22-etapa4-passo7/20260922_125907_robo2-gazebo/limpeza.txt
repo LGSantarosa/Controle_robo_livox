@@ -1,0 +1,30 @@
+== limpeza ==
+grupos do wrapper (PGID STARTTIME PAPEL):
+   837598 1057012 pilha
+pilha pgid=837598 (nosso) pid=837598: sinalizado
+pilha pgid=837598 (nosso) pid=838094: sinalizado
+pilha pgid=837598 (nosso) pid=838095: sinalizado
+pilha pgid=837598 (nosso) pid=838096: sinalizado
+pilha pgid=837598 (nosso) pid=838105: sinalizado
+pilha pgid=837598 (nosso) pid=838109: sinalizado
+pilha pgid=837598 (nosso) pid=838125: sinalizado
+pilha pgid=837598 (nosso) pid=838154: sinalizado
+pilha pgid=837598 (nosso) pid=838157: sinalizado
+pilha pgid=837598 (nosso) pid=838160: sinalizado
+pilha pgid=837598 (nosso) pid=838174: sinalizado
+pilha pgid=837598 (nosso) pid=838175: sinalizado
+pilha pgid=837598 (nosso) pid=838178: sinalizado
+pilha pgid=837598 (nosso) pid=838179: sinalizado
+pilha pgid=837598 (nosso) pid=838180: sinalizado
+pilha pgid=837598 (nosso) pid=838181: sinalizado
+pilha pgid=837598 (nosso) pid=838188: sinalizado
+pilha pgid=837598 (nosso) pid=838194: sinalizado
+pilha pgid=837598 (nosso) pid=838198: sinalizado
+pilha pgid=837598 (nosso) pid=838199: sinalizado
+pilha pgid=837598 (nosso) pid=838200: sinalizado
+pilha pgid=837598 (nosso) pid=838243: sinalizado
+KILL: 2 membro(s) não saíram com INT em 20 s
+pilha pgid=837598 (nosso) pid=837598: sinalizado
+pilha pgid=837598 (nosso) pid=838243: sinalizado
+processos marcados depois: 0
+domínio 41: nenhum nó (consulta com código 0)

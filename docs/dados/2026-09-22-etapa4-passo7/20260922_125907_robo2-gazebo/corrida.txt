@@ -1,0 +1,13 @@
+esperando o servidor `navigate_to_pose`...
+objetivo mandado: (6.24 · 3.51) no frame map. TECLADO NA MÃO.
+
+teto de 120 s atingido.
+objetivo CANCELADO.
+
+2400 amostras -> /home/rbe-luis/validacao_etapa4/20260922_125907_robo2-gazebo/corrida.csv
+
+🟢 chegada        0.133 m do alvo (raio 0.25 m) em 120.0 s
+   caminho        6.76 m andados para 4.49 m de reta  (tortuosidade 1.51)
+   replanejou     7x
+🛡️ reflexo        agiu 2x, 0.2 s no total (1ª vez em t=0.1 s)
+   pose           46.4 Hz mediana, pior intervalo 0.051 s

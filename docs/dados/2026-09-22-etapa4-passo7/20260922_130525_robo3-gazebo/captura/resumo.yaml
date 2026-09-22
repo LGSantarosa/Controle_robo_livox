@@ -1,0 +1,27 @@
+veredito: REPROVADO
+motivos:
+- 'sobrando: [''/transform_listener_impl_5a6bfed37c90'']'
+- 'não ativos/sem resposta: {''/transform_listener_impl_5a6bfed37c90'': ''sem_resposta''}'
+- grafo não ficou estável dentro do prazo
+- 'erro lendo parâmetros: {''/transform_listener_impl_5a6bfed37c90'': ''serviços de parâmetro ausentes''}'
+footprint_padding: {}
+ilegiveis:
+  /controller_manager:
+  - hoverboard_base_controller.fallback_controllers
+  - hoverboard_base_controller.node_options_args
+  - joint_state_broadcaster.fallback_controllers
+  - joint_state_broadcaster.node_options_args
+ilegiveis_permitidos_observados:
+  /controller_manager:
+  - hoverboard_base_controller.fallback_controllers
+  - hoverboard_base_controller.node_options_args
+  - joint_state_broadcaster.fallback_controllers
+  - joint_state_broadcaster.node_options_args
+ilegiveis_inesperados: {}
+permissoes_ilegivel_sem_uso: []
+dumps_vazios: []
+nos_esperados: 8
+nos_com_parametros: 8
+nos_visiveis: 9
+consultas: 39
+segundos: 187.7

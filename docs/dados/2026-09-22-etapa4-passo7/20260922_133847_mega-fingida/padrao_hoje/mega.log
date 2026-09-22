@@ -1,0 +1,5 @@
+   APROVADO  lb_frente    48/48 frames = {'steer': 0, 'speed': -120}
+   APROVADO  lb_solto     0/0 frames = {'steer': 0, 'speed': 0}
+   APROVADO  lb_esquerda  48/48 frames = {'steer': -256, 'speed': 0}
+   APROVADO  lb_solto     0/0 frames = {'steer': 0, 'speed': 0}
+   APROVADO  TF base_link→livox_frame yaw 0.0

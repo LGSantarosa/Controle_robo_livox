@@ -1,0 +1,4 @@
+commit: e3c69f47a43fa0c2dc463aab780edcd1104d2466
+e3c69f4 2026-09-22 13:18:11 -0300 etapa 4 passo 7: robo 3 sim espera 1 transform_listener_impl do scan_2d (atribuido por execucao isolada, dominio 45, depois da captura reprovada); teste 1 aprova, 0 e 2 reprovam
+branch: etapa4-perfis
+status --porcelain (vazio = limpo):

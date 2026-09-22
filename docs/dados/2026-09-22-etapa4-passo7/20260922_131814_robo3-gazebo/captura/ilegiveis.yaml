@@ -1,0 +1,5 @@
+/controller_manager:
+- hoverboard_base_controller.fallback_controllers
+- hoverboard_base_controller.node_options_args
+- joint_state_broadcaster.fallback_controllers
+- joint_state_broadcaster.node_options_args

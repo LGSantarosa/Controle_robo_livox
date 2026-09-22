@@ -1,0 +1,5 @@
+[INFO] [launch]: All log files can be found below /home/rbe-luis/.ros/log/2026-09-22-13-13-44-380881-rbe-luis-20429-900914
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [pointcloud_to_laserscan_node-1]: process started with pid [900972]
+[pointcloud_to_laserscan_node-1] [INFO] [1790093652.320936771] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[INFO] [pointcloud_to_laserscan_node-1]: process has finished cleanly [pid 900972]

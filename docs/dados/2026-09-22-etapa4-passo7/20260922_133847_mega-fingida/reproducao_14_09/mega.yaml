@@ -1,0 +1,118 @@
+cenario: reproducao_14_09
+argumentos:
+- sinal:=-1.0
+- frente:=1.0
+- bitola:=0.3225
+pty: /dev/pts/2
+frames_set_speed: 123
+fases:
+- fase: lb_frente
+  t_ini: 47.672
+  t_fim: 50.683
+  esperado:
+    steer: 0
+    speed: -120
+  esperado_hex: aa550108000088ff000088ff09
+  frames_na_janela: 49
+  iguais_ao_esperado: 49
+  diferentes_hex: []
+  veredito: APROVADO
+- fase: lb_solto
+  t_ini: 50.683
+  t_fim: 52.692
+  esperado:
+    steer: 0
+    speed: 0
+  esperado_hex: aa550108000000000000000009
+  frames_na_janela: 0
+  iguais_ao_esperado: 0
+  diferentes_hex: []
+  veredito: APROVADO
+- fase: lb_esquerda
+  t_ini: 52.692
+  t_fim: 55.693
+  esperado:
+    steer: 97
+    speed: 0
+  esperado_hex: aa550108610000006100000009
+  frames_na_janela: 48
+  iguais_ao_esperado: 48
+  diferentes_hex: []
+  veredito: APROVADO
+- fase: lb_solto
+  t_ini: 55.693
+  t_fim: 57.693
+  esperado:
+    steer: 0
+    speed: 0
+  esperado_hex: aa550108000000000000000009
+  frames_na_janela: 0
+  iguais_ao_esperado: 0
+  diferentes_hex: []
+  veredito: APROVADO
+tf_base_link_livox_frame:
+  veredito: APROVADO
+  lida:
+  - t_s: 7.072
+    xyz:
+    - -0.093
+    - 0.0
+    - 0.24
+    quat:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    rpy:
+    - 0.0
+    - 0.0
+    - 0.0
+  - t_s: 7.572
+    xyz:
+    - -0.093
+    - 0.0
+    - 0.24
+    quat:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    rpy:
+    - 0.0
+    - 0.0
+    - 0.0
+  - t_s: 8.072
+    xyz:
+    - -0.093
+    - 0.0
+    - 0.24
+    quat:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+    rpy:
+    - 0.0
+    - 0.0
+    - 0.0
+  amostras: 103
+  urdf_xyz:
+  - -0.093
+  - 0.0
+  - 0.24
+  urdf_rpy:
+  - 0.0
+  - 0.0
+  - 0.0
+  viva_xyz:
+  - -0.093
+  - 0.0
+  - 0.24
+  viva_rpy_rad:
+  - 0.0
+  - 0.0
+  - 0.0
+  viva_yaw_graus: 0.0
+  dif_max_xyz_m: 0.0
+  dif_max_rpy_rad: 0.0
+veredito: APROVADO

@@ -1,0 +1,6 @@
+build + install/ igual ao fonte                            APROVADO 
+captura: grafo pronto e estável, dumps                    REPROVADO (captura/resumo.yaml)
+robo3: lista de nós = esperada, uniq -d vazio             REPROVADO (robo3_lista_nos.yaml)
+smoke-gazebo-robo3 6/6                                     APROVADO 
+linhas ERROR/FATAL/died em launch.log                      ANOTADO 0 (erros_launch.txt)
+limpeza: nada marcado, domínios vazios                    APROVADO 

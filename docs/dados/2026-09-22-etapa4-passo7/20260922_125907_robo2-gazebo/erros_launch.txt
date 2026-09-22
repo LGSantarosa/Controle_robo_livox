@@ -1,0 +1,3 @@
+259:[rviz2-20] [ERROR] [1790092771.161495006] [rviz2]: rviz/glsl120/indexed_8bit_image.vert
+430:[controller_server-10] [ERROR] [1790092810.422142299] [controller_server]: Costmap timed out waiting for update
+446:[controller_server-10] [ERROR] [1790092812.782026185] [controller_server]: Costmap timed out waiting for update

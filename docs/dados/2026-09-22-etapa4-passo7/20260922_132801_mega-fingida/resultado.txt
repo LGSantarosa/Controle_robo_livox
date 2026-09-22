@@ -1,0 +1,5 @@
+build + install/ igual ao fonte                            APROVADO 
+externos: 4 nós no domínio 44                            APROVADO 
+recusa: listou os 4, não matou, não registrou            REPROVADO (recusa.txt)
+reproducao_14_09: sobe-robo3 subiu (placa, bateria, /joy)  REPROVADO (reproducao_14_09/sobe.txt)
+limpeza: nada marcado, domínios vazios                    APROVADO 

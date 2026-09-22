@@ -1,0 +1,5 @@
+    PID    PGID     SID                  STARTED COMMAND
+1018642 1018642 1018642 Tue Sep 22 13:38:52 2026 /opt/ros/jazzy/lib/joy/joy_node /home/rbe-luis/Workspace/Controle_robo_livox/tools/valida_etapa4/externo.py joy_node
+1018648 1018648 1018648 Tue Sep 22 13:38:52 2026 /opt/ros/jazzy/lib/teleop_twist_joy/teleop_node /home/rbe-luis/Workspace/Controle_robo_livox/tools/valida_etapa4/externo.py teleop_twist_joy_node
+1018654 1018654 1018654 Tue Sep 22 13:38:52 2026 /opt/ros/jazzy/lib/twist_mux/twist_mux /home/rbe-luis/Workspace/Controle_robo_livox/tools/valida_etapa4/externo.py twist_mux
+1018663 1018663 1018663 Tue Sep 22 13:38:52 2026 /opt/ros/jazzy/lib/robot_state_publisher/robot_state_publisher /home/rbe-luis/Workspace/Controle_robo_livox/tools/valida_etapa4/externo.py robot_state_publisher

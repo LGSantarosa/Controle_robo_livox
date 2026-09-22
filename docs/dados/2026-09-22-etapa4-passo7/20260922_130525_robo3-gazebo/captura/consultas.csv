@@ -1,0 +1,40 @@
+t_s,n_visiveis,duplicados,faltando,sobrando,nao_prontos,pronto
+0.0,0,,/controller_manager /gz_ros_control /hoverboard_base_controller /joint_state_broadcaster /placa_simulada /robot_state_publisher /ros_gz_bridge /scan_2d,,,False
+2.0,0,,/controller_manager /gz_ros_control /hoverboard_base_controller /joint_state_broadcaster /placa_simulada /robot_state_publisher /ros_gz_bridge /scan_2d,,,False
+4.0,0,,/controller_manager /gz_ros_control /hoverboard_base_controller /joint_state_broadcaster /placa_simulada /robot_state_publisher /ros_gz_bridge /scan_2d,,,False
+9.1,9,,/hoverboard_base_controller,/spawner_joint_state_broadcaster /transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False
+14.1,9,,,/transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False
+19.1,9,,,/transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False
+24.1,9,,,/transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False
+29.1,9,,,/transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False
+34.2,9,,,/transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False
+39.2,9,,,/transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False
+44.2,9,,,/transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False
+49.2,9,,,/transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False
+54.2,9,,,/transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False
+59.2,9,,,/transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False
+64.2,9,,,/transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False
+69.2,9,,,/transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False
+74.3,9,,,/transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False
+79.3,9,,,/transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False
+84.3,9,,,/transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False
+89.3,9,,,/transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False
+94.3,9,,,/transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False
+99.3,9,,,/transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False
+104.3,9,,,/transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False
+109.3,9,,,/transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False
+114.4,9,,,/transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False
+119.4,9,,,/transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False
+124.4,9,,,/transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False
+129.4,9,,,/transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False
+134.4,9,,,/transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False
+139.4,9,,,/transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False
+144.4,9,,,/transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False
+149.5,9,,,/transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False
+154.5,9,,,/transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False
+159.5,9,,,/transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False
+164.5,9,,,/transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False
+169.5,9,,,/transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False
+174.5,9,,,/transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False
+179.6,9,,,/transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False
+184.6,9,,,/transform_listener_impl_5a6bfed37c90,/transform_listener_impl_5a6bfed37c90,False

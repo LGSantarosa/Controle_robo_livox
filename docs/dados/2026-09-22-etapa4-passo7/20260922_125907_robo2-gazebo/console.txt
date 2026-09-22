@@ -1,0 +1,111 @@
+== validação etapa 4 · robo2-gazebo · 20260922_125907 ==
+   pasta: /home/rbe-luis/validacao_etapa4/20260922_125907_robo2-gazebo · ROS_DOMAIN_ID=41  · só localhost · GZ_PARTITION=valida_etapa4_20260922_125907
+== compilando robot_base robot_motion robot_nav (build.log) ==
+      Starting >>> robot_base
+      Finished <<< robot_base [1.47s]
+      Starting >>> robot_motion
+      Starting >>> robot_nav
+      Finished <<< robot_nav [1.77s]
+      Finished <<< robot_motion [1.81s]
+      
+      Summary: 3 packages finished [3.59s]
+   🟢 build + install/ igual ao fonte — APROVADO 
+== robô 2: pilha no Gazebo (comando do §8, sem outro argumento) ==
+   pilha: PID=PGID 837598 (starttime 1057012)
+      veredito: APROVADO
+      motivos: []
+      footprint_padding:
+        /global_costmap/global_costmap: 0.009999999776482582
+        /local_costmap/local_costmap: 0.009999999776482582
+      ilegiveis:
+        /collision_monitor:
+        - PolygonApproach.max_points
+        - PolygonStop.max_points
+        /controller_manager:
+        - hoverboard_base_controller.fallback_controllers
+        - hoverboard_base_controller.node_options_args
+        - joint_state_broadcaster.fallback_controllers
+        - joint_state_broadcaster.node_options_args
+      ilegiveis_permitidos_observados:
+        /collision_monitor:
+        - PolygonApproach.max_points
+        - PolygonStop.max_points
+        /controller_manager:
+        - hoverboard_base_controller.fallback_controllers
+        - hoverboard_base_controller.node_options_args
+        - joint_state_broadcaster.fallback_controllers
+        - joint_state_broadcaster.node_options_args
+      ilegiveis_inesperados: {}
+      permissoes_ilegivel_sem_uso: []
+      dumps_vazios: []
+      nos_esperados: 30
+      nos_com_parametros: 25
+      nos_visiveis: 30
+      consultas: 11
+      segundos: 32.3
+      
+   🟢 captura: grafo pronto e estável, dumps — APROVADO 
+      APROVADO: uniq -d vazio, faltando nada, sobrando nada
+   🟢 robo2: lista de nós = esperada, uniq -d vazio — APROVADO 
+== parâmetros contra a v2 (sem permissão) e a original (permissão do passo 2) ==
+      APROVADO: A_v2_sem_permissao=ok, B_original_com_passo2=ok, C_padding_dos_dois_costmaps=ok
+   🟢 parâmetros: v2 sem permissão, original com passo 2, padding — APROVADO 
+== corrida até (6.24, 3.51) — smoke, não medida ==
+      esperando o servidor `navigate_to_pose`...
+      objetivo mandado: (6.24 · 3.51) no frame map. TECLADO NA MÃO.
+      
+      teto de 120 s atingido.
+      objetivo CANCELADO.
+      
+      2400 amostras -> /home/rbe-luis/validacao_etapa4/20260922_125907_robo2-gazebo/corrida.csv
+      
+      🟢 chegada        0.133 m do alvo (raio 0.25 m) em 120.0 s
+         caminho        6.76 m andados para 4.49 m de reta  (tortuosidade 1.51)
+         replanejou     7x
+      🛡️ reflexo        agiu 2x, 0.2 s no total (1ª vez em t=0.1 s)
+         pose           46.4 Hz mediana, pior intervalo 0.051 s
+   🟢 corrida da pista chegou — APROVADO 
+   ⚪ linhas ERROR/FATAL/died em launch.log — ANOTADO 3 (erros_launch.txt)
+== limpeza ==
+/home/rbe-luis/Workspace/Controle_robo_livox/tools/valida_etapa4/lib.sh: line 73: 837598 Killed                  setsid "$@" > "$log" 2>&1 < /dev/null
+   🟢 limpeza: nada marcado, domínios vazios — APROVADO 
+   == limpeza ==
+   grupos do wrapper (PGID STARTTIME PAPEL):
+      837598 1057012 pilha
+   pilha pgid=837598 (nosso) pid=837598: sinalizado
+   pilha pgid=837598 (nosso) pid=838094: sinalizado
+   pilha pgid=837598 (nosso) pid=838095: sinalizado
+   pilha pgid=837598 (nosso) pid=838096: sinalizado
+   pilha pgid=837598 (nosso) pid=838105: sinalizado
+   pilha pgid=837598 (nosso) pid=838109: sinalizado
+   pilha pgid=837598 (nosso) pid=838125: sinalizado
+   pilha pgid=837598 (nosso) pid=838154: sinalizado
+   pilha pgid=837598 (nosso) pid=838157: sinalizado
+   pilha pgid=837598 (nosso) pid=838160: sinalizado
+   pilha pgid=837598 (nosso) pid=838174: sinalizado
+   pilha pgid=837598 (nosso) pid=838175: sinalizado
+   pilha pgid=837598 (nosso) pid=838178: sinalizado
+   pilha pgid=837598 (nosso) pid=838179: sinalizado
+   pilha pgid=837598 (nosso) pid=838180: sinalizado
+   pilha pgid=837598 (nosso) pid=838181: sinalizado
+   pilha pgid=837598 (nosso) pid=838188: sinalizado
+   pilha pgid=837598 (nosso) pid=838194: sinalizado
+   pilha pgid=837598 (nosso) pid=838198: sinalizado
+   pilha pgid=837598 (nosso) pid=838199: sinalizado
+   pilha pgid=837598 (nosso) pid=838200: sinalizado
+   pilha pgid=837598 (nosso) pid=838243: sinalizado
+   KILL: 2 membro(s) não saíram com INT em 20 s
+   pilha pgid=837598 (nosso) pid=837598: sinalizado
+   pilha pgid=837598 (nosso) pid=838243: sinalizado
+   processos marcados depois: 0
+   domínio 41: nenhum nó (consulta com código 0)
+
+== resultado (/home/rbe-luis/validacao_etapa4/20260922_125907_robo2-gazebo/resultado.txt) ==
+   build + install/ igual ao fonte                            APROVADO 
+   captura: grafo pronto e estável, dumps                    APROVADO 
+   robo2: lista de nós = esperada, uniq -d vazio             APROVADO 
+   parâmetros: v2 sem permissão, original com passo 2, padding APROVADO 
+   corrida da pista chegou                                    APROVADO 
+   linhas ERROR/FATAL/died em launch.log                      ANOTADO 3 (erros_launch.txt)
+   limpeza: nada marcado, domínios vazios                    APROVADO 
+   🟢 APROVADO — pasta: /home/rbe-luis/validacao_etapa4/20260922_125907_robo2-gazebo

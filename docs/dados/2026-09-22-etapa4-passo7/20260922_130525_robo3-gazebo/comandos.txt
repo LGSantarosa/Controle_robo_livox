@@ -1,0 +1,5 @@
+13:05:25.586 [dominio 42] colcon build --packages-select robot_base robot_motion robot_nav > build.log
+13:05:30.897 [dominio 42] setsid ros2 launch robot_base sim_robo3.launch.py mundo:=/home/rbe-luis/Workspace/Controle_robo_livox/worlds/pista_obstaculos.sdf x:=2.0 y:=5.0 yaw:=0.0 gui:=true > launch.log
+13:05:30.909 [dominio 42] python3 tools/linha_de_base/captura.py /home/rbe-luis/Workspace/Controle_robo_livox/tools/valida_etapa4/esperados_robo3_sim.yaml /home/rbe-luis/validacao_etapa4/20260922_130525_robo3-gazebo/captura --prazo 180 > captura.log
+13:08:45.017 [dominio 42] python3 /home/rbe-luis/Workspace/Controle_robo_livox/tools/valida_etapa4/lista_nos.py /home/rbe-luis/Workspace/Controle_robo_livox/tools/valida_etapa4/esperados_robo3_sim.yaml /home/rbe-luis/validacao_etapa4/20260922_130525_robo3-gazebo/robo3_nos.txt /home/rbe-luis/validacao_etapa4/20260922_130525_robo3-gazebo/robo3_lista_nos.yaml > robo3_lista_nos.log
+13:08:45.121 [dominio 42] python3 tools/smoke_gazebo_robo3.py /home/rbe-luis/validacao_etapa4/20260922_130525_robo3-gazebo/smoke 10 > smoke.log

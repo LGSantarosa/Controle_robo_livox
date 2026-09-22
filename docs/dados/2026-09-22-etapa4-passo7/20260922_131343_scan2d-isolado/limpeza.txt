@@ -1,0 +1,7 @@
+== limpeza ==
+grupos do wrapper (PGID STARTTIME PAPEL):
+   900914 1143978 scan_2d
+scan_2d pgid=900914 (nosso) pid=900914: sinalizado
+scan_2d pgid=900914 (nosso) pid=900972: sinalizado
+processos marcados depois: 0
+domínio 45: nenhum nó (consulta com código 0)

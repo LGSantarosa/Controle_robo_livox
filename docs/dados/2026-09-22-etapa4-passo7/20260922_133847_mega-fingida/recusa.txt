@@ -1,0 +1,7 @@
+== 0/4 conflitos ==
+   🔴 já existe no domínio ROS (pode ser o robô 2 ou o simulador):
+      /joy_node
+      /robot_state_publisher
+      /teleop_twist_joy_node
+      /twist_mux
+      não mato nada — derrube quem subiu esses nós e tente de novo

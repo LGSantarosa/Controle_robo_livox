@@ -1,0 +1,78 @@
+== validação etapa 4 · robo3-gazebo · 20260922_130525 ==
+   pasta: /home/rbe-luis/validacao_etapa4/20260922_130525_robo3-gazebo · ROS_DOMAIN_ID=42  · só localhost · GZ_PARTITION=valida_etapa4_20260922_130525
+== compilando robot_base robot_motion robot_nav (build.log) ==
+      Starting >>> robot_base
+      Finished <<< robot_base [1.49s]
+      Starting >>> robot_motion
+      Starting >>> robot_nav
+      Finished <<< robot_motion [1.72s]
+      Finished <<< robot_nav [1.69s]
+      
+      Summary: 3 packages finished [3.54s]
+   🟢 build + install/ igual ao fonte — APROVADO 
+== robô 3: sim_robo3 na pista (argumentos do smoke-gazebo-robo3) ==
+   sim_robo3: PID=PGID 865126 (starttime 1094663)
+      veredito: REPROVADO
+      motivos:
+      - 'sobrando: [''/transform_listener_impl_5a6bfed37c90'']'
+      - 'não ativos/sem resposta: {''/transform_listener_impl_5a6bfed37c90'': ''sem_resposta''}'
+      - grafo não ficou estável dentro do prazo
+      - 'erro lendo parâmetros: {''/transform_listener_impl_5a6bfed37c90'': ''serviços de parâmetro ausentes''}'
+      footprint_padding: {}
+      ilegiveis:
+        /controller_manager:
+        - hoverboard_base_controller.fallback_controllers
+        - hoverboard_base_controller.node_options_args
+        - joint_state_broadcaster.fallback_controllers
+        - joint_state_broadcaster.node_options_args
+      ilegiveis_permitidos_observados:
+        /controller_manager:
+        - hoverboard_base_controller.fallback_controllers
+        - hoverboard_base_controller.node_options_args
+        - joint_state_broadcaster.fallback_controllers
+        - joint_state_broadcaster.node_options_args
+      ilegiveis_inesperados: {}
+      permissoes_ilegivel_sem_uso: []
+      dumps_vazios: []
+      nos_esperados: 8
+      nos_com_parametros: 8
+      nos_visiveis: 9
+      consultas: 39
+      segundos: 187.7
+      
+   🔴 captura: grafo pronto e estável, dumps — REPROVADO (captura/resumo.yaml)
+      REPROVADO: uniq -d vazio, faltando nada, sobrando ['/transform_listener_impl_5a6bfed37c90']
+   🔴 robo3: lista de nós = esperada, uniq -d vazio — REPROVADO (robo3_lista_nos.yaml)
+== smoke (6 itens) ==
+         janela: 10.0 s de parede, fator de tempo real 1.00
+         🟢 1 modelo assentado       PASSOU        z=-0.0000 m (variou 0.0 mm), |roll|max=0.00°, |pitch|max=0.00°, deriva xy=0.0 mm
+         🟢 2 /livox/pontos          PASSOU        9.6 Hz, 20000 pontos, frame livox_frame
+         🟢 3 /scan                  PASSOU        9.6 Hz, 360/360 feixes com alcance finito, frame base_link
+         🟢 4 /Odometry              PASSOU        50.0 Hz, odom -> base_link
+         🟢 5 TF                     PASSOU        odom->base_link, base_link->livox_frame, base_link->left_wheel, base_link->right_wheel
+         🟢 6 controladores ativos   PASSOU        joint_state_broadcaster=active, hoverboard_base_controller=active
+   🟢 smoke-gazebo-robo3 6/6 — APROVADO 
+   ⚪ linhas ERROR/FATAL/died em launch.log — ANOTADO 0 (erros_launch.txt)
+== limpeza ==
+   🟢 limpeza: nada marcado, domínios vazios — APROVADO 
+   == limpeza ==
+   grupos do wrapper (PGID STARTTIME PAPEL):
+      865126 1094663 sim_robo3
+   sim_robo3 pgid=865126 (nosso) pid=865126: sinalizado
+   sim_robo3 pgid=865126 (nosso) pid=865211: sinalizado
+   sim_robo3 pgid=865126 (nosso) pid=865212: sinalizado
+   sim_robo3 pgid=865126 (nosso) pid=865213: sinalizado
+   sim_robo3 pgid=865126 (nosso) pid=865214: sinalizado
+   sim_robo3 pgid=865126 (nosso) pid=865215: sinalizado
+   sim_robo3 pgid=865126 (nosso) pid=865217: sinalizado
+   processos marcados depois: 0
+   domínio 42: nenhum nó (consulta com código 0)
+
+== resultado (/home/rbe-luis/validacao_etapa4/20260922_130525_robo3-gazebo/resultado.txt) ==
+   build + install/ igual ao fonte                            APROVADO 
+   captura: grafo pronto e estável, dumps                    REPROVADO (captura/resumo.yaml)
+   robo3: lista de nós = esperada, uniq -d vazio             REPROVADO (robo3_lista_nos.yaml)
+   smoke-gazebo-robo3 6/6                                     APROVADO 
+   linhas ERROR/FATAL/died em launch.log                      ANOTADO 0 (erros_launch.txt)
+   limpeza: nada marcado, domínios vazios                    APROVADO 
+   🔴 REPROVADO em algum item — NÃO mexa em nada; a pasta é a prova: /home/rbe-luis/validacao_etapa4/20260922_130525_robo3-gazebo

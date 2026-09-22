@@ -1,0 +1,12 @@
+== limpeza ==
+grupos do wrapper (PGID STARTTIME PAPEL):
+   923802 1171581 sim_robo3
+sim_robo3 pgid=923802 (nosso) pid=923802: sinalizado
+sim_robo3 pgid=923802 (nosso) pid=923878: sinalizado
+sim_robo3 pgid=923802 (nosso) pid=923879: sinalizado
+sim_robo3 pgid=923802 (nosso) pid=923880: sinalizado
+sim_robo3 pgid=923802 (nosso) pid=923881: sinalizado
+sim_robo3 pgid=923802 (nosso) pid=923882: sinalizado
+sim_robo3 pgid=923802 (nosso) pid=923886: sinalizado
+processos marcados depois: 0
+domínio 42: nenhum nó (consulta com código 0)

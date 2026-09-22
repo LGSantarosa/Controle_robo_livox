@@ -1,0 +1,8 @@
+t_s,n_visiveis,duplicados,faltando,sobrando,nao_prontos,pronto
+0.0,0,,/controller_manager /gz_ros_control /hoverboard_base_controller /joint_state_broadcaster /placa_simulada /robot_state_publisher /ros_gz_bridge /scan_2d,,,False
+2.0,1,,/controller_manager /gz_ros_control /hoverboard_base_controller /joint_state_broadcaster /robot_state_publisher /ros_gz_bridge /scan_2d,,,False
+4.1,9,,/hoverboard_base_controller,/spawner_joint_state_broadcaster,,False
+6.1,8,,/hoverboard_base_controller,,,False
+8.1,9,,,,,True
+10.1,9,,,,,True
+12.1,9,,,,,True

@@ -1,0 +1,137 @@
+[INFO] [launch]: All log files can be found below /home/rbe-luis/.ros/log/2026-09-22-13-05-31-216847-rbe-luis-20429-865126
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [gazebo-1]: process started with pid [865211]
+[INFO] [robot_state_publisher-2]: process started with pid [865212]
+[INFO] [placa_simulada-3]: process started with pid [865214]
+[INFO] [parameter_bridge-4]: process started with pid [865215]
+[INFO] [create-5]: process started with pid [865216]
+[INFO] [pointcloud_to_laserscan_node-6]: process started with pid [865217]
+[create-5] [INFO] [1790093131.725216046] [ros_gz_sim]: Requesting list of world names.
+[parameter_bridge-4] [INFO] [1790093131.734580116] [ros_gz_bridge]: Creating GZ->ROS Bridge: [/clock (gz.msgs.Clock) -> /clock (rosgraph_msgs/msg/Clock)] (Lazy 0)
+[parameter_bridge-4] [INFO] [1790093131.735403153] [ros_gz_bridge]: Creating GZ->ROS Bridge: [/Odometry (gz.msgs.Odometry) -> /Odometry (nav_msgs/msg/Odometry)] (Lazy 0)
+[robot_state_publisher-2] [WARN] [1790093131.737361770] [kdl_parser]: The root link base_link has an inertia specified in the URDF, but KDL does not support a root link with an inertia.  As a workaround, you can add an extra dummy link to your URDF.
+[robot_state_publisher-2] [INFO] [1790093131.737566085] [robot_state_publisher]: Robot initialized
+[parameter_bridge-4] [INFO] [1790093131.738502181] [ros_gz_bridge]: Creating GZ->ROS Bridge: [/tf_odom (gz.msgs.Pose_V) -> /tf_odom (tf2_msgs/msg/TFMessage)] (Lazy 0)
+[parameter_bridge-4] [INFO] [1790093131.740414878] [ros_gz_bridge]: Creating GZ->ROS Bridge: [/livox/lidar/points (gz.msgs.PointCloudPacked) -> /livox/lidar/points (sensor_msgs/msg/PointCloud2)] (Lazy 0)
+[placa_simulada-3] [WARN] [1790093132.093841159] [placa_simulada]: placa MEDIDA (31-07): patamar de 0.009 a 0.864 m/s de comando vira SEMPRE 0.307 m/s de borda. Nessa faixa cmd_vel escolhe sentido, não módulo.
+[placa_simulada-3] [WARN] [1790093132.094270821] [placa_simulada]: latência 0.27 s, escala real 0.0372 rad/s/unidade (2.8x menor que a assumida pelo driver).
+[placa_simulada-3] [WARN] [1790093132.094635155] [placa_simulada]: atraso de DESLIGA 0.52 s: depois do comando zerar a placa CONTINUA empurrando (04-08, n=3). Num pulso curto quase todo o movimento acontece aí — pivô de 0,2 s gira 35,8° no robô, dos quais 35,4° com o comando já em zero.
+[placa_simulada-3] [WARN] [1790093132.094999260] [placa_simulada]: o robô ARCA (04-08): curvatura -0.817 1/m de frente, -0.098 de ré — 8.3x de assimetria. Não espere reta deste robô.
+[placa_simulada-3] [WARN] [1790093132.095380413] [placa_simulada]: para isso a esquerda entrega +39.1% de frente e -3.8% de ré (derivado, com rendimento de giro do Gazebo em 0.80). O encoder do robô mediu 11-12% / ~0%: a diferença é o termo de CORPO entrando disfarçado de roda. Modelo FENOMENOLÓGICO.
+[create-5] [INFO] [1790093132.392141029] [ros_gz_sim]: Waiting messages on topic [robot_description].
+[create-5] [INFO] [1790093132.404566127] [ros_gz_sim]: Entity creation successful.
+[INFO] [create-5]: process has finished cleanly [pid 865216]
+[INFO] [spawner-7]: process started with pid [865417]
+[spawner-7] [INFO] [1790093132.957999404] [spawner_joint_state_broadcaster]: waiting for service /controller_manager/list_controllers to become available...
+[gazebo-1] [1;33mWarning [Utils.cc:132][0m [/sdf/model[@name="robo3"]/link[@name="livox_frame"]/sensor[@name="livox_mid360"]/gz_frame_id:<urdf-string>:L0]: XML Element[gz_frame_id], child of element[sensor], not defined in SDF. Copying[gz_frame_id] as children of [sensor].
+[gazebo-1] [INFO] [1790093134.013289367] [gz_ros_control]: [gz_ros2_control] Fixed joint ['livox_joint'] (Entity='82') is skipped.
+[gazebo-1] [INFO] [1790093134.014904044] [gz_ros_control]: Loading controller_manager
+[gazebo-1] [INFO] [1790093134.026233268] [controller_manager]: Using ROS clock for triggering controller manager cycles.
+[gazebo-1] [INFO] [1790093134.030798034] [controller_manager]: Subscribing to '/robot_description' topic for robot description.
+[gazebo-1] [WARN] [1790093134.033431658] [gz_ros_control]: Waiting RM to load and initialize hardware...
+[gazebo-1] [WARN] [1790093135.030279852] [controller_manager]: Waiting for data on 'robot_description' topic to finish initialization
+[gazebo-1] [WARN] [1790093136.033564337] [gz_ros_control]: Waiting RM to load and initialize hardware...
+[gazebo-1] [WARN] [1790093136.048676850] [controller_manager]: Waiting for data on 'robot_description' topic to finish initialization
+[gazebo-1] [INFO] [1790093136.131468614] [controller_manager]: Received robot description from topic.
+[gazebo-1] [INFO] [1790093136.131763245] [controller_manager]: Enforcing command limits is disabled. Command limits from URDF will be ignored.
+[gazebo-1] [INFO] [1790093136.152221839] [gz_ros_control]: The position_proportional_gain has been set to: 0.1
+[gazebo-1] [INFO] [1790093136.152442841] [gz_ros_control]: Loading joint: left_wheel_joint
+[gazebo-1] [INFO] [1790093136.152487131] [gz_ros_control]: 	State:
+[gazebo-1] [INFO] [1790093136.152518220] [gz_ros_control]: 		 position
+[gazebo-1] [INFO] [1790093136.152546043] [gz_ros_control]: 		 velocity
+[gazebo-1] [INFO] [1790093136.152585801] [gz_ros_control]: 	Command:
+[gazebo-1] [INFO] [1790093136.152606634] [gz_ros_control]: 		 velocity
+[gazebo-1] [INFO] [1790093136.152713141] [gz_ros_control]: Loading joint: right_wheel_joint
+[gazebo-1] [INFO] [1790093136.152763045] [gz_ros_control]: 	State:
+[gazebo-1] [INFO] [1790093136.152782553] [gz_ros_control]: 		 position
+[gazebo-1] [INFO] [1790093136.152804375] [gz_ros_control]: 		 velocity
+[gazebo-1] [INFO] [1790093136.152829313] [gz_ros_control]: 	Command:
+[gazebo-1] [INFO] [1790093136.152852393] [gz_ros_control]: 		 velocity
+[gazebo-1] [INFO] [1790093136.153378769] [controller_manager]: Initialize hardware 'GazeboSimSystem' 
+[gazebo-1] [WARN] [1790093136.153479870] [controller_manager.hardware_component.system.GazeboSimSystem]: Executor is not available during hardware component initialization for 'GazeboSimSystem'. Skipping node creation!
+[gazebo-1] [INFO] [1790093136.153776523] [controller_manager]: Successful initialization of hardware 'GazeboSimSystem'
+[gazebo-1] [INFO] [1790093136.154142308] [controller_manager]: Activating component 'GazeboSimSystem'.
+[gazebo-1] [INFO] [1790093136.154189086] [resource_manager]: 'configure' hardware 'GazeboSimSystem' 
+[gazebo-1] [INFO] [1790093136.154212628] [gz_ros_control]: System Successfully configured!
+[gazebo-1] [INFO] [1790093136.154236837] [resource_manager]: Successful 'configure' of hardware 'GazeboSimSystem'
+[gazebo-1] [INFO] [1790093136.154269508] [resource_manager]: 'activate' hardware 'GazeboSimSystem' 
+[gazebo-1] [INFO] [1790093136.154333200] [resource_manager]: Successful 'activate' of hardware 'GazeboSimSystem'
+[gazebo-1] [WARN] [1790093136.154662553] [controller_manager]: Component 'GazeboSimSystem' does not have read or write statistics initialized, skipping registration.
+[gazebo-1] [INFO] [1790093136.154697491] [controller_manager]: Resource Manager has been successfully initialized. Starting Controller Manager services...
+[gazebo-1] [INFO] [1790093136.714313308] [controller_manager]: Loading controller : 'joint_state_broadcaster' of type 'joint_state_broadcaster/JointStateBroadcaster'
+[gazebo-1] [INFO] [1790093136.714376329] [controller_manager]: Loading controller 'joint_state_broadcaster'
+[gazebo-1] [INFO] [1790093136.720333844] [controller_manager]: Controller 'joint_state_broadcaster' node arguments: --ros-args --params-file /home/rbe-luis/Workspace/Controle_robo_livox/install/robot_base/share/robot_base/config/hoverboard_controllers_sim_robo3.yaml -p use_sim_time:=true --param use_sim_time:=true 
+[spawner-7] [INFO] [1790093136.738456901] [spawner_joint_state_broadcaster]: Loaded joint_state_broadcaster
+[gazebo-1] [INFO] [1790093136.740357409] [controller_manager]: Configuring controller: 'joint_state_broadcaster'
+[gazebo-1] [INFO] [1790093136.740652764] [joint_state_broadcaster]: 'joints' or 'interfaces' parameter is empty. All available state interfaces will be published
+[gazebo-1] [INFO] [1790093136.755740081] [controller_manager]: Activating controllers: [ joint_state_broadcaster ]
+[gazebo-1] [WARN] [1790093138.146717104] [gz_ros_control]:  Desired controller update period (0.1 s) is slower than the gazebo simulation period (0.001 s).
+[gazebo-1] [1;33mWarning [Utils.cc:132][0m [/sdf/model[@name="robo3"]/link[@name="livox_frame"]/sensor[@name="livox_mid360"]/gz_frame_id:<data-string>:L324]: XML Element[gz_frame_id], child of element[sensor], not defined in SDF. Copying[gz_frame_id] as children of [sensor].
+[gazebo-1] [INFO] [1790093138.480103238] [controller_manager]: Successfully switched controllers!
+[spawner-7] [INFO] [1790093138.584817587] [spawner_joint_state_broadcaster]: Configured and activated joint_state_broadcaster
+[INFO] [spawner-7]: process has finished cleanly [pid 865417]
+[INFO] [spawner-8]: process started with pid [866063]
+[spawner-8] [INFO] [1790093139.299113120] [spawner_hoverboard_base_controller]: waiting for service /controller_manager/list_controllers to become available...
+[gazebo-1] [INFO] [1790093140.802941350] [controller_manager]: Loading controller : 'hoverboard_base_controller' of type 'diff_drive_controller/DiffDriveController'
+[gazebo-1] [INFO] [1790093140.803021888] [controller_manager]: Loading controller 'hoverboard_base_controller'
+[gazebo-1] [INFO] [1790093140.812027143] [controller_manager]: Controller 'hoverboard_base_controller' node arguments: --ros-args --params-file /home/rbe-luis/Workspace/Controle_robo_livox/install/robot_base/share/robot_base/config/hoverboard_controllers_sim_robo3.yaml -p use_sim_time:=true --param use_sim_time:=true 
+[spawner-8] [INFO] [1790093140.904246956] [spawner_hoverboard_base_controller]: Loaded hoverboard_base_controller
+[gazebo-1] [INFO] [1790093140.905712618] [controller_manager]: Configuring controller: 'hoverboard_base_controller'
+[gazebo-1] [WARN] [1790093140.905931130] [hoverboard_base_controller]: [deprecated] has_jerk_limits parameter is deprecated, instead set the respective limits to NAN
+[gazebo-1] [WARN] [1790093140.905970310] [hoverboard_base_controller]: [deprecated] has_jerk_limits parameter is deprecated, instead set the respective limits to NAN
+[gazebo-1] [INFO] [1790093141.006540553] [controller_manager]: Activating controllers: [ hoverboard_base_controller ]
+[gazebo-1] [INFO] [1790093141.102737722] [controller_manager]: Successfully switched controllers!
+[spawner-8] [INFO] [1790093141.204935898] [spawner_hoverboard_base_controller]: Configured and activated hoverboard_base_controller
+[INFO] [spawner-8]: process has finished cleanly [pid 866063]
+[gazebo-1] [WARN] [1790093315.816233448] [rclcpp]: Failed to get parameters: parameter 'hoverboard_base_controller.fallback_controllers' is not initialized
+[gazebo-1] [WARN] [1790093315.850841067] [rclcpp]: Failed to get parameters: parameter 'hoverboard_base_controller.fallback_controllers' is not initialized
+[gazebo-1] [WARN] [1790093315.851823666] [rclcpp]: Failed to get parameters: parameter 'hoverboard_base_controller.node_options_args' is not initialized
+[gazebo-1] [WARN] [1790093315.854108256] [rclcpp]: Failed to get parameters: parameter 'joint_state_broadcaster.fallback_controllers' is not initialized
+[gazebo-1] [WARN] [1790093315.855110083] [rclcpp]: Failed to get parameters: parameter 'joint_state_broadcaster.node_options_args' is not initialized
+[pointcloud_to_laserscan_node-6] [INFO] [1790093325.804169770] [scan_2d]: Got a subscriber to laserscan, starting pointcloud subscriber
+[pointcloud_to_laserscan_node-6] [INFO] [1790093339.016871860] [scan_2d]: No subscribers to laserscan, shutting down pointcloud subscriber
+[robot_state_publisher-2] [INFO] [1790093339.249522880] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[parameter_bridge-4] [INFO] [1790093339.249716321] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[pointcloud_to_laserscan_node-6] [INFO] [1790093339.249789882] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[placa_simulada-3] Traceback (most recent call last):
+[placa_simulada-3]   File "/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_base/lib/python3.12/site-packages/robot_base/placa_simulada.py", line 441, in main
+[placa_simulada-3]     rclpy.spin(no)
+[placa_simulada-3]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/__init__.py", line 247, in spin
+[placa_simulada-3]     executor.spin_once()
+[placa_simulada-3]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 926, in spin_once
+[placa_simulada-3]     self._spin_once_impl(timeout_sec)
+[placa_simulada-3]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 907, in _spin_once_impl
+[placa_simulada-3]     handler, entity, node = self.wait_for_ready_callbacks(
+[placa_simulada-3]                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[placa_simulada-3]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 877, in wait_for_ready_callbacks
+[placa_simulada-3]     return next(self._cb_iter)
+[placa_simulada-3]            ^^^^^^^^^^^^^^^^^^^
+[placa_simulada-3]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 757, in _wait_for_ready_callbacks
+[placa_simulada-3]     wait_set = _rclpy.WaitSet(
+[placa_simulada-3]                ^^^^^^^^^^^^^^^
+[placa_simulada-3] rclpy._rclpy_pybind11.RCLError: failed to initialize wait set: the given context is not valid, either rcl_init() was not called or rcl_shutdown() was called., at ./src/rcl/wait.c:130
+[placa_simulada-3] 
+[placa_simulada-3] During handling of the above exception, another exception occurred:
+[placa_simulada-3] 
+[placa_simulada-3] Traceback (most recent call last):
+[placa_simulada-3]   File "/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_base/lib/robot_base/placa_simulada", line 33, in <module>
+[placa_simulada-3]     sys.exit(load_entry_point('robot-base==0.1.0', 'console_scripts', 'placa_simulada')())
+[placa_simulada-3]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[placa_simulada-3]   File "/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_base/lib/python3.12/site-packages/robot_base/placa_simulada.py", line 446, in main
+[placa_simulada-3]     rclpy.shutdown()
+[placa_simulada-3]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/__init__.py", line 134, in shutdown
+[placa_simulada-3]     _shutdown(context=context)
+[placa_simulada-3]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/utilities.py", line 82, in shutdown
+[placa_simulada-3]     context.shutdown()
+[placa_simulada-3]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/context.py", line 129, in shutdown
+[placa_simulada-3]     self.__context.shutdown()
+[placa_simulada-3] rclpy._rclpy_pybind11.RCLError: failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:333
+[INFO] [pointcloud_to_laserscan_node-6]: process has finished cleanly [pid 865217]
+[INFO] [robot_state_publisher-2]: process has finished cleanly [pid 865212]
+[INFO] [parameter_bridge-4]: process has finished cleanly [pid 865215]
+[ERROR] [placa_simulada-3]: process has died [pid 865214, exit code 1, cmd '/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_base/lib/robot_base/placa_simulada --ros-args -r __node:=placa_simulada --params-file /tmp/launch_params_ck6q_pb9'].
+[gazebo-1] [INFO] [1790093340.449587443] [controller_manager.pal_statistics]: Async messages lost 0
+[gazebo-1] [INFO] [1790093340.449660733] [controller_manager.pal_statistics]: publish_async_failures_ 0
+[gazebo-1] [INFO] [1790093340.451007895] [controller_manager.pal_statistics]: Async messages lost 0
+[gazebo-1] [INFO] [1790093340.451030765] [controller_manager.pal_statistics]: publish_async_failures_ 3
+[INFO] [gazebo-1]: process has finished cleanly [pid 865211]

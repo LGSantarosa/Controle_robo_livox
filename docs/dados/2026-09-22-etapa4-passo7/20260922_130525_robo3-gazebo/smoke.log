@@ -1,0 +1,7 @@
+   janela: 10.0 s de parede, fator de tempo real 1.00
+   🟢 1 modelo assentado       PASSOU        z=-0.0000 m (variou 0.0 mm), |roll|max=0.00°, |pitch|max=0.00°, deriva xy=0.0 mm
+   🟢 2 /livox/pontos          PASSOU        9.6 Hz, 20000 pontos, frame livox_frame
+   🟢 3 /scan                  PASSOU        9.6 Hz, 360/360 feixes com alcance finito, frame base_link
+   🟢 4 /Odometry              PASSOU        50.0 Hz, odom -> base_link
+   🟢 5 TF                     PASSOU        odom->base_link, base_link->livox_frame, base_link->left_wheel, base_link->right_wheel
+   🟢 6 controladores ativos   PASSOU        joint_state_broadcaster=active, hoverboard_base_controller=active

@@ -1,0 +1,122 @@
+/controller_manager:
+  defaults.allow_controller_activation_with_inactive_hardware: false
+  defaults.deactivate_controllers_on_hardware_self_deactivate: true
+  defaults.switch_controller.strictness: best_effort
+  diagnostic_updater.period: 1.0
+  diagnostic_updater.use_fqn: false
+  diagnostics.threshold.controller_manager.periodicity.mean_error.error: 10.0
+  diagnostics.threshold.controller_manager.periodicity.mean_error.warn: 5.0
+  diagnostics.threshold.controller_manager.periodicity.standard_deviation.error: 10.0
+  diagnostics.threshold.controller_manager.periodicity.standard_deviation.warn: 5.0
+  diagnostics.threshold.controllers.execution_time.mean_error.error: 2000.0
+  diagnostics.threshold.controllers.execution_time.mean_error.warn: 1000.0
+  diagnostics.threshold.controllers.execution_time.standard_deviation.error: 200.0
+  diagnostics.threshold.controllers.execution_time.standard_deviation.warn: 100.0
+  diagnostics.threshold.controllers.periodicity.mean_error.error: 10.0
+  diagnostics.threshold.controllers.periodicity.mean_error.warn: 5.0
+  diagnostics.threshold.controllers.periodicity.standard_deviation.error: 10.0
+  diagnostics.threshold.controllers.periodicity.standard_deviation.warn: 5.0
+  diagnostics.threshold.hardware_components.execution_time.mean_error.error: 2000.0
+  diagnostics.threshold.hardware_components.execution_time.mean_error.warn: 1000.0
+  diagnostics.threshold.hardware_components.execution_time.standard_deviation.error: 200.0
+  diagnostics.threshold.hardware_components.execution_time.standard_deviation.warn: 100.0
+  diagnostics.threshold.hardware_components.periodicity.mean_error.error: 10.0
+  diagnostics.threshold.hardware_components.periodicity.mean_error.warn: 5.0
+  diagnostics.threshold.hardware_components.periodicity.standard_deviation.error: 10.0
+  diagnostics.threshold.hardware_components.periodicity.standard_deviation.warn: 5.0
+  enforce_command_limits: false
+  handle_exceptions: true
+  hardware_components_initial_state.inactive: []
+  hardware_components_initial_state.shutdown_on_initial_state_failure: true
+  hardware_components_initial_state.unconfigured: []
+  hoverboard_base_controller.type: diff_drive_controller/DiffDriveController
+  joint_state_broadcaster.type: joint_state_broadcaster/JointStateBroadcaster
+  overruns.print_warnings: false
+  update_rate: 10.0
+/gz_ros_control: {hold_joints: true, position_proportional_gain: 0.1}
+/hoverboard_base_controller:
+  angular.z.has_acceleration_limits: true
+  angular.z.has_jerk_limits: false
+  angular.z.has_velocity_limits: true
+  angular.z.max_acceleration: 1.5
+  angular.z.max_acceleration_reverse: .nan
+  angular.z.max_deceleration: .nan
+  angular.z.max_deceleration_reverse: .nan
+  angular.z.max_jerk: 0.0
+  angular.z.max_velocity: 2.5
+  angular.z.min_acceleration: -1.5
+  angular.z.min_jerk: 0.0
+  angular.z.min_velocity: -2.5
+  base_frame_id: base_link
+  cmd_vel_timeout: 0.5
+  enable_odom_tf: false
+  is_async: false
+  left_wheel_names: [left_wheel_joint]
+  left_wheel_radius_multiplier: 1.0
+  linear.x.has_acceleration_limits: true
+  linear.x.has_jerk_limits: false
+  linear.x.has_velocity_limits: true
+  linear.x.max_acceleration: 0.8
+  linear.x.max_acceleration_reverse: .nan
+  linear.x.max_deceleration: .nan
+  linear.x.max_deceleration_reverse: .nan
+  linear.x.max_jerk: 0.0
+  linear.x.max_velocity: 0.7
+  linear.x.min_acceleration: .nan
+  linear.x.min_jerk: 0.0
+  linear.x.min_velocity: -0.7
+  odom_frame_id: odom
+  open_loop: false
+  pose_covariance_diagonal: [0.001, 0.001, 0.001, 0.001, 0.001, 0.01]
+  position_feedback: true
+  publish_limited_velocity: false
+  publish_rate: 50.0
+  right_wheel_names: [right_wheel_joint]
+  right_wheel_radius_multiplier: 1.0
+  tf_frame_prefix: ''
+  tf_frame_prefix_enable: true
+  thread_priority: -100.0
+  twist_covariance_diagonal: [0.001, 0.001, 0.001, 0.001, 0.001, 0.01]
+  update_rate: 10.0
+  velocity_rolling_window_size: 10.0
+  wheel_radius: 0.0825
+  wheel_separation: 0.32
+  wheel_separation_multiplier: 1.0
+/joint_state_broadcaster:
+  extra_joints: []
+  frame_id: base_link
+  interfaces: []
+  is_async: false
+  joints: []
+  map_interface_to_joint_state.effort: effort
+  map_interface_to_joint_state.position: position
+  map_interface_to_joint_state.velocity: velocity
+  publish_dynamic_joint_states: true
+  thread_priority: -100.0
+  update_rate: 10.0
+  use_local_topics: false
+  use_urdf_to_filter: true
+/placa_simulada: {atraso_desliga: 0.52, bitola: 0.32, curvatura_frente: -0.817, curvatura_re: -0.098, deadband_speed: 100.0, escala_driver: 0.10472, escala_real: 0.0372, latencia: 0.27, modelo: medido, raio: 0.0825, rendimento_giro: 0.8, taxa_avisos: 2.0, zona_morta_crua: 0.3}
+/robot_state_publisher: {frame_prefix: '', ignore_timestamp: false, publish_frequency: 20.0, robot_description: "<?xml version=\"1.0\" ?><!-- =================================================================================== --><!-- |    This document was autogenerated by xacro from /home/rbe-luis/Workspace/Controle_robo_livox/install/robot_base/share/robot_base/description/robo3.urdf.xacro | --><!-- |    EDITING THIS FILE BY HAND IS NOT RECOMMENDED                                 | --><!-- =================================================================================== --><!--\n  Robô 3 — caixa menor, 2 rodas de hoverboard NA FRENTE, 2 rodas bobas ATRÁS.\n\n  \U0001F504 GIRADO 180° EM 18-09 (etapa 3 do `docs/PLANO_NAV2_ROBO3.md`, §3). Até 17-09\n  este modelo tinha as motrizes atrás; o dono decidiu em 16-09 que, para\n  navegar, a frente é o lado das motrizes. O corpo girou em torno do\n  `base_link`, que continua no eixo (C8). Eletricamente a frente é a antiga ré:\n  isso é o `linear_sign:\
+    \ -1.0` (`frente:=-1.0`, decisão 049), e o teste\n  `test_urdf_girado_exige_frente_negativa_no_controle` trava os dois em par.\n\n  Irmão do `robo2.urdf.xacro` e NÃO substituto: o robô 2 continua de pé porque é\n  a linha de base contra a qual todo CSV histórico foi medido. Aqui muda a\n  máquina inteira — a geometria inverteu, a bitola cresceu 57% e o apoio passou\n  de 3 para 4 pontos.\n\n  ⚠️ TODA MEDIDA VEIO DE `docs/ROBO3_REVISAO_CRUZADA.md`, seção 5.8.2, e as que\n  ainda não foram medidas estão marcadas caso a caso. Quem mediu não foi o dono:\n  as divergências entre levas estão registradas lá (D2 a D8), e o que aqui está\n  como \"medido\" é o que sobreviveu à conferência cruzada.\n\n  ⛔ O QUE ESTE MODELO AINDA NÃO SABE (não tire conclusão de dinâmica dele):\n     - massa e centro de massa: PROVISÓRIOS. O Livox e o NUC nem subiram no\n       robô, então medir agora seria medir outro robô (D7).\n     - onde o Livox monta: DECISÃO DO DONO pendente. O valor daqui é um chute\n  \
+    \     documentado, e a altura do sensor manda na zona cega.\n     - a placa: pode ser outra (§5.1). O modelo de atuador herdado é o do\n       robô 2, e cai inteiro se a placa mudar.\n--><robot name=\"robo3\"><!-- ==================== ONDE FICA A ORIGEM ====================\n\n       \U0001F534 MUDANÇA DE CONVENÇÃO EM RELAÇÃO AO ROBÔ 2 (proposta C8, §5.8.1).\n\n       No robô 2 o `base_link` fica no centro da CAIXA e o eixo motor 8,15 cm à\n       frente dele. Mas quem gira é o EIXO: o robô 2 gira em torno de um ponto\n       8 cm à frente da própria origem, e todo `wz` puro sai acompanhado de\n       deslocamento lateral na origem — um acoplamento que ninguém escolheu e\n       que esteve embaixo da lei de rumo o tempo todo.\n\n       Aqui o `base_link` vai no CENTRO DO EIXO DAS MOTRIZES, no nível do chão\n       — desde 18-09 o eixo DIANTEIRO:\n\n           x = 0 no eixo das motrizes      x cresce para a FRENTE (motrizes)\n           y = 0 no plano de simetria      z = 0 no chão\n\n\
+    \       Com isso o centro de rotação É a origem, e `wz` puro não desloca nada.\n       O preço: o contorno do robô deixa de ser simétrico em x (a frente tem\n       8,25 cm — o pneu, `roda_raio` — e a traseira 24,85), e comparar CSV com o\n       robô 2 exige saber disso.\n  --><!-- ==================== NÚMEROS AJUSTÁVEIS ==================== --><!-- ==================== CHASSI ====================\n       A caixa não está centrada na origem: ela fica ADIANTE do eixo, porque a\n       origem é o eixo (C8). `caixa_cx` = +0,093. --><link name=\"base_link\"><visual><origin xyz=\"-0.093 0 0.1325\"/><geometry><box size=\"0.311 0.24 0.135\"/></geometry><material name=\"madeira\"><color rgba=\"0.72 0.53 0.30 1\"/></material></visual><collision><origin xyz=\"-0.093 0 0.1325\"/><geometry><box size=\"0.311 0.24 0.135\"/></geometry></collision><inertial><origin xyz=\"-0.093 0 0.1325\"/><mass value=\"3.0\"/><inertia ixx=\"0.01895625\" ixy=\"0\" ixz=\"0\" iyy=\"0.0287365\" iyz=\"0\" izz=\"0.038580249999999996\"\
+    /></inertial></link><!-- ==================== MOTRIZES (NA FRENTE desde 18-09) ====================\n       Ficam na origem em x, por definição da convenção C8. E ficam ENCOSTADAS\n       na caixa pelo cubo: lateral da caixa em 0,120, cubo até 0,135, pneu de\n       0,135 a 0,185. Zero vão — foi o vão desenhado por engano que denunciou\n       a etiqueta trocada do 37,5. --><link name=\"left_wheel\"><visual><origin rpy=\"1.5707963267948966 0 0\"/><geometry><cylinder length=\"0.06\" radius=\"0.0825\"/></geometry><material name=\"borracha\"><color rgba=\"0.15 0.15 0.15 1\"/></material></visual><collision><origin rpy=\"1.5707963267948966 0 0\"/><geometry><cylinder length=\"0.06\" radius=\"0.0825\"/></geometry></collision><!-- O cubo: liga a roda à lateral da caixa. Só visual — quem toca o chão\n           é o pneu, e dar colisão a ele criaria contato lateral que não existe. --><visual><origin rpy=\"1.5707963267948966 0 0\" xyz=\"0 -0.0375 0\"/><geometry><cylinder length=\"0.015\" radius=\"\
+    0.04125\"/></geometry><material name=\"metal\"><color rgba=\"0.5 0.5 0.55 1\"/></material></visual><inertial><mass value=\"3.1\"/><inertia ixx=\"0.00620484375\" ixy=\"0\" ixz=\"0\" iyy=\"0.010549687500000002\" iyz=\"0\" izz=\"0.00620484375\"/></inertial></link><joint name=\"left_wheel_joint\" type=\"continuous\"><parent link=\"base_link\"/><child link=\"left_wheel\"/><origin xyz=\"0 0.16 0.0825\"/><axis xyz=\"0 1 0\"/></joint><link name=\"right_wheel\"><visual><origin rpy=\"1.5707963267948966 0 0\"/><geometry><cylinder length=\"0.06\" radius=\"0.0825\"/></geometry><material name=\"borracha\"><color rgba=\"0.15 0.15 0.15 1\"/></material></visual><collision><origin rpy=\"1.5707963267948966 0 0\"/><geometry><cylinder length=\"0.06\" radius=\"0.0825\"/></geometry></collision><!-- O cubo: liga a roda à lateral da caixa. Só visual — quem toca o chão\n           é o pneu, e dar colisão a ele criaria contato lateral que não existe. --><visual><origin rpy=\"1.5707963267948966 0 0\" xyz=\"0 0.0375\
+    \ 0\"/><geometry><cylinder length=\"0.015\" radius=\"0.04125\"/></geometry><material name=\"metal\"><color rgba=\"0.5 0.5 0.55 1\"/></material></visual><inertial><mass value=\"3.1\"/><inertia ixx=\"0.00620484375\" ixy=\"0\" ixz=\"0\" iyy=\"0.010549687500000002\" iyz=\"0\" izz=\"0.00620484375\"/></inertial></link><joint name=\"right_wheel_joint\" type=\"continuous\"><parent link=\"base_link\"/><child link=\"right_wheel\"/><origin xyz=\"0 -0.16 0.0825\"/><axis xyz=\"0 1 0\"/></joint><!-- ==================== BOBAS (DUAS, ATRÁS) ====================\n\n       \U0001F534 QUATRO APOIOS RÍGIDOS, SEM MOLA (C3 confirmado, §5.6.2). O robô 2\n       tinha 3 pontos, que por definição não balançam; este tem 4 num chassi\n       rígido, o que é hiperestático: em piso irregular uma boba sai do chão e\n       o corpo balança entre as duas diagonais. Com o braço de 14,4 cm, 3 mm de\n       junta de piso viram 1,2° de inclinação — e o Livox vai em cima disso.\n\n       O Gazebo REPRODUZ esse balanço\
+    \ (contato rígido, 4 pontos), então o\n       modelo serve para vê-lo. O que ele não decide é o conserto: complacência\n       numa boba, ou balancim que devolva o apoio a 3 pontos, é escolha\n       mecânica do dono, e é mais barata antes de o Livox subir.\n\n       Cada boba é pivô vertical + roda deslocada `boba_trail` do pivô. Em\n       repouso a rodinha fica do lado do EIXO (+x desde o giro de 18-09): é a\n       posição física girada junto com o corpo, debaixo da caixa. Andando para a\n       frente ela vira 180° e sai da caixa — isso é a envolvente varrida (§3,\n       item 5), que este modelo em repouso não mostra.\n       Trail zero = boba ideal = simulador que mente. --><link name=\"left_caster_fork\"><visual><origin xyz=\"0.01 0 -0.01\"/><geometry><box size=\"0.02 0.03 0.02\"/></geometry><material name=\"metal\"><color rgba=\"0.5 0.5 0.55 1\"/></material></visual><inertial><origin xyz=\"0.01 0 -0.01\"/><mass value=\"0.05\"/><inertia ixx=\"5.416666666666666e-06\" ixy=\"0\"\
+    \ ixz=\"0\" iyy=\"3.3333333333333337e-06\" iyz=\"0\" izz=\"5.416666666666666e-06\"/></inertial></link><joint name=\"left_caster_swivel_joint\" type=\"continuous\"><parent link=\"base_link\"/><child link=\"left_caster_fork\"/><origin xyz=\"-0.2485 0.105 0.065\"/><axis xyz=\"0 0 1\"/><dynamics damping=\"0.02\" friction=\"0.05\"/></joint><link name=\"left_caster_wheel\"><visual><origin rpy=\"1.5707963267948966 0 0\"/><geometry><cylinder length=\"0.03\" radius=\"0.02\"/></geometry><material name=\"borracha\"><color rgba=\"0.15 0.15 0.15 1\"/></material></visual><collision><origin rpy=\"1.5707963267948966 0 0\"/><geometry><cylinder length=\"0.03\" radius=\"0.02\"/></geometry></collision><inertial><mass value=\"0.05\"/><inertia ixx=\"8.750000000000001e-06\" ixy=\"0\" ixz=\"0\" iyy=\"1e-05\" iyz=\"0\" izz=\"8.750000000000001e-06\"/></inertial></link><joint name=\"left_caster_wheel_joint\" type=\"continuous\"><parent link=\"left_caster_fork\"/><child link=\"left_caster_wheel\"/><origin xyz=\"\
+    0.02 0 -0.045\"/><axis xyz=\"0 1 0\"/></joint><link name=\"right_caster_fork\"><visual><origin xyz=\"0.01 0 -0.01\"/><geometry><box size=\"0.02 0.03 0.02\"/></geometry><material name=\"metal\"><color rgba=\"0.5 0.5 0.55 1\"/></material></visual><inertial><origin xyz=\"0.01 0 -0.01\"/><mass value=\"0.05\"/><inertia ixx=\"5.416666666666666e-06\" ixy=\"0\" ixz=\"0\" iyy=\"3.3333333333333337e-06\" iyz=\"0\" izz=\"5.416666666666666e-06\"/></inertial></link><joint name=\"right_caster_swivel_joint\" type=\"continuous\"><parent link=\"base_link\"/><child link=\"right_caster_fork\"/><origin xyz=\"-0.2485 -0.105 0.065\"/><axis xyz=\"0 0 1\"/><dynamics damping=\"0.02\" friction=\"0.05\"/></joint><link name=\"right_caster_wheel\"><visual><origin rpy=\"1.5707963267948966 0 0\"/><geometry><cylinder length=\"0.03\" radius=\"0.02\"/></geometry><material name=\"borracha\"><color rgba=\"0.15 0.15 0.15 1\"/></material></visual><collision><origin rpy=\"1.5707963267948966 0 0\"/><geometry><cylinder length=\"\
+    0.03\" radius=\"0.02\"/></geometry></collision><inertial><mass value=\"0.05\"/><inertia ixx=\"8.750000000000001e-06\" ixy=\"0\" ixz=\"0\" iyy=\"1e-05\" iyz=\"0\" izz=\"8.750000000000001e-06\"/></inertial></link><joint name=\"right_caster_wheel_joint\" type=\"continuous\"><parent link=\"right_caster_fork\"/><child link=\"right_caster_wheel\"/><origin xyz=\"0.02 0 -0.045\"/><axis xyz=\"0 1 0\"/></joint><!-- ==================== Livox Mid-360 ==================== --><link name=\"livox_frame\"><visual><geometry><cylinder length=\"0.065\" radius=\"0.0325\"/></geometry><material name=\"livox_preto\"><color rgba=\"0.10 0.10 0.12 1\"/></material></visual><inertial><mass value=\"0.265\"/><inertia ixx=\"0.0001632786458333334\" ixy=\"0\" ixz=\"0\" iyy=\"0.00013995312500000002\" iyz=\"0\" izz=\"0.0001632786458333334\"/></inertial></link><joint name=\"livox_joint\" type=\"fixed\"><parent link=\"base_link\"/><child link=\"livox_frame\"/><origin rpy=\"0 0 0.0\" xyz=\"-0.093 0 0.24\"/></joint><!-- ====================\
+    \ ros2_control ==================== --><ros2_control name=\"GazeboSimSystem\" type=\"system\"><hardware><plugin>gz_ros2_control/GazeboSimSystem</plugin></hardware><joint name=\"left_wheel_joint\"><command_interface name=\"velocity\"/><state_interface name=\"position\"/><state_interface name=\"velocity\"/></joint><joint name=\"right_wheel_joint\"><command_interface name=\"velocity\"/><state_interface name=\"position\"/><state_interface name=\"velocity\"/></joint></ros2_control><gazebo reference=\"left_wheel\"><mu1>1.0</mu1><mu2>1.0</mu2><kp>1e6</kp><kd>100.0</kd></gazebo><gazebo reference=\"right_wheel\"><mu1>1.0</mu1><mu2>1.0</mu2><kp>1e6</kp><kd>100.0</kd></gazebo><gazebo reference=\"left_caster_wheel\"><mu1>0.3</mu1><mu2>0.05</mu2><kp>1e6</kp><kd>100.0</kd></gazebo><gazebo reference=\"right_caster_wheel\"><mu1>0.3</mu1><mu2>0.05</mu2><kp>1e6</kp><kd>100.0</kd></gazebo><gazebo reference=\"base_link\"><mu1>0.3</mu1><mu2>0.3</mu2></gazebo><gazebo><plugin filename=\"gz_ros2_control-system\"\
+    \ name=\"gz_ros2_control::GazeboSimROS2ControlPlugin\"><parameters>/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_base/share/robot_base/config/hoverboard_controllers_sim_robo3.yaml</parameters></plugin></gazebo><!-- Pose verdadeira como /Odometry — o papel do LIO no robô real.\n       ⚠️ Agora ela é a pose do EIXO DAS MOTRIZES (dianteiro desde o giro de 18-09), não do centro da caixa (C8).\n       Comparar com CSV do robô 2 exige saber disso. --><gazebo><plugin filename=\"gz-sim-odometry-publisher-system\" name=\"gz::sim::systems::OdometryPublisher\"><odom_frame>odom</odom_frame><robot_base_frame>base_link</robot_base_frame><odom_topic>Odometry</odom_topic><tf_topic>tf_odom</tf_topic><dimensions>3</dimensions><odom_publish_frequency>50</odom_publish_frequency></plugin></gazebo><!-- Livox Mid-360 fingido. Mesmo raster do robô 2, com as MESMAS ressalvas\n       (decisão 012): é grade uniforme, o sensor real é roseta não repetitiva,\n       então aqui ele enxerga melhor que\
+    \ o robô num quadro só.\n\n       ⚠️ E aqui o sensor está a 0,24 m, altura CHUTADA (o robô 3 não tem o\n       Livox montado). A zona cega escala com a altura — 8,1×h — então mudar\n       `livox_z_solo` no URDF muda o que este sensor enxerga perto. --><gazebo reference=\"livox_joint\"><preserveFixedJoint>true</preserveFixedJoint><disableFixedJointLumping>true</disableFixedJointLumping></gazebo><gazebo reference=\"livox_frame\"><sensor name=\"livox_mid360\" type=\"gpu_lidar\"><topic>livox/lidar</topic><gz_frame_id>livox_frame</gz_frame_id><update_rate>10</update_rate><always_on>1</always_on><visualize>true</visualize><lidar><scan><horizontal><samples>400</samples><resolution>1</resolution><min_angle>-3.141593</min_angle><max_angle>3.141593</max_angle></horizontal><vertical><samples>50</samples><resolution>1</resolution><min_angle>-0.122173</min_angle><!-- −7°  --><max_angle>0.907571</max_angle><!-- +52° --></vertical></scan><range><min>0.1</min><max>40.0</max><resolution>0.01</resolution></range><noise><type>gaussian</type><mean>0.0</mean><stddev>0.02</stddev></noise></lidar></sensor></gazebo></robot>"}
+/ros_gz_bridge:
+  bridge_names: []
+  config_file: ''
+  expand_gz_topic_names: false
+  lazy: false
+  override_frame_id: ''
+  override_timestamps_with_wall_time: false
+  subscription_heartbeat: 1000.0
+/scan_2d: {angle_increment: 0.017453292519943295, angle_max: 3.141592653589793, angle_min: -3.141592653589793, inf_epsilon: 1.0, max_height: 1.0, min_height: 0.15, queue_size: 5.0, range_max: 20.0, range_min: 0.35, scan_time: 0.1, target_frame: base_link, transform_tolerance: 0.1, use_inf: true}

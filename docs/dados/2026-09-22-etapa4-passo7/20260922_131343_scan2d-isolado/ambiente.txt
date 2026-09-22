@@ -1,0 +1,7 @@
+AMENT_PREFIX_PATH=/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_nav:/home/rbe-luis/Workspace/Controle_robo_livox/install/wheel_msgs:/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_planning:/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_motion:/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_base:/home/rbe-luis/Workspace/Controle_robo_livox/install/hoverboard_driver:/home/rbe-luis/Workspace/Controle_robo_web/install/robot_nav:/home/rbe-luis/Workspace/Controle_robo_web/install/wheel_msgs:/home/rbe-luis/Workspace/Controle_robo_web/install/teb_msgs:/home/rbe-luis/Workspace/Controle_robo_web/install/rf2o_laser_odometry:/home/rbe-luis/Workspace/Controle_robo_web/install/costmap_converter:/home/rbe-luis/Workspace/Controle_robo_web/install/costmap_converter_msgs:/opt/ros/jazzy
+ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
+ROS_DISTRO=jazzy
+ROS_DOMAIN_ID=45
+ROS_PYTHON_VERSION=3
+ROS_VERSION=2
+VALIDA_ETAPA4_MARCA=/home/rbe-luis/validacao_etapa4/20260922_131343_scan2d-isolado

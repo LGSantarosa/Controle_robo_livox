@@ -1,0 +1,10 @@
+no,estado
+/controller_manager,responde
+/gz_ros_control,responde
+/hoverboard_base_controller,responde
+/joint_state_broadcaster,responde
+/placa_simulada,responde
+/robot_state_publisher,responde
+/ros_gz_bridge,responde
+/scan_2d,responde
+/transform_listener_impl_5f86e8f84c90,presente_sem_parametros

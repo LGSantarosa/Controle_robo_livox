@@ -1,0 +1,30 @@
+veredito: APROVADO
+uniq_d: []
+vistos:
+- /controller_manager
+- /gz_ros_control
+- /hoverboard_base_controller
+- /joint_state_broadcaster
+- /placa_simulada
+- /robot_state_publisher
+- /ros_gz_bridge
+- /scan_2d
+- /transform_listener_impl_5f86e8f84c90
+aliases:
+  /transform_listener_impl_5f86e8f84c90: /transform_listener_impl_scan_2d
+duplicados: []
+faltando: []
+sobrando: []
+somente_grafo:
+- /transform_listener_impl_5f86e8f84c90
+visiveis:
+- /controller_manager
+- /gz_ros_control
+- /hoverboard_base_controller
+- /joint_state_broadcaster
+- /placa_simulada
+- /robot_state_publisher
+- /ros_gz_bridge
+- /scan_2d
+- /transform_listener_impl_5f86e8f84c90
+volateis_invalidos: []

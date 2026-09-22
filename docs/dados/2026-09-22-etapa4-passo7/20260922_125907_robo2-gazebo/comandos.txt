@@ -1,0 +1,6 @@
+12:59:08.273 [dominio 41] colcon build --packages-select robot_base robot_motion robot_nav > build.log
+12:59:14.390 [dominio 41] setsid ros2 launch robot_motion pilha.launch.py sim:=true > launch.log
+12:59:14.409 [dominio 41] python3 tools/linha_de_base/captura.py tools/linha_de_base/esperados_robo2_sim.yaml /home/rbe-luis/validacao_etapa4/20260922_125907_robo2-gazebo/captura --prazo 240 > captura.log
+12:59:53.857 [dominio 41] python3 /home/rbe-luis/Workspace/Controle_robo_livox/tools/valida_etapa4/lista_nos.py tools/linha_de_base/esperados_robo2_sim.yaml /home/rbe-luis/validacao_etapa4/20260922_125907_robo2-gazebo/robo2_nos.txt /home/rbe-luis/validacao_etapa4/20260922_125907_robo2-gazebo/robo2_lista_nos.yaml > robo2_lista_nos.log
+12:59:53.994 [dominio 41] python3 /home/rbe-luis/Workspace/Controle_robo_livox/tools/valida_etapa4/compara_robo2.py /home/rbe-luis/validacao_etapa4/20260922_125907_robo2-gazebo/captura/parametros_normalizados.yaml /home/rbe-luis/validacao_etapa4/20260922_125907_robo2-gazebo/comparacao.yaml > comparacao.log
+12:59:54.327 [dominio 41] timeout -s INT 180 python3 tools/banco/corrida_nav.py --alvo 6.24 3.51 --csv /home/rbe-luis/validacao_etapa4/20260922_125907_robo2-gazebo/corrida.csv --teto-s 120 > corrida.txt

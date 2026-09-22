@@ -1,0 +1,13 @@
+veredito: APROVADO
+itens:
+  A_v2_sem_permissao: true
+  B_original_com_passo2: true
+  C_padding_dos_dois_costmaps: true
+A_relatorio: APROVADO
+B_nos_comparados: 22
+B_relatorio: '✅ permitida  entrou  /path_follower:avanco_para_choque  None → 0.28
+
+  APROVADO'
+C_padding:
+  /global_costmap/global_costmap: 0.009999999776482582
+  /local_costmap/local_costmap: 0.009999999776482582

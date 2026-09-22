@@ -1,0 +1,81 @@
+== validação etapa 4 · mega-fingida · 20260922_132801 ==
+   pasta: /home/rbe-luis/validacao_etapa4/20260922_132801_mega-fingida · ROS_DOMAIN_ID=43 44 · só localhost · GZ_PARTITION=valida_etapa4_20260922_132801
+   ⚪ /dev/input/js* presentes, todos mouse sem ID_INPUT_JOYSTICK (em ambiente.txt)
+== compilando robot_base robot_motion robot_nav (build.log) ==
+      Starting >>> robot_base
+      Finished <<< robot_base [1.48s]
+      Starting >>> robot_motion
+      Starting >>> robot_nav
+      Finished <<< robot_motion [1.75s]
+      Finished <<< robot_nav [1.73s]
+      
+      Summary: 3 packages finished [3.57s]
+   🟢 build + install/ igual ao fonte — APROVADO 
+== externos de mesmo nome, no domínio 44 (o "robô 2" no mesmo PC) ==
+   externo_joy_node: PID=PGID 969864 (starttime 1230331)
+   externo_teleop_twist_joy_node: PID=PGID 969870 (starttime 1230333)
+   externo_twist_mux: PID=PGID 969881 (starttime 1230340)
+   externo_robot_state_publisher: PID=PGID 969887 (starttime 1230341)
+   🟢 externos: 4 nós no domínio 44 — APROVADO 
+== o sobe-robo3 no domínio dos externos tem de RECUSAR, sem matar ==
+      == 0/4 conflitos ==
+         🟢 nenhum
+      == 1/4 MEGA ==
+         /dev/null presente
+      == 2/4 subindo (log em /home/rbe-luis/bancada_robo3/controle_20260922_132813/launch.log) ==
+          controle em js0 — NENHUM Xbox; caindo no js0 ('mouce-library-fake-mouse') — confira os botões com scripts/js_mapping.py
+      == 3/4 gravando bag ==
+      == 4/4 conferências ==
+         placa responde:     🔴 NÃO (placa desligada, azul fora do 19, ou travada — religue a placa)
+         bateria das rodas:  🔴 sem leitura válida
+         controle (/joy):    🔴 mudo — controle ligado? (botão Xbox; ls /dev/input/js*)
+      
+         gravando em: /home/rbe-luis/bancada_robo3/controle_20260922_132813
+         para derrubar:  bash bin/sobe-robo3 --mata
+         🔴 NÃO TESTE — resolva o que está vermelho acima
+   🔴 recusa: listou os 4, não matou, não registrou — REPROVADO (recusa.txt)
+== MEGA fingida · reproducao_14_09 ==
+   mega_reproducao_14_09: PID=PGID 972067 (starttime 1232995)
+      == 0/4 conflitos ==
+         🔴 já está no ar (grupos 970569 971265 )
+            derrube antes:  bash bin/sobe-robo3 --mata
+   🔴 reproducao_14_09: sobe-robo3 subiu (placa, bateria, /joy) — REPROVADO (reproducao_14_09/sobe.txt)
+
+   interrompido — limpando antes de sair
+== limpeza ==
+   🟢 limpeza: nada marcado, domínios vazios — APROVADO 
+   == limpeza ==
+   grupos do wrapper (PGID STARTTIME PAPEL):
+      969864 1230331 externo_joy_node
+      969870 1230333 externo_teleop_twist_joy_node
+      969881 1230340 externo_twist_mux
+      969887 1230341 externo_robot_state_publisher
+      972067 1232995 mega_reproducao_14_09
+   externo_joy_node pgid=969864 (nosso) pid=969864: sinalizado
+   externo_teleop_twist_joy_node pgid=969870 (nosso) pid=969870: sinalizado
+   externo_twist_mux pgid=969881 (nosso) pid=969881: sinalizado
+   externo_robot_state_publisher pgid=969887 (nosso) pid=969887: sinalizado
+   mega_reproducao_14_09 pgid=972067 (nosso) pid=972067: sinalizado
+   sobras com a marca desta rodada:
+      970473 pgid=970468 /usr/bin/python3 -c from ros2cli.daemon.daemonize import main; main() --name ros2-daemon --ros-domain-id 44 --rmw-implementation rmw_fastrtps_cpp
+      970569 pgid=970569 /usr/bin/python3 /opt/ros/jazzy/bin/ros2 launch robot_nav controle_robo3.launch.py porta:=/dev/null
+      970622 pgid=970569 /usr/bin/python3 /home/rbe-luis/Workspace/Controle_robo_livox/install/robot_nav/lib/robot_nav/cmd_vel_to_wheels --ros-args -r __node:=cmd_vel_to_wheels --params
+      970623 pgid=970569 /opt/ros/jazzy/lib/joy/joy_node --ros-args -r __node:=joy_node --params-file /tmp/launch_params_qt4oojto
+      970624 pgid=970569 /opt/ros/jazzy/lib/teleop_twist_joy/teleop_node --ros-args -r __node:=teleop_twist_joy_node --params-file /home/rbe-luis/Workspace/Controle_robo_livox/install/r
+      970625 pgid=970569 /usr/bin/python3 /home/rbe-luis/Workspace/Controle_robo_livox/install/robot_nav/lib/robot_nav/dpad_reto --ros-args -r __node:=dpad_reto
+      970626 pgid=970569 /opt/ros/jazzy/lib/robot_state_publisher/robot_state_publisher --ros-args -r __node:=robot_state_publisher --params-file /tmp/launch_params_xyxr45zf
+      970627 pgid=970569 /opt/ros/jazzy/lib/twist_mux/twist_mux --ros-args -r __node:=twist_mux --params-file /home/rbe-luis/Workspace/Controle_robo_livox/install/robot_nav/share/robot_
+      971265 pgid=971265 /usr/bin/python3 /opt/ros/jazzy/bin/ros2 bag record -o /home/rbe-luis/bancada_robo3/controle_20260922_132813/bag /joy /joy_vel /cmd_vel /wheel_vel_setpoints /ho
+   marcado pid=970473 pgid=970468 /usr/bin/python3 -c from ros2cli.daemon.daemonize import main; main() --name ros2-daemon --ros-domain-id 44 --rmw-implem: sinalizado
+   marcado pid=970569 pgid=970569 /usr/bin/python3 /opt/ros/jazzy/bin/ros2 launch robot_nav controle_robo3.launch.py porta:=/dev/null: sinalizado
+   marcado pid=970622 pgid=970569 /usr/bin/python3 /home/rbe-luis/Workspace/Controle_robo_livox/install/robot_nav/lib/robot_nav/cmd_vel_to_wheels --ros-ar: sinalizado
+   marcado pid=970623 pgid=970569 /opt/ros/jazzy/lib/joy/joy_node --ros-args -r __node:=joy_node --params-file /tmp/launch_params_qt4oojto: sinalizado
+   marcado pid=970624 pgid=970569 /opt/ros/jazzy/lib/teleop_twist_joy/teleop_node --ros-args -r __node:=teleop_twist_joy_node --params-file /home/rbe-luis: sinalizado
+   marcado pid=970625 pgid=970569 /usr/bin/python3 /home/rbe-luis/Workspace/Controle_robo_livox/install/robot_nav/lib/robot_nav/dpad_reto --ros-args -r __: sinalizado
+   marcado pid=970626 pgid=970569 /opt/ros/jazzy/lib/robot_state_publisher/robot_state_publisher --ros-args -r __node:=robot_state_publisher --params-file: sinalizado
+   marcado pid=970627 pgid=970569 /opt/ros/jazzy/lib/twist_mux/twist_mux --ros-args -r __node:=twist_mux --params-file /home/rbe-luis/Workspace/Controle_r: sinalizado
+   marcado pid=971265 pgid=971265 /usr/bin/python3 /opt/ros/jazzy/bin/ros2 bag record -o /home/rbe-luis/bancada_robo3/controle_20260922_132813/bag /joy /j: sinalizado
+   marcado pid=971265 pgid=971265 /usr/bin/python3 /opt/ros/jazzy/bin/ros2 bag record -o /home/rbe-luis/bancada_robo3/controle_20260922_132813/bag /joy /j: sinalizado
+   processos marcados depois: 0
+   domínio 43: nenhum nó (consulta com código 0)
+   domínio 44: nenhum nó (consulta com código 0)

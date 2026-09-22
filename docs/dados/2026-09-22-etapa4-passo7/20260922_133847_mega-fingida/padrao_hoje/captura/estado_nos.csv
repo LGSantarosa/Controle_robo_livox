@@ -1,0 +1,9 @@
+no,estado
+/cmd_vel_to_wheels,responde
+/dpad_reto,responde
+/joy_node,responde
+/mega_bridge,responde
+/robot_state_publisher,responde
+/rosbag2_recorder,responde
+/teleop_twist_joy_node,responde
+/twist_mux,responde

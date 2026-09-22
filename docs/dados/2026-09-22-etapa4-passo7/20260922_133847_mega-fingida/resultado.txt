@@ -1,0 +1,24 @@
+build + install/ igual ao fonte                            APROVADO 
+externos: 4 nós no domínio 44                            APROVADO 
+recusa: listou os 4, não matou, não registrou            APROVADO 
+reproducao_14_09: sobe-robo3 subiu (placa, bateria, /joy)  APROVADO 
+captura: grafo pronto e estável, dumps                    APROVADO 
+reproducao_14_09: lista de nós = esperada, uniq -d vazio  APROVADO 
+reproducao_14_09: frames exatos + TF base_link→livox_frame APROVADO 
+reproducao_14_09: sobe-robo3 --mata limpo                  APROVADO 
+reproducao_14_09: só o grupo registrado morreu; externos vivos APROVADO 
+reproducao_14_09: os 4 externos ainda no grafo do domínio 44 APROVADO 
+reproducao_14_09: domínio 43 sem nós depois do --mata    APROVADO 
+reproducao_14_09: registro do sobe-robo3 removido          APROVADO 
+reproducao_14_09: a MEGA fingida (fora do grupo) sobreviveu ao --mata APROVADO 
+padrao_hoje: sobe-robo3 subiu (placa, bateria, /joy)       APROVADO 
+captura: grafo pronto e estável, dumps                    APROVADO 
+padrao_hoje: lista de nós = esperada, uniq -d vazio       APROVADO 
+padrao_hoje: frames exatos + TF base_link→livox_frame    APROVADO 
+padrao_hoje: sobe-robo3 --mata limpo                       APROVADO 
+padrao_hoje: só o grupo registrado morreu; externos vivos APROVADO 
+padrao_hoje: os 4 externos ainda no grafo do domínio 44   APROVADO 
+padrao_hoje: domínio 43 sem nós depois do --mata         APROVADO 
+padrao_hoje: registro do sobe-robo3 removido               APROVADO 
+padrao_hoje: a MEGA fingida (fora do grupo) sobreviveu ao --mata APROVADO 
+limpeza: nada marcado, domínios vazios                    APROVADO 

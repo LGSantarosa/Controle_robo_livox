@@ -1,0 +1,4 @@
+commit: cba7639401fc4dd15b6bd43e057fee3b9d8b319f
+cba7639 2026-09-22 12:59:00 -0300 etapa 4 passo 7 (preparo): valida-etapa4 em tres cenarios separados; sinal so com identidade (PGID+starttime+marca), limpeza em EXIT, consulta ao grafo com erro reprova; roteiro e coletores
+branch: etapa4-perfis
+status --porcelain (vazio = limpo):
