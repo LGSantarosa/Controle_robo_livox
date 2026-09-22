@@ -121,8 +121,14 @@ comparadas.
 ### 3.4 O robô 2 não muda
 
 - **gate de fechamento** (não teste permanente, porque dependeria do Git):
-  `git diff 0c70691 --stat` sem nenhum arquivo de `robot_motion/`,
+  `git diff 5e12f0e --stat` sem nenhum arquivo de `robot_motion/`,
   `robot_base/`, `robot.launch.py` nem `robot_nav/config/twist_mux.yaml`;
+  a baseline era `0c70691` e andou **um commit só**, em 22-09, para incorporar
+  a correção isolada do carregador "sem ROS" (`5e12f0e`) — infraestrutura de
+  teste que mantém a suíte hermética, que não é de etapa nenhuma e por isso foi
+  para a `main` sozinha. **A baseline andou para não relaxar o gate**: era a
+  alternativa a deixar um arquivo de `robot_base/` no diff da etapa 5 ou a
+  abrir ressalva no gate, e as duas foram recusadas pelo dono. Decisão 054;
 - o `cmd_vel_to_wheels` com o default (`false`) **ainda assina `Twist`** (no
   grafo) e produz **exatamente os mesmos valores de `WheelSpeeds`** para a
   mesma entrada — o fonte compartilhado muda, então "o mesmo nó" não seria
