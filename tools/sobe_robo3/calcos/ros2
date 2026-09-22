@@ -2,7 +2,11 @@
 # `ros2` falso do teste do sobe-robo3: nada chega ao grafo ROS real.
 #
 #   node list        imprime $CALCO/nos (o "domínio" fingido). Botões:
-#                    node_list_atraso (segundos), node_list_falha, node_list_trava
+#                    node_list_atraso (segundos), node_list_falha, node_list_trava,
+#                    node_list_daemon_frio: SÓ `node list --no-daemon --spin-time 5`
+#                    exato enxerga o domínio; qualquer outra forma (pelo daemon)
+#                    volta VAZIA com código 0 — a descoberta incompleta de um
+#                    daemon recém-nascido (validação de 22-09, 20260922_132801)
 #   launch …         vira líder de grupo com filhos de nome de nó do robô 3
 #   bag record …     um processo só, dormindo
 #   topic echo/hz    a placa e o controle respondendo
@@ -18,6 +22,9 @@ case "$1 $2" in
     [ -f "$C/node_list_atraso" ] && command sleep "$(cat "$C/node_list_atraso")"
     [ -f "$C/node_list_trava" ] && exec /usr/bin/sleep 3600
     if [ -f "$C/node_list_falha" ]; then echo "falha fingida do daemon" >&2; exit 1; fi
+    if [ -f "$C/node_list_daemon_frio" ] && [ "$*" != "node list --no-daemon --spin-time 5" ]; then
+      exit 0
+    fi
     [ -f "$C/nos" ] && cat "$C/nos"
     exit 0 ;;
   "launch robot_nav")

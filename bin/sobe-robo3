@@ -204,7 +204,11 @@ recusa_conflito() {
     rm -f "$REGISTRO"
   fi
   local nos rc
-  nos="$(timeout 10 ros2 node list 2>&1)"; rc=$?
+  # SEM daemon: um daemon recém-nascido responde vazio, com código 0, antes de
+  # terminar a descoberta — e vazio viraria "sem conflito". Em 22-09
+  # (validação da etapa 4, 20260922_132801) foi exatamente isso: subiu por
+  # cima de quatro nós de mesmo nome. `--spin-time 5` espera a descoberta.
+  nos="$(timeout 10 ros2 node list --no-daemon --spin-time 5 2>&1)"; rc=$?
   if [ "$rc" -ne 0 ]; then
     echo "   🔴 não consegui consultar o grafo ROS (código $rc) — não subo sem saber"
     echo "$nos" | sed 's/^/      /' | head -5

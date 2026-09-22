@@ -488,6 +488,30 @@ def test_subida_com_conflito_no_grafo_recusa_sem_matar(b):
     assert b.violacoes() == []
 
 
+def test_subida_nao_confia_no_daemon_que_ainda_nao_descobriu(b):
+    """Vazio com código 0 NÃO é "sem conflito" quando a descoberta é incompleta.
+
+    Os testes de `node_list_falha`/`node_list_trava` cobriam erro e
+    travamento da consulta, mas não isto: em 22-09 (20260922_132801) o
+    `ros2 node list` pelo daemon recém-nascido voltou vazio com código 0,
+    enquanto `--no-daemon --spin-time 5`, logo antes, via os quatro. O
+    sobe-robo3 subiu por cima e o domínio ficou com nomes duplicados.
+    """
+    ext = b.externos()
+    b.botao('nos', '\n'.join(NOS_CONFLITO) + '\n')
+    b.botao('node_list_daemon_frio')
+    r = b.sobe()
+    saida = r.stdout + r.stderr
+    assert r.returncode != 0, 'subiu por cima de quem está no domínio'
+    for no in NOS_CONFLITO:
+        assert no in saida
+    assert not any(c.startswith(('launch', 'bag')) for c in b.chamadas_ros2())
+    assert b.chamadas_kill() == []
+    assert not b.registro.exists()
+    assert _todos_vivos(ext) == []
+    assert b.violacoes() == []
+
+
 @pytest.mark.parametrize('defeito', ['node_list_falha', 'node_list_trava'])
 def test_subida_com_node_list_sem_resposta_recusa(b, defeito):
     ext = b.externos()

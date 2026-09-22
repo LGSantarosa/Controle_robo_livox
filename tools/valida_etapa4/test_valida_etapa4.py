@@ -505,6 +505,22 @@ def test_udevadm_falhando_e_inconclusivo(tmp_path):
     assert _classifica(tmp_path, 'exit 0') == 'INCONCLUSIVO', 'sem saída não é mouse'
 
 
+@pytest.mark.parametrize('item', ['recusa: listou os 4', 'sobe-robo3 subiu (placa'])
+def test_falha_da_recusa_ou_da_subida_encerra_o_cenario(item):
+    """Nada de rodada da MEGA por cima: o REPROVADO é seguido de `return`."""
+    codigo = _codigo()
+    i = codigo.index(f'anota "$caso: {item}' if 'subiu' in item else f'anota "{item}')
+    reprovado = codigo.index('REPROVADO', codigo.index(item, i + 1))
+    assert re.match(r'[^\n]*\n\s*return\b', codigo[reprovado:]), item
+
+
+def test_sobe_robo3_consulta_o_grafo_sem_daemon():
+    with open(os.path.join(RAIZ, 'bin', 'sobe-robo3')) as f:
+        fonte = '\n'.join(re.sub(r'(^|\s)#.*$', '', linha) for linha in f.read().splitlines())
+    consultas = re.findall(r'ros2 node list[^)\n]*', fonte)
+    assert consultas == ['ros2 node list --no-daemon --spin-time 5 2>&1'], consultas
+
+
 def test_pre_condicao_so_deixa_passar_mouse():
     codigo = _codigo()
     bloco = codigo[codigo.index('JS_INFO="nenhum'):codigo.index('registro do sobe-robo3')]

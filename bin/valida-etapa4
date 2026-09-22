@@ -256,10 +256,15 @@ EOF_EXT
   while read -r pid pgid start nome; do
     set -- $(stat_de "$pid" || echo "- - -"); [ "$3" = "$start" ] || vivos_ext=0
   done < "$SAIDA/externos.txt"
-  [ "$rc" -ne 0 ] && [ "$faltam" -eq 0 ] && [ "$vivos_ext" -eq 1 ] \
-     && [ ! -e "$HOME/.local/state/sobe-robo3/grupos" ] \
-    && anota "recusa: listou os 4, não matou, não registrou" APROVADO \
-    || anota "recusa: listou os 4, não matou, não registrou" REPROVADO "(recusa.txt)"
+  if [ "$rc" -ne 0 ] && [ "$faltam" -eq 0 ] && [ "$vivos_ext" -eq 1 ] \
+     && [ ! -e "$HOME/.local/state/sobe-robo3/grupos" ]; then
+    anota "recusa: listou os 4, não matou, não registrou" APROVADO
+  else
+    # Recusa que falhou pode ter deixado a pilha dele de pé (22-09): nenhuma
+    # rodada da MEGA começa por cima — direto para a limpeza.
+    anota "recusa: listou os 4, não matou, não registrou" REPROVADO "(recusa.txt)"
+    return
+  fi
 
   for caso in reproducao_14_09 padrao_hoje; do
     d="$SAIDA/$caso"; mkdir -p "$d"
@@ -275,7 +280,10 @@ EOF_EXT
     if roda "$d/sobe.txt" bash bin/sobe-robo3 porta:="$pty" $args; then
       anota "$caso: sobe-robo3 subiu (placa, bateria, /joy)" APROVADO
     else
+      # Sem subida não há o que medir, e o que ele deixou de pé (se deixou) é
+      # da limpeza — marcado por construção.
       anota "$caso: sobe-robo3 subiu (placa, bateria, /joy)" REPROVADO "($caso/sobe.txt)"
+      return
     fi
     cp "$HOME/.local/state/sobe-robo3/grupos" "$d/grupos_sobe_robo3.txt" 2>/dev/null \
       || : > "$d/grupos_sobe_robo3.txt"
