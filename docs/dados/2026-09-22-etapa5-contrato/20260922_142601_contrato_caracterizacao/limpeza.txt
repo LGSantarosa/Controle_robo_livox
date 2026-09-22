@@ -1,0 +1,13 @@
+== limpeza ==
+grupos do wrapper (PGID STARTTIME PAPEL):
+   1226482 1578263 mega_reproducao_14_09
+   1231915 1585238 mega_padrao_hoje
+   1238744 1594043 mega_frente_mais_1
+mega_reproducao_14_09 pgid=1226482: vazio — não sinalizado (0 membro(s) vivo(s))
+mega_padrao_hoje pgid=1231915: vazio — não sinalizado (0 membro(s) vivo(s))
+mega_frente_mais_1 pgid=1238744: vazio — não sinalizado (0 membro(s) vivo(s))
+sobras com a marca desta rodada:
+   1227900 pgid=1227870 /usr/bin/python3 -c from ros2cli.daemon.daemonize import main; main() --name ros2-daemon --ros-domain-id 46 --rmw-implementation rmw_fastrtps_cpp
+marcado pid=1227900 pgid=1227870 /usr/bin/python3 -c from ros2cli.daemon.daemonize import main; main() --name ros2-daemon --ros-domain-id 46 --rmw-implem: sinalizado
+processos marcados depois: 0
+domínio 46: nenhum nó (consulta com código 0)

@@ -1,0 +1,12 @@
+   ANOTADO   repouso      nada     
+   APROVADO  lb_frente    igual    
+   APROVADO  lb_solto     zero     
+   APROVADO  lb_esquerda  igual    
+   APROVADO  lb_solto_2   zero     
+   APROVADO  prioridade   igual    
+   APROVADO  timeout_mux  timeout  0.35
+   APROVADO  lb_solto_3   zero     
+   APROVADO  lb_frente_2  igual    
+   APROVADO  perda        perda    -0.009
+   APROVADO  retoma       zero     
+   APROVADO  TF base_link→livox_frame

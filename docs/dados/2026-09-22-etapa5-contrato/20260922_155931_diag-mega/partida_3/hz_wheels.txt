@@ -1,0 +1,19 @@
+WARNING: topic [/hoverboard/wheel_velocities] does not appear to be published yet
+average rate: 49.983
+	min: 0.000s max: 0.060s std dev: 0.02464s window: 30
+average rate: 49.985
+	min: 0.000s max: 0.059s std dev: 0.02460s window: 30
+average rate: 45.562
+	min: 0.000s max: 0.060s std dev: 0.02536s window: 30
+average rate: 48.421
+	min: 0.000s max: 0.060s std dev: 0.02546s window: 30
+average rate: 49.970
+	min: 0.000s max: 0.060s std dev: 0.02460s window: 30
+average rate: 50.079
+	min: 0.000s max: 0.060s std dev: 0.02459s window: 30
+average rate: 48.406
+	min: 0.000s max: 0.060s std dev: 0.02539s window: 30
+average rate: 45.456
+	min: 0.000s max: 0.060s std dev: 0.02538s window: 30
+average rate: 50.117
+	min: 0.000s max: 0.060s std dev: 0.02454s window: 30

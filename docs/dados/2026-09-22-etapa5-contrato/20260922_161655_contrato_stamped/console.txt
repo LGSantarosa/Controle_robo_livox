@@ -1,0 +1,189 @@
+== validação etapa 5 · contrato · stamped · 20260922_161655 ==
+   pasta: /home/rbe-luis/validacao_etapa5/20260922_161655_contrato_stamped · ROS_DOMAIN_ID=46  · só localhost · GZ_PARTITION=valida_etapa5_20260922_161655
+   ⚪ /dev/input/js* presentes, todos mouse sem ID_INPUT_JOYSTICK (em ambiente.txt)
+== compilando robot_base robot_motion robot_nav (build.log) ==
+      Starting >>> robot_base
+      Finished <<< robot_base [1.48s]
+      Starting >>> robot_motion
+      Starting >>> robot_nav
+      Finished <<< robot_motion [1.68s]
+      Finished <<< robot_nav [1.73s]
+      
+      Summary: 3 packages finished [3.55s]
+   🟢 build + install/ igual ao fonte — APROVADO 
+== MEGA fingida · reproducao_14_09 ==
+   mega_reproducao_14_09: PID=PGID 1714091 (starttime 2243654)
+      == 0/4 conflitos ==
+         🟢 nenhum
+      == 1/4 MEGA ==
+         /dev/pts/2 presente
+      == 2/4 subindo (log em /home/rbe-luis/bancada_robo3/controle_20260922_161701/launch.log) ==
+          controle em js0 — NENHUM Xbox; caindo no js0 ('mouce-library-fake-mouse') — confira os botões com scripts/js_mapping.py
+      == 3/4 gravando bag ==
+      == 4/4 conferências ==
+         placa responde:     🟢 sim
+         bateria das rodas:  🟢 36.5 V
+         controle (/joy):    🟢 average rate: 19.942
+      
+         gravando em: /home/rbe-luis/bancada_robo3/controle_20260922_161701
+         para derrubar:  bash bin/sobe-robo3 --mata
+         LB segurado + analógico esquerdo dirige · RB = turbo · soltou o LB, para
+         🔴 PRIMEIRO TESTE COM AS RODAS SUSPENSAS (roteiro no PLANO_CONTROLE_ROBO3)
+   🟢 reproducao_14_09: sobe-robo3 subiu (placa, bateria, /joy) — APROVADO 
+      veredito: APROVADO
+      motivos: []
+      footprint_padding: {}
+      ilegiveis: {}
+      ilegiveis_permitidos_observados: {}
+      ilegiveis_inesperados: {}
+      permissoes_ilegivel_sem_uso: []
+      dumps_vazios: []
+      nos_esperados: 8
+      nos_com_parametros: 8
+      nos_visiveis: 8
+      consultas: 5
+      segundos: 8.2
+      
+   🟢 captura: grafo pronto e estável, dumps — APROVADO 
+      APROVADO: uniq -d vazio, faltando nada, sobrando nada
+   🟢 reproducao_14_09: lista de nós = esperada, uniq -d vazio — APROVADO 
+   fases do /joy (mega.log) ...
+   🟢 reproducao_14_09: frames exatos por fase + TF — APROVADO 
+      == matando o que o sobe-robo3 subiu ==
+         🟢 limpo
+   🟢 reproducao_14_09: sobe-robo3 --mata limpo — APROVADO 
+      APROVADO: cada_grupo_registrado_valido_e_morto=ok, nenhum_outro_processo_morreu=ok, externos_estavam_vivos_antes=ok, externos_vivos_depois_mesmo_starttime=ok
+   🟢 reproducao_14_09: só o grupo registrado morreu — APROVADO 
+   🟢 reproducao_14_09: domínio 46 sem nós depois do --mata — APROVADO 
+   🟢 reproducao_14_09: registro do sobe-robo3 removido — APROVADO 
+== MEGA fingida · padrao_hoje ==
+   mega_padrao_hoje: PID=PGID 1719707 (starttime 2250929)
+      == 0/4 conflitos ==
+         🟢 nenhum
+      == 1/4 MEGA ==
+         /dev/pts/2 presente
+      == 2/4 subindo (log em /home/rbe-luis/bancada_robo3/controle_20260922_161814/launch.log) ==
+          controle em js0 — NENHUM Xbox; caindo no js0 ('mouce-library-fake-mouse') — confira os botões com scripts/js_mapping.py
+      == 3/4 gravando bag ==
+      == 4/4 conferências ==
+         placa responde:     🟢 sim
+         bateria das rodas:  🟢 36.5 V
+         controle (/joy):    🟢 average rate: 20.008
+      
+         gravando em: /home/rbe-luis/bancada_robo3/controle_20260922_161814
+         para derrubar:  bash bin/sobe-robo3 --mata
+         LB segurado + analógico esquerdo dirige · RB = turbo · soltou o LB, para
+         🔴 PRIMEIRO TESTE COM AS RODAS SUSPENSAS (roteiro no PLANO_CONTROLE_ROBO3)
+   🟢 padrao_hoje: sobe-robo3 subiu (placa, bateria, /joy) — APROVADO 
+      veredito: APROVADO
+      motivos: []
+      footprint_padding: {}
+      ilegiveis: {}
+      ilegiveis_permitidos_observados: {}
+      ilegiveis_inesperados: {}
+      permissoes_ilegivel_sem_uso: []
+      dumps_vazios: []
+      nos_esperados: 8
+      nos_com_parametros: 8
+      nos_visiveis: 8
+      consultas: 5
+      segundos: 8.2
+      
+   🟢 captura: grafo pronto e estável, dumps — APROVADO 
+      APROVADO: uniq -d vazio, faltando nada, sobrando nada
+   🟢 padrao_hoje: lista de nós = esperada, uniq -d vazio — APROVADO 
+   fases do /joy (mega.log) ...
+   🟢 padrao_hoje: frames exatos por fase + TF — APROVADO 
+      == matando o que o sobe-robo3 subiu ==
+         🟢 limpo
+   🟢 padrao_hoje: sobe-robo3 --mata limpo — APROVADO 
+      APROVADO: cada_grupo_registrado_valido_e_morto=ok, nenhum_outro_processo_morreu=ok, externos_estavam_vivos_antes=ok, externos_vivos_depois_mesmo_starttime=ok
+   🟢 padrao_hoje: só o grupo registrado morreu — APROVADO 
+   🟢 padrao_hoje: domínio 46 sem nós depois do --mata — APROVADO 
+   🟢 padrao_hoje: registro do sobe-robo3 removido — APROVADO 
+== MEGA fingida · frente_mais_1 ==
+   mega_frente_mais_1: PID=PGID 1726435 (starttime 2259618)
+      == 0/4 conflitos ==
+         🟢 nenhum
+      == 1/4 MEGA ==
+         /dev/pts/2 presente
+      == 2/4 subindo (log em /home/rbe-luis/bancada_robo3/controle_20260922_161940/launch.log) ==
+          controle em js0 — NENHUM Xbox; caindo no js0 ('mouce-library-fake-mouse') — confira os botões com scripts/js_mapping.py
+      == 3/4 gravando bag ==
+      == 4/4 conferências ==
+         placa responde:     🟢 sim
+         bateria das rodas:  🟢 36.5 V
+         controle (/joy):    🟢 average rate: 20.078
+      
+         gravando em: /home/rbe-luis/bancada_robo3/controle_20260922_161940
+         para derrubar:  bash bin/sobe-robo3 --mata
+         LB segurado + analógico esquerdo dirige · RB = turbo · soltou o LB, para
+         🔴 PRIMEIRO TESTE COM AS RODAS SUSPENSAS (roteiro no PLANO_CONTROLE_ROBO3)
+   🟢 frente_mais_1: sobe-robo3 subiu (placa, bateria, /joy) — APROVADO 
+      veredito: APROVADO
+      motivos: []
+      footprint_padding: {}
+      ilegiveis: {}
+      ilegiveis_permitidos_observados: {}
+      ilegiveis_inesperados: {}
+      permissoes_ilegivel_sem_uso: []
+      dumps_vazios: []
+      nos_esperados: 8
+      nos_com_parametros: 8
+      nos_visiveis: 8
+      consultas: 5
+      segundos: 8.2
+      
+   🟢 captura: grafo pronto e estável, dumps — APROVADO 
+      APROVADO: uniq -d vazio, faltando nada, sobrando nada
+   🟢 frente_mais_1: lista de nós = esperada, uniq -d vazio — APROVADO 
+   fases do /joy (mega.log) ...
+   🟢 frente_mais_1: frames exatos por fase + TF — APROVADO 
+      == matando o que o sobe-robo3 subiu ==
+         🟢 limpo
+   🟢 frente_mais_1: sobe-robo3 --mata limpo — APROVADO 
+      APROVADO: cada_grupo_registrado_valido_e_morto=ok, nenhum_outro_processo_morreu=ok, externos_estavam_vivos_antes=ok, externos_vivos_depois_mesmo_starttime=ok
+   🟢 frente_mais_1: só o grupo registrado morreu — APROVADO 
+   🟢 frente_mais_1: domínio 46 sem nós depois do --mata — APROVADO 
+   🟢 frente_mais_1: registro do sobe-robo3 removido — APROVADO 
+== limpeza ==
+   🟢 limpeza: nada marcado, domínios vazios — APROVADO 
+   == limpeza ==
+   grupos do wrapper (PGID STARTTIME PAPEL):
+      1714091 2243654 mega_reproducao_14_09
+      1719707 2250929 mega_padrao_hoje
+      1726435 2259618 mega_frente_mais_1
+   mega_reproducao_14_09 pgid=1714091: vazio — não sinalizado (0 membro(s) vivo(s))
+   mega_padrao_hoje pgid=1719707: vazio — não sinalizado (0 membro(s) vivo(s))
+   mega_frente_mais_1 pgid=1726435: vazio — não sinalizado (0 membro(s) vivo(s))
+   processos marcados depois: 0
+   domínio 46: nenhum nó (consulta com código 0)
+
+== resultado (/home/rbe-luis/validacao_etapa5/20260922_161655_contrato_stamped/resultado.txt) ==
+   build + install/ igual ao fonte                            APROVADO 
+   reproducao_14_09: sobe-robo3 subiu (placa, bateria, /joy)  APROVADO 
+   captura: grafo pronto e estável, dumps                    APROVADO 
+   reproducao_14_09: lista de nós = esperada, uniq -d vazio  APROVADO 
+   reproducao_14_09: frames exatos por fase + TF              APROVADO 
+   reproducao_14_09: sobe-robo3 --mata limpo                  APROVADO 
+   reproducao_14_09: só o grupo registrado morreu            APROVADO 
+   reproducao_14_09: domínio 46 sem nós depois do --mata    APROVADO 
+   reproducao_14_09: registro do sobe-robo3 removido          APROVADO 
+   padrao_hoje: sobe-robo3 subiu (placa, bateria, /joy)       APROVADO 
+   captura: grafo pronto e estável, dumps                    APROVADO 
+   padrao_hoje: lista de nós = esperada, uniq -d vazio       APROVADO 
+   padrao_hoje: frames exatos por fase + TF                   APROVADO 
+   padrao_hoje: sobe-robo3 --mata limpo                       APROVADO 
+   padrao_hoje: só o grupo registrado morreu                 APROVADO 
+   padrao_hoje: domínio 46 sem nós depois do --mata         APROVADO 
+   padrao_hoje: registro do sobe-robo3 removido               APROVADO 
+   frente_mais_1: sobe-robo3 subiu (placa, bateria, /joy)     APROVADO 
+   captura: grafo pronto e estável, dumps                    APROVADO 
+   frente_mais_1: lista de nós = esperada, uniq -d vazio     APROVADO 
+   frente_mais_1: frames exatos por fase + TF                 APROVADO 
+   frente_mais_1: sobe-robo3 --mata limpo                     APROVADO 
+   frente_mais_1: só o grupo registrado morreu               APROVADO 
+   frente_mais_1: domínio 46 sem nós depois do --mata       APROVADO 
+   frente_mais_1: registro do sobe-robo3 removido             APROVADO 
+   limpeza: nada marcado, domínios vazios                    APROVADO 
+   🟢 APROVADO — pasta: /home/rbe-luis/validacao_etapa5/20260922_161655_contrato_stamped

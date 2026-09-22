@@ -1,0 +1,45 @@
+===== partida fria 1 =====
+cat: /home/rbe-luis/validacao_etapa5/20260922_155627_diag-mega/partida_1/pty.txt: No such file or directory
+pty= mega_pid=1618240
+--- /battery/front (mensagem inteira):
+rc=1
+   WARNING: topic [/battery/front] does not appear to be published yet
+   Could not determine the type for the passed topic
+--- taxas (MEGA -> bridge):
+--- um WheelSpeeds conhecido (bridge -> MEGA):
+rc=124
+--- frames recebidos pela MEGA fingida (bridge -> MEGA):
+/tmp/claude-1000/-home-rbe-luis-Workspace-Controle-robo-livox/7e51c999-8a53-48ed-a2b2-39fb48154748/scratchpad/diag_mega.sh: line 79: /home/rbe-luis/validacao_etapa5/20260922_155627_diag-mega/partida_1/frames.csv: No such file or directory
+   linhas em frames.csv: 0
+--- diag da thread de STATE:
+===== partida fria 2 =====
+cat: /home/rbe-luis/validacao_etapa5/20260922_155627_diag-mega/partida_2/pty.txt: No such file or directory
+pty= mega_pid=1622345
+--- /battery/front (mensagem inteira):
+rc=1
+   WARNING: topic [/battery/front] does not appear to be published yet
+   Could not determine the type for the passed topic
+--- taxas (MEGA -> bridge):
+--- um WheelSpeeds conhecido (bridge -> MEGA):
+rc=124
+--- frames recebidos pela MEGA fingida (bridge -> MEGA):
+/tmp/claude-1000/-home-rbe-luis-Workspace-Controle-robo-livox/7e51c999-8a53-48ed-a2b2-39fb48154748/scratchpad/diag_mega.sh: line 79: /home/rbe-luis/validacao_etapa5/20260922_155627_diag-mega/partida_2/frames.csv: No such file or directory
+   linhas em frames.csv: 0
+--- diag da thread de STATE:
+===== partida fria 3 =====
+cat: /home/rbe-luis/validacao_etapa5/20260922_155627_diag-mega/partida_3/pty.txt: No such file or directory
+pty= mega_pid=1626344
+--- /battery/front (mensagem inteira):
+rc=1
+   WARNING: topic [/battery/front] does not appear to be published yet
+   Could not determine the type for the passed topic
+--- taxas (MEGA -> bridge):
+--- um WheelSpeeds conhecido (bridge -> MEGA):
+rc=124
+--- frames recebidos pela MEGA fingida (bridge -> MEGA):
+/tmp/claude-1000/-home-rbe-luis-Workspace-Controle-robo-livox/7e51c999-8a53-48ed-a2b2-39fb48154748/scratchpad/diag_mega.sh: line 79: /home/rbe-luis/validacao_etapa5/20260922_155627_diag-mega/partida_3/frames.csv: No such file or directory
+   linhas em frames.csv: 0
+--- diag da thread de STATE:
+1619458 pgid=1619454 /usr/bin/python3 -c from ros2cli.daemon.daemonize import main; main() --name ros2-daemon --ros-domain-id 47 --rmw-implementation rmw_fastrtps_cpp
+SOBRARAM marcados
+pasta: /home/rbe-luis/validacao_etapa5/20260922_155627_diag-mega

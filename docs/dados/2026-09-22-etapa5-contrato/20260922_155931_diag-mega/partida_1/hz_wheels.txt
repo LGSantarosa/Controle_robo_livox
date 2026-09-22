@@ -1,0 +1,22 @@
+WARNING: topic [/hoverboard/wheel_velocities] does not appear to be published yet
+average rate: 50.004
+	min: 0.000s max: 0.060s std dev: 0.02475s window: 30
+average rate: 49.910
+	min: 0.000s max: 0.060s std dev: 0.02465s window: 30
+average rate: 48.453
+	min: 0.000s max: 0.060s std dev: 0.02548s window: 30
+average rate: 50.011
+	min: 0.000s max: 0.060s std dev: 0.02465s window: 30
+average rate: 49.909
+	min: 0.000s max: 0.060s std dev: 0.02465s window: 30
+average rate: 48.405
+	min: 0.000s max: 0.060s std dev: 0.02539s window: 30
+average rate: 45.531
+	min: 0.000s max: 0.060s std dev: 0.02527s window: 30
+average rate: 49.909
+	min: 0.000s max: 0.060s std dev: 0.02465s window: 30
+average rate: 48.421
+	min: 0.000s max: 0.060s std dev: 0.02532s window: 30
+average rate: 45.550
+	min: 0.000s max: 0.059s std dev: 0.02530s window: 30
+failed to initialize wait set: the given context is not valid, either rcl_init() was not called or rcl_shutdown() was called., at ./src/rcl/wait.c:130

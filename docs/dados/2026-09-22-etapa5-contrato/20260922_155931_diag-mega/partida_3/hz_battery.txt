@@ -1,0 +1,17 @@
+WARNING: topic [/battery/front] does not appear to be published yet
+average rate: 4.901
+	min: 0.199s max: 0.221s std dev: 0.00826s window: 5
+average rate: 5.004
+	min: 0.199s max: 0.201s std dev: 0.00075s window: 5
+average rate: 4.996
+	min: 0.199s max: 0.201s std dev: 0.00066s window: 5
+average rate: 4.722
+	min: 0.199s max: 0.260s std dev: 0.02424s window: 5
+average rate: 4.996
+	min: 0.199s max: 0.201s std dev: 0.00071s window: 5
+average rate: 4.900
+	min: 0.199s max: 0.220s std dev: 0.00785s window: 5
+average rate: 5.001
+	min: 0.199s max: 0.201s std dev: 0.00064s window: 5
+average rate: 4.993
+	min: 0.199s max: 0.201s std dev: 0.00052s window: 5

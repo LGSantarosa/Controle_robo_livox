@@ -1,0 +1,14 @@
+[ERROR] [1790103509.286218115] [rcl]: Failed to parse global arguments
+Traceback (most recent call last):
+  File "/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_nav/lib/robot_nav/mega_bridge", line 33, in <module>
+    sys.exit(load_entry_point('robot-nav==0.1.0', 'console_scripts', 'mega_bridge')())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/rbe-luis/Workspace/Controle_robo_livox/install/robot_nav/lib/python3.12/site-packages/robot_nav/mega_bridge.py", line 496, in main
+    rclpy.init(args=args)
+  File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/__init__.py", line 88, in init
+    context.init(args, domain_id=domain_id)
+  File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/context.py", line 99, in init
+    self.__context = _rclpy.Context(
+                     ^^^^^^^^^^^^^^^
+rclpy._rclpy_pybind11.RCLError: failed to initialize rcl: Couldn't parse parameter override rule: '-p port:='. Error: error not set, at ./src/rcl/arguments.c:352
+[ros2run]: Process exited with failure 1

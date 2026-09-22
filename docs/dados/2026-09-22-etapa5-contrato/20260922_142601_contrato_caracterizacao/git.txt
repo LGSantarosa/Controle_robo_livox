@@ -1,0 +1,4 @@
+commit: 8747c92f77c57c21ff9021fadab5809e33e4be00
+8747c92 2026-09-22 14:26:00 -0300 etapa 5: regua do timeout do mux aceita o frame do direcional em transito ate t0+0,1 s (dois periodos do /joy), exige o zero nesse prazo e so o analogico depois; achado de 20260922_141628, preservado
+branch: etapa5-contrato
+status --porcelain (vazio = limpo):

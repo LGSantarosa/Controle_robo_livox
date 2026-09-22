@@ -1,0 +1,11 @@
+/_linha_de_base   (oculto, fora da comparação)
+/_mega_fingida5   (oculto, fora da comparação)
+/_ros2cli_daemon_46_8e67f8bed8204161b099c3e86e92501c   (oculto, fora da comparação)
+/cmd_vel_to_wheels
+/dpad_reto
+/joy_node
+/mega_bridge
+/robot_state_publisher
+/rosbag2_recorder
+/teleop_twist_joy_node
+/twist_mux

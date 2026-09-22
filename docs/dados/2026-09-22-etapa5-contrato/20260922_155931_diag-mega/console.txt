@@ -1,0 +1,101 @@
+===== partida fria 1 =====
+pty=/dev/pts/2 mega_pid=1631713
+--- /battery/front (mensagem inteira):
+rc=1
+   WARNING: topic [/battery/front] does not appear to be published yet
+   Could not determine the type for the passed topic
+--- taxas (MEGA -> bridge):
+   wheel_velocities average rate: 50.004
+   battery          average rate: 4.905
+--- um WheelSpeeds conhecido (bridge -> MEGA):
+rc=0
+--- frames recebidos pela MEGA fingida (bridge -> MEGA):
+   linhas em frames.csv: -1
+--- diag da thread de STATE:
+   frame STATE = aa5581100000000000000000420e420e0000000392 (21 bytes)
+   0.015s writes=1
+   0.198s writes=10
+   1.006s writes=50
+   5.058s writes=250
+   20.257s writes=1000
+===== partida fria 2 =====
+pty=/dev/pts/2 mega_pid=1634759
+--- /battery/front (mensagem inteira):
+rc=0
+   header:
+     stamp:
+       sec: 1790103620
+       nanosec: 761995471
+     frame_id: ''
+   voltage: 36.5
+   temperature: 0.0
+   current: 0.0
+   charge: 0.0
+   capacity: 0.0
+   design_capacity: 0.0
+   percentage: 0.0
+   power_supply_status: 0
+   power_supply_health: 0
+   power_supply_technology: 0
+   present: true
+   cell_voltage: []
+   cell_temperature: []
+   location: ''
+   serial_number: ''
+   ---
+--- taxas (MEGA -> bridge):
+   wheel_velocities average rate: 45.536
+   battery          average rate: 4.995
+--- um WheelSpeeds conhecido (bridge -> MEGA):
+rc=0
+--- frames recebidos pela MEGA fingida (bridge -> MEGA):
+   linhas em frames.csv: -1
+--- diag da thread de STATE:
+   frame STATE = aa5581100000000000000000420e420e0000000392 (21 bytes)
+   0.015s writes=1
+   0.200s writes=10
+   1.008s writes=50
+   5.064s writes=250
+   20.255s writes=1000
+===== partida fria 3 =====
+pty=/dev/pts/2 mega_pid=1637745
+--- /battery/front (mensagem inteira):
+rc=0
+   header:
+     stamp:
+       sec: 1790103662
+       nanosec: 80688465
+     frame_id: ''
+   voltage: 36.5
+   temperature: 0.0
+   current: 0.0
+   charge: 0.0
+   capacity: 0.0
+   design_capacity: 0.0
+   percentage: 0.0
+   power_supply_status: 0
+   power_supply_health: 0
+   power_supply_technology: 0
+   present: true
+   cell_voltage: []
+   cell_temperature: []
+   location: ''
+   serial_number: ''
+   ---
+--- taxas (MEGA -> bridge):
+   wheel_velocities average rate: 49.983
+   battery          average rate: 4.901
+--- um WheelSpeeds conhecido (bridge -> MEGA):
+rc=0
+--- frames recebidos pela MEGA fingida (bridge -> MEGA):
+   linhas em frames.csv: -1
+--- diag da thread de STATE:
+   frame STATE = aa5581100000000000000000420e420e0000000392 (21 bytes)
+   0.015s writes=1
+   0.198s writes=10
+   1.006s writes=50
+   5.058s writes=250
+   20.257s writes=1000
+1632196 pgid=1632154 /usr/bin/python3 -c from ros2cli.daemon.daemonize import main; main() --name ros2-daemon --ros-domain-id 47 --rmw-implementation rmw_fastrtps_cpp
+SOBRARAM marcados
+pasta: /home/rbe-luis/validacao_etapa5/20260922_155931_diag-mega

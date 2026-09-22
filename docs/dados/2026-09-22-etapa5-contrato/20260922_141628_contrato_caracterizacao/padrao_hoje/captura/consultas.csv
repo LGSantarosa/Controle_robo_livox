@@ -1,0 +1,6 @@
+t_s,n_visiveis,duplicados,faltando,sobrando,nao_prontos,pronto
+0.0,0,,/cmd_vel_to_wheels /dpad_reto /joy_node /mega_bridge /robot_state_publisher /rosbag2_recorder /teleop_twist_joy_node /twist_mux,,,False
+2.0,3,,/cmd_vel_to_wheels /joy_node /robot_state_publisher /teleop_twist_joy_node /twist_mux,,,False
+4.1,8,,,,,True
+6.1,8,,,,,True
+8.1,8,,,,,True

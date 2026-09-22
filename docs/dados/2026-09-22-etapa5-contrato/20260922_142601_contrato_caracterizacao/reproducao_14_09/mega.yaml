@@ -1,0 +1,75 @@
+cenario: reproducao_14_09
+argumentos:
+- sinal:=-1.0
+- frente:=1.0
+- bitola:=0.3225
+pty: /dev/pts/2
+frames_set_speed: 123
+fases:
+- fase: repouso
+  confere: nada
+  t_ini: 40.557
+  t_fim: 42.561
+  esperado: null
+  esperado_hex: null
+  veredito: ANOTADO
+  frames: 0
+- fase: lb_frente
+  confere: igual
+  t_ini: 42.561
+  t_fim: 45.561
+  esperado:
+    steer: 0
+    speed: -120
+  esperado_hex: aa550108000088ff000088ff09
+  frames_na_janela: 48
+  iguais: 48
+  diferentes_hex: []
+  veredito: APROVADO
+- fase: lb_solto
+  confere: zero
+  t_ini: 45.561
+  t_fim: 47.569
+  esperado: null
+  esperado_hex: null
+  frames_na_janela: 0
+  diferentes_hex: []
+  ultimo_ate_o_fim_hex: aa550108000000000000000009
+  veredito: APROVADO
+- fase: lb_esquerda
+  confere: igual
+  t_ini: 47.569
+  t_fim: 50.569
+  esperado:
+    steer: 97
+    speed: 0
+  esperado_hex: aa550108610000006100000009
+  frames_na_janela: 48
+  iguais: 48
+  diferentes_hex: []
+  veredito: APROVADO
+- fase: lb_solto_2
+  confere: zero
+  t_ini: 50.569
+  t_fim: 52.579
+  esperado: null
+  esperado_hex: null
+  frames_na_janela: 0
+  diferentes_hex: []
+  ultimo_ate_o_fim_hex: aa550108000000000000000009
+  veredito: APROVADO
+tf_base_link_livox_frame:
+  veredito: APROVADO
+  amostras: 87
+  urdf_xyz:
+  - -0.093
+  - 0.0
+  - 0.24
+  viva_xyz:
+  - -0.093
+  - 0.0
+  - 0.24
+  viva_yaw_graus: 0.0
+  dif_max_xyz_m: 0.0
+  dif_max_rpy_rad: 0.0
+veredito: APROVADO

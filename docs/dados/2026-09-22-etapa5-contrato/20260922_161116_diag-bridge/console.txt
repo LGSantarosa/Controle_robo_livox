@@ -1,0 +1,8 @@
+pty=/dev/pts/2 mega(pgid)=1688387
+== um WheelSpeeds conhecido: left=-120 right=-120  (esperado steer=0 speed=-120)
+   pub rc=2
+== encerrando normalmente (vai + fim), para os arquivos fecharem
+== frames FT_SET_SPEED recebidos pela MEGA fingida:
+   total de frames: -1  | bytes.bin: 0 bytes
+0 marcados
+pasta: /home/rbe-luis/validacao_etapa5/20260922_161116_diag-bridge

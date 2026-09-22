@@ -1,0 +1,4 @@
+commit: 9c99c208fbb7ab784f1918ad967a725a705c76e2
+9c99c20 2026-09-22 15:42:30 -0300 etapa 5 passo 4 (corte atomico): a cadeia do robo 3 fala TwistStamped — dpad_reto com header (frame_id base_link, tambem no zero de soltura), teleop stamped com frame explicito, mux use_stamped, launch passa use_stamped ao cmd_vel_to_wheels; legado robot.launch.py segue cru pelo default; coerencia dos dois lados de cada topico travada
+branch: etapa5-contrato
+status --porcelain (vazio = limpo):

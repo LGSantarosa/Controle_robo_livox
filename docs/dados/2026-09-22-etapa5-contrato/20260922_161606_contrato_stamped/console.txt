@@ -1,0 +1,4 @@
+== validação etapa 5 · contrato · stamped · 20260922_161606 ==
+   pasta: /home/rbe-luis/validacao_etapa5/20260922_161606_contrato_stamped · ROS_DOMAIN_ID=46  · só localhost · GZ_PARTITION=valida_etapa5_20260922_161606
+   🔴 já tem ROS/Gazebo de pé neste PC — não subo por cima nem mato nada:
+      1706096 rbe-luis /usr/bin/python3 /home/rbe-luis/Workspace/Controle_robo_livox/install/robot_nav/lib/robot_nav/mega_bridge --ros-args -p port:=/dev/pts/2 -p baud:=230400

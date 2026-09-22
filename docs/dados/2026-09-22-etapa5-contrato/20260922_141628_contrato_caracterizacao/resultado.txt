@@ -1,0 +1,26 @@
+build + install/ igual ao fonte                            APROVADO 
+reproducao_14_09: sobe-robo3 subiu (placa, bateria, /joy)  APROVADO 
+captura: grafo pronto e estável, dumps                    APROVADO 
+reproducao_14_09: lista de nós = esperada, uniq -d vazio  APROVADO 
+reproducao_14_09: frames exatos por fase + TF              APROVADO 
+reproducao_14_09: sobe-robo3 --mata limpo                  APROVADO 
+reproducao_14_09: só o grupo registrado morreu            APROVADO 
+reproducao_14_09: domínio 46 sem nós depois do --mata    APROVADO 
+reproducao_14_09: registro do sobe-robo3 removido          APROVADO 
+padrao_hoje: sobe-robo3 subiu (placa, bateria, /joy)       APROVADO 
+captura: grafo pronto e estável, dumps                    APROVADO 
+padrao_hoje: lista de nós = esperada, uniq -d vazio       APROVADO 
+padrao_hoje: frames exatos por fase + TF                   REPROVADO (padrao_hoje/mega.yaml)
+padrao_hoje: sobe-robo3 --mata limpo                       APROVADO 
+padrao_hoje: só o grupo registrado morreu                 APROVADO 
+padrao_hoje: domínio 46 sem nós depois do --mata         APROVADO 
+padrao_hoje: registro do sobe-robo3 removido               APROVADO 
+frente_mais_1: sobe-robo3 subiu (placa, bateria, /joy)     APROVADO 
+captura: grafo pronto e estável, dumps                    APROVADO 
+frente_mais_1: lista de nós = esperada, uniq -d vazio     APROVADO 
+frente_mais_1: frames exatos por fase + TF                 APROVADO 
+frente_mais_1: sobe-robo3 --mata limpo                     APROVADO 
+frente_mais_1: só o grupo registrado morreu               APROVADO 
+frente_mais_1: domínio 46 sem nós depois do --mata       APROVADO 
+frente_mais_1: registro do sobe-robo3 removido             APROVADO 
+limpeza: nada marcado, domínios vazios                    APROVADO 

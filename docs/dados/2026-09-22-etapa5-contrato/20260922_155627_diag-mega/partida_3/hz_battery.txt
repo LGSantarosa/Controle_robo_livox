@@ -1,0 +1,1 @@
+WARNING: topic [/battery/front] does not appear to be published yet
