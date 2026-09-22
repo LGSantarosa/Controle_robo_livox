@@ -41,9 +41,16 @@ cenarios:
 # eixo 0 = giro, eixo 7 = direcional cima) e a conferência:
 #   igual     depois da janela, TODOS os frames = frames[espera]
 #   zero      nenhum frame não-zero na janela, e o último até o fim = zero
-#   timeout   o primeiro frame da fase é o zero do dpad_reto ao soltar; depois
-#             SÓ frames[espera], o primeiro deles entre [0,2; 0,6] s depois do
-#             zero (a faixa `direcional` bloqueia a `joystick` por 0,3 s)
+#   timeout   até t0 + transito_s, SÓ frames[anterior] (em trânsito da fase
+#             anterior) e então o zero do dpad_reto ao soltar — o zero TEM de
+#             chegar dentro desses transito_s; depois do zero, SÓ
+#             frames[espera], ao menos um, o primeiro entre [0,2; 0,6] s depois
+#             do zero (a faixa `direcional` bloqueia a `joystick` por 0,3 s).
+#             transito_s = 0,1 s = até DOIS períodos do /joy a 20 Hz — a
+#             latência da troca de fase, NÃO o timeout do mux. Régua ajustada
+#             em 22-09 depois da caracterização 20260922_141628 (preservada):
+#             lá chegou um frame do direcional 2 ms depois da troca, antes do
+#             zero, e a versão anterior exigia o zero como primeiro frame
 #   perda     /joy para de chegar: nenhum frame depois de t0 + 0,25 s, e o
 #             último frame é frames[espera], NÃO-zero (só o firmware zeraria)
 sequencias:
@@ -60,7 +67,7 @@ sequencias:
     - {nome: lb_esquerda, duracao_s: 3.0, lb: true, giro: true, confere: igual, espera: lb_esquerda}
     - {nome: lb_solto_2,  duracao_s: 2.0, lb: false, confere: zero}
     - {nome: prioridade,  duracao_s: 3.0, lb: true, giro: true, dpad: true, confere: igual, espera: dpad}
-    - {nome: timeout_mux, duracao_s: 3.0, lb: true, giro: true, confere: timeout, espera: lb_esquerda}
+    - {nome: timeout_mux, duracao_s: 3.0, lb: true, giro: true, confere: timeout, espera: lb_esquerda, anterior: dpad}
     - {nome: lb_solto_3,  duracao_s: 2.0, lb: false, confere: zero}
     - {nome: lb_frente_2, duracao_s: 2.0, lb: true, frente: true, confere: igual, espera: lb_frente}
     - {nome: perda,       duracao_s: 2.5, lb: true, frente: true, publica: false, confere: perda, espera: lb_frente}
@@ -69,3 +76,4 @@ janela_s: 0.6
 timeout_min_s: 0.2
 timeout_max_s: 0.6
 perda_margem_s: 0.25
+transito_s: 0.1

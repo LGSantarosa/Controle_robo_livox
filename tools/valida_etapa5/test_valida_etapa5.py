@@ -106,8 +106,9 @@ def test_regressao_do_passo7_com_os_mesmos_numeros():
 def test_toda_espera_tem_frame_no_cenario_que_a_usa():
     for c in CFG['cenarios'].values():
         for f in CFG['sequencias'][c['sequencia']]:
-            if f.get('espera'):
-                assert f['espera'] in c['frames'], (f['nome'], f['espera'])
+            for chave in ('espera', 'anterior'):
+                if f.get(chave):
+                    assert f[chave] in c['frames'], (f['nome'], chave, f[chave])
 
 
 # ─── as conferências mordem ──────────────────────────────────────────────────
@@ -136,16 +137,68 @@ def test_zero():
     assert _c('zero', [(10.05, Z), (11.0, F)], None)['veredito'] == 'REPROVADO'
 
 
-def test_timeout_exige_zero_depois_silencio_depois_a_faixa_menor():
-    bom = [(10.05, Z)] + [(10.36 + i / 20, G) for i in range(30)]
-    r = _c('timeout', bom, GI)
+DP = {'steer': 0, 'speed': -120}   # o frame do direcional (fase anterior)
+D = mf.frame_set_speed(**DP)
+H = mf.frame_set_speed(0, -99)    # um valor qualquer que não é o do direcional
+
+
+def _t(frames):
+    return mf.confere({'nome': 'timeout_mux', 'confere': 'timeout'}, 10.0, 13.0, frames,
+                      GI, CFG, DP)
+
+
+def _analogico(desde):
+    return [(desde + i / 20, G) for i in range(30)]
+
+
+def test_timeout_sem_transito_aprova():
+    r = _t([(10.05, Z)] + _analogico(10.36))
     assert r['veredito'] == 'APROVADO' and r['atraso_da_volta_s'] == pytest.approx(0.31)
-    cedo = [(10.05, Z)] + [(10.1 + i / 20, G) for i in range(30)]
-    assert _c('timeout', cedo, GI)['veredito'] == 'REPROVADO', 'voltou antes do timeout'
-    sem_zero = [(10.36 + i / 20, G) for i in range(30)]
-    assert _c('timeout', sem_zero, GI)['veredito'] == 'REPROVADO'
-    intruso = [(10.05, Z), (10.2, F)] + [(10.36 + i / 20, G) for i in range(30)]
-    assert _c('timeout', intruso, GI)['veredito'] == 'REPROVADO'
+
+
+def test_timeout_com_o_frame_real_em_transito_aprova():
+    """Reproduz o caso de 20260922_141628.
+
+    O direcional 2 ms depois da troca, o zero em 52 ms, o analógico 0,349 s
+    depois do zero.
+    """
+    r = _t([(10.002, D), (10.052, Z)] + _analogico(10.401))
+    assert r['veredito'] == 'APROVADO', r
+    assert r['em_transito_hex'] == [D.hex()] and r['atraso_da_volta_s'] == pytest.approx(0.349)
+
+
+def test_timeout_em_transito_com_outro_valor_reprova():
+    assert _t([(10.002, H), (10.052, Z)] + _analogico(10.401))['veredito'] == 'REPROVADO'
+
+
+def test_timeout_em_transito_depois_de_0_1_s_reprova():
+    """Direcional em 0,15 s e zero em 0,2 s: o zero já passou do limite."""
+    assert _t([(10.15, D), (10.2, Z)] + _analogico(10.55))['veredito'] == 'REPROVADO'
+
+
+def test_timeout_sem_zero_reprova():
+    assert _t(_analogico(10.36))['veredito'] == 'REPROVADO'
+    assert _t([(10.002, D)] + _analogico(10.36))['veredito'] == 'REPROVADO'
+
+
+def test_timeout_analogico_cedo_demais_reprova():
+    assert _t([(10.05, Z)] + _analogico(10.1))['veredito'] == 'REPROVADO'
+
+
+def test_timeout_intruso_entre_zero_e_analogico_reprova():
+    assert _t([(10.05, Z), (10.2, F)] + _analogico(10.36))['veredito'] == 'REPROVADO'
+    assert _t([(10.05, Z), (10.2, D)] + _analogico(10.36))['veredito'] == 'REPROVADO', \
+        'direcional DEPOIS do zero não é trânsito'
+
+
+def test_timeout_sem_analogico_depois_do_zero_reprova():
+    assert _t([(10.002, D), (10.052, Z)])['veredito'] == 'REPROVADO'
+
+
+def test_transito_documentado_como_dois_periodos_do_joy():
+    assert CFG['transito_s'] == pytest.approx(2 * 0.05)
+    fases = open(os.path.join(AQUI, 'fases.yaml')).read()
+    assert 'DOIS períodos do /joy a 20 Hz' in fases and 'NÃO o timeout do mux' in fases
 
 
 def test_perda_exige_silencio_e_ultimo_nao_zero():
