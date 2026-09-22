@@ -67,6 +67,33 @@ nos_do_dominio() {   # nos_do_dominio <dominio> <saida.txt>
   ROS_DOMAIN_ID="$1" ros2 node list --no-daemon --spin-time 5 > "$2" 2> "$2.err"
 }
 
+# ── dispositivos /dev/input/js* (pré-condição do mega-fingida) ──────────────
+#
+# O kernel cria jsN para qualquer aparelho com eixo absoluto — inclusive mouse
+# virtual. Quem decide o que o joy_node (SDL) abre é a marca do udev. Veredito:
+#   JOYSTICK      ID_INPUT_JOYSTICK=1                    → recusa
+#   MOUSE         ID_INPUT_MOUSE=1 e sem ID_INPUT_JOYSTICK → permite, registrado
+#   INCONCLUSIVO  udevadm falhou, ou nenhuma das duas     → recusa por segurança
+# A comparação exata dos frames é defesa ADICIONAL, não substitui isto.
+classifica_js() {   # classifica_js </dev/input/jsN> — imprime o veredito
+  local props
+  if ! props="$(udevadm info --query=property --name="$1" 2>/dev/null)" || [ -z "$props" ]; then
+    echo INCONCLUSIVO; return
+  fi
+  if grep -qx 'ID_INPUT_JOYSTICK=1' <<< "$props"; then echo JOYSTICK
+  elif grep -qx 'ID_INPUT_MOUSE=1' <<< "$props"; then echo MOUSE
+  else echo INCONCLUSIVO
+  fi
+}
+
+descreve_js() {     # descreve_js </dev/input/jsN> — tudo o que se sabe dele
+  local s="/sys/class/input/$(basename "$1")/device"
+  echo "$1: veredito $(classifica_js "$1")"
+  echo "   nome: $(cat "$s/name" 2>/dev/null) · id $(cat "$s/id/bustype" "$s/id/vendor" "$s/id/product" 2>/dev/null | paste -sd:)"
+  echo "   sysfs: $(readlink -f "$s" 2>/dev/null)"
+  udevadm info --query=property --name="$1" 2>&1 | grep -E '^(ID_INPUT|DEVNAME|ID_VENDOR|ID_MODEL)' | sed 's/^/   /'
+}
+
 # ── limpeza (idempotente; o `trap EXIT` garante que roda em toda saída) ──────
 
 LIMPO=0

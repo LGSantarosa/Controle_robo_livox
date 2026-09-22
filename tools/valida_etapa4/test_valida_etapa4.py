@@ -476,6 +476,41 @@ def test_robo3_sim_aceita_exatamente_um_listener_do_scan_2d():
     assert nome_torto['veredito'] == 'REPROVADO', 'fora do padrão ancorado é nó a mais'
 
 
+# ─── /dev/input/js*: só mouse explícito passa ────────────────────────────────
+
+def _classifica(tmp_path, corpo_udevadm):
+    falso = tmp_path / 'bin'
+    falso.mkdir(exist_ok=True)
+    (falso / 'udevadm').write_text('#!/usr/bin/env bash\n' + corpo_udevadm + '\n')
+    os.chmod(falso / 'udevadm', 0o755)
+    env = dict(os.environ, PATH=f'{falso}:{os.environ["PATH"]}')
+    r = subprocess.run(['bash', '-c', f'source {LIB}; classifica_js /dev/input/js9'],
+                       env=env, capture_output=True, text=True)
+    return r.stdout.strip()
+
+
+@pytest.mark.parametrize('props, veredito', [
+    ('ID_INPUT=1\nID_INPUT_JOYSTICK=1', 'JOYSTICK'),
+    ('ID_INPUT=1\nID_INPUT_MOUSE=1\nID_INPUT_JOYSTICK=1', 'JOYSTICK'),
+    ('ID_INPUT=1\nID_INPUT_MOUSE=1', 'MOUSE'),
+    ('ID_INPUT=1', 'INCONCLUSIVO'),
+    ('ID_INPUT=1\nID_INPUT_MOUSE=0', 'INCONCLUSIVO'),
+])
+def test_classificacao_do_js_pelo_udev(tmp_path, props, veredito):
+    assert _classifica(tmp_path, f"printf '{props}\\n'") == veredito
+
+
+def test_udevadm_falhando_e_inconclusivo(tmp_path):
+    assert _classifica(tmp_path, 'echo "erro" >&2; exit 1') == 'INCONCLUSIVO'
+    assert _classifica(tmp_path, 'exit 0') == 'INCONCLUSIVO', 'sem saída não é mouse'
+
+
+def test_pre_condicao_so_deixa_passar_mouse():
+    codigo = _codigo()
+    bloco = codigo[codigo.index('JS_INFO="nenhum'):codigo.index('registro do sobe-robo3')]
+    assert 'classifica_js' in bloco and '!= MOUSE' in bloco and 'exit 1' in bloco
+
+
 # ─── o orquestrador ──────────────────────────────────────────────────────────
 
 ORQ = os.path.join(RAIZ, 'bin', 'valida-etapa4')

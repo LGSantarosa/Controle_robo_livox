@@ -71,10 +71,21 @@ if grep -lsa "VALIDA_ETAPA4_MARCA=" /proc/[0-9]*/environ 2>/dev/null | grep -q .
   echo "   🔴 há processo marcado de uma rodada anterior:"
   grep -lsa "VALIDA_ETAPA4_MARCA=" /proc/[0-9]*/environ | sed 's|/environ||;s|^|      |'; exit 1
 fi
+JS_INFO="nenhum /dev/input/js*"
 if [ "$CENARIO" = mega-fingida ]; then
+  # Joystick de verdade (ou dúvida) recusa: o joy_node real o leria e
+  # misturaria com o /joy fingido. Mouse virtual com jsN (eixo absoluto)
+  # passa, registrado. Critério: a marca do udev, a mesma do SDL.
   if ls /dev/input/js* >/dev/null 2>&1; then
-    echo "   🔴 joystick conectado ($(ls /dev/input/js* | tr '\n' ' ')): o joy_node real o leria"
-    echo "      e misturaria com o /joy fingido. Desconecte e rode de novo."; exit 1
+    JS_INFO="$(for j in /dev/input/js*; do descreve_js "$j"; done)"
+    for j in /dev/input/js*; do
+      v="$(classifica_js "$j")"
+      if [ "$v" != MOUSE ]; then
+        echo "   🔴 $j: $v — não subo (o joy_node poderia lê-lo):"
+        echo "$JS_INFO" | sed 's/^/      /'; exit 1
+      fi
+    done
+    echo "   ⚪ /dev/input/js* presentes, todos mouse sem ID_INPUT_JOYSTICK (em ambiente.txt)"
   fi
   if [ -e "$HOME/.local/state/sobe-robo3/grupos" ]; then
     echo "   🔴 existe registro do sobe-robo3 — confira com: bash bin/sobe-robo3 --mata"; exit 1
@@ -127,7 +138,7 @@ anota "build + install/ igual ao fonte" APROVADO
 { date -Is; uname -a; echo "hostname: $(hostname)"
   echo "ROS_DISTRO=$ROS_DISTRO"; ros2 --help >/dev/null 2>&1 && echo "ros2 no PATH: $(command -v ros2)"
   printenv | grep -E '^(ROS|RMW|AMENT|COLCON|GZ|IGN|FASTRTPS|CYCLONEDDS|PYTHONPATH|VALIDA)' | sort
-  echo "--- /dev/input/js*:"; ls /dev/input/js* 2>&1
+  echo "--- /dev/input/js* (pré-condição do mega-fingida):"; echo "$JS_INFO"
   echo "--- nota: as baselines do robô 2 foram capturadas no ROS_DOMAIN_ID 0; esta"
   echo "    rodada usa $DOMINIOS_USADOS por isolamento. O domínio não entra nos"
   echo "    parâmetros comparados e NÃO é uma permissão de diferença."
