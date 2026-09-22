@@ -26,6 +26,14 @@ def _carrega(nome):
 al = _carrega('argumentos_launch')
 cap = _carrega('captura')
 PILHA = 'ros2_packages/robot_motion/launch/pilha.launch.py'
+BASE = 'ros2_packages/robot_base/launch/base.launch.py'
+SIM3 = 'ros2_packages/robot_base/launch/sim_robo3.launch.py'
+
+# Argumentos que são dos terceiros, não nossos: o `ros_gz_sim` traz os de cima,
+# o `fast_lio` os de baixo. Nenhum pode voltar para a linha de base.
+ARGS_DE_TERCEIRO = ('gz_args', 'gz_version', 'ign_args', 'ign_version',
+                    'on_exit_shutdown', 'debugger', 'debug_env',
+                    'config_file', 'config_path', 'rviz_cfg')
 
 
 def _trava():
@@ -52,29 +60,120 @@ def test_a_trava_nao_tem_caminho_da_maquina():
     assert '/install/' not in texto
 
 
+# ─── a fronteira do projeto (22-09) ──────────────────────────────────────────
+#
+# A trava gravava também os argumentos transitivos de terceiro, e com isso
+# passou a depender do que está instalado na máquina: no PC da captura o
+# `fast_lio` não existia, a `localizacao.launch.py` estourava ao carregar e o
+# subárvore sumia calado — a trava nunca viu o `frame_da_pose`, que é nosso.
+# Noutro PC, com `fast_lio`, os mesmos comandos davam 6 argumentos a mais e o
+# teste reprovava sem nada ter mudado no repo.
+
+def _prefixos_de_terceiro():
+    """Prefixos do `AMENT_PREFIX_PATH` que fornecem algum pacote de terceiro."""
+    fora = []
+    for prefixo in os.environ.get('AMENT_PREFIX_PATH', '').split(os.pathsep):
+        if not prefixo:
+            continue
+        for pkg in al.ESQUELETO_TERCEIROS:
+            marca = os.path.join(prefixo, 'share', 'ament_index',
+                                 'resource_index', 'packages', pkg)
+            if os.path.exists(marca):
+                fora.append(prefixo)
+                break
+    return fora
+
+
+def test_a_fronteira_separa_o_nosso_do_terceiro():
+    nosso = (
+        f'{al.REPO}/ros2_packages/robot_base/launch/localizacao.launch.py',
+        f'{al.REPO}/install/robot_nav/share/robot_nav/launch/controle_robo3.launch.py',
+    )
+    terceiro = (
+        '/opt/ros/jazzy/share/ros_gz_sim/launch/gz_sim.launch.py',
+        os.path.expanduser('~/ros2_ws/install/fast_lio/share/fast_lio/launch/mapping.launch.py'),
+        # vendorizado dentro do repo, mas com dono upstream: terceiro também.
+        f'{al.REPO}/install/twist_mux/share/twist_mux/launch/twist_mux_launch.py',
+        None, '',
+    )
+    assert [c for c in nosso if not al.e_do_projeto(c)] == []
+    assert [c for c in terceiro if al.e_do_projeto(c)] == []
+
+
+def test_o_frame_da_pose_entra_na_linha_de_base():
+    """Argumento NOSSO atrás de um include nosso — o que a trava antiga perdia."""
+    assert al.extrai_todos()[BASE].get('frame_da_pose') == 'livox_frame'
+
+
+def test_nenhum_argumento_de_terceiro_na_linha_de_base():
+    todos = al.extrai_todos()
+    achados = [(rel, nome) for rel, args in todos.items()
+               for nome in args if nome in ARGS_DE_TERCEIRO]
+    assert achados == []
+    travados = [(rel, nome) for rel, args in _trava().items()
+                for nome in args if nome in ARGS_DE_TERCEIRO]
+    assert travados == []
+
+
+def test_terceiro_presente_ou_ausente_dao_a_mesma_linha_de_base(monkeypatch):
+    """A prova da invariância: com e sem o terceiro instalado, a mesma lista.
+
+    A ausência é simulada tirando do `AMENT_PREFIX_PATH` todo prefixo que
+    fornece `ros_gz_sim`, `fast_lio` ou `livox_ros_driver2` — é o estado do PC
+    onde a trava foi capturada. Quem segura os nossos launches de pé nessa
+    condição é o esqueleto de `extrai_todos`.
+    """
+    com_terceiro = al.extrai_todos()
+
+    fora = set(_prefixos_de_terceiro())
+    restantes = [p for p in os.environ.get('AMENT_PREFIX_PATH', '').split(os.pathsep)
+                 if p and p not in fora]
+    monkeypatch.setenv('AMENT_PREFIX_PATH', os.pathsep.join(restantes))
+    sem_terceiro = al.extrai_todos()
+
+    assert sem_terceiro == com_terceiro
+    # E não é igual por ter truncado dos dois lados: o nosso continua lá.
+    assert sem_terceiro[BASE].get('frame_da_pose') == 'livox_frame'
+    assert sem_terceiro[SIM3].get('mundo', '').startswith('<share:robot_base>')
+
+
+def test_o_canario_do_esqueleto_nao_entra_na_linha_de_base():
+    """Se o canário aparecer, a recursão atravessou um include de terceiro."""
+    todos = al.extrai_todos()
+    assert [rel for rel, args in todos.items()
+            if al.CANARIO_DE_TERCEIRO in args] == []
+    assert [rel for rel, args in _trava().items()
+            if al.CANARIO_DE_TERCEIRO in args] == []
+
+
+def test_o_esqueleto_nao_vaza_para_o_ambiente():
+    antes = os.environ.get('AMENT_PREFIX_PATH')
+    al.extrai_todos()
+    assert os.environ.get('AMENT_PREFIX_PATH') == antes
+
+
 # ─── o comparador reclama ────────────────────────────────────────────────────
 
-BASE = {PILHA: {'sim': 'false', 'bag': 'true'}}
+TRAVA_FALSA = {PILHA: {'sim': 'false', 'bag': 'true'}}
 
 
 def test_argumento_sumido_reprova():
-    assert al.confere(BASE, {PILHA: {'sim': 'false'}})
+    assert al.confere(TRAVA_FALSA, {PILHA: {'sim': 'false'}})
 
 
 def test_default_mudado_reprova():
-    assert al.confere(BASE, {PILHA: {'sim': 'true', 'bag': 'true'}})
+    assert al.confere(TRAVA_FALSA, {PILHA: {'sim': 'true', 'bag': 'true'}})
 
 
 def test_novo_so_o_permitido_com_o_default_certo():
     ok = {PILHA: {'sim': 'false', 'bag': 'true', 'robo': '2'}}
-    assert al.confere(BASE, ok) == []
-    assert al.confere(BASE, {PILHA: {**ok[PILHA], 'robo': '3'}})
-    assert al.confere(BASE, {PILHA: {**BASE[PILHA], 'outro': 'x'}})
+    assert al.confere(TRAVA_FALSA, ok) == []
+    assert al.confere(TRAVA_FALSA, {PILHA: {**ok[PILHA], 'robo': '3'}})
+    assert al.confere(TRAVA_FALSA, {PILHA: {**TRAVA_FALSA[PILHA], 'outro': 'x'}})
 
 
 def test_novo_permitido_so_na_pilha():
-    outro = 'ros2_packages/robot_base/launch/base.launch.py'
-    assert al.confere({outro: {}}, {outro: {'robo': '2'}})
+    assert al.confere({BASE: {}}, {BASE: {'robo': '2'}})
 
 
 def test_normaliza_caminhos():
