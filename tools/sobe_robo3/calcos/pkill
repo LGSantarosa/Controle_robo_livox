@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Calço: pkill é proibido no sobe-robo3 — vira violação, nada acontece.
+echo "pkill $*" >> "${CALCO:?}/violacoes"
+exit 1

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Calço: pgrep é proibido no sobe-robo3 — vira violação, nada acontece.
+echo "pgrep $*" >> "${CALCO:?}/violacoes"
+exit 1

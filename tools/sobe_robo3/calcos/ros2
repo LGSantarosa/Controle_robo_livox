@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# `ros2` falso do teste do sobe-robo3: nada chega ao grafo ROS real.
+#
+#   node list        imprime $CALCO/nos (o "domínio" fingido). Botões:
+#                    node_list_atraso (segundos), node_list_falha, node_list_trava
+#   launch …         vira líder de grupo com filhos de nome de nó do robô 3
+#   bag record …     um processo só, dormindo
+#   topic echo/hz    a placa e o controle respondendo
+#
+# Todo processo que ele cria entra em $CALCO/permitidos (e o líder em
+# $CALCO/grupos), para o calço de kill deixar o sobe-robo3 derrubá-lo.
+C="${CALCO:?}"
+printf '%s\n' "$*" >> "$C/ros2_chamadas"
+registra() { echo "$1" >> "$C/permitidos"; }
+
+case "$1 $2" in
+  "node list")
+    [ -f "$C/node_list_atraso" ] && command sleep "$(cat "$C/node_list_atraso")"
+    [ -f "$C/node_list_trava" ] && exec /usr/bin/sleep 3600
+    if [ -f "$C/node_list_falha" ]; then echo "falha fingida do daemon" >&2; exit 1; fi
+    [ -f "$C/nos" ] && cat "$C/nos"
+    exit 0 ;;
+  "launch robot_nav")
+    registra $$; echo $$ >> "$C/grupos"
+    # Em python com SIGINT de volta ao padrão: o bash deixa SIG_IGN em quem
+    # ele lança em segundo plano, e o launch real ATENDE o INT.
+    dorme='import signal, time; signal.signal(signal.SIGINT, signal.SIG_DFL); time.sleep(3600)'
+    for nome in mega_bridge cmd_vel_to_wheels joy_node teleop_twist_joy_node \
+                twist_mux dpad_reto robot_state_publisher; do
+      ( exec -a "/fingido/lib/$nome" /usr/bin/python3 -c "$dorme" ) &
+      registra $!
+    done
+    echo "[robo3] controle fingido (teste)"
+    exec -a "ros2 launch (fingido)" /usr/bin/python3 -c "$dorme" ;;
+  "bag record")
+    registra $$; echo $$ >> "$C/grupos"
+    exec -a "ros2 bag record (fingido)" /usr/bin/python3 -c \
+      'import signal, time; signal.signal(signal.SIGINT, signal.SIG_DFL); time.sleep(3600)' ;;
+  "topic echo")
+    printf 'present: true\nvoltage: 38.5\n'; exit 0 ;;
+  "topic hz")
+    echo "average rate: 50.000"; exit 0 ;;
+esac
+echo "ros2 falso: chamada não prevista: $*" >> "$C/violacoes"
+exit 2

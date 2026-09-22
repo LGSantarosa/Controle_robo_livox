@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Calço: killall é proibido no sobe-robo3 — vira violação, nada acontece.
+echo "killall $*" >> "${CALCO:?}/violacoes"
+exit 1

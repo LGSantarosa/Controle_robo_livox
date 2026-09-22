@@ -4,7 +4,7 @@
 #   bash bin/sobe-robo3                  sobe; a FRENTE é a antiga RÉ (decisão 049)
 #   bash bin/sobe-robo3 frente:=1.0      volta a frente antiga (a que puxa p/ direita)
 #   bash bin/sobe-robo3 sinal:=-1.0      inverte frente E giro juntos
-#   bash bin/sobe-robo3 --mata           mata tudo e confere que morreu
+#   bash bin/sobe-robo3 --mata           derruba o que ESTE script subiu, e só isso
 #
 # ⚠️ `frente` e `sinal` NÃO são a mesma coisa: `frente` é rotação (vira o robô
 # de costas, giro continua igual para quem dirige), `sinal` é espelho.
@@ -20,6 +20,23 @@
 # Tudo o que acontece fica num bag em ~/bancada_robo3/controle_<data>/. Não
 # precisa relatar console: puxe a pasta e eu leio.
 #
+# ── Quem ele derruba (etapa 4, passo 6a, D5) ──────────────────────────────────
+# NUNCA por nome: `joy_node`, `twist_mux`… existem no robô 2 e no simulador, no
+# mesmo PC. Cada coisa que ele sobe ganha grupo de processo próprio (`setsid`),
+# e o grupo entra no REGISTRO logo depois de criado:
+#
+#   ~/.local/state/sobe-robo3/grupos     PGID STARTTIME PAPEL, uma linha por grupo
+#
+# O `--mata` só sinaliza grupo do registro. Um PGID não é realocado enquanto o
+# grupo tem membro: líder morto com membro vivo é grupo NOSSO (derruba); líder
+# vivo com STARTTIME diferente é PID reusado por outro (não toca). Registro
+# ausente ou obsoleto: sai 0 sem matar. Malformado: recusa, sem sinal nenhum.
+#
+# Ao SUBIR ele não mata nada: registro vivo, ou `/robot_state_publisher`,
+# `/twist_mux`, `/joy_node`, `/teleop_twist_joy_node` no domínio ROS (inclusive
+# de outra máquina), ou `ros2 node list` sem resposta → recusa e diz por quê.
+# Consulta, subida, registro e `--mata` correm sob `flock`.
+#
 # ⚠️ NÃO usa `pkill -f`: ele já matou a sessão ssh em outra máquina.
 set +u
 R="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
@@ -28,27 +45,191 @@ SAIDA="$HOME/bancada_robo3/controle_$CARIMBO"
 PORTA=/dev/ttyACM0
 for a in "$@"; do case "$a" in porta:=*) PORTA="${a#porta:=}" ;; esac; done
 
-vivos() {
-  ps -eo pid,args | grep -E "ros2 launch robot_nav controle_robo3|mega_bridge|cmd_vel_to_wheels|\
-joy_node|teleop_twist_joy|twist_mux|dpad_reto|ros2 bag record" | grep -v grep
+ESTADO="${XDG_STATE_HOME:-$HOME/.local/state}/sobe-robo3"
+REGISTRO="$ESTADO/grupos"
+CONFLITO='^/(robot_state_publisher|twist_mux|joy_node|teleop_twist_joy_node)$'
+
+# ── /proc ─────────────────────────────────────────────────────────────────────
+
+# "ESTADO PGRP STARTTIME" de um PID. Os campos vêm DEPOIS do último ") ": o
+# comm (campo 2) pode ter espaço e parêntese.
+stat_de() {
+  local s
+  { read -r s < "/proc/$1/stat"; } 2>/dev/null || return 1
+  s="${s##*") "}"
+  # shellcheck disable=SC2086
+  set -- $s
+  [[ "$3" =~ ^[0-9]+$ && "${20}" =~ ^[0-9]+$ ]] || return 1
+  echo "$1 $3 ${20}"
+}
+
+# PIDs vivos (não zumbi) de qualquer um dos grupos em "$@". Uma passada só
+# pelo /proc, sem subshell por processo (a varredura é o laço da espera).
+membros() {
+  local f s pid alvo=" $* "
+  for f in /proc/[0-9]*/stat; do
+    { read -r s < "$f"; } 2>/dev/null || continue
+    s="${s##*") "}"
+    # shellcheck disable=SC2086
+    set -- $s
+    case "$alvo" in
+      *" $3 "*) [ "$1" != Z ] && [ "$1" != X ] \
+                  && { pid="${f#/proc/}"; echo "${pid%/stat}"; } ;;
+    esac
+  done
+}
+
+# ── registro ──────────────────────────────────────────────────────────────────
+
+# O arquivo INTEIRO tem de ser válido antes de qualquer sinal.
+registro_valido() {
+  local n=0 pgid start papel resto vistos=" "
+  while IFS= read -r linha || [ -n "$linha" ]; do
+    n=$((n + 1))
+    read -r pgid start papel resto <<< "$linha"
+    [[ "$linha" =~ ^[1-9][0-9]*\ [0-9]+\ (launch|bag)$ ]] || return 1
+    [ "$pgid" -gt 1 ] || return 1
+    case "$vistos" in *" $pgid "*) return 1 ;; esac
+    vistos="$vistos$pgid "
+  done < "$REGISTRO"
+  [ "$n" -gt 0 ]
+}
+
+# Os PGIDs do registro que ainda são NOSSOS e têm alguém vivo.
+grupos_nossos_vivos() {
+  local pgid start papel st
+  while read -r pgid start papel; do
+    if st="$(stat_de "$pgid")"; then
+      set -- $st
+      # líder existe (mesmo zumbi, que ainda segura o PID): nosso só se for
+      # o MESMO processo — STARTTIME diferente é PID reusado por outro
+      [ "$3" = "$start" ] && [ -n "$(membros "$pgid")" ] && echo "$pgid"
+    else
+      # líder morto: o PGID não é realocado com membro vivo — é nosso
+      [ -n "$(membros "$pgid")" ] && echo "$pgid"
+    fi
+  done < "$REGISTRO"
+}
+
+# Registra o grupo que $1 lidera, depois de CONFERIR que o PID é o PGID
+# (o `setsid` roda logo depois do fork). Escrita atômica, umask 077. Se a
+# escrita falhar, o grupo — já confirmado — é derrubado: sem registro,
+# ninguém o acharia depois.
+registra() {
+  local pid="$1" papel="$2" st i tmp="$REGISTRO.novo.$$"
+  for i in $(seq 1 40); do
+    if st="$(stat_de "$pid")"; then
+      set -- $st
+      if [ "$2" = "$pid" ]; then
+        if ( umask 077
+             { [ -f "$REGISTRO" ] && cat "$REGISTRO"; echo "$pid $3 $papel"; } \
+               > "$tmp" && mv -f "$tmp" "$REGISTRO" ); then
+          return 0
+        fi
+        rm -f "$tmp"
+        echo "   🔴 não consegui gravar $REGISTRO — derrubando o $papel (grupo $pid)"
+        derruba "$pid"
+        return 1
+      fi
+    fi
+    command sleep 0.05
+  done
+  echo "   🔴 $papel (PID $pid) não virou líder de grupo — derrubando só ele"
+  kill -INT "$pid" 2>/dev/null
+  return 1
+}
+
+# Espera até $1 segundos os grupos "${@:2}" esvaziarem.
+espera_grupos() {
+  local fim=$((SECONDS + $1)); shift
+  while [ -n "$(membros "$@")" ] && [ "$SECONDS" -lt "$fim" ]; do sleep 0.2; done
+}
+
+# INT nos grupos "$@" (o launch derruba os nós dele), KILL em quem sobrar.
+derruba() {
+  local g
+  for g in "$@"; do kill -INT -- "-$g" 2>/dev/null; done
+  espera_grupos 10 "$@"
+  for g in "$@"; do
+    [ -n "$(membros "$g")" ] && kill -KILL -- "-$g" 2>/dev/null
+  done
+  espera_grupos 3 "$@"
+}
+
+trava() {
+  ( umask 077; mkdir -p "$ESTADO" ) || exit 1
+  exec 9> "$ESTADO/trava"
+  if ! flock -n 9; then
+    echo "   🔴 outra chamada do sobe-robo3 está em andamento — tente de novo"
+    exit 1
+  fi
 }
 
 mata() {
-  echo "== matando =="
-  vivos | awk '{print $1}' | sort -u | xargs -r kill -INT
-  sleep 3
-  vivos | awk '{print $1}' | sort -u | xargs -r kill -9
-  sleep 1
-  if [ "$(vivos | wc -l)" -eq 0 ]; then echo "   🟢 limpo"
-  else echo "   🔴 AINDA TEM COISA VIVA — não suba por cima"; vivos; return 1; fi
+  echo "== matando o que o sobe-robo3 subiu =="
+  if [ ! -f "$REGISTRO" ]; then echo "   🟢 nada meu no ar"; return 0; fi
+  if ! registro_valido; then
+    echo "   🔴 registro malformado: $REGISTRO"
+    echo "      não sinalizo nada — confira à mão"
+    return 1
+  fi
+  local alvos g
+  alvos="$(grupos_nossos_vivos)"
+  if [ -z "$alvos" ]; then
+    rm -f "$REGISTRO"
+    echo "   🟢 nada meu no ar (registro obsoleto descartado)"
+    return 0
+  fi
+  # shellcheck disable=SC2086
+  derruba $alvos
+  # shellcheck disable=SC2086
+  if [ -n "$(membros $alvos)" ]; then
+    echo "   🔴 AINDA TEM COISA VIVA nos grupos $alvos — não suba por cima"
+    return 1
+  fi
+  rm -f "$REGISTRO"
+  echo "   🟢 limpo"
 }
 
-[ "$1" = "--mata" ] && { mata; exit $?; }
+recusa_conflito() {
+  if [ -f "$REGISTRO" ]; then
+    if ! registro_valido; then
+      echo "   🔴 registro malformado: $REGISTRO — confira à mão"; return 1
+    fi
+    if [ -n "$(grupos_nossos_vivos)" ]; then
+      echo "   🔴 já está no ar (grupos $(grupos_nossos_vivos | tr '\n' ' '))"
+      echo "      derrube antes:  bash bin/sobe-robo3 --mata"
+      return 1
+    fi
+    rm -f "$REGISTRO"
+  fi
+  local nos rc
+  nos="$(timeout 10 ros2 node list 2>&1)"; rc=$?
+  if [ "$rc" -ne 0 ]; then
+    echo "   🔴 não consegui consultar o grafo ROS (código $rc) — não subo sem saber"
+    echo "$nos" | sed 's/^/      /' | head -5
+    return 1
+  fi
+  local conflito
+  conflito="$(echo "$nos" | grep -E "$CONFLITO")"
+  if [ -n "$conflito" ]; then
+    echo "   🔴 já existe no domínio ROS (pode ser o robô 2 ou o simulador):"
+    echo "$conflito" | sed 's/^/      /'
+    echo "      não mato nada — derrube quem subiu esses nós e tente de novo"
+    return 1
+  fi
+}
+
+if [ "$1" = "--mata" ]; then trava; mata; exit $?; fi
 
 cd "$R" || exit 1
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
-mata || exit 1
+trava
+
+echo "== 0/4 conflitos =="
+recusa_conflito || exit 1
+echo "   🟢 nenhum"
 
 echo "== 1/4 MEGA =="
 if [ ! -e "$PORTA" ]; then
@@ -58,8 +239,10 @@ echo "   $PORTA presente"
 
 mkdir -p "$SAIDA"
 echo "== 2/4 subindo (log em $SAIDA/launch.log) =="
+# `9>&-`: o launch não herda a trava (senão ela ficaria presa enquanto ele vive).
 setsid nohup ros2 launch robot_nav controle_robo3.launch.py "$@" \
-    > "$SAIDA/launch.log" 2>&1 < /dev/null &
+    > "$SAIDA/launch.log" 2>&1 < /dev/null 9>&- &
+registra $! launch || exit 1
 # A MEGA reseta ao abrir a porta (~2 s) e a IMU ausente custa a primeira falha.
 sleep 8
 grep -m1 "\[robo3\] controle" "$SAIDA/launch.log" | sed 's/^.*\[robo3\]/   /'
@@ -68,7 +251,8 @@ echo "== 3/4 gravando bag =="
 setsid nohup ros2 bag record -o "$SAIDA/bag" \
     /joy /joy_vel /cmd_vel /wheel_vel_setpoints \
     /hoverboard/wheel_velocities /battery/front /system/health /mega/debug \
-    > "$SAIDA/bag.log" 2>&1 < /dev/null &
+    > "$SAIDA/bag.log" 2>&1 < /dev/null 9>&- &
+registra $! bag || exit 1
 sleep 2
 
 echo "== 4/4 conferências =="

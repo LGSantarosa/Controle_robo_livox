@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Calço de `ps`: só mostra os processos do TESTE ($CALCO/permitidos). O script
+# de hoje escolhe quem matar pelo `ps`; aqui ele não enxerga a máquina.
+C="${CALCO:?}"
+echo "$*" >> "$C/ps_chamadas"
+if [ "$1" != "-eo" ] || [[ "$2" != pid,* ]]; then
+  echo "ps $*: forma não prevista (o calço exige -eo pid,...)" >> "$C/violacoes"
+  exit 97
+fi
+/usr/bin/ps "$@" | awk -v f="$C/permitidos" \
+  'BEGIN { while ((getline l < f) > 0) ok[l] = 1 } NR == 1 || ($1 in ok)'

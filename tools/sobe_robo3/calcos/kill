@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# Calço de `kill` do teste do sobe-robo3. Só deixa passar alvo que o TESTE
+# criou: PID em $CALCO/permitidos ou −PGID com o PGID em $CALCO/grupos — ou,
+# se ainda não anotado (o script pode sinalizar antes de o `ros2` falso se
+# anotar), alvo cujos processos TODOS carregam a marca CALCO deste teste.
+# Nenhum processo da máquina tem a marca.
+# Qualquer outra coisa vira linha em $CALCO/violacoes e NADA é enviado.
+#
+# Argumentos tratados como array, sem eval. Semântica do kill do procps:
+# antes de qualquer alvo, o primeiro `-X` é o sinal (`-5` é sinal 5, não o
+# grupo 5); depois do sinal ou de `--`, `-N` é o grupo N.
+set -u
+C="${CALCO:?}"
+printf '%q ' "$@" >> "$C/kill_chamadas"; echo >> "$C/kill_chamadas"
+
+viola() { printf 'kill %q: %s\n' "$*" "$MOTIVO" >> "$C/violacoes"; exit 1; }
+consta() { [ -f "$2" ] && grep -qxF -- "$1" "$2"; }
+marcado() { tr '\0' '\n' < "/proc/$1/environ" 2>/dev/null | grep -qxF "CALCO=$C"; }
+# Todos os membros vivos do grupo $1 marcados (e ao menos um membro).
+grupo_marcado() {
+  local f s n=0 pid
+  for f in /proc/[0-9]*/stat; do
+    { read -r s < "$f"; } 2>/dev/null || continue
+    s="${s##*") "}"; set -- "$1" $s
+    [ "$4" = "$1" ] || continue
+    [ "$2" = Z ] && continue     # zumbi: environ vazio, e não recebe sinal
+    pid="${f#/proc/}"; pid="${pid%/stat}"
+    marcado "$pid" || return 1
+    n=$((n + 1))
+  done
+  [ "$n" -gt 0 ]
+}
+
+args=("$@")
+n=${#args[@]}
+i=0
+sinal=0
+fim=0
+alvos=()
+while [ "$i" -lt "$n" ]; do
+  a="${args[$i]}"
+  if [ "$fim" -eq 0 ] && [ "$sinal" -eq 0 ] && [ "${#alvos[@]}" -eq 0 ]; then
+    if [ "$a" = "--" ]; then fim=1; i=$((i + 1)); continue; fi
+    if [ "$a" = "-s" ]; then
+      s="${args[$((i + 1))]:-}"
+      [[ "$s" =~ ^(INT|TERM|KILL|0)$ ]] || { MOTIVO="sinal '$s' não previsto"; viola "$@"; }
+      sinal=1; i=$((i + 2)); continue
+    fi
+    if [[ "$a" == -* ]]; then
+      [[ "$a" =~ ^-(INT|TERM|KILL|SIGINT|SIGTERM|SIGKILL|0|2|9|15)$ ]] \
+        || { MOTIVO="opção/sinal '$a' não previsto"; viola "$@"; }
+      sinal=1; i=$((i + 1)); continue
+    fi
+  fi
+  if [ "$fim" -eq 0 ] && [ "$a" = "--" ]; then fim=1; i=$((i + 1)); continue; fi
+  alvos+=("$a"); i=$((i + 1))
+done
+
+[ "${#alvos[@]}" -gt 0 ] || { MOTIVO="sem alvo"; viola "$@"; }
+for a in "${alvos[@]}"; do
+  [[ "$a" =~ ^-?[1-9][0-9]*$ ]] || { MOTIVO="alvo '$a' malformado"; viola "$@"; }
+  v="${a#-}"
+  [ "$v" -gt 1 ] || { MOTIVO="alvo '$a' proibido"; viola "$@"; }
+  if [ "${a:0:1}" = "-" ]; then
+    consta "$v" "$C/grupos" || grupo_marcado "$v" \
+      || { MOTIVO="grupo $v não é do teste"; viola "$@"; }
+  else
+    consta "$v" "$C/permitidos" || marcado "$v" \
+      || { MOTIVO="PID $v não é do teste"; viola "$@"; }
+  fi
+done
+exec /usr/bin/kill "$@"
