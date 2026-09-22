@@ -3,6 +3,15 @@
 Converts geometry_msgs/Twist (/cmd_vel) into wheel_msgs/WheelSpeeds
 (/wheel_vel_setpoints for the hoverboard driver).
 
+`use_stamped` escolhe o CONTRATO da entrada (etapa 5, PLANO_ETAPA5_ROBO3.md
+D1): `false` (default) assina `geometry_msgs/Twist` — o `robot.launch.py`,
+que não passa o parâmetro, continua igual —; `true` assina
+`geometry_msgs/TwistStamped`, a cadeia única do robô 3. O `header` (stamp e
+frame_id) não entra na conta: os dois tipos entregam linear e angular para o
+MESMO método, e a cinemática mora num lugar só. Tipo trocado entre quem
+publica e quem assina = nenhuma mensagem, em silêncio — por isso o
+parâmetro, e não detecção automática.
+
 Cinemática diferencial amarrada à geometria do robô:
   v_left  = linear * linear_sign - angular * wheel_base / 2     (m/s)
   v_right = linear * linear_sign + angular * wheel_base / 2     (m/s)
@@ -33,7 +42,7 @@ import math
 
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Twist, TwistStamped
 from wheel_msgs.msg import WheelSpeeds
 
 from .utils import spin_node
@@ -53,6 +62,7 @@ class CmdVelToWheels(Node):
         self.declare_parameter('linear_sign', 1.0)
         self.declare_parameter('cmd_vel_topic', 'cmd_vel')
         self.declare_parameter('max_output', 1000.0)
+        self.declare_parameter('use_stamped', False)
 
         self.wheel_base = float(self.get_parameter('wheel_base').value)
         self.linear_scale = float(self.get_parameter('linear_scale').value)
@@ -62,12 +72,15 @@ class CmdVelToWheels(Node):
         self.cmd_vel_topic = self.get_parameter('cmd_vel_topic').value
         self.max_output = float(self.get_parameter('max_output').value)
 
-        self.sub = self.create_subscription(
-            Twist,
-            self.cmd_vel_topic,
-            self._cmd_vel_callback,
-            10
-        )
+        self.use_stamped = bool(self.get_parameter('use_stamped').value)
+        if self.use_stamped:
+            self.sub = self.create_subscription(
+                TwistStamped, self.cmd_vel_topic,
+                lambda m: self._converte(m.twist.linear.x, m.twist.angular.z), 10)
+        else:
+            self.sub = self.create_subscription(
+                Twist, self.cmd_vel_topic,
+                lambda m: self._converte(m.linear.x, m.angular.z), 10)
 
         self.pub = self.create_publisher(WheelSpeeds, 'wheel_vel_setpoints', 10)
 
@@ -78,12 +91,11 @@ class CmdVelToWheels(Node):
             f'| signs L={self.left_sign} R={self.right_sign} '
             f'| linear_sign={self.linear_sign}'
             f'{" (DE COSTAS: frente ↔ ré)" if self.linear_sign < 0 else ""}'
+            f' | {"TwistStamped" if self.use_stamped else "Twist"}'
         )
 
-    def _cmd_vel_callback(self, msg: Twist):
-        linear = msg.linear.x
-        angular = msg.angular.z
-
+    def _converte(self, linear: float, angular: float):
+        """O único caminho da cinemática, para os dois contratos."""
         if not (math.isfinite(linear) and math.isfinite(angular)):
             self.get_logger().warn(
                 f'cmd_vel não-finito (linear={linear}, angular={angular}); ignorando',
