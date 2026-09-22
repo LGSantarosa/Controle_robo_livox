@@ -20,7 +20,17 @@ nos:
   # Transitórios que NÃO entram: ros_gz_sim `create` e os dois `spawner`.
 grafo_somente:
   exatos: []
-  volateis: []
+  volateis:
+    # TransformListener interno do scan_2d (pointcloud_to_laserscan com
+    # target_frame: base_link; membro tf2_listener_ em
+    # pointcloud_to_laserscan_node.hpp; nome "transform_listener_impl_%zx" do
+    # libtf2_ros). NÃO estava na previsão: a captura 20260922_130525 reprovou
+    # por ele ("sobrando"), e a atribuição veio DEPOIS, por execução isolada
+    # (só scan_2d.launch.py, domínio 45, 3/3 consultas: /scan_2d + exatamente
+    # uma ocorrência): ~/validacao_etapa4/20260922_131343_scan2d-isolado/.
+    - padrao: '^/transform_listener_impl_[0-9a-f]+$'
+      quantidade: 1
+      alias: /transform_listener_impl_scan_2d
 
 # 🔴 PREVISÃO HERDADA, não observada no robô 3: mesmo plugin gz_ros2_control e
 # mesmos nomes de controlador (hoverboard_controllers_sim_robo3.yaml) que no

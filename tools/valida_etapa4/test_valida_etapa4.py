@@ -461,6 +461,21 @@ def test_lista_de_nos_pega_duplicado_faltando_e_sobrando():
     assert ln.avalia(cfg['nos'] + ['/intruso'], cfg, cap)['sobrando'] == ['/intruso']
 
 
+def test_robo3_sim_aceita_exatamente_um_listener_do_scan_2d():
+    """A família volátil do scan_2d: uma ocorrência aprova; zero e duas reprovam."""
+    cap = ln._captura()
+    cfg = cap.le_configuracao(os.path.join(AQUI, 'esperados_robo3_sim.yaml'))
+    um = '/transform_listener_impl_5a6bfed37c90'
+    outro = '/transform_listener_impl_5eeb28ab2770'
+    assert ln.avalia(cfg['nos'] + [um], cfg, cap)['veredito'] == 'APROVADO'
+    zero = ln.avalia(cfg['nos'], cfg, cap)
+    assert zero['veredito'] == 'REPROVADO' and zero['volateis_invalidos']
+    dois = ln.avalia(cfg['nos'] + [um, outro], cfg, cap)
+    assert dois['veredito'] == 'REPROVADO' and dois['volateis_invalidos']
+    nome_torto = ln.avalia(cfg['nos'] + ['/transform_listener_impl_XYZ'], cfg, cap)
+    assert nome_torto['veredito'] == 'REPROVADO', 'fora do padrão ancorado é nó a mais'
+
+
 # ─── o orquestrador ──────────────────────────────────────────────────────────
 
 ORQ = os.path.join(RAIZ, 'bin', 'valida-etapa4')
