@@ -21,18 +21,37 @@ FONTE = os.path.join(RAIZ, 'robot_base', 'placa_simulada.py')
 
 
 def _carrega():
-    """Importa o nó sem subir ROS: só a matemática interessa aqui."""
-    for nome in ('rclpy', 'rclpy.node', 'rclpy.qos', 'geometry_msgs',
-                 'geometry_msgs.msg'):
-        sys.modules.setdefault(nome, types.ModuleType(nome))
-    sys.modules['rclpy.node'].Node = object
-    sys.modules['rclpy.qos'].QoSProfile = object
-    sys.modules['rclpy.qos'].ReliabilityPolicy = types.SimpleNamespace(RELIABLE=1)
-    sys.modules['geometry_msgs.msg'].TwistStamped = object
-    spec = importlib.util.spec_from_file_location('placa_simulada', FONTE)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+    """Importa o nó sem subir ROS: só a matemática interessa aqui.
+
+    ⚠️ Os falsos SUBSTITUEM as entradas do `sys.modules` e são desfeitos no
+    `finally`. A versão antiga usava `setdefault` + atributo
+    (`sys.modules['rclpy.node'].Node = object`): com o módulo real já
+    importado, o `setdefault` devolvia o REAL e o atributo era escrito nele,
+    de forma permanente, para o processo inteiro. Ficou inofensivo enquanto
+    nenhum teste subia nó rclpy de verdade depois deste; em 22-09 o
+    `test_cmd_vel_to_wheels_stamped.py` (etapa 5) quebrou por isso na suíte
+    completa, passando sozinho. O canário abaixo reprova se voltar.
+    """
+    falsos = {nome: types.ModuleType(nome)
+              for nome in ('rclpy', 'rclpy.node', 'rclpy.qos', 'geometry_msgs',
+                           'geometry_msgs.msg')}
+    falsos['rclpy.node'].Node = object
+    falsos['rclpy.qos'].QoSProfile = object
+    falsos['rclpy.qos'].ReliabilityPolicy = types.SimpleNamespace(RELIABLE=1)
+    falsos['geometry_msgs.msg'].TwistStamped = object
+    guardados = {n: sys.modules.get(n) for n in falsos}
+    sys.modules.update(falsos)
+    try:
+        spec = importlib.util.spec_from_file_location('placa_simulada', FONTE)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+    finally:
+        for n, antigo in guardados.items():
+            if antigo is None:
+                sys.modules.pop(n, None)
+            else:
+                sys.modules[n] = antigo
 
 
 placa_mod = _carrega()
@@ -406,3 +425,18 @@ def test_a_fila_nao_cresce_sem_limite():
         p.enfileira(100.0 + i * 0.02, 0.30, 0.0)
     assert len(p.fila) <= 1 + PADRAO['latencia'] / 0.02, (
         f'fila com {len(p.fila)} entradas — está vazando')
+
+
+def test_o_carregador_nao_estraga_o_rclpy_dos_outros_testes():
+    """Canário: os falsos do `_carrega` não podem sobrar no processo.
+
+    A versão antiga escrevia `object` por cima de `rclpy.node.Node` e de
+    `geometry_msgs.msg.TwistStamped` REAIS, e quem subisse nó depois quebrava.
+    """
+    import geometry_msgs.msg
+    import rclpy.node
+    import rclpy.qos
+    assert rclpy.node.Node is not object
+    assert rclpy.qos.QoSProfile is not object
+    assert geometry_msgs.msg.TwistStamped is not object
+    assert placa_mod is not None, 'e o nó continua carregável sem ROS'
