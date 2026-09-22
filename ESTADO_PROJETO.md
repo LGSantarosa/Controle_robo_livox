@@ -2,12 +2,29 @@
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
 > Versionado na `main`. Atualizado em **2026-09-22** (dev, branch `etapa4-perfis`
-> — etapa 4: passos 0–6a fechados; baseline v2 é a régua; próximo é o passo 6b).
+> — etapa 4: passos 0–6b fechados; baseline v2 é a régua; próximo é o passo 7).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+---
+
+## ✅ 22-09 — ETAPA 4, PASSO 6b FECHADO: RSP NO `controle_robo3`
+
+- `robot_state_publisher` (nome fixo) com o `robo3.urdf.xacro` do `robot_base`,
+  `sim:=false`; `exec_depend robot_base` no `robot_nav`. Seis nós e cinco
+  argumentos intactos; sem `joint_state_publisher`. Suíte **1094**.
+- Árvore fixa configurada para publicação (inclui `base_link → livox_frame`;
+  TF viva ainda não provada — passo 7); rodas e bobas sem TF dinâmica até
+  existir `/joint_states` — limite, não defeito.
+
+⬜ **Próximo: passo 7** — validação final (§10) e registro: robô 2 no Gazebo
+(dump idêntico à baseline salvo as permissões, corrida da pista), robô 3 no
+Gazebo (`smoke-gazebo-robo3` 6/6), robô 3 com MEGA fingida (TF `base_link →
+livox_frame` yaw 0, frames para a MEGA iguais aos de 14-09, `sobe-robo3 --mata`
+limpo com nós de mesmo nome fora do grupo vivos), `uniq -d` vazio em todas.
 
 ---
 
@@ -26,9 +43,7 @@
 - ⚠️ Mudou o uso: a subida **não mata mais** o que estiver no ar — recusa e
   manda rodar `--mata` (que só derruba o que o próprio script subiu).
 
-⬜ **Próximo: passo 6b** — RSP no `controle_robo3` + `exec_depend robot_base`
-no `robot_nav` (D4). Vermelho: teste de launch com contexto (RSP presente, 1
-instância de cada nó, argumentos antigos intactos) e do `package.xml`.
+✅ Passo 6b fechado (seção acima).
 
 ---
 

@@ -4,6 +4,47 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-09-22 (dev, sem robô) — ETAPA 4, PASSO 6b: O `controle_robo3` GANHA O RSP
+
+**Por quê (D4):** sem `robot_state_publisher` não existe `base_link →
+livox_frame`, e sem essa TF nada do Livox chega ao corpo do robô 3.
+
+**Vermelho primeiro** — `robot_nav/test/test_controle_robo3_launch.py`, 13
+casos, na launch de verdade: o `OpaqueFunction` roda num `LaunchContext` real
+e devolve as ações sem executá-las (nenhum processo ROS sobe); o
+`escolhe_joystick` é trocado por um falso, para o teste não abrir o
+`/dev/input/js*` do PC. 5 reprovaram pelo motivo certo (0 RSP; URDF e TF do
+Livox sem RSP; lista de nós sem ele; `package.xml` sem `robot_base`); 8
+passaram e travam o que existia: os seis nós uma vez cada, nenhum
+`joint_state_publisher`, os cinco argumentos com os defaults de hoje.
+
+O URDF é conferido por **igualdade** com o `robo3.urdf.xacro` do
+`share/robot_base` renderizado com `sim:=false`, e o teste exige que ele
+difira do `sim:=true` (senão a igualdade não distinguiria nada). Achado no
+caminho: o bloco `<ros2_control>` também tem `<joint>`, sem parent/child — o
+teste da TF lê só as juntas de topo (`findall`, não `iter`). Lint: o
+`importorskip` entre imports sempre bate no I100 do `ament_flake8` (o
+`test_pilha_robo.py` vizinho tem o mesmo aviso); aqui `launch_ros` e `xacro`
+são dependências declaradas, então import direto, ordenado.
+
+**Conserto:** no `_monta`, um `Node` `robot_state_publisher` com nome fixo
+(`robot_state_publisher`, o que o `sobe-robo3` procura no grafo) e o XML de
+`xacro.process_file(share/robot_base/description/robo3.urdf.xacro,
+mappings={'sim': 'false'})`, como o `sim_robo3.launch.py` já faz;
+`<exec_depend>robot_base</exec_depend>` no `robot_nav`; docstring sem o "Sem
+URDF". Nenhum argumento novo, nenhum default alterado.
+
+13/13; `ament_flake8` limpo no teste e no launch; build de `robot_base` e
+`robot_nav` (launch instalado idêntico ao fonte); suíte da raiz **1094**; sem
+processo residual.
+
+**Limite, que não é defeito do 6b:** o RSP fica configurado para publicar a
+árvore FIXA, inclusive `base_link → livox_frame` (TF viva não provada aqui). Rodas e bobas são juntas contínuas e
+ficam **sem TF dinâmica** até alguém publicar `/joint_states` — não há
+`joint_state_publisher` de propósito (nada neste bringup mede ângulo de roda).
+Não prova: o RSP subindo de verdade com a MEGA fingida e a TF viva — é o
+critério §10.5, no passo 7.
+
 ## 2026-09-22 (dev, sem robô) — ETAPA 4, PASSO 6a: O `sobe-robo3` SÓ DERRUBA O QUE ELE SUBIU
 
 **O defeito (D5, achado do dono em 18-09):** o `vivos()` escolhia quem matar
