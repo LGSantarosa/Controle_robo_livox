@@ -63,18 +63,28 @@ def _importa_dente():
     # Recorta a classe Ensaio inteira seria frágil; em vez disso executa o
     # arquivo com um rclpy de mentira, que é o único import pesado.
     import sys
-    falsos = {}
-    for nome in ('rclpy', 'rclpy.node', 'rclpy.qos', 'geometry_msgs',
-                 'geometry_msgs.msg', 'nav_msgs', 'nav_msgs.msg'):
-        m = types.ModuleType(nome)
-        falsos[nome] = m
-        sys.modules.setdefault(nome, m)
-    sys.modules['rclpy.node'].Node = object
-    sys.modules['rclpy.qos'].QoSProfile = object
-    sys.modules['rclpy.qos'].ReliabilityPolicy = types.SimpleNamespace(RELIABLE=1)
-    sys.modules['geometry_msgs.msg'].TwistStamped = object
-    sys.modules['nav_msgs.msg'].Odometry = object
-    return _carrega('ensaio')
+    # ⚠️ SUBSTITUI e restaura no finally (como o `_carrega_checa_pilha`
+    # abaixo). A versão antiga usava `setdefault` + atributo, e com o módulo
+    # real já importado escrevia `object` no rclpy/geometry_msgs REAIS, para o
+    # processo inteiro — quebrou o teste de nó real da etapa 5 em 22-09.
+    falsos = {nome: types.ModuleType(nome)
+              for nome in ('rclpy', 'rclpy.node', 'rclpy.qos', 'geometry_msgs',
+                           'geometry_msgs.msg', 'nav_msgs', 'nav_msgs.msg')}
+    falsos['rclpy.node'].Node = object
+    falsos['rclpy.qos'].QoSProfile = object
+    falsos['rclpy.qos'].ReliabilityPolicy = types.SimpleNamespace(RELIABLE=1)
+    falsos['geometry_msgs.msg'].TwistStamped = object
+    falsos['nav_msgs.msg'].Odometry = object
+    guardados = {n: sys.modules.get(n) for n in falsos}
+    sys.modules.update(falsos)
+    try:
+        return _carrega('ensaio')
+    finally:
+        for n, antigo in guardados.items():
+            if antigo is None:
+                sys.modules.pop(n, None)
+            else:
+                sys.modules[n] = antigo
 
 
 ensaio = _importa_dente()
@@ -1314,3 +1324,16 @@ def test_o_resumo_conta_sobre_TODOS_os_feixes_e_nao_so_os_que_casaram():
     """Percentual sobre os que casaram esconderia metade da falha."""
     linhas = casa_scan.resumo([0.02, None], fora_do_mapa=0)
     assert any('0.05 m de parede da planta:  50.0%' in l for l in linhas)
+
+
+def test_os_carregadores_nao_estragam_o_rclpy_dos_outros_testes():
+    """Canário: nenhum falso de `_importa_dente` sobra no processo."""
+    import geometry_msgs.msg
+    import nav_msgs.msg
+    import rclpy.node
+    import rclpy.qos
+    assert rclpy.node.Node is not object
+    assert rclpy.qos.QoSProfile is not object
+    assert geometry_msgs.msg.TwistStamped is not object
+    assert nav_msgs.msg.Odometry is not object
+    assert dente_de_serra is not None, 'e o ensaio continua carregável sem ROS'
