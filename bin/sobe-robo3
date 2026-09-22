@@ -264,10 +264,32 @@ FALHOU=0
 # /battery/front e não /system/health: o health só publica quando MUDA, e um
 # `--once` nele esperaria para sempre com tudo certo. A bateria sai a ~5 Hz,
 # e `present` é "a placa respondeu nos últimos 200 ms" (firmware txState).
-BAT="$(timeout 6 ros2 topic echo /battery/front --once 2>/dev/null)"
+#
+# ⚠️ AVISO DE DESCOBERTA NÃO É DIAGNÓSTICO DE PLACA (22-09). Com a descoberta
+# incompleta, o `ros2 topic echo` imprime "topic ... does not appear to be
+# published yet" NO STDOUT: a saída fica não-vazia e sem `present:`, e a
+# versão anterior lia isso como "placa desligada". Aconteceu na validação da
+# etapa 5 (~/validacao_etapa5/20260922_154816_contrato_stamped) e foi
+# reproduzido isolado (20260922_155931_diag-mega, 1 de 3 partidas frias) com a
+# bateria publicando a 4,9 Hz o tempo todo. Agora: tipo explícito, sem daemon,
+# e tenta de novo até ter uma mensagem com `present:` (teto de 10 s). Cada
+# tentativa fica em $SAIDA/battery_check.log.
+BAT=""
+: > "$SAIDA/battery_check.log"
+FIM_BAT=$((SECONDS + 10))
+while [ "$SECONDS" -lt "$FIM_BAT" ]; do
+  TENTATIVA="$(timeout 6 ros2 topic echo /battery/front sensor_msgs/msg/BatteryState \
+      --once --no-daemon --spin-time 2 --timeout 2 2>&1)"
+  { echo "--- tentativa (t=$SECONDS s, código $?):"; echo "$TENTATIVA"; } \
+      >> "$SAIDA/battery_check.log"
+  if echo "$TENTATIVA" | grep -q "^present:"; then BAT="$TENTATIVA"; break; fi
+  sleep 1
+done
 echo -n "   placa responde:     "
 if [ -z "$BAT" ]; then
-  echo "🔴 /battery/front mudo — MEGA sem mega_bridge gravado? veja $SAIDA/launch.log"
+  # Nunca veio mensagem estruturada: tópico sem leitura válida (mega_bridge
+  # sem gravar, porta errada, ou nada publicando).
+  echo "🔴 /battery/front sem leitura válida em 10 s — veja $SAIDA/battery_check.log"
   FALHOU=1
 elif echo "$BAT" | grep -q "^present: true"; then
   echo "🟢 sim"
