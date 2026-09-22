@@ -392,6 +392,36 @@ def test_footprint_canonico_NAO_carrega_folga(urdf, footprint):
     assert geo[3] - 1e-9 <= fp[3] <= geo[3] + ARRED
 
 
+def _raio_varrido_pivo(urdf):
+    """Distância máxima ao `base_link` de tudo o que o robô ocupa girando nele.
+
+    Envolvente FÍSICA: quinas do corpo rígido e, para cada boba, o ponto mais
+    longe do disco que ela varre (|pivô| + raio varrido). NÃO é a quina do
+    footprint retangular — ela é área vazia (0,348 m) e inflaria a folga.
+    """
+    corpo = max(math.hypot(x, y) for x, y in _pontos_do_corpo(urdf))
+    bobas = max(math.hypot(px, py) + R for px, py, R in _varredura_bobas(urdf))
+    return max(corpo, bobas)
+
+
+def test_raio_varrido_pivo_do_artefato_bate_com_o_urdf(urdf, footprint):
+    """`raio_varrido_pivo` (etapa 4, passo 4a) é geometria, classe (b).
+
+    Consumidor: o `desencalhe_pivo_folga` do perfil do robô 3 = este raio +
+    margem (c) em chave própria. Sem folga aqui, arredondado para FORA como a
+    traseira do footprint; quem manda nele hoje são as bobas (0,31249), não o
+    corpo rígido (0,2760).
+    """
+    with open(GEOMETRIA) as f:
+        artefato = yaml.safe_load(f)['raio_varrido_pivo']
+    geo = _raio_varrido_pivo(urdf)
+    assert abs(geo - 0.31249) < 1e-5
+    assert geo - 1e-9 <= artefato <= geo + 1e-4, 'fora da envolvente ou com folga'
+    assert artefato == 0.3125, 'o valor escolhido no plano: 0,31249 arredondado para fora'
+    quina = max(math.hypot(x, y) for x, y in footprint)
+    assert artefato < quina - 0.03, 'isto é a quina vazia do retângulo, não o robô'
+
+
 def test_urdf_girado_exige_frente_negativa_no_controle(urdf):
     """Coerência entre o URDF girado e o `frente:=-1.0` — NÃO observa roda física.
 

@@ -29,3 +29,17 @@ footprint:
   #   lateral  y = ±0,1900   face externa do pneu (0,160 + 0,060/2); a varredura
   #                          das bobas chega a 0,14772 e não alarga nada
   poligono: [[0.0825, 0.1900], [0.0825, -0.1900], [-0.2913, -0.1900], [-0.2913, 0.1900]]
+
+# Distância máxima ao `base_link` de tudo o que o robô ocupa GIRANDO NELE
+# (pivô no lugar). Classe (b), SEM folga — etapa 4, passo 4a. Consumidor: o
+# `desencalhe_pivo_folga` do perfil do robô 3 = este raio + margem (c) própria.
+#
+#   quem manda: as BOBAS, |pivô| + raio varrido
+#               = √(0,2485² + 0,105²) + 0,04272 = 0,312493, ARREDONDADO PARA FORA
+#   corpo rígido (quina traseira da caixa): 0,2760 — não alcança
+#
+# ⚠️ NÃO é a quina do `poligono` acima (0,348): aquela é área VAZIA da caixa
+# delimitadora, e usá-la seria folga escondida de 3,5 cm. Nome diferente de
+# `raio_min_curva` de propósito: isto é o raio que o CORPO varre, não a curva
+# que a trajetória faz. `test_urdf_robo3.py` confere contra o URDF.
+raio_varrido_pivo: 0.3125
