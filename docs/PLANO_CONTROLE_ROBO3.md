@@ -63,7 +63,9 @@ Feedback de volta: `/battery/front`, `/hoverboard/wheel_velocities`, `/system/he
    cmd_vel_to_wheels, joy_node (autorepeat 20 Hz, deadzone 0,10), teleop e mux.
    Os sinais, a escala e a porta viram argumentos, para inverter no lab sem
    recompilar.
-5. **`bin/sobe-robo3`**: mata o que estiver vivo, sobe a launch e confere a
+5. **`bin/sobe-robo3`**: recusa se já houver instância dele ou conflito no
+   grafo ROS (desde 22-09, etapa 4 passo 6a: não mata mais nada por nome; o
+   `--mata` só derruba o que ele próprio subiu), sobe a launch e confere a
    bateria da placa, se a placa responde e o `/joy`. Grava bag em
    `~/bancada_robo3/controle_<data>/` com `/joy /joy_vel /cmd_vel
    /wheel_vel_setpoints /hoverboard/wheel_velocities /battery/front

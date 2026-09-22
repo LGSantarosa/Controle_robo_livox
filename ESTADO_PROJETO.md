@@ -2,12 +2,33 @@
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
 > Versionado na `main`. Atualizado em **2026-09-22** (dev, branch `etapa4-perfis`
-> — etapa 4: passos 0–5 fechados; baseline v2 é a régua; próximo é o passo 6a).
+> — etapa 4: passos 0–6a fechados; baseline v2 é a régua; próximo é o passo 6b).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+---
+
+## ✅ 22-09 — ETAPA 4, PASSO 6a FECHADO: `sobe-robo3` SÓ DERRUBA O PRÓPRIO GRUPO
+
+- Registro `~/.local/state/sobe-robo3/grupos` (PGID, STARTTIME, papel);
+  `--mata` só nesses grupos, idempotente, obsoleto → 0 sem matar, malformado →
+  recusa sem sinal; subida recusa conflito no grafo ou `node list` sem
+  resposta, sem matar nada; `flock` em tudo. Nada de matar por nome.
+- Testes em `tools/sobe_robo3/` com calços (sem namespace neste PC); grupo
+  recém-criado sem registro gravado é derrubado (não fica órfão). Suíte **1081**.
+- 🔴 **Incidente 10:45–10:59:** a bancada subiu a pilha REAL do robô 3 no dev
+  e criou 56 grupos (`source` relativo escapou do calço). Limpo; nenhum processo
+  pré-existente sinalizado; ver DIARIO. Bancada agora com domínio 77, só
+  localhost e detector de vazamento.
+- ⚠️ Mudou o uso: a subida **não mata mais** o que estiver no ar — recusa e
+  manda rodar `--mata` (que só derruba o que o próprio script subiu).
+
+⬜ **Próximo: passo 6b** — RSP no `controle_robo3` + `exec_depend robot_base`
+no `robot_nav` (D4). Vermelho: teste de launch com contexto (RSP presente, 1
+instância de cada nó, argumentos antigos intactos) e do `package.xml`.
 
 ---
 
@@ -21,9 +42,7 @@
   regressão da 032 (tabela no DIARIO).
 - No robô 2 o Approach **não** contém o footprint — por isso a regra é por perfil.
 
-⬜ **Próximo: passo 6a** — `sobe-robo3` por grupo de processo próprio: recusa
-conflito, `--mata` só o próprio grupo (D5). Vermelho antes: contra processos
-fingidos com os mesmos nomes, hoje ele os mata; depois, recusa e não mata.
+✅ Passo 6a fechado (seção acima).
 
 ---
 

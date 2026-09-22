@@ -4,6 +4,114 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-09-22 (dev, sem robô) — ETAPA 4, PASSO 6a: O `sobe-robo3` SÓ DERRUBA O QUE ELE SUBIU
+
+**O defeito (D5, achado do dono em 18-09):** o `vivos()` escolhia quem matar
+por NOME (`joy_node`, `twist_mux`, `teleop_twist_joy`…) na máquina inteira, e a
+subida começava matando. Com o robô 2 ou o simulador no mesmo PC, derrubaria os
+nós deles.
+
+**Bancada sem namespace.** O AppArmor deste PC bloqueia user namespace sem
+root (`apparmor_restrict_unprivileged_userns=1`; `unshare` e `bwrap` falham
+dentro e fora do sandbox). O isolamento ficou por calços
+(`tools/sobe_robo3/calcos/`): `BASH_ENV` troca `kill`, `pkill`, `killall`,
+`sleep` e o `source` de setup por funções; o PATH começa por `kill`, `ps`,
+`pkill`, `killall`, `pgrep` e `ros2` falsos. O `kill` falso valida os
+argumentos como array (sem eval), com a semântica do procps (antes de alvo,
+`-5` é sinal), e só entrega a PID/PGID que o teste criou. Rede de segurança
+independente dos calços: todo descendente do script herda `CALCO=<dir do
+teste>`, e ao fim de cada teste qualquer marcado desconhecido reprova e é
+derrubado. `ROS_DOMAIN_ID=77` e só localhost na bancada, para o caso de um
+`ros2` real escapar de novo. Os calços têm testes próprios (alvos proibidos,
+`source` relativo, detector de vazamento). Estático: o fonte não pode ter
+`pkill`, `killall`, `pgrep`, `xargs … kill`, `/bin/kill`, `/usr/bin/kill`,
+`builtin kill`, `command kill`, `env kill`, `exec kill`, `\kill` nem `. arquivo`.
+
+**Vermelho (script antigo, depois do incidente abaixo):** 21 reprovados, cada
+um pelo motivo certo — mata por nome e sem `flock`; `--mata` sem registro
+matou os 4 externos; registro obsoleto ignorado; PID reusado morto; membro do
+grupo com líder morto sobrevivendo (filho com nome NEUTRO, para não morrer por
+coincidência de nome — na primeira versão ele se chamava `mega_bridge` e o
+script antigo o matava por acaso); 8 registros malformados aceitos; conflito
+no grafo ignorado; `node list` falhando/travando tratado como "sem conflito";
+subida matando externos; subida por cima de registro vivo; duas subidas
+concorrentes passando as duas.
+
+**O conserto:** registro `~/.local/state/sobe-robo3/grupos` (`PGID STARTTIME
+PAPEL`, diretório 0700, arquivo 0600, escrita atômica com umask 077), cada
+grupo registrado logo depois do `setsid`, com o PID conferido como PGID;
+`/proc/PID/stat` lido depois do último `) `, inteiros validados, PGID 0/1/
+negativo/malformado recusado, o arquivo inteiro validado antes de qualquer
+sinal (teste de registro misto: linha boa + malformada → nenhum sinal).
+Líder morto com membro vivo = nosso (o kernel não realoca PGID com membro);
+líder existente com STARTTIME diferente = PID reusado, não toca. INT, até
+10 s, KILL no que sobrar. `flock -n` em consulta, subida, registro e
+`--mata`; o launch e o bag não herdam a trava (`9>&-`). Subida recusa com
+registro vivo, com `/robot_state_publisher`, `/twist_mux`, `/joy_node` ou
+`/teleop_twist_joy_node` no domínio, ou com `ros2 node list` falhando ou
+passando de 10 s.
+
+Tropeços meus no caminho, todos da bancada ou do conserto, não do vermelho:
+o `ros2` falso nasceu sem bit de execução; os fingidos do launch/bag
+ignoravam INT (o bash deixa SIG_IGN em processo de segundo plano) e o `--mata`
+só terminava no KILL — viraram python com SIGINT padrão, como o launch real, e
+o teste da subida limpa exige que o caminho normal não precise de KILL (o
+KILL tem teste próprio, com um processo que ignora INT); a varredura do
+`/proc` custava 0,57 s (um subshell por processo), caiu a 0,046 s numa
+passada só; e o líder ZUMBI com membro vivo seria descartado como alheio —
+corrigido antes do commit (zumbi ainda segura o PID, não houve reuso).
+
+Revisão do dono antes do commit: (1) falha ao gravar o registro deixava o
+grupo recém-criado ÓRFÃO — agora o `registra` derruba o grupo já confirmado,
+remove o temporário e reprova, com teste de `mv` falhando (e mutação: sem o
+`derruba`, o teste reprova com "grupo órfão vivo"). Para esse teste não ficar
+instável, o calço de kill aceita também alvo cujos processos TODOS têm a marca
+`CALCO` (o script pode sinalizar antes de o `ros2` falso se anotar; zumbi,
+sem environ, não conta). (2) 16 erros de docstring do `ament_flake8` no teste
+novo, corrigidos — a suíte verde não substitui o lint direto.
+
+Suíte dirigida **52**; da raiz **1081**; `ament_flake8` limpo. Depois de cada
+uma: nenhum processo marcado, nenhum ROS residual. Não prova: o comportamento contra a pilha real
+do robô 3 (`controle_robo3` de verdade atendendo o INT em ≤ 10 s) — é o
+critério §10.5, com MEGA fingida, no passo 7.
+
+## 2026-09-22 10:45–10:59 (dev) — INCIDENTE: A BANCADA DO 6a SUBIU A PILHA REAL DO ROBÔ 3
+
+**O que aconteceu.** Nas duas primeiras rodadas dos testes do 6a, contra o
+script antigo, os testes de subida chamaram o `ros2` **real**:
+`ros2 launch robot_nav controle_robo3.launch.py` (joy_node, teleop, twist_mux,
+dpad_reto, cmd_vel_to_wheels) e `ros2 bag record`, no **domínio 0**, uma vez
+por teste que chegava à subida. **56 grupos, 206 processos**, mais um
+`ros2-daemon` iniciado às 10:45:55. O `--mata` antigo via o `ps` falso e não os
+enxergava; ficaram vivos.
+
+**Causa.** O calço de `source` só neutralizava `*/install/setup.bash`; o
+script faz `source install/setup.bash`, **relativo**. O setup real rodou, pôs
+`/opt/ros/jazzy/bin` na frente do PATH e o `ros2` falso deixou de ser o
+encontrado. Um segundo defeito escondia o primeiro: o `ros2` falso estava sem
+bit de execução, então a primeira rodada nem teria usado ele.
+
+**O que NÃO houve.** Nenhum sinal a processo **pré-existente**: o `kill` estava
+coberto pelo calço (só PIDs do teste) e não havia outro ROS no PC. A porta era
+um arquivo falso em `/tmp`: nada chegou à MEGA nem ao robô (desligado).
+
+**Risco potencial.** O `joy_node` real abre `/dev/input/js*`: um controle ou
+joystick pareado com este PC na janela 10:45–10:59 pode ter sido lido e
+publicado em `/joy` no domínio 0. Não há registro de que havia um.
+
+**Limpeza.** Grupos identificados pelo caminho `/tmp/pytest-of-…` nos
+argumentos do líder e derrubados **só eles** (INT, depois KILL). O
+`ros2 daemon stop` travou; o daemon foi derrubado pelo PID, conferido o
+horário de início. Depois: nenhum processo ROS no PC. Os 90
+`/tmp/launch_params_*` ficaram — não dá para atribuí-los inequivocamente.
+
+**Defesas que entraram por causa dele:** `source` de qualquer `setup.bash`
+(relativo ou absoluto) e de `/opt/ros/*` neutralizado, com teste de que o PATH
+não muda e o `command -v ros2` é o falso; detector de vazamento pela marca
+`CALCO`; `ROS_DOMAIN_ID=77` e só localhost na bancada. **Lição:** calço que
+depende de casar caminho falha em silêncio; a rede de segurança tem de ser
+independente do calço estar certo.
+
 ## 2026-09-22 (dev, sem robô) — ETAPA 4, PASSO 5: O REFLEXO COERENTE POR PERFIL, E O TESTE NASCE VERDE
 
 `test_reflexo_por_perfil.py`, 15 casos, sobre o perfil **montado** (os dois
