@@ -4,6 +4,70 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-09-22 (dev, sem robô) — ETAPA 5, PASSOS 1–5: A CADEIA DO ROBÔ 3 FALA `TwistStamped`
+
+Evidência: `docs/dados/2026-09-22-etapa5-contrato/` (13 pastas, README,
+`SHA256SUMS`). Branch `etapa5-contrato`; a `main` só recebe a etapa inteira.
+
+**Plano** (`docs/PLANO_ETAPA5_ROBO3.md`, `9b26ec3`), aprovado com seis
+correções do dono. Achado que mudou o desenho: o `cmd_vel_to_wheels` **não é
+só do robô 3** — o `robot.launch.py` (via `launch.sh`) usa o mesmo nó em
+`Twist` (DIARIO 1331, decisão 049). Por isso D1 = parâmetro `use_stamped`
+com **default cru**, e não adaptador nem troca de tipo.
+
+**Passo 2 — caracterização da cadeia `Twist`.** Bancada nova
+(`bin/valida-etapa5`, `tools/valida_etapa5/`), com a segurança COPIADA da
+etapa 4 (evidência congelada, não refatorada). 26/26 (`142601`), com o que a
+cadeia faz hoje: prioridade do direcional, timeout do mux (analógico volta em
+0,35 s), homem-morto, e **perda do controle com o último frame NÃO-ZERO** —
+só o watchdog do firmware pararia o robô (D4, em aberto).
+
+**Passo 3 — `cmd_vel_to_wheels` dual** (`f0ea415`): `use_stamped` (default
+`false`), um caminho só para a cinemática, teste com o nó REAL, tipo conferido
+no grafo, controle positivo e barreira de descoberta.
+
+**Passo 4 — corte atômico** (`9c99c20`): `dpad_reto` em `TwistStamped` com
+header (frame `base_link`, inclusive no zero de soltura), teleop stamped com
+`frame` explícito, mux `use_stamped: true`, launch passando `use_stamped` ao
+`cmd_vel_to_wheels`. Coerência dos dois lados de cada tópico travada, e o
+legado provado cru.
+
+**Passo 5 — bancada `stamped` 26/26** (`161655`): `joy_vel`, `dpad_vel` e
+`cmd_vel` são `TwistStamped` no grafo, e **os números não mudaram** —
+reprodução de 14-09 (−120 / 97), padrão de hoje (−120 / −256), o par que
+isola o `linear_sign` (+120 / −256), prioridade, timeout em 0,35 s,
+homem-morto, perda do controle e TF com yaw 0.
+
+**Dois defeitos achados no caminho, nenhum do contrato:**
+1. **régua do timeout estreita** (`141628`): um frame do direcional em
+   trânsito chegou 2 ms depois da troca de fase. A régua passou a aceitar, até
+   `t0 + 0,1 s` (dois períodos do `/joy`), só o frame da fase anterior, com o
+   zero exigido nesse prazo (`8747c92`);
+2. **aviso de descoberta lido como placa desligada** (`154816`): o
+   `ros2 topic echo` imprime o aviso no stdout, e o `sobe-robo3` lia isso como
+   defeito de placa. Reproduzido isolado (`155931`, 1 de 3 partidas frias, com
+   a bateria a 4,9 Hz o tempo todo). Conserto em `c914c1c`, com quatro
+   vereditos distintos e `battery_check.log`.
+
+**E um defeito PREEXISTENTE da bancada de testes** (`199fe30`): o carregador
+"sem ROS" do `test_placa_simulada.py` e do `tools/banco/test_banco.py` usava
+`setdefault` + atributo e escrevia `object` por cima de `rclpy.node.Node` e de
+`geometry_msgs.msg.TwistStamped` REAIS, para o processo inteiro. Inofensivo
+até alguém subir nó de verdade depois deles — o teste do passo 3 foi o
+primeiro. Agora os falsos substituem e são restaurados no `finally`, com
+canário nos dois arquivos.
+
+**Tropeços meus, todos registrados:** commitei o passo 3 com a suíte vermelha,
+porque `pytest | tail -1 && git commit` mascara o código de saída (agora o
+código é conferido direto); o primeiro vermelho do passo 3 rodou contra o
+`install/` porque o `rootdir` do pytest muda quando se roda o arquivo direto
+(uso `--rootdir=.`); a cópia instrumentada da MEGA ficou sem o `fases.yaml`;
+`--no-daemon` não existe no `ros2 topic pub` e `--once` publica antes de a
+assinatura casar; e o arranjo mínimo deixou um `mega_bridge` vivo, que a
+bancada seguinte recusou — foi assim que eu soube.
+
+Suíte da raiz: **1231**. Falta o passo 6: decisão 054 e o fechamento.
+
 ## 2026-09-22 (dev + Gazebo, sem robô) — ETAPA 4, PASSO 7: A VALIDAÇÃO FINAL — UMA PREVISÃO FALSIFICADA E UM DEFEITO REAL
 
 Evidência completa em `docs/dados/2026-09-22-etapa4-passo7/` (sete pastas
