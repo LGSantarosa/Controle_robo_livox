@@ -1,0 +1,23 @@
+# Nós esperados do `bash bin/sobe-robo3 porta:=<pty>` com a MEGA fingida —
+# cópia da etapa 4 (passo 7 aprovou esta lista, 20260922_133847); etapa 5. Formato do tools/linha_de_base/captura.py.
+#
+# 🔴 É PREVISÃO pela leitura do código (controle_robo3.launch.py depois do 6b
+# e o `ros2 bag record` do sobe-robo3), NÃO observação. Divergência reprova e
+# fica na pasta; nó a mais é IDENTIFICADO antes de entrar aqui.
+# Fora da lista, por serem OCULTOS: `_mega_fingida5` (a bancada) e
+# `_linha_de_base` (a captura). Os transitórios do sobe-robo3 (`ros2 topic
+# echo`/`hz`) terminam antes da captura.
+nos:
+  # --- controle_robo3.launch.py
+  - /mega_bridge
+  - /cmd_vel_to_wheels
+  - /joy_node
+  - /teleop_twist_joy_node
+  - /dpad_reto
+  - /twist_mux
+  - /robot_state_publisher     # novo no 6b
+  # --- o bag do sobe-robo3
+  - /rosbag2_recorder
+grafo_somente:
+  exatos: []
+  volateis: []

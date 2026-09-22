@@ -1,0 +1,238 @@
+#!/usr/bin/env bash
+# Validação da etapa 5 — o contrato de comando do robô 3, sem Gazebo
+# (docs/PLANO_ETAPA5_ROBO3.md §3.3). O bin/valida-etapa4 é evidência congelada
+# da etapa 4 e NÃO muda; a infraestrutura de segurança foi COPIADA para
+# tools/valida_etapa5/ (marca, sinal só com identidade, limpeza em EXIT,
+# consulta ao grafo com erro reprova, pré-condição do udev).
+#
+#   bash bin/valida-etapa5 contrato caracterizacao   a cadeia Twist de hoje
+#   bash bin/valida-etapa5 contrato stamped          depois do corte atômico
+#
+# Três condições, cada uma subindo o sobe-robo3 contra a MEGA fingida:
+# reproducao_14_09 e padrao_hoje (regressão byte a byte contra o passo 7) e
+# frente_mais_1 (o par de padrao_hoje que isola o linear_sign). padrao_hoje
+# roda a sequência completa: prioridade, timeout do mux, homem-morto e perda
+# do controle (tools/valida_etapa5/fases.yaml).
+#
+# Pasta nova por chamada: ~/validacao_etapa5/<data>_contrato_<rótulo>/.
+# NUNCA mata por nome. Robô físico não participa.
+set +u
+R="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+CENARIO="$1"; ROTULO="$2"
+case "$CENARIO" in
+  contrato) DOMINIO=46 ;;
+  *) echo "uso: bash bin/valida-etapa5 contrato <rótulo>"; exit 2 ;;
+esac
+[[ "$ROTULO" =~ ^[a-z0-9_-]+$ ]] || { echo "uso: bash bin/valida-etapa5 contrato <rótulo: [a-z0-9_-]+>"; exit 2; }
+
+CARIMBO="$(date +%Y%m%d_%H%M%S)"
+SAIDA="$HOME/validacao_etapa5/${CARIMBO}_${CENARIO}_${ROTULO}"
+[ -e "$SAIDA" ] && { echo "🔴 $SAIDA já existe — não reaproveito pasta"; exit 1; }
+mkdir -p "$SAIDA" || exit 1
+exec > >(tee -a "$SAIDA/console.txt") 2>&1
+GRUPOS="$SAIDA/grupos_wrapper.txt"; : > "$GRUPOS"
+RESULTADO="$SAIDA/resultado.txt"; : > "$RESULTADO"
+V="$R/tools/valida_etapa5"
+export ROS_DOMAIN_ID="$DOMINIO"
+export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
+# O transporte do Gazebo não olha o ROS_DOMAIN_ID: partição própria por rodada.
+export GZ_PARTITION="valida_etapa5_$CARIMBO"
+DOMINIOS_USADOS="$DOMINIO ${DOMINIO_EXT:-}"
+
+# anota, roda, stat_de, sobe_grupo, nos_do_dominio, limpa, instala_limpeza
+source "$V/lib.sh"
+
+# ── pré-condições (antes de subir QUALQUER coisa) ─────────────────────────────
+
+echo "== validação etapa 5 · $CENARIO · $ROTULO · $CARIMBO =="
+echo "   pasta: $SAIDA · ROS_DOMAIN_ID=$DOMINIOS_USADOS · só localhost · GZ_PARTITION=$GZ_PARTITION"
+{ echo "commit: $(git -C "$R" rev-parse HEAD)"; git -C "$R" log -1 --format='%h %ad %s' --date=iso
+  echo "branch: $(git -C "$R" rev-parse --abbrev-ref HEAD)"
+  echo "status --porcelain (vazio = limpo):"; git -C "$R" status --porcelain; } > "$SAIDA/git.txt"
+if [ -n "$(git -C "$R" status --porcelain)" ]; then
+  echo "   🔴 árvore com mudança não commitada — a proveniência seria falsa:"
+  git -C "$R" status --porcelain | sed 's/^/      /'; exit 1
+fi
+PRE="$(ps -eo pid,user,args | grep -E '(^|[ /])(ros2|gz|rviz2|_ros2_daemon)( |$)|/opt/ros/[a-z]+/lib/|/install/[a-z_]+/lib/|ros2cli\.daemon' | grep -vE 'grep -E|valida-etapa4')"
+if [ -n "$PRE" ]; then
+  echo "   🔴 já tem ROS/Gazebo de pé neste PC — não subo por cima nem mato nada:"
+  echo "$PRE" | sed 's/^/      /'; exit 1
+fi
+if grep -lsa "VALIDA_ETAPA4_MARCA=" /proc/[0-9]*/environ 2>/dev/null | grep -q .; then
+  echo "   🔴 há processo marcado de uma rodada anterior:"
+  grep -lsa "VALIDA_ETAPA4_MARCA=" /proc/[0-9]*/environ | sed 's|/environ||;s|^|      |'; exit 1
+fi
+JS_INFO="nenhum /dev/input/js*"
+if [ "$CENARIO" = contrato ]; then
+  # Joystick de verdade (ou dúvida) recusa: o joy_node real o leria e
+  # misturaria com o /joy fingido. Mouse virtual com jsN (eixo absoluto)
+  # passa, registrado. Critério: a marca do udev, a mesma do SDL.
+  if ls /dev/input/js* >/dev/null 2>&1; then
+    JS_INFO="$(for j in /dev/input/js*; do descreve_js "$j"; done)"
+    for j in /dev/input/js*; do
+      v="$(classifica_js "$j")"
+      if [ "$v" != MOUSE ]; then
+        echo "   🔴 $j: $v — não subo (o joy_node poderia lê-lo):"
+        echo "$JS_INFO" | sed 's/^/      /'; exit 1
+      fi
+    done
+    echo "   ⚪ /dev/input/js* presentes, todos mouse sem ID_INPUT_JOYSTICK (em ambiente.txt)"
+  fi
+  if [ -e "$HOME/.local/state/sobe-robo3/grupos" ]; then
+    echo "   🔴 existe registro do sobe-robo3 — confira com: bash bin/sobe-robo3 --mata"; exit 1
+  fi
+fi
+
+# A marca entra SÓ agora, depois das pré-condições: antes disso o próprio
+# grep que procura marca de rodada anterior a teria (e se acharia). Daqui em
+# diante todo processo lançado a herda; o wrapper em si e o `tee` do console,
+# não (o environ de um processo é o do exec dele).
+export VALIDA_ETAPA4_MARCA="$SAIDA"
+# Daqui em diante TODA saída (build falhou, install difere, Ctrl+C, fim
+# normal) passa pela limpeza — idempotente.
+instala_limpeza
+
+cd "$R" || exit 1
+source /opt/ros/jazzy/setup.bash
+
+echo "== compilando robot_base robot_motion robot_nav (build.log) =="
+if ! roda "$SAIDA/build.log" colcon build --packages-select robot_base robot_motion robot_nav; then
+  anota "build" REPROVADO; exit 1
+fi
+source install/setup.bash
+DIF=0
+while read -r pkg padrao destino; do
+  while IFS= read -r f; do
+    cmp -s "$f" "install/$pkg/share/$pkg/$destino/$(basename "$f")" \
+      || { echo "   🔴 install/ difere do fonte: $f"; DIF=1; }
+  done < <(git ls-files "$padrao")
+done <<'EOF_LISTA'
+robot_base   ros2_packages/robot_base/package.xml            .
+robot_base   ros2_packages/robot_base/launch/*.py            launch
+robot_base   ros2_packages/robot_base/config/*               config
+robot_base   ros2_packages/robot_base/description/*.xacro    description
+robot_base   worlds/*.sdf                                    worlds
+robot_motion ros2_packages/robot_motion/package.xml          .
+robot_motion ros2_packages/robot_motion/config/*.yaml        config
+robot_motion ros2_packages/robot_motion/launch/*.py          launch
+robot_motion ros2_packages/robot_motion/rviz/*.rviz          rviz
+robot_motion ros2_packages/robot_motion/behavior_trees/*.xml behavior_trees
+robot_nav    ros2_packages/robot_nav/package.xml             .
+robot_nav    ros2_packages/robot_nav/launch/*.py             launch
+robot_nav    ros2_packages/robot_nav/urdf/*                  urdf
+robot_nav    ros2_packages/robot_nav/config/*                config
+robot_nav    ros2_packages/robot_nav/behavior_trees/*.xml    behavior_trees
+EOF_LISTA
+[ "$DIF" -ne 0 ] && { anota "install/ igual ao fonte" REPROVADO; exit 1; }
+anota "build + install/ igual ao fonte" APROVADO
+
+{ date -Is; uname -a; echo "hostname: $(hostname)"
+  echo "ROS_DISTRO=$ROS_DISTRO"; ros2 --help >/dev/null 2>&1 && echo "ros2 no PATH: $(command -v ros2)"
+  printenv | grep -E '^(ROS|RMW|AMENT|COLCON|GZ|IGN|FASTRTPS|CYCLONEDDS|PYTHONPATH|VALIDA)' | sort
+  echo "--- /dev/input/js* (pré-condição do contrato):"; echo "$JS_INFO"
+} > "$SAIDA/ambiente.txt"
+
+# Lista completa de nós + uniq -d + comparação com a esperada.
+confere_nos() {   # confere_nos <esperados.yaml> <dominio> <prefixo>
+  if ! nos_do_dominio "$2" "$SAIDA/$3_nos.txt"; then
+    anota "$3: lista de nós = esperada, uniq -d vazio" REPROVADO "(ros2 node list falhou: $3_nos.txt.err)"
+    return 1
+  fi
+  sort "$SAIDA/$3_nos.txt" | uniq -d > "$SAIDA/$3_uniq_d.txt"
+  if roda "$SAIDA/$3_lista_nos.log" python3 "$V/lista_nos.py" "$1" "$SAIDA/$3_nos.txt" \
+       "$SAIDA/$3_lista_nos.yaml"; then
+    anota "$3: lista de nós = esperada, uniq -d vazio" APROVADO
+  else
+    anota "$3: lista de nós = esperada, uniq -d vazio" REPROVADO "($3_lista_nos.yaml)"
+  fi
+}
+captura() {       # captura <esperados.yaml> <pasta> <prazo> — prontidão explícita + dumps
+  if roda "$2.log" python3 tools/linha_de_base/captura.py "$1" "$2" --prazo "$3"; then
+    anota "$(basename "$2"): grafo pronto e estável, dumps" APROVADO
+  else
+    anota "$(basename "$2"): grafo pronto e estável, dumps" REPROVADO "($(basename "$2")/resumo.yaml)"
+  fi
+}
+erros_do_launch() {
+  grep -nE "\[ERROR\]|\[FATAL\]|process has died" "$1" > "$2"
+  anota "linhas ERROR/FATAL/died em $(basename "$1")" ANOTADO "$(wc -l < "$2") ($(basename "$2"))"
+}
+
+# ── cenário ───────────────────────────────────────────────────────────────────
+
+contrato() {
+  local caso d mega pty args i st
+  for caso in reproducao_14_09 padrao_hoje frente_mais_1; do
+    d="$SAIDA/$caso"; mkdir -p "$d"
+    echo "== MEGA fingida · $caso =="
+    sobe_grupo "mega_$caso" "$d/mega.log" python3 "$V/mega_fingida5.py" "$d" "$caso" || return
+    mega=$ULTIMO_PID
+    for i in $(seq 1 100); do [ -s "$d/pty.txt" ] && break; sleep 0.1; done
+    [ -s "$d/pty.txt" ] || { anota "$caso: pty da MEGA fingida" REPROVADO; return; }
+    pty="$(cat "$d/pty.txt")"
+    args="$(python3 -c "import yaml,sys; print(' '.join(yaml.safe_load(open(sys.argv[1]))['cenarios'][sys.argv[2]]['argumentos']))" "$V/fases.yaml" "$caso")"
+    # shellcheck disable=SC2086
+    if roda "$d/sobe.txt" bash bin/sobe-robo3 porta:="$pty" $args; then
+      anota "$caso: sobe-robo3 subiu (placa, bateria, /joy)" APROVADO
+    else
+      anota "$caso: sobe-robo3 subiu (placa, bateria, /joy)" REPROVADO "($caso/sobe.txt)"
+      return
+    fi
+    cp "$HOME/.local/state/sobe-robo3/grupos" "$d/grupos_sobe_robo3.txt" 2>/dev/null \
+      || : > "$d/grupos_sobe_robo3.txt"
+    captura "$V/esperados_robo3_mega.yaml" "$d/captura" 90
+    confere_nos "$V/esperados_robo3_mega.yaml" "$DOMINIO" "$caso"
+    echo "   fases do /joy (mega.log) ..."
+    touch "$d/vai"
+    for i in $(seq 1 900); do [ -s "$d/mega.yaml" ] && break; sleep 0.1; done
+    if grep -q "^veredito: APROVADO" "$d/mega.yaml" 2>/dev/null; then
+      anota "$caso: frames exatos por fase + TF" APROVADO
+    else
+      anota "$caso: frames exatos por fase + TF" REPROVADO "($caso/mega.yaml)"
+    fi
+    sed 's/^/      /' "$d/mega.log" | tail -14
+    : > "$d/externos.txt"
+    python3 "$V/processos.py" foto "$d/antes_mata.csv"
+    roda "$d/mata.txt" bash bin/sobe-robo3 --mata \
+      && anota "$caso: sobe-robo3 --mata limpo" APROVADO \
+      || anota "$caso: sobe-robo3 --mata limpo" REPROVADO "($caso/mata.txt)"
+    python3 "$V/processos.py" foto "$d/depois_mata.csv"
+    if roda "$d/quem_morreu.log" python3 "$V/processos.py" compara "$d/antes_mata.csv" \
+         "$d/depois_mata.csv" "$d/grupos_sobe_robo3.txt" "$d/externos.txt" \
+         "$d/quem_morreu.yaml"; then
+      anota "$caso: só o grupo registrado morreu" APROVADO
+    else
+      anota "$caso: só o grupo registrado morreu" REPROVADO "($caso/quem_morreu.yaml)"
+    fi
+    local rc_d
+    nos_do_dominio "$DOMINIO" "$d/nos_depois_mata.txt"; rc_d=$?
+    if [ "$rc_d" -ne 0 ]; then
+      anota "$caso: domínio $DOMINIO sem nós depois do --mata" REPROVADO "(consulta falhou, código $rc_d)"
+    elif [ -s "$d/nos_depois_mata.txt" ]; then
+      anota "$caso: domínio $DOMINIO sem nós depois do --mata" REPROVADO "($caso/nos_depois_mata.txt)"
+    else
+      anota "$caso: domínio $DOMINIO sem nós depois do --mata" APROVADO
+    fi
+    [ -e "$HOME/.local/state/sobe-robo3/grupos" ] \
+      && anota "$caso: registro do sobe-robo3 removido" REPROVADO \
+      || anota "$caso: registro do sobe-robo3 removido" APROVADO
+    touch "$d/fim"
+    for i in $(seq 1 100); do
+      st="$(stat_de "$mega")" || break
+      case "$st" in Z*) break ;; esac
+      sleep 0.1
+    done
+  done
+}
+
+contrato
+limpa
+
+echo
+echo "== resultado ($RESULTADO) =="
+sed 's/^/   /' "$RESULTADO"
+if grep -q " REPROVADO" "$RESULTADO"; then
+  echo "   🔴 REPROVADO em algum item — NÃO mexa em nada; a pasta é a prova: $SAIDA"
+  exit 1
+fi
+echo "   🟢 APROVADO — pasta: $SAIDA"
