@@ -44,6 +44,21 @@ case "$1 $2" in
     exec -a "ros2 bag record (fingido)" /usr/bin/python3 -c \
       'import signal, time; signal.signal(signal.SIGINT, signal.SIG_DFL); time.sleep(3600)' ;;
   "topic echo")
+    # Botões do /battery/front (etapa 5, 22-09): `battery_avisos` = quantas
+    # primeiras tentativas saem como AVISO DE DESCOBERTA no stdout (o que
+    # enganou o verificador antigo); `battery_travado` = nada dentro do
+    # timeout; `battery_present_false` = leitura válida com a placa muda.
+    n=0; [ -f "$C/battery_tentativas" ] && n="$(cat "$C/battery_tentativas")"
+    echo $((n + 1)) > "$C/battery_tentativas"
+    if [ -f "$C/battery_travado" ]; then exec /usr/bin/sleep 30; fi
+    if [ -f "$C/battery_avisos" ] && [ "$n" -lt "$(cat "$C/battery_avisos")" ]; then
+      echo "WARNING: topic [/battery/front] does not appear to be published yet"
+      echo "Could not determine the type for the passed topic"
+      exit 1
+    fi
+    if [ -f "$C/battery_present_false" ]; then
+      printf 'present: false\nvoltage: 0.0\n'; exit 0
+    fi
     printf 'present: true\nvoltage: 38.5\n'; exit 0 ;;
   "topic hz")
     echo "average rate: 50.000"; exit 0 ;;

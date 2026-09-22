@@ -584,6 +584,62 @@ def test_falha_ao_gravar_o_registro_derruba_o_grupo_recem_criado(b, tmp_path):
     assert b.violacoes() == []
 
 
+# ─── a conferência da placa não confunde descoberta com defeito ─────────────
+
+def _tentativas(b, d):
+    return (d / 'battery_check.log').read_text().count('--- tentativa')
+
+
+def test_aviso_de_descoberta_e_depois_a_mensagem_boa(b):
+    """O falso negativo de 22-09: aviso no stdout lido como placa desligada."""
+    b.externos()
+    b.botao('battery_avisos', '1')
+    r = b.sobe()
+    saida = r.stdout + r.stderr
+    assert r.returncode == 0, saida
+    assert 'placa responde:     🟢 sim' in saida
+    bag = sorted((b.home / 'bancada_robo3').glob('controle_*'))[-1]
+    assert _tentativas(b, bag) >= 2, 'a segunda tentativa é que trouxe a leitura'
+    assert b.violacoes() == []
+
+
+def test_aviso_permanente_reprova_como_sem_leitura(b):
+    b.externos()
+    b.botao('battery_avisos', '999')
+    r = b.sobe(timeout=120)
+    saida = r.stdout + r.stderr
+    assert r.returncode != 0
+    assert 'sem leitura válida em 10 s' in saida, saida
+    assert 'placa desligada' not in saida, 'aviso de descoberta não é diagnóstico de placa'
+
+
+def test_echo_travado_reprova_como_sem_leitura(b):
+    b.externos()
+    b.botao('battery_travado')
+    r = b.sobe(timeout=180)
+    assert r.returncode != 0
+    assert 'sem leitura válida em 10 s' in (r.stdout + r.stderr)
+
+
+def test_present_false_reprova_como_placa_muda(b):
+    b.externos()
+    b.botao('battery_present_false')
+    r = b.sobe()
+    saida = r.stdout + r.stderr
+    assert r.returncode != 0
+    assert 'placa desligada' in saida, 'leitura VÁLIDA com a placa muda'
+    # a linha da TENSÃO também diz "sem leitura válida"; aqui importa a da placa
+    assert 'sem leitura válida em 10 s' not in saida
+
+
+def test_present_true_com_tensao_aprova(b):
+    b.externos()
+    r = b.sobe()
+    saida = r.stdout + r.stderr
+    assert r.returncode == 0, saida
+    assert 'placa responde:     🟢 sim' in saida and 'bateria das rodas:  🟢 38.5 V' in saida
+
+
 def test_subida_com_registro_vivo_recusa(b):
     ext = b.externos()
     nosso = b.processo('/fingido/lib/mega_bridge')
