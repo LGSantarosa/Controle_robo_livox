@@ -1,0 +1,255 @@
+#!/usr/bin/env bash
+# Audita a camada de localização de UMA máquina (tipicamente o NUC), sem sudo,
+# sem subir pilha e sem tocar em nada. Só leitura.
+#
+# POR QUE EXISTE: em 23-09 o PC de dev tinha TRÊS defeitos que nenhum teste
+# nosso pegava, e nenhum deles dava sintoma até a hora errada (decisão 055):
+#   - o SDK nativo compilado desde julho e NUNCA instalado em /usr/local;
+#   - um install/livox_ros_driver2 que era casca vazia (6 arquivos de
+#     escrituração do colcon, zero biblioteca, zero mensagem);
+#   - o MID360_config.json de runtime com o IP .169, que a varredura de 15-09
+#     achou MUDO, em vez do .158 versionado. IP errado = bind failed =
+#     FAST-LIO sem nuvem = /Odometry nunca publicado.
+# O robô pode estar em qualquer um dos três. Do PC de dev não dá para saber:
+# third_party/ e install/ não vêm pelo git.
+#
+# VEREDITOS, e por que três e não dois: "não consegui provar" NÃO é "está
+# errado". Se o clone do SDK não existe na máquina, a lib instalada pode estar
+# perfeita — só não dá para provar a procedência dali. Chamar isso de
+# reprovação seria mentir sobre o robô.
+#   0 = APROVADO       tudo que dava para provar, provou
+#   1 = REPROVADO      pelo menos uma coisa está errada
+#   2 = INCONCLUSIVO   nada errado, mas algo não deu para provar
+#
+# O QUE ESTE SCRIPT NÃO FAZ: rede, lidar, nuvem, /Odometry. Nada aqui liga o
+# robô nem fala com o Mid-360. Ele responde "a máquina está montada para
+# tentar", não "a localização funciona".
+#
+# Uso:  bin/audita-livox [--saida ARQUIVO]
+set -uo pipefail
+
+# O default é a fonte da verdade e está travado contra o setup_livox.sh por
+# teste estático. O override existe só para o teste: repositório fingido não
+# tem como ter o SHA de verdade, e fingir o 'git rev-parse' esconderia
+# justamente o que se quer provar.
+SDK_COMMIT_ESPERADO="${AUDITA_SDK_COMMIT:-f5d9375f84efe2b15bc0a052d3e18482ed13adf4}"
+SDK_TAG_ESPERADA="v1.3.1"
+DISTRO_SUPORTADA="jazzy"
+
+# Injetáveis para o teste (o resto o teste calça pelo PATH, como no sobe-robo3).
+ROS_OPT="${AUDITA_ROS_OPT:-/opt/ros}"
+SDK_LIB="${AUDITA_SDK_LIB:-/usr/local/lib/liblivox_lidar_sdk_shared.so}"
+WS="${AUDITA_WS:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+
+SAIDA=""
+[ "${1:-}" = "--saida" ] && { SAIDA="${2:?--saida exige um arquivo}"; }
+
+pior=0
+linhas=()
+
+# REPROVADO ganha de INCONCLUSIVO: o pior veredito manda.
+# O printf do bash conta BYTES, não caracteres: 'revisão' tem 7 caracteres e 8
+# bytes em UTF-8, e a coluna desalinha justamente nas linhas com acento.
+enche() {
+    local texto="$1" largura="$2"
+    printf '%s' "$texto"
+    local i
+    for ((i = ${#texto}; i < largura; i++)); do printf ' '; done
+}
+
+registra() {
+    local veredito="$1" nome="$2" detalhe="$3"
+    linhas+=("$(printf '[%s] %s %s' \
+        "$(enche "$veredito" 12)" "$(enche "$nome" 22)" "$detalhe")")
+    case "$veredito" in
+        REPROVADO)    pior=1 ;;
+        INCONCLUSIVO) [ "$pior" -eq 0 ] && pior=2 ;;
+    esac
+}
+
+# --- 1. distro ---------------------------------------------------------------
+# Não presumir Jazzy: o passo 0/5 do setup_livox.sh monta nome de pacote apt
+# com 'ros-jazzy-'. Em outra distro a mensagem dele engana.
+distros=()
+for s in "$ROS_OPT"/*/setup.bash; do
+    [ -f "$s" ] || continue
+    distros+=("$(basename "$(dirname "$s")")")
+done
+
+DISTRO=""
+case "${#distros[@]}" in
+    0) registra REPROVADO "distro ROS" "nenhuma em $ROS_OPT/*/setup.bash" ;;
+    1)
+        if [ "${distros[0]}" = "$DISTRO_SUPORTADA" ]; then
+            DISTRO="${distros[0]}"
+            registra APROVADO "distro ROS" "$DISTRO"
+        else
+            registra REPROVADO "distro ROS" \
+                "${distros[0]} — o setup_livox.sh suporta $DISTRO_SUPORTADA explicitamente"
+        fi
+        ;;
+    *)
+        registra INCONCLUSIVO "distro ROS" \
+            "mais de uma (${distros[*]}) — sem escolha inequívoca"
+        ;;
+esac
+
+# --- 2. pacote do sistema ----------------------------------------------------
+if [ -z "$DISTRO" ]; then
+    registra INCONCLUSIVO "apt pcl_ros" "sem distro definida"
+elif ! command -v dpkg-query >/dev/null 2>&1; then
+    registra INCONCLUSIVO "apt pcl_ros" "dpkg-query indisponível"
+elif versao="$(dpkg-query -W -f='${Version}' "ros-$DISTRO-pcl-ros" 2>/dev/null)" \
+     && [ -n "$versao" ]; then
+    registra APROVADO "apt pcl_ros" "ros-$DISTRO-pcl-ros $versao"
+else
+    registra REPROVADO "apt pcl_ros" \
+        "ausente — instale: sudo apt install ros-$DISTRO-pcl-ros"
+fi
+
+# --- 3 e 4. as duas camadas do ROS -------------------------------------------
+# Três camadas distintas, de propósito: o apt diz que o .deb está no disco; o
+# ROS base diz que a distro enxerga; o overlay diz que o WORKSPACE foi
+# construído. Em 23-09 o apt e o base estavam certos e o overlay não existia.
+prefixo_de() {
+    local pacote="$1" overlay="$2"
+    env -i HOME="${HOME:-/root}" PATH="${PATH}" TERM=dumb bash -lc "
+        set +u
+        source '$ROS_OPT/$DISTRO/setup.bash' >/dev/null 2>&1 || exit 90
+        if [ '$overlay' = sim ]; then
+            [ -f '$WS/install/setup.bash' ] || exit 91
+            source '$WS/install/setup.bash' >/dev/null 2>&1 || exit 92
+        fi
+        ros2 pkg prefix '$pacote' 2>/dev/null" 2>/dev/null
+}
+
+checa_pacote() {
+    local nome="$1" pacote="$2" overlay="$3" rotulo="$4"
+    if [ -z "$DISTRO" ]; then
+        registra INCONCLUSIVO "$nome" "sem distro definida"
+        return
+    fi
+    local prefixo rc
+    prefixo="$(prefixo_de "$pacote" "$overlay")"; rc=$?
+    if [ "$rc" -eq 91 ]; then
+        registra REPROVADO "$nome" "não há $WS/install/setup.bash — workspace não construído"
+    elif [ "$rc" -ne 0 ] || [ -z "$prefixo" ]; then
+        registra REPROVADO "$nome" "$rotulo não enxerga $pacote"
+    else
+        registra APROVADO "$nome" "$prefixo"
+    fi
+}
+
+checa_pacote "ROS base pcl_ros"   pcl_ros            nao "o /opt/ros/$DISTRO"
+checa_pacote "overlay livox"      livox_ros_driver2  sim "o overlay do projeto"
+checa_pacote "overlay fast_lio"   fast_lio           sim "o overlay do projeto"
+
+# --- 5 e 6. o SDK nativo: presença E procedência ------------------------------
+# São duas perguntas diferentes. O SHA do clone sozinho NÃO prova qual
+# biblioteca está instalada: em 23-09 o clone estava na revisão certa e
+# /usr/local estava vazia.
+SDK_BUILD="$WS/third_party/Livox-SDK2/build/sdk_core/liblivox_lidar_sdk_shared.so"
+SDK_CLONE="$WS/third_party/Livox-SDK2"
+
+if [ ! -f "$SDK_LIB" ]; then
+    registra REPROVADO "SDK instalado" \
+        "$SDK_LIB ausente — é o estado que o PC de dev tinha em 23-09"
+else
+    # Sem cano: 'ldconfig -p | grep -q' dá falso negativo com 'set -o pipefail'
+    # — o grep -q fecha o cano, o ldconfig morre de SIGPIPE e o pipefail
+    # chama isso de falha. Custou um INCONCLUSIVO mentiroso em 23-09, na
+    # primeira execução deste script.
+    cache_ld=""
+    command -v ldconfig >/dev/null 2>&1 && cache_ld="$(ldconfig -p 2>/dev/null)"
+    case "$cache_ld" in
+        *liblivox_lidar_sdk_shared.so*)
+            registra APROVADO "SDK instalado" "$SDK_LIB (no cache do ldconfig)" ;;
+        *)
+            registra INCONCLUSIVO "SDK instalado" \
+                "$SDK_LIB existe, mas não está no cache do ldconfig" ;;
+    esac
+fi
+
+if [ ! -d "$SDK_CLONE/.git" ]; then
+    registra INCONCLUSIVO "SDK revisão" \
+        "sem clone em $SDK_CLONE — a lib instalada pode estar certa, não dá para provar daqui"
+elif ! command -v git >/dev/null 2>&1; then
+    registra INCONCLUSIVO "SDK revisão" "git indisponível"
+else
+    sha="$(git -C "$SDK_CLONE" rev-parse HEAD 2>/dev/null)"
+    if [ "$sha" = "$SDK_COMMIT_ESPERADO" ]; then
+        registra APROVADO "SDK revisão" "$SDK_TAG_ESPERADA ($sha)"
+    else
+        registra REPROVADO "SDK revisão" \
+            "esperado $SDK_COMMIT_ESPERADO ($SDK_TAG_ESPERADA), presente ${sha:-ilegível}"
+    fi
+fi
+
+if [ ! -f "$SDK_LIB" ]; then
+    registra INCONCLUSIVO "SDK procedência" "sem lib instalada para comparar"
+elif [ ! -f "$SDK_BUILD" ]; then
+    registra INCONCLUSIVO "SDK procedência" \
+        "sem build local em $SDK_BUILD — instalada de origem não verificável aqui"
+elif cmp -s "$SDK_LIB" "$SDK_BUILD"; then
+    registra APROVADO "SDK procedência" "a instalada é byte a byte a do build fixado"
+else
+    registra REPROVADO "SDK procedência" \
+        "a instalada DIFERE do build fixado — reinstale pelo setup_livox.sh"
+fi
+
+# --- 7. o JSON que o launch de fato lê ---------------------------------------
+# O artefato de runtime, não o clone: o clone pode nem existir, e é o
+# install/ que o launch consome. Com --symlink-install os dois são o mesmo
+# arquivo; SEM ele, o install/ tem cópia real e os dois podem divergir calados.
+JSON_FONTE="$WS/ros2_packages/robot_base/config/MID360_config.json"
+prefixo_livox="$(prefixo_de livox_ros_driver2 sim)"
+JSON_RUNTIME="$prefixo_livox/share/livox_ros_driver2/config/MID360_config.json"
+
+if [ ! -f "$JSON_FONTE" ]; then
+    registra REPROVADO "config de rede" "sem o versionado $JSON_FONTE"
+elif [ -z "$prefixo_livox" ]; then
+    registra INCONCLUSIVO "config de rede" \
+        "sem prefixo do livox_ros_driver2 — nada de runtime para comparar"
+elif [ ! -e "$JSON_RUNTIME" ]; then
+    registra REPROVADO "config de rede" "$JSON_RUNTIME ausente (link quebrado?)"
+elif cmp -s "$JSON_FONTE" "$JSON_RUNTIME"; then
+    if [ -L "$JSON_RUNTIME" ]; then
+        registra APROVADO "config de rede" "igual ao versionado (link do --symlink-install)"
+    else
+        registra APROVADO "config de rede" "igual ao versionado (cópia real)"
+    fi
+else
+    ip_runtime="$(grep -o '192\.168\.[0-9]*\.[0-9]*' "$JSON_RUNTIME" | tail -1)"
+    registra REPROVADO "config de rede" \
+        "o runtime DIFERE do versionado (lidar ${ip_runtime:-?}) — rode o setup_livox.sh"
+fi
+
+# --- relatório ---------------------------------------------------------------
+case "$pior" in
+    0) resumo="APROVADO — tudo que dava para provar, provou" ;;
+    1) resumo="REPROVADO — veja as linhas acima" ;;
+    2) resumo="INCONCLUSIVO — nada errado, mas algo não deu para provar" ;;
+esac
+
+relatorio() {
+    echo "audita-livox — $(date '+%Y-%m-%d %H:%M:%S') — $(hostname 2>/dev/null || echo '?')"
+    echo "workspace: $WS"
+    echo
+    printf '%s\n' "${linhas[@]}"
+    echo
+    echo "VEREDITO: $resumo"
+    echo
+    echo "NÃO TESTADO por este script, e que não se conclua o contrário:"
+    echo "  rede, resposta do lidar, nuvem de pontos e /Odometry."
+    echo "  Isto diz que a máquina está montada para tentar, não que a"
+    echo "  localização funciona. Isso só no laboratório, com o robô ligado."
+}
+
+if [ -n "$SAIDA" ]; then
+    relatorio | tee "$SAIDA"
+    echo "(relatório também em $SAIDA)"
+else
+    relatorio
+fi
+
+exit "$pior"
