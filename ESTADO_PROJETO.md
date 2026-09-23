@@ -99,18 +99,28 @@ Validado: `ldconfig` ✅, `ros2 pkg prefix` dos dois ✅, `cmp` das configs ✅,
 não é publicar `/Odometry`. O `.158` é a varredura de 15-09, não medição de
 hoje.
 
-🔴 **Tarefa explícita de deploy da etapa 6 — auditar o NUC.** Tudo acima
-conserta o clone **deste PC**. Lá pode haver outra revisão de SDK, faltar
-`ros-jazzy-pcl-ros` e estar o `.169` velho. Os dois comandos a rodar no robô:
-`git -C third_party/Livox-SDK2 rev-parse HEAD` (esperado `f5d9375…`) e
-`cmp ros2_packages/robot_base/config/MID360_config.json ros2_packages/livox_ros_driver2/config/MID360_config.json`.
+🔴 **Tarefa explícita de deploy da etapa 6 — auditar o NOTEBOOK.** Tudo acima
+conserta **este PC**. O **computador de bordo da etapa 6 é o notebook**, não o
+NUC (adiado até chassi e Nav2 aprovados). Lá pode haver outra revisão de SDK,
+faltar `ros-jazzy-pcl-ros`, estar o `.169` velho — e, o mais provável, **o IP
+do host não existir na máquina**: o JSON espera `192.168.1.2`, documentado
+como IP do NUC. Roteiro: `docs/ROTEIRO_ETAPA6_PRECONDICAO.md`; saída em
+`~/audita-notebook.txt`.
+
+**Sequência da etapa 6:** (1) auditar o notebook; (2) preparar nele SDK,
+drivers e overlay; (3) verificar a rede notebook↔Mid-360; (4) só então o
+roteiro de bancada com Nav2; (5) se o chassi superar o robô 2, migrar e
+auditar o NUC.
 
 ⬜ **Próximo:** etapa 6 — a `pilha` com `robo:=3`, começando pela auditoria do
 NUC. **O roteiro está pronto e versionado:**
 `docs/ROTEIRO_ETAPA6_PRECONDICAO.md` (robô pode estar DESLIGADO). O auditor é
 `bin/audita-livox`, na branch **`etapa6-pilha-robo3`** — três vereditos
-(0 aprovado, 1 reprovado, 2 inconclusivo), sem sudo, sem subir pilha.
-Neste PC: **APROVADO em tudo, rc 0**.
+(0 aprovado, 1 reprovado, 2 inconclusivo), sem sudo, sem subir pilha, 23
+testes. Confere distro, apt/ROS base/overlay em camadas separadas, presença E
+procedência do SDK, o JSON de **runtime** e o **IP do host contra a interface
+real**. Neste PC: rc **2** — tudo aprovado, menos o IP do host, que aqui é
+inconclusivo (não há rede do lidar no dev).
 
 ⚠️ Na auditoria **não** se usa `git reset --hard`: a regra do CLAUDE.md é de
 **deploy**, e sujeira local no NUC pode ser a própria evidência. O roteiro usa

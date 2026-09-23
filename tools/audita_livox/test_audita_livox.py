@@ -58,6 +58,9 @@ class Maquina:
         self.prefixos = {}
         self.apt = {'pcl_ros': '2.6.5-1noble'}
         self.ldconfig = 'liblivox_lidar_sdk_shared.so (libc6,x86-64) => /usr/local/lib/x.so'
+        # Por padrão a máquina TEM o IP do host do JSON; cada teste muda.
+        self.ip_addr = ('lo               UNKNOWN        127.0.0.1/8\n'
+                        'eth0             UP             192.168.1.2/24')
 
         _escreve(os.path.join(self.ros_opt, 'jazzy', 'setup.bash'), '')
         _escreve(os.path.join(self.ws, 'install', 'setup.bash'), '')
@@ -129,6 +132,12 @@ done <<'LISTA'
 LISTA
 exit 1
 ''', executavel=True)
+        # '%b' e não '%s': o printf só expande \n dentro do FORMATO, não do
+        # argumento — com %s o `ip` fingido devolvia tudo numa linha só, e o
+        # auditor lia a interface errada. Defeito do calço, achado em 23-09.
+        _escreve(os.path.join(self.calcos, 'ip'),
+                 f'#!/usr/bin/env bash\nprintf "%b\\n" {self.ip_addr!r}\n',
+                 executavel=True)
         _escreve(os.path.join(self.calcos, 'ldconfig'),
                  f'#!/usr/bin/env bash\nprintf "%s\\n" {self.ldconfig!r}\n',
                  executavel=True)
@@ -327,3 +336,47 @@ def test_saida_grava_arquivo_com_o_relatorio(maquina, tmp_path):
     with open(destino) as f:
         conteudo = f.read()
     assert 'VEREDITO: APROVADO' in conteudo
+
+
+# --- o IP do host contra a interface real -----------------------------------
+# O cmp fonte/runtime prova que os dois arquivos são iguais; NÃO prova que o
+# endereço deles existe nesta máquina. Com o notebook no lugar do NUC (23-09),
+# esse é o defeito mais provável: config idêntica dos dois lados e host que
+# nunca sobe. bind failed com tudo verde.
+
+def test_ip_do_host_presente_aprova(maquina):
+    maquina.build_sdk()
+    r = maquina.audita()
+    assert r.returncode == 0, r.stdout
+    assert '192.168.1.2 em eth0 (UP)' in r.stdout
+
+
+def test_maquina_na_rede_do_lidar_com_outro_ip_reprova(maquina):
+    """O caso notebook: está na rede certa, com o endereço errado."""
+    maquina.ip_addr = 'eth0             UP             192.168.1.77/24'
+    maquina.build_sdk()
+    r = maquina.audita()
+    assert r.returncode == 1
+    assert '192.168.1.77' in r.stdout and '192.168.1.2' in r.stdout
+
+
+def test_sem_nada_na_sub_rede_e_inconclusivo_nao_reprovacao(maquina):
+    """Cabo fora hoje não é máquina errada."""
+    maquina.ip_addr = 'wlan0            UP             10.0.0.5/24'
+    maquina.build_sdk()
+    r = maquina.audita()
+    assert r.returncode == 2, r.stdout
+    assert 'cabo fora' in r.stdout
+
+
+def test_sub_rede_parecida_nao_conta_como_a_do_lidar(maquina):
+    """Ponto é curinga em regex: 192.168.1. casava com 192.168.18.9.
+
+    O auditor REPROVAVA uma máquina por estar numa sub-rede que só PARECE a do
+    lidar. Achado em 23-09 rodando o próprio script no PC de dev.
+    """
+    maquina.ip_addr = 'wlan0            UP             192.168.18.9/24'
+    maquina.build_sdk()
+    r = maquina.audita()
+    assert r.returncode == 2, r.stdout
+    assert 'REPROVADO' not in r.stdout

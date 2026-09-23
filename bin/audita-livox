@@ -224,6 +224,62 @@ else
         "o runtime DIFERE do versionado (lidar ${ip_runtime:-?}) — rode o setup_livox.sh"
 fi
 
+# --- 8. o IP do host existe NESTA máquina? -----------------------------------
+# O cmp do passo 7 prova que fonte e runtime são o mesmo arquivo; NÃO prova que
+# esse arquivo combina com a máquina. O host_net_info.cmd_data_ip está
+# documentado como o IP do NUC, e em 23-09 o computador de bordo da etapa 6
+# passou a ser o NOTEBOOK. Config igual nos dois lados e endereço que não
+# existe na interface = bind failed, com os dois cmp verdes.
+ip_do_host() {
+    local arquivo="$1"
+    if command -v python3 >/dev/null 2>&1; then
+        python3 -c "
+import json, sys
+try:
+    c = json.load(open(sys.argv[1]))
+    print(c['MID360']['host_net_info']['cmd_data_ip'])
+except Exception:
+    pass" "$arquivo" 2>/dev/null
+    else
+        grep -o '\"cmd_data_ip\"[^,]*' "$arquivo" 2>/dev/null |
+            grep -o '[0-9][0-9.]*' | head -1
+    fi
+}
+
+if [ ! -f "$JSON_FONTE" ]; then
+    registra INCONCLUSIVO "IP do host" "sem o JSON versionado para ler"
+elif ! command -v ip >/dev/null 2>&1; then
+    registra INCONCLUSIVO "IP do host" "comando 'ip' indisponível"
+else
+    esperado="$(ip_do_host "$JSON_FONTE")"
+    enderecos="$(ip -brief addr 2>/dev/null)"
+    if [ -z "$esperado" ]; then
+        registra INCONCLUSIVO "IP do host" "não consegui ler cmd_data_ip do JSON"
+    # Ponto é curinga em regex: '192.168.1.' casa com '192.168.18.9'. Escapar
+    # não é preciosismo — sem isso o auditor REPROVA uma máquina por estar
+    # numa sub-rede que só PARECE a do lidar (achado em 23-09, aqui mesmo).
+    elif esc="$(printf '%s' "$esperado" | sed 's/\./\\./g')";
+         printf '%s\n' "$enderecos" | grep -qE "(^| )${esc}/"; then
+        iface="$(printf '%s\n' "$enderecos" | grep -E "(^| )${esc}/" | awk '{print $1" ("$2")"}' | head -1)"
+        registra APROVADO "IP do host" "$esperado em $iface"
+    else
+        # Interface na MESMA sub-rede com outro endereço é caso diferente de
+        # sub-rede nenhuma: a primeira é máquina errada para este JSON; a
+        # segunda pode ser só cabo fora hoje.
+        sub="${esperado%.*}."
+        sub_esc="$(printf '%s' "$sub" | sed 's/\./\\./g')"
+        if printf '%s\n' "$enderecos" | grep -qE "(^| )${sub_esc}[0-9]+/"; then
+            outro="$(printf '%s\n' "$enderecos" | grep -E "(^| )${sub_esc}[0-9]+/" |
+                     awk '{for(i=3;i<=NF;i++) if ($i ~ /^'"$sub_esc"'/) print $1" "$i}' | head -1)"
+            registra REPROVADO "IP do host" \
+                "o JSON espera $esperado, mas esta máquina está na rede como $outro"
+        else
+            registra INCONCLUSIVO "IP do host" \
+                "$esperado não está em nenhuma interface, e não há nada na ${sub}0/24 (cabo fora?)"
+        fi
+    fi
+fi
+
 # --- relatório ---------------------------------------------------------------
 case "$pior" in
     0) resumo="APROVADO — tudo que dava para provar, provou" ;;
