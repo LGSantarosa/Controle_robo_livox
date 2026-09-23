@@ -124,6 +124,69 @@ def _robo3(share_motion, share_base):
     }
 
 
+# Como se chamam os YAMLs materializados dentro da pasta da corrida. O nome
+# diz de quem é o arquivo, porque a pasta é evidência: dois YAMLs anônimos não
+# contam história nenhuma depois (etapa 6, D2).
+NOMES = {'nav2': 'perfil_nav2.yaml',
+         'collision_monitor': 'perfil_collision_monitor.yaml'}
+
+
+def destinos(perfil: dict, pasta: str) -> dict:
+    """Qual arquivo cada consumidor vai ler, dado este perfil e esta corrida.
+
+    Sem reescrita, é o próprio arquivo do `share/` — e isso NÃO é economia de
+    disco: o caminho é o valor do parâmetro que o nó recebe, e materializar
+    para o robô 2, mesmo com bytes idênticos, mudaria esse valor e quebraria a
+    comparação byte a byte que protege o robô que funciona (plano §6).
+    """
+    return {c: (os.path.join(pasta, NOMES[c]) if perfil[f'{c}_rewrites']
+                else perfil[c])
+            for c in NOMES}
+
+
+def materializa(perfil: dict, pasta: str) -> dict:
+    """Escreve os YAMLs reescritos na pasta da corrida; devolve o que escreveu.
+
+    Sem reescrita não escreve nada e **nem cria a pasta** — pasta de corrida
+    vazia num robô que não materializa seria evidência de coisa nenhuma.
+
+    A escrita é ATÔMICA: serializa num temporário ao lado e troca por
+    `os.replace`. O motivo é o costmap: um YAML truncado não dá erro de
+    leitura, dá configuração pela metade — e o `os.replace` só é atômico
+    dentro do mesmo sistema de arquivos, por isso o temporário mora no mesmo
+    diretório do destino, nunca em `/tmp`.
+    """
+    # 🔴 PREFLIGHT DOS DOIS, e é aqui que mora a diferença entre "nada nasceu"
+    # e "metade nasceu". Validar-e-escrever um por vez publicaria o YAML do
+    # Nav2 e só então descobriria que a reescrita do reflexo é inválida — e a
+    # pasta da corrida ficaria com UM arquivo, que é pior do que nenhum:
+    # parece evidência completa. Tudo é lido e reescrito EM MEMÓRIA antes de a
+    # pasta existir.
+    pronto = {}
+    for chave, destino in destinos(perfil, pasta).items():
+        if destino == perfil[chave]:
+            continue
+        pronto[chave] = (destino, aplica_reescritas(_le(perfil[chave]),
+                                                    perfil[f'{chave}_rewrites']))
+    if not pronto:
+        return {}
+
+    escritos = {}
+    os.makedirs(pasta, exist_ok=True)
+    for chave, (destino, dados) in pronto.items():
+        parcial = destino + '.parcial'
+        try:
+            with open(parcial, 'w') as f:
+                yaml.safe_dump(dados, f)
+            os.replace(parcial, destino)
+        except BaseException:
+            if os.path.exists(parcial):
+                os.remove(parcial)
+            raise
+        escritos[chave] = destino
+    return escritos
+
+
 def aplica_reescritas(dados: dict, reescritas: dict) -> dict:
     """Cópia de `dados` com cada FOLHA existente em `reescritas` trocada.
 

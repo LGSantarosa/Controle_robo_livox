@@ -170,17 +170,64 @@ def generate_launch_description():
     # perfil pelo argumento `robo` é a etapa 6. Quem recusa outro robô é o
     # `_recusa_robo`, na subida.
     perfil_robo = perfil.parametros(2, pkg)
-    # Esta pilha ainda não sabe reescrever YAML. Reescrita pedida e não
-    # aplicada seria costmap (ou reflexo) lendo o arquivo sem ela, em silêncio.
-    for chave in ('nav2_rewrites', 'collision_monitor_rewrites'):
-        if perfil_robo[chave]:
-            raise RuntimeError(
-                f'o perfil pede {chave}, e esta pilha ainda não as aplica: '
-                f'{sorted(perfil_robo[chave])}')
-    nav2_params = perfil_robo['nav2']
+    # 🔴 A REESCRITA DO PERFIL VIRA ARQUIVO (etapa 6, passo 3, decisão 056).
+    #
+    # Quem lê a configuração dos costmaps é o SERVIDOR do Nav2, por caminho de
+    # arquivo: os costmaps são nós dentro dele, e dicionário passado ao `Node`
+    # não desce até lá. Por isso a guarda que existia aqui — "esta pilha ainda
+    # não sabe reescrever YAML" — deu lugar à aplicação de verdade,
+    # `perfil.materializa`, testada sozinha em `test_materializa.py`.
+    #
+    # O que a guarda protegia continua protegido, e é o mesmo perigo de
+    # sempre: reescrita pedida e caída no silêncio. Chave de reescrita que a
+    # materialização não conheça mata a subida AQUI, antes de qualquer coisa.
+    desconhecidas = sorted(
+        c for c in perfil_robo if c.endswith('_rewrites')
+        and c[:-len('_rewrites')] not in perfil.NOMES)
+    if desconhecidas:
+        raise RuntimeError(
+            f'o perfil pede reescrita em {desconhecidas}, e a materialização '
+            f'só conhece {sorted(perfil.NOMES)} — aplicar metade seria o nó '
+            'lendo o arquivo sem a reescrita, sem uma linha de aviso')
+    # A pasta da corrida é a RAIZ DE EVIDÊNCIAS (D2): é lá que os YAMLs
+    # materializados nascem, ao lado do log. O caminho é montado aqui porque o
+    # `Node` precisa dele na descrição; os BYTES são escritos depois, pelo
+    # `_materializa_perfil`, que só roda passada a validação do robô.
+    #
+    # ⚠️ Hoje o `ros2 bag record -o` lá embaixo aponta para esta MESMA pasta, e
+    # ele exige diretório inexistente. Enquanto nenhum perfil materializa (o
+    # robô 2 não tem reescrita), não há colisão; quando o robô 3 entrar, o bag
+    # desce para `<pasta>/bag`. Está no plano da etapa 6, §4 (D2).
+    pasta_corrida = [LaunchConfiguration('log_dir'), f'/corrida_{CARIMBO}']
+    destinos = {
+        chave: ([*pasta_corrida, '/' + perfil.NOMES[chave]]
+                if perfil_robo[f'{chave}_rewrites'] else perfil_robo[chave])
+        for chave in perfil.NOMES}
+
+    def _materializa_perfil(contexto, *_args, **_kwargs):
+        """Escreve os YAMLs reescritos — DEPOIS de o robô ter sido validado.
+
+        Sem reescrita (o robô 2), não escreve nada e nem cria pasta: o caminho
+        que o nó recebe continua sendo o do `share/`, byte a byte o de antes.
+        """
+        log_dir = LaunchConfiguration('log_dir').perform(contexto)
+        se_precisa = any(perfil_robo[f'{c}_rewrites'] for c in perfil.NOMES)
+        if not log_dir:
+            if se_precisa:
+                raise RuntimeError(
+                    'este perfil precisa materializar o YAML reescrito, e '
+                    '`log_dir` vazio não dá pasta de corrida onde escrever. '
+                    'Sem ela o costmap leria a configuração do robô errado')
+            return []
+        escritos = perfil.materializa(
+            perfil_robo, os.path.join(log_dir, f'corrida_{CARIMBO}'))
+        return [LogInfo(msg=f'perfil materializado: {caminho}')
+                for caminho in escritos.values()]
+
+    nav2_params = destinos['nav2']
     amcl_params = os.path.join(pkg, 'config', 'localizacao_amcl.yaml')
     mux_params = os.path.join(pkg, 'config', 'twist_mux.yaml')
-    cm_params = perfil_robo['collision_monitor']
+    cm_params = destinos['collision_monitor']
     mov_params_real = os.path.join(pkg, 'config', 'movimentacao.yaml')
     mov_params_sim = os.path.join(pkg, 'config', 'movimentacao_sim.yaml')
     rviz_config = os.path.join(pkg, 'rviz', 'pilha.rviz')
@@ -591,6 +638,23 @@ def generate_launch_description():
             description='fração do wz pedido que a cadeia entrega (038). '
                         '0,45 medido no Gazebo em 13-08 com ganho_de_giro.py; '
                         '1,0 no robô real, onde ninguém mediu ainda'),
+
+        # --------------------------------- os YAMLs reescritos do perfil
+        #
+        # 🔴 A POSIÇÃO DESTA LINHA É CONTRATO (etapa 6, §4.7), e ela está
+        # espremida entre duas coisas de propósito:
+        #
+        #   - DEPOIS do `_recusa_robo` e do `log_dir`: combinação recusada não
+        #     pode deixar pasta de corrida com YAML dentro. Seria falsa
+        #     evidência de uma corrida que não houve, e neste projeto a pasta
+        #     da corrida É a prova;
+        #   - ANTES de qualquer ação operacional: o primeiro nó que subir já
+        #     abre o arquivo. Escrever depois dele apareceria como "arquivo
+        #     não existe" num servidor do Nav2, longe da causa.
+        #
+        # Para o robô 2 isto é no-op absoluto: sem reescrita no perfil, não
+        # escreve nada e nem cria pasta.
+        OpaqueFunction(function=_materializa_perfil),
 
         # ---------------------------------------------------- o simulador
         IncludeLaunchDescription(

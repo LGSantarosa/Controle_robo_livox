@@ -21,6 +21,7 @@ import importlib
 import os
 
 import pytest
+import yaml
 
 pytest.importorskip('launch_ros')
 
@@ -164,17 +165,65 @@ def test_a_pilha_monta_pelo_perfil(monkeypatch, tmp_path):
     assert _params(ctx, _nos(ld, 'path_follower')[0])[-1] == {'passagem_margem': 0.99}
 
 
-@pytest.mark.parametrize('chave', ['nav2_rewrites', 'collision_monitor_rewrites'])
-def test_reescrita_nao_vazia_nao_e_ignorada_em_silencio(monkeypatch, chave):
-    """A pilha ainda não aplica reescrita. Se o perfil pedir uma, ela não pode
-    sumir sem aviso — os costmaps, ou o reflexo, leriam o arquivo sem ela."""
+FOLHAS = {
+    'nav2_rewrites': (('bt_navigator', 'ros__parameters',
+                       'bt_loop_duration'), 999),
+    'collision_monitor_rewrites': (('collision_monitor', 'ros__parameters',
+                                    'stop_pub_timeout'), 9.99),
+}
+
+
+@pytest.mark.parametrize('chave', list(FOLHAS))
+def test_reescrita_conhecida_passa_a_ser_aplicada(monkeypatch, tmp_path, chave):
+    """🔄 ETAPA 6, PASSO 3: aqui a pilha ABORTAVA, porque não sabia reescrever.
+
+    Agora sabe (`perfil.materializa`), e o teste vai até o fim: sobe a
+    descrição, RODA o `_materializa_perfil` e abre o arquivo que nasceu. Só
+    `_descricao()` não provaria nada — a reescrita nem chega a ser avaliada
+    ali, e uma reescrita inválida passaria batida.
+    """
+    caminho, valor = FOLHAS[chave]
+    alvo = chave[:-len('_rewrites')]
     real = _perfil().parametros
 
     def com_reescrita(robo, share):
-        return {**real(robo, share), chave: {('a', 'b'): '[]'}}
+        return {**real(robo, share), chave: {caminho: valor}}
 
     monkeypatch.setattr(_perfil(), 'parametros', com_reescrita)
-    with pytest.raises(Exception, match=chave):
+    ld = _descricao()
+
+    ctx = LaunchContext()
+    ctx.launch_configurations.update({'log_dir': str(tmp_path)})
+    escreveu = [e for e in ld.entities if isinstance(e, OpaqueFunction)
+                and e._OpaqueFunction__function.__name__ == '_materializa_perfil']
+    assert len(escreveu) == 1
+    escreveu[0].visit(ctx)
+
+    nascidos = [p for p in tmp_path.rglob('*.yaml')]
+    assert len(nascidos) == 1, nascidos
+    with open(nascidos[0]) as f:
+        dados = yaml.safe_load(f)
+    no = dados
+    for passo in caminho:
+        no = no[passo]
+    assert no == valor, f'{alvo}: a reescrita não chegou ao arquivo'
+    # E o nó recebe ESSE arquivo, não o do `share/`.
+    ctx_nos = _contexto(ld, sim='true', log_dir=str(tmp_path))
+    consumidor = 'collision_monitor' if alvo == 'collision_monitor' else 'bt_navigator'
+    assert _params(ctx_nos, _nos(ld, consumidor)[0])[0] == str(nascidos[0])
+
+
+def test_reescrita_que_a_materializacao_nao_conhece_mata_a_subida(monkeypatch):
+    """O que sobrou da guarda, e é o que ela de fato protegia: chave de
+    reescrita que ninguém aplica sumiria em silêncio, e o nó leria o arquivo
+    sem ela — costmap com o footprint do robô errado, sem uma linha de aviso."""
+    real = _perfil().parametros
+
+    def com_chave_estranha(robo, share):
+        return {**real(robo, share), 'inventado_rewrites': {('a',): 1}}
+
+    monkeypatch.setattr(_perfil(), 'parametros', com_chave_estranha)
+    with pytest.raises(RuntimeError, match='inventado_rewrites'):
         _descricao()
 
 
