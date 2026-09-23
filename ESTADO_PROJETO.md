@@ -106,7 +106,19 @@ conserta o clone **deste PC**. Lá pode haver outra revisão de SDK, faltar
 `cmp ros2_packages/robot_base/config/MID360_config.json ros2_packages/livox_ros_driver2/config/MID360_config.json`.
 
 ⬜ **Próximo:** etapa 6 — a `pilha` com `robo:=3`, começando pela auditoria do
-NUC acima. Deploy segue a regra do CLAUDE.md, e nada da etapa 5 foi para robô.
+NUC. **O roteiro está pronto e versionado:**
+`docs/ROTEIRO_ETAPA6_PRECONDICAO.md` (robô pode estar DESLIGADO). O auditor é
+`bin/audita-livox`, na branch **`etapa6-pilha-robo3`** — três vereditos
+(0 aprovado, 1 reprovado, 2 inconclusivo), sem sudo, sem subir pilha.
+Neste PC: **APROVADO em tudo, rc 0**.
+
+⚠️ Na auditoria **não** se usa `git reset --hard`: a regra do CLAUDE.md é de
+**deploy**, e sujeira local no NUC pode ser a própria evidência. O roteiro usa
+`--ff-only` e manda **parar** se o status vier sujo.
+
+🛑 **Nenhuma ação de hardware antes de eu ler o `audita-nuc.txt`.** O roteiro
+de bancada nasce depois do relatório real, não antes. Deploy segue a regra do
+CLAUDE.md, e nada da etapa 5 nem da 6 foi para robô.
 
 ---
 
