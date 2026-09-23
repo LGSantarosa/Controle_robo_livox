@@ -2,8 +2,8 @@
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
 > Versionado na `main`. Atualizado em **2026-09-23** (PC de dev, robô
-> desligado — a **etapa 5 inteira está na `main`** (`a283213`), passos 1–6, por
-> fast-forward; em aberto antes da etapa 6, o SDK Livox deste PC).
+> desligado — a **etapa 5 inteira está na `main`**, passos 1–6, e a pilha de
+> localização já compila aqui (055); em aberto, auditar o NUC na etapa 6).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
@@ -85,14 +85,28 @@ versionado no `git ls-files` tem de cair sob algum `testpaths`, e todo
 fast-forward, com o ok do dono; plano §9 cumprido — a `main` recebeu a etapa
 inteira). A `etapa5-contrato` aponta para o mesmo commit.
 
-🔴 **Antes da etapa 6, um BO novo:** o **SDK Livox não está instalado neste
-PC** — `colcon build` sem `--packages-skip livox_ros_driver2 fast_lio` reprova
-em `LIVOX_LIDAR_SDK_LIBRARY` não encontrada, e o `install/livox_ros_driver2`
-que existe aqui é de antes. A etapa 6 não deve começar apoiada nesse
-`install/` velho: ou instala o SDK, ou a ausência vira registro formal.
+✅ **23-09: a pilha de localização compila neste PC** (decisão **055**,
+`c6a7b46`). O SDK Livox estava compilado desde 24-07 e **nunca instalado**; o
+`install/livox_ros_driver2` era uma **casca de 6 arquivos** (removida); e o
+`MID360_config.json` do clone estava com o `.169` **mudo** em vez do `.158`.
+O SDK agora é fixado (`v1.3.1` / `f5d9375…`), revisão diferente é recusada, e
+um passo **0/5** confere dependências ROS antes de tocar `/usr/local` —
+nasceu de o `fast_lio` reprovar por `pcl_ros` ausente com o SDK já instalado.
+Validado: `ldconfig` ✅, `ros2 pkg prefix` dos dois ✅, `cmp` das configs ✅,
+**1239 passed** código 0 ✅.
 
-⬜ **Próximo:** resolver/formalizar o SDK Livox; depois, etapa 6: a `pilha` com
-`robo:=3`. Deploy segue a regra do CLAUDE.md, e nada da etapa 5 foi para robô.
+🔴 **Isso NÃO é localização:** o lidar não foi ligado, e compilar o FAST-LIO
+não é publicar `/Odometry`. O `.158` é a varredura de 15-09, não medição de
+hoje.
+
+🔴 **Tarefa explícita de deploy da etapa 6 — auditar o NUC.** Tudo acima
+conserta o clone **deste PC**. Lá pode haver outra revisão de SDK, faltar
+`ros-jazzy-pcl-ros` e estar o `.169` velho. Os dois comandos a rodar no robô:
+`git -C third_party/Livox-SDK2 rev-parse HEAD` (esperado `f5d9375…`) e
+`cmp ros2_packages/robot_base/config/MID360_config.json ros2_packages/livox_ros_driver2/config/MID360_config.json`.
+
+⬜ **Próximo:** etapa 6 — a `pilha` com `robo:=3`, começando pela auditoria do
+NUC acima. Deploy segue a regra do CLAUDE.md, e nada da etapa 5 foi para robô.
 
 ---
 

@@ -76,6 +76,57 @@ da trava).
   não-zero e quem para o robô é o watchdog do firmware. É decisão de
   comportamento, não saneamento de suíte — não entra aqui.
 
+### Tarde: a pilha de localização não compilava neste PC (decisão 055)
+
+Preparo da etapa 6. `colcon build` reprovava em `LIVOX_LIDAR_SDK_LIBRARY`, e o
+diagnóstico achou **três coisas velhas**, nenhuma de hoje:
+
+| achado | o que era |
+|---|---|
+| SDK compilado em 24-07, **nunca instalado** | o `sudo cmake --install` não completou; a `.so` estava em `third_party/.../build` |
+| `install/livox_ros_driver2` | **casca de 6 arquivos** — só escrituração do colcon, zero lib, zero mensagem, sem `ament_index`. Não era build velho: era rastro de build que falhou |
+| `MID360_config.json` do clone | ainda com **`192.168.1.169`**, o IP que a varredura de 15-09 achou mudo. O versionado tem `.158` desde `56e6bda` |
+
+O terceiro é o que me preocupou: IP errado = `bind failed` = FAST-LIO sem
+nuvem = `/Odometry` nunca publicado. Quem investiga vai olhar o FAST-LIO, e o
+defeito está num JSON dentro de um clone descartável. O passo 4 do setup
+conserta isso de graça — ele só nunca tinha rodado depois de 15-09.
+
+**Antes de rodar o script, fixei o SDK** (055): ele era o único dos três
+terceiros clonado sem revisão (`--depth 1`, `main` do dia). O que vai para
+`/usr/local` é código nativo, fora do git, que nenhum teste nosso cobre —
+numa máquina nova seria outra lib, sem aviso. Mesma família da zona morta.
+Conferi antes de escolher o valor: o clone daqui está em `v1.3.1` /
+`f5d9375…`, limpo. E **recusa** revisão diferente em vez de resetar sozinho —
+provado em sandbox: para em 1/5, código 1, nada clonado.
+
+**O script pediu sudo e eu parei.** Não rodo `sudo` no escuro nem peço senha;
+conferi que `sudo -n true` não alcança minha shell (*"a password is
+required"*) e devolvi o comando. O dono rodou.
+
+**E aí o `fast_lio` reprovou** — `By not providing "Findpcl_ros.cmake"`, com o
+SDK **já instalado em `/usr/local`**. Ou seja: o script mexeu no sistema e só
+no passo 5/5 descobriu que o ambiente não dava conta, com um erro de CMake que
+não diz o que instalar. Faltava o `ros-jazzy-pcl-ros`, declarado em
+`FAST_LIO/package.xml:28`.
+
+Isso virou o **passo 0/5**: pré-condição de dependências ROS, antes de
+`/usr/local` e antes do clone, com o `apt install` exato na tela. Lista fixa, e
+não lida dos `package.xml`, porque roda **antes** do clone — em máquina nova
+não há `package.xml` para ler. **Tive a sorte de poder provar vermelho contra o
+defeito real**, não contra sandbox: com o `pcl_ros` ainda ausente, o 0/5 parou
+com código 1 e apontou só ele (o `pcl_conversions` já existia).
+
+Depois do `apt` do dono: `rc=0`, três pacotes, e as quatro validações —
+`ldconfig` ✅, `ros2 pkg prefix` dos dois ✅ (o `CustomMsg` aparece no grafo),
+`cmp` das configs idêntico (`.158`) ✅, **1239 passed** código 0 ✅.
+
+🔴 **O que isto NÃO é:** localização. O lidar não foi ligado, a rede dele não
+foi tocada, e compilar o FAST-LIO não é publicar `/Odometry`. Que o `.158`
+responda é crença da varredura de 15-09, não medição de hoje. E conserta o
+clone **deste PC** — o NUC pode estar com outra revisão de SDK, sem `pcl_ros`
+e com o `.169` velho. Virou tarefa explícita de deploy da etapa 6.
+
 **Nada foi ao robô hoje.** O robô ficou desligado a sessão inteira.
 
 ---
