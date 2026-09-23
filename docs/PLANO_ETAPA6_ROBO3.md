@@ -6,7 +6,11 @@
 > `footprint` e do `footprint_padding` **vivos** nos dois costmaps — na etapa 4
 > só o YAML reescrito foi provado.
 >
-> Estado: **proposta, aguardando revisão do dono.** Partida: `1f49981`, branch
+> Estado: **APROVADO pelo dono em 23-09**, com seis correções obrigatórias —
+> incorporadas abaixo e listadas no §9. Autorizado seguir pelos testes
+> vermelhos e pela implementação estática; as primeiras corridas de Gazebo
+> (passos 6 e 7) seguem dependendo de aviso prévio e do "pode".
+> Partida: `1f49981`, branch
 > `etapa6-pilha-robo3`. Nada de hardware: esta etapa inteira roda no PC de dev,
 > **robô desligado**. A auditoria do notebook
 > (`docs/ROTEIRO_ETAPA6_PRECONDICAO.md`) é trilha paralela e continua sendo a
@@ -25,7 +29,8 @@ Seis achados, e três deles mudam o desenho.
 | **B** | **Momento errado.** `generate_launch_description()` roda **sem contexto**; `robo` só existe dentro de um `LaunchContext`. Escolher o perfil pelo argumento exige `OpaqueFunction` ou ler o `argv` — e ler `argv` já tem precedente na casa (`_passou`) | `pilha.launch.py:150–162`, `:108` |
 | **C** | **O include do simulador não troca só de arquivo.** A pilha inclui `robot_base/launch/sim.launch.py` passando `planta`, e o `sim_robo3.launch.py` **não declara `planta`** (ele declara `mundo`, `x`, `y`, `yaw`, `gui`, `placa`). Include com argumento não declarado morre na subida. O mundo padrão também difere: a pilha usa `worlds/pista_obstaculos.sdf` da raiz; o `sim_robo3`, `robot_base/worlds/pista_livre.sdf` | `pilha.launch.py:596–621`; `sim_robo3.launch.py:56–70` |
 | **D** | **No Gazebo a cadeia NÃO termina no `cmd_vel_to_wheels`.** Ela termina no `hoverboard_base_controller`: `compensador_rumo` → `/cmd_vel_bruto` → `placa_simulada` → `ros2_control`. O `sim_robo3` **já sobe** a placa fingida e o controlador. A fronteira da decisão 054 (`WheelSpeeds` → MEGA) é do **hardware**, e `WheelSpeeds` não tem consumidor no Gazebo — foi exatamente isto que derrubou a "etapa 3" da v1 | `placa_simulada.py:186`; `sim_robo3.launch.py:94–150`; `PLANO_NAV2_ROBO3.md:91` |
-| **E** | **Nenhum dos dois muxes serve inteiro ao robô 3.** O da pilha (`twist_mux.yaml`) tem `joy_vel`/`key_vel`/`web_vel`/`auto_vel` e **não tem `dpad_vel`**. O do robô 3 (`twist_mux_robo3.yaml`) tem `dpad_vel` (110) e `joy_vel` (100) e **não tem `auto_vel`** — com ele, a autonomia não chega ao atuador, e o sintoma seria robô parado com o Nav2 dizendo que está navegando | `twist_mux.yaml`; `twist_mux_robo3.yaml` |
+| **E** | **Nenhum dos dois muxes serve inteiro ao robô 3.** O da pilha tem cinco faixas — `joy_vel` 100, `key_vel` 90, `web_vel` 50, **`unstuck_vel` 30** e `auto_vel` 10 — e **não tem `dpad_vel`**. O do robô 3 tem `dpad_vel` (110) e `joy_vel` (100), e **não tem nem `auto_vel` nem `unstuck_vel`** — com ele, a autonomia **e o desencalhe** publicam para o vazio, e o sintoma seria robô parado com o Nav2 dizendo que está navegando | `robot_motion/config/twist_mux.yaml:60–104`; `robot_motion/config/twist_mux_robo3.yaml` |
+| **E′** | 🔧 **Correção da revisão de 23-09** (a primeira redação deste achado errou): o mux da pilha **já tem** `unstuck_vel`, e quem publica nele é o **`path_follower`** (`path_follower.py:741`), não um supervisor à parte. O comentário do topo do `twist_mux.yaml` ("lá existe uma entrada `unstuck_vel` … aqui ela não existe AINDA") está **vencido** desde que o desencalhe entrou. Não corrigir aqui: é arquivo do robô 2, e o §6 proíbe | `twist_mux.yaml:28` × `:98`; `path_follower.py:741` |
 | **F** | O `sim_robo3` fixa `use_sim_time: True` **literal** nos nós dele; a pilha passa a **substituição** `sim` nos dela. A prova viva tem de cobrir os dois lados, porque são dois mecanismos diferentes de chegar ao mesmo valor | `sim_robo3.launch.py`; `pilha.launch.py` |
 
 O achado **E** é o que tem cara de zona morta: faixa que não existe não dá
@@ -35,13 +40,19 @@ erro, dá silêncio.
 
 **Entra:**
 
-- a `pilha` aprende a **materializar** o perfil: aplicar as reescritas
-  (`perfil.aplica_reescritas`, que já existe e é testada) e **escrever o YAML
-  resultante em disco**, porque servidor do Nav2 lê arquivo, e dicionário
-  passado ao `Node` do servidor não chega aos costmaps que moram dentro dele;
+- a `pilha` aprende a **materializar** o perfil **do robô 3**: aplicar as
+  reescritas (`perfil.aplica_reescritas`, que já existe e é testada) e
+  **escrever os DOIS YAMLs resultantes em disco** (Nav2 e `collision_monitor`),
+  porque servidor do Nav2 lê arquivo, e dicionário passado ao `Node` do
+  servidor não chega aos costmaps que moram dentro dele.
+  🔴 **O robô 2 não materializa arquivo nenhum** — ele segue recebendo os
+  caminhos originais do `share/`. Materializar para ele, ainda que com
+  conteúdo idêntico, mudaria o valor do parâmetro (o caminho) e tornaria o
+  gate "byte a byte" do §6 impossível de cumprir por construção;
 - `robo:=3 sim:=true` escolhendo `sim_robo3.launch.py`, com os argumentos que
   ele de fato declara (achado C);
-- **um mux só**, com faixa para a autonomia no robô 3 (achado E);
+- **um mux só**, com faixa para a autonomia **e para o desencalhe** no robô 3
+  (achados E e E′);
 - a cadeia de atuação do simulador terminando no `hoverboard_base_controller`,
   e **nenhum** nó da fronteira de hardware no grafo (achado D);
 - as provas vivas: `use_sim_time`, `footprint`/`footprint_padding` nos dois
@@ -81,21 +92,25 @@ A recusa do `3 sim:=false` **não** é "ainda não implementei": é uma trava
 deliberada desta etapa, e o texto dela tem de nomear as duas coisas que
 faltam (a fronteira do atuador real e a localização), não dizer "não existe".
 
-## 3. Decisões que dependem do dono
+## 3. Decisões — **DECIDIDAS pelo dono em 23-09**
 
-| # | decisão | opções | recomendação |
-|---|---|---|---|
-| **D1** | como o número do robô chega à árvore (achado B) | **(i)** `OpaqueFunction` montando a pilha inteira dentro do contexto; **(ii)** perfil escolhido lendo o `argv` (precedente `_passou`) **+ trava de coerência**: o `_recusa_robo`, que roda no contexto, compara o que o `argv` disse com o que o contexto diz e **mata se divergirem**; **(iii)** materializar os dois perfis e escolher o **arquivo** por substituição | **(ii)**. A (i) é a mais correta no papel e a mais perigosa na prática: reescreve uma launch de 835 linhas que hoje sobe o robô 2 funcionando. A (iii) não resolve a sobreposição do `path_follower` (é dicionário, não arquivo) e tornaria o `robot_base` dependência obrigatória para subir o robô 2. A (ii) mantém a árvore do robô 2 **literalmente a mesma** e transforma o risco real — `argv` e contexto discordarem, que daria footprint errado em silêncio — em morte imediata com mensagem |
-| **D2** | onde mora o YAML materializado | `/tmp` por processo; **pasta do carimbo da corrida**, junto do log | **a pasta do carimbo**, com o caminho impresso na subida. Isto é PIBIT: o YAML que os costmaps realmente leram é evidência, e `/tmp` some. Custo: um arquivo por corrida |
-| **D3** | o mux do robô 3 na pilha (achado E) | **(i)** usar o `twist_mux.yaml` do robô 2 (o direcional some); **(ii)** o mux vira **chave do perfil**, e o `twist_mux_robo3.yaml` ganha `auto_vel` **abaixo dos humanos**; **(iii)** um arquivo só, com as cinco faixas, para os dois robôs | **(ii)**. O perfil já é o lugar do que difere por robô, e as prioridades do robô 3 (direcional 110 acima do analógico 100) foram decididas na etapa 5. Faixa sem publicador é faixa **muda**, não erro — então o `dpad_vel` no Gazebo simplesmente não fala. A (iii) mexeria no mux do robô 2, que o §6 proíbe |
-| **D4** | o `key_vel` (teclado) no robô 3 | entra agora; fica fora | **fica fora**, como a etapa 5 decidiu (D3 de lá). Faixa humana nova é escopo próprio; a etapa 6 não a herda de lambuja |
+| # | decisão | o que ficou |
+|---|---|---|
+| **D1** | como o número do robô chega à árvore (achado B) | **(ii) aprovada**: perfil escolhido lendo o `argv` (precedente `_passou`) **+ trava de coerência** no `LaunchContext`. É uma **ponte deliberada, não uma API geral** — e por isso a trava tem **três bocas**, todas matando **antes de qualquer processo ou escrita em disco**: (1) `robo:=` repetido no `argv`; (2) `argv` e contexto divergindo; (3) include **programático** com `robo:=3` que não aparece no `argv` (que cai na boca 2, porque o `argv` entrega o default `2`). Descartadas: (i) `OpaqueFunction` montando as 835 linhas — reescreve a launch que hoje sobe o robô 2 funcionando; (iii) escolher o arquivo por substituição — não resolve o `path_follower` (dicionário, não arquivo) e tornaria o `robot_base` dependência obrigatória do robô 2 |
+| **D2** | onde moram os YAMLs materializados | **pasta persistente da corrida, aprovada**, e ela é a **raiz de evidências**. Os **dois** arquivos do robô 3 (Nav2 e `collision_monitor`) são escritos **atomicamente** (arquivo temporário no mesmo diretório + `os.replace`), com os **caminhos absolutos impressos** na subida e incluídos no `SHA256SUMS`. ⚠️ O rosbag vai num **subdiretório que ainda não existe**, porque `ros2 bag record -o` exige diretório inexistente e abortaria contra a raiz já criada |
+| **D3** | o mux do robô 3 na pilha (achados E e E′) | **por perfil, aprovado, com correção de nome e de faixas**: nasce `robot_motion/config/twist_mux_pilha_robo3.yaml`, com **quatro** faixas — `dpad_vel` 110, `joy_vel` 100, **`unstuck_vel` 30**, `auto_vel` 10. Sem o `unstuck_vel`, o desencalhe que o **próprio perfil do robô 3 configura** (`perfil.py:108–115`: `re_largura`, `re_recuo_para_choque`, `desencalhe_pivo_folga`) publicaria para o vazio. O nome longo é de propósito: `robot_nav/config/twist_mux.yaml` (controle físico) fica **intocado**, e não se criam duas fontes aparentemente canônicas com o mesmo nome |
+| **D4** | canais humanos novos no robô 3 | **`key_vel` fica fora**, como a etapa 5 já decidira, **e `web_vel` também não entra** — nem implicitamente, por estar no mux do robô 2. Canal humano novo exige decisão própria |
 
 ## 4. O que a etapa fixa por contrato
 
 Cada item vira teste, e cada teste falha **antes** de existir a implementação.
 
-1. **Um mux só.** Com `robo:=3 sim:=true`, exatamente **um** nó `twist_mux` no
-   grafo, e o `controle_robo3.launch.py` **não** é incluído pela pilha.
+1. **Um mux só, e com as quatro faixas.** Com `robo:=3 sim:=true`, exatamente
+   **um** nó `twist_mux` no grafo, lendo
+   `robot_motion/config/twist_mux_pilha_robo3.yaml`, com `dpad_vel` 110,
+   `joy_vel` 100, `unstuck_vel` 30 e `auto_vel` 10 — conferidas **vivas**, por
+   `ros2 param get`, não só no arquivo. O `controle_robo3.launch.py` **não** é
+   incluído pela pilha, e `robot_nav/config/twist_mux.yaml` não é tocado.
 2. **Quem encerra a cadeia no simulador**: `placa_simulada` consumindo
    `/cmd_vel_bruto` e publicando ao `hoverboard_base_controller`. E a prova
    pela negativa: **nenhum** `cmd_vel_to_wheels`, `mega_bridge` ou tópico
@@ -123,7 +138,14 @@ Cada item vira teste, e cada teste falha **antes** de existir a implementação.
    `hoverboard_base_controller` recebeu comando **não nulo** — sem este
    terceiro, "chegou" pode ser "já estava lá", que é o modo de falha mais
    provável com um alvo curto. Teto: 60 s de **tempo simulado**.
-7. **Limpeza sem órfão.** Varredura de processos no molde do
+7. **Combinação recusada não deixa rastro.** A escrita dos YAMLs acontece
+   **depois** da validação de `robo` e `sim`, nunca antes: uma subida recusada
+   não pode deixar **falsa evidência** de uma corrida que não houve. Isto tem
+   consequência de implementação, e é a forma da mudança: o **caminho** dos
+   dois arquivos é calculado na descrição (o `Node` precisa dele), mas os
+   **bytes** são escritos por uma ação que roda **depois** do `_recusa_robo`.
+   Teste: subida recusada → a pasta da corrida não existe, ou existe vazia.
+8. **Limpeza sem órfão.** Varredura de processos no molde do
    `bin/smoke-gazebo-robo3` (que **não** usa `pkill -f`, e o motivo está lá:
    já matou uma sessão ssh), estendida aos nós da pilha. Sobrou processo →
    código de saída ≠ 0 e a lista no relatório.
@@ -141,13 +163,21 @@ a launch num `LaunchContext` real, como o arquivo já faz hoje:
 - o include do simulador recebe só argumento **declarado** pelo alvo (achado C)
   — teste que lê os `DeclareLaunchArgument` do `sim_robo3` em vez de confiar
   numa lista escrita à mão;
-- nenhuma reescrita pedida fica sem aplicar: o YAML materializado, relido do
-  disco, é **igual** a `aplica_reescritas(base, reescritas)`.
+- nenhuma reescrita pedida fica sem aplicar: cada um dos **dois** YAMLs
+  materializados, relido do disco, é **igual** a
+  `aplica_reescritas(base, reescritas)`;
+- **o robô 2 não materializa nada**: com `robo:=2`, os caminhos que os nós
+  recebem são os do `share/`, e a pasta da corrida não ganha YAML nenhum;
+- **recusa não escreve**: nas duas combinações recusadas, nenhum arquivo.
 
-**5.2 Vivos (Gazebo), em `bin/valida-etapa6`.** Os sete itens do §4, um por
+**5.2 Vivos (Gazebo), em `bin/valida-etapa6`.** Os oito itens do §4, um por
 linha do CSV, com veredito por item e no fim. Sobe headless, roda, derruba,
-confere que não sobrou nada, e deixa tudo em `~/etapa6/<carimbo>/`: console,
-`launch.log`, `resultado.csv`, o **YAML materializado** e o `SHA256SUMS`.
+confere que não sobrou nada, e deixa tudo em `~/etapa6/<carimbo>/`, que é a
+**raiz de evidências**: console, `launch.log`, `resultado.csv`, os **dois YAMLs
+materializados** (caminhos absolutos impressos na subida) e o `SHA256SUMS`, que
+inclui os dois. ⚠️ O rosbag, quando entrar, vai em `<carimbo>/bag/` — um
+subdiretório **que ainda não existe**, porque `ros2 bag record -o` exige
+diretório inexistente e abortaria contra a raiz já criada.
 
 O dono só roda `bash bin/valida-etapa6` e me manda a pasta. Nada de relatar
 console.
@@ -159,12 +189,14 @@ O robô 2 é o que funciona hoje. Esta etapa fecha só se **as quatro** valerem:
 - **(a) diff contra `1f49981`** tocando apenas `bin/`, `docs/`, `tools/`,
   `ros2_packages/robot_motion/launch/pilha.launch.py`,
   `ros2_packages/robot_motion/robot_motion/perfil.py`,
-  `ros2_packages/robot_motion/config/twist_mux_robo3.yaml`,
+  `ros2_packages/robot_motion/config/twist_mux_pilha_robo3.yaml` (**novo**),
   `ros2_packages/robot_motion/config/perfil_robo3.yaml`,
   `ros2_packages/robot_motion/test/` e `ESTADO_PROJETO.md`.
-  **Nenhum** arquivo de `robot_base/`, `robot_nav/`, `nav2.yaml`,
-  `collision_monitor.yaml`, `twist_mux.yaml` ou `movimentacao*.yaml`;
-- **(b) a suíte inteira verde**, com o número de hoje como piso (1239);
+  **Nenhum** arquivo de `robot_base/`, de `robot_nav/` (inclusive o
+  `robot_nav/config/twist_mux.yaml`, o mux do controle físico), nem
+  `robot_motion/config/{nav2,collision_monitor,twist_mux,movimentacao*}.yaml`;
+- **(b) a suíte inteira verde**, com o número de hoje como piso: **1262**
+  (coletados em `1f49981`, conferido — não o 1239 de 22-09, que envelheceu);
 - **(c) as duas combinações do robô 2** percorridas e a lista de parâmetros de
   **cada nó** comparada com a de `1f49981`, byte a byte — a maquinaria
   (`evaluate_parameters`) já está no `test_pilha_robo.py`;
@@ -180,10 +212,10 @@ Se um arquivo do robô 2 precisar mudar, o passo **para e volta ao dono**.
 |---|---|---|---|
 | 1 | este plano + a decisão 056 como **proposta** | — | — |
 | 2 | testes vermelhos da matriz do §2 (as quatro linhas) e da trava de coerência | eles mesmos | falham contra a pilha de hoje, pelo motivo certo |
-| 3 | `perfil.py`/`pilha`: **materializar** o YAML reescrito (D1 + D2), ainda só para o robô 2 (que não tem reescrita) — a máquina nova entra sem mudar comportamento | o YAML relido é igual ao esperado | o robô 2 segue com a mesma lista de parâmetros (§6c) |
-| 4 | `robo:=3` escolhe perfil 3 e `sim_robo3`, com os argumentos certos (achado C), e `3 sim:=false` recusa | os do passo 2 viram verde | estáticos |
-| 5 | o mux do robô 3 na pilha (D3): `auto_vel` no `twist_mux_robo3.yaml` + o mux vindo do perfil | faixa de autonomia ausente reprova | estáticos + grafo |
-| 6 | `bin/valida-etapa6` + `tools/valida_etapa6/`, e a **primeira corrida** | — | pasta de evidência com os sete itens |
+| 3 | **infraestrutura de materialização instalada, e no-op para o robô 2** (D1 + D2): a função que aplica as reescritas e escreve os dois arquivos entra e é testada em isolamento; o robô 2, sem reescrita, **não escreve nada** e segue com os caminhos do `share/` | o materializado relido é igual a `aplica_reescritas(...)`; e o caminho que o nó recebe com `robo:=2` **não** muda | o robô 2 com a **mesma** lista de parâmetros (§6c) |
+| 4 | `robo:=3` escolhe perfil 3 e `sim_robo3`, com os argumentos certos (achado C), a escrita depois da validação (§4.7), e `3 sim:=false` recusa | os do passo 2 viram verde | estáticos |
+| 5 | o mux do robô 3 na pilha (D3): nasce `robot_motion/config/twist_mux_pilha_robo3.yaml` com as quatro faixas (`dpad_vel` 110, `joy_vel` 100, `unstuck_vel` 30, `auto_vel` 10) e o mux passa a vir do perfil | faixa de autonomia **e** de desencalhe ausentes reprovam | estáticos + grafo |
+| 6 | `bin/valida-etapa6` + `tools/valida_etapa6/`, e a **primeira corrida** | — | pasta de evidência com os oito itens |
 | 7 | o objetivo curto (§4.6) | — | a mesma pasta, com o critério de três partes |
 | 8 | decisão 056 → **aplicada**, DIARIO, ESTADO, gate do §6 | — | — |
 
@@ -210,3 +242,34 @@ O Gazebo aprova **integração de software**, e só. Não prova:
 
 Corrida limpa no Gazebo é permissão para ir ao robô com uma hipótese, não
 certificado de que funciona.
+
+## 9. Correções da revisão do dono (23-09), já incorporadas
+
+1. **O robô 2 não materializa arquivo nenhum** — segue com os caminhos do
+   `share/`. A redação anterior ("materializar, ainda só para o robô 2") era
+   **incompatível com o próprio gate do §6(c)**: materializar muda o valor do
+   parâmetro (o caminho), e a lista deixaria de ser idêntica byte a byte à de
+   `1f49981`. §1 e §7 (passo 3) corrigidos.
+2. **A escrita acontece depois da validação de `robo` e `sim`** — combinação
+   recusada não deixa falsa evidência. Virou o contrato §4.7, com a forma da
+   implementação explicitada: caminho na descrição, bytes depois do
+   `_recusa_robo`.
+3. **Passo 3 redigido como "infraestrutura instalada, no-op para o robô 2"**.
+4. **O mux do robô 3 leva `unstuck_vel` (30)**, não só `auto_vel`: o perfil do
+   robô 3 **configura** a ré e o desencalhe (`perfil.py:108–115`) e o
+   `path_follower` publica em `/unstuck_vel` (`path_follower.py:741`). Sem a
+   faixa, o desencalhe publicaria para o vazio. 🔧 Isto também **corrige um
+   erro da primeira redação** deste plano, que listou o mux da pilha sem o
+   `unstuck_vel` — achado **E′** do §0.
+5. **O piso da suíte é 1262**, não 1239 (coletados em `1f49981`, conferido).
+6. **Os muxes aparecem qualificados pelo pacote**, e o novo arquivo chama-se
+   `robot_motion/config/twist_mux_pilha_robo3.yaml` — nome inequívoco, para
+   não existirem duas fontes aparentemente canônicas com o mesmo nome. O
+   `robot_nav/config/twist_mux.yaml` (controle físico) fica **intocado**, e o
+   §6(a) passou a dizer isso explicitamente.
+
+Também da revisão, nas decisões: a trava do D1 ganhou as **três bocas**
+(duplicidade de `robo:=`, divergência `argv`×contexto, include programático);
+o D2 ganhou **escrita atômica dos dois arquivos**, caminhos absolutos
+impressos, entrada no `SHA256SUMS` e o **rosbag em subdiretório inexistente**;
+o D4 passou a barrar também o `web_vel`.
