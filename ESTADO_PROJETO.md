@@ -3,7 +3,7 @@
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
 > Versionado na `main`. Atualizado em **2026-09-23** (PC de dev, robô
 > desligado — a **etapa 5 inteira está na `main`**, passos 1–6, e a pilha de
-> localização já compila aqui (055); em aberto, auditar o NUC na etapa 6).
+> localização já compila aqui (055); em aberto, auditar o NOTEBOOK na etapa 6).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
@@ -112,8 +112,9 @@ drivers e overlay; (3) verificar a rede notebook↔Mid-360; (4) só então o
 roteiro de bancada com Nav2; (5) se o chassi superar o robô 2, migrar e
 auditar o NUC.
 
-⬜ **Próximo:** etapa 6 — a `pilha` com `robo:=3`, começando pela auditoria do
-NUC. **O roteiro está pronto e versionado:**
+⬜ **Próximo:** etapa 6 — a `pilha` com `robo:=3`, em duas trilhas paralelas: o
+Gazebo (software, daqui) e a auditoria do **NOTEBOOK** (hardware, na máquina).
+**O roteiro da auditoria está pronto e versionado:**
 `docs/ROTEIRO_ETAPA6_PRECONDICAO.md` (robô pode estar DESLIGADO). O auditor é
 `bin/audita-livox`, na branch **`etapa6-pilha-robo3`** — três vereditos
 (0 aprovado, 1 reprovado, 2 inconclusivo), sem sudo, sem subir pilha, 23
@@ -123,10 +124,10 @@ real**. Neste PC: rc **2** — tudo aprovado, menos o IP do host, que aqui é
 inconclusivo (não há rede do lidar no dev).
 
 ⚠️ Na auditoria **não** se usa `git reset --hard`: a regra do CLAUDE.md é de
-**deploy**, e sujeira local no NUC pode ser a própria evidência. O roteiro usa
+**deploy**, e sujeira local no notebook pode ser a própria evidência. O roteiro usa
 `--ff-only` e manda **parar** se o status vier sujo.
 
-🛑 **Nenhuma ação de hardware antes de eu ler o `audita-nuc.txt`.** O roteiro
+🛑 **Nenhuma ação de hardware antes de eu ler o `audita-notebook.txt`.** O roteiro
 de bancada nasce depois do relatório real, não antes. Deploy segue a regra do
 CLAUDE.md, e nada da etapa 5 nem da 6 foi para robô.
 
