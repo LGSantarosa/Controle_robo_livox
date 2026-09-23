@@ -4,6 +4,82 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-09-23 (PC de dev, robô desligado) — A ETAPA 5 VAI PARA A `main`, E A SUÍTE PARA DE DEPENDER DE `--ignore`
+
+Sessão de dev, offline. Peguei o trabalho de 22-09 que veio do lab: a
+`etapa5-contrato` remota tinha sido **rebaseada** (force-update), e o meu local
+estava 10 à frente / 14 atrás. Antes de qualquer reset, conferi que
+`origin/backup/etapa5-contrato-antes-rebase-22-09` apontava **exatamente** para
+o meu `bfb6686` — os 10 commits locais eram as versões pré-rebase dos mesmos,
+nada exclusivo a perder. `main` por `--ff-only`, branch por `reset --hard`.
+
+### Quatro textos errados, achados na revisão de fechamento (`a283213`)
+
+| onde | o que estava errado |
+|---|---|
+| `054` §Status | citava `e66d06b` e `4ab61b9` — **SHAs que não existem no repo**, sobras do pré-rebase. Certos: `e12b1f4` e `ba32571` |
+| `PLANO` §3.4 | a *especificação* do gate ainda mandava diffar contra `0c70691`; a baseline andou para `f23ac4f` |
+| `ESTADO` e este diário | "a etapa 5 só toca `robot_nav/`, `tools/` e `docs/`" — por `git diff --name-only f23ac4f HEAD`, toca também `bin/` e o próprio `ESTADO_PROJETO.md`. O gate passava igual: errada era a **descrição**, não o resultado |
+| BO do `twist_mux` | estava escrito como problema de um pacote; é **causa geral** (abaixo) |
+
+**Não mexi** nas citações históricas a `0c70691` (`PLANO` 126 e 142, este
+diário 16 e 40): lá o número é fato do dia, não especificação.
+
+Gate reconferido depois do commit de texto, e aí sim `git merge --ff-only`:
+**`f23ac4f..a283213`**, sem merge commit. Plano §9 cumprido.
+
+### O `--ignore` não era do `twist_mux` — era da coleta
+
+Reproduzindo a suíte em shell limpa (só `/opt/ros/jazzy`, sem o overlay do
+`Controle_robo_web`, que estava carregado aqui), apareceram **2 falhas que
+ninguém tinha visto**: `test_flake8` e `test_pep257` do `robo_exemplos`, dentro
+de `ESTAGIO-2026/` — diretório local, ignorado pelo git, que não é deste
+projeto. Os 1237 próprios passavam igual, mas o **código de saída virava 1**.
+
+Ou seja: o BO de 22-09 não era "o `pytest` pendura no `twist_mux`". Era **o
+`pytest` da raiz coleta diretório local ignorado pelo git**, e o `twist_mux`
+foi só o primeiro a doer. Exclusão por nome nunca fecha isso — o próximo
+diretório clonado ao lado entra sozinho de novo.
+
+**Fechado por seleção positiva** (`pytest.ini` com `testpaths`, os 13 caminhos
+do projeto). `pytest` sem argumento coleta só o nosso; `pytest
+ros2_packages/twist_mux` continua alcançando terceiro quando a gente quiser
+(conferido: coleta explícita em `ESTAGIO-2026` segue funcionando).
+
+**O risco que a seleção positiva cria, e a trava:** o modo de sumir se inverte
+— em vez de teste de terceiro entrando, é teste NOSSO saindo em silêncio,
+verde por não ter rodado. É a mesma família da zona morta: falha sem sintoma.
+`test_coleta_da_suite.py` fecha: todo arquivo de teste do `git ls-files` tem de
+cair sob algum `testpaths`, e todo `testpaths` tem de existir no disco.
+**Nasceu verde** — mutei os dois lados para provar que pega:
+
+| mutação | resultado |
+|---|---|
+| tirar `tools/banco` do `testpaths` | ❌ `test_todo_teste_versionado_esta_no_testpaths` |
+| pôr entrada inexistente no `testpaths` | ❌ `test_nenhum_testpaths_morto` |
+| restaurado | ✅ 2 passed |
+
+**Suíte: 1239 passed, código de saída 0, sem `--ignore` nenhum** (1237 + os 2
+da trava).
+
+### Dois resíduos do PC, e um BO que fica aberto
+
+- `build/wheel_msgs` de 14-09 tinha diretório real onde o `--symlink-install`
+  queria link: o build morria em `ament_cmake_python_symlink`. Apagado
+  `build/` e `install/` do pacote, rebuildou. Artefato local, fora do git.
+- 🔴 **O SDK Livox não está instalado neste PC**: `colcon build` reprova em
+  `LIVOX_LIDAR_SDK_LIBRARY` não encontrada, e o `install/livox_ros_driver2`
+  daqui é de antes. O build do dia foi com `--packages-skip livox_ros_driver2
+  fast_lio` (6 pacotes, código 0). **A etapa 6 não deve começar apoiada nesse
+  `install/` velho** — ou instala o SDK, ou a ausência vira registro formal.
+- **D4 segue aberta de propósito**: `/joy` sumindo deixa o último frame
+  não-zero e quem para o robô é o watchdog do firmware. É decisão de
+  comportamento, não saneamento de suíte — não entra aqui.
+
+**Nada foi ao robô hoje.** O robô ficou desligado a sessão inteira.
+
+---
+
 ## 2026-09-22 (lab, robô desligado, sessão da tarde) — ETAPA 5 FECHADA: O PASSO 6, E DUAS CORREÇÕES QUE TIVERAM DE SAIR DA BRANCH
 
 Sessão no laboratório, mas **inteiramente offline** — o robô ficou desligado e

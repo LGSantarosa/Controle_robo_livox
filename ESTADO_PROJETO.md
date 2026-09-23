@@ -1,9 +1,9 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-09-22** (lab, robô desligado,
-> branch `etapa5-contrato` — a etapa 4 JÁ ESTÁ NA `main`; a **etapa 5 está
-> FECHADA na branch**, passos 1–6, e falta o ok do dono para levá-la à `main`).
+> Versionado na `main`. Atualizado em **2026-09-23** (PC de dev, robô
+> desligado — a **etapa 5 inteira está na `main`** (`a283213`), passos 1–6, por
+> fast-forward; em aberto antes da etapa 6, o SDK Livox deste PC).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
@@ -12,11 +12,13 @@
 
 ---
 
-## ✅ 22-09 — ETAPA 5 FECHADA NA BRANCH `etapa5-contrato` (passos 1–6)
+## ✅ 22/23-09 — ETAPA 5 FECHADA E NA `main` (passos 1–6)
 
-**Para continuar em outro PC:** `git fetch origin && git switch etapa5-contrato`
-— e **`colcon build` + `source install/setup.bash` neste PC**, que o `install/`
-não vem pelo git (custou 21 falsas reprovações em 22-09).
+**Para continuar em outro PC:** `git fetch origin && git switch main` — e
+**`colcon build --base-paths ros2_packages --symlink-install --packages-skip
+livox_ros_driver2 fast_lio` + `source install/setup.bash` neste PC**, que o
+`install/` não vem pelo git (custou 21 falsas reprovações em 22-09). Em shell
+limpa, sem overlay de outro workspace: 6 pacotes, código 0.
 
 - **O contrato:** a cadeia do robô 3 fala `TwistStamped` de ponta a ponta, e a
   conversão acontece só na fronteira do atuador (`cmd_vel_to_wheels` com
@@ -31,8 +33,9 @@ não vem pelo git (custou 21 falsas reprovações em 22-09).
   `ESTADO_PROJETO.md`. Nenhum arquivo de `robot_motion/`, `robot_base/`,
   `robot.launch.py` ou `twist_mux.yaml`.
 - **Suíte: 1237 passed**, código de saída 0 (na `main`, 1174). Rodar com o
-  overlay do repo carregado, com o código de saída conferido, sem `| tail`, e
-  com `--ignore=ros2_packages/twist_mux --ignore=ESTAGIO-2026` (ver o ⚠️
+  overlay do repo carregado e com o código de saída conferido, sem `| tail`.
+  Desde 23-09 **sem `--ignore` nenhum**: a coleta é por seleção positiva
+  (`pytest.ini`), e com a trava da coleta o número passou a **1239** (ver
   abaixo).
 - 🔴 **D4 em aberto:** com o `/joy` sumindo, os frames cessam e o **último
   fica não-zero**; quem para o robô é o watchdog do firmware. Watchdog no PC
@@ -56,27 +59,39 @@ gate, por morarem em `robot_base/`):
 Baseline: `0c70691` → `5e12f0e` → **`f23ac4f`**. Backup do estado anterior ao
 rebase: branch `backup/etapa5-contrato-antes-rebase-22-09`, no GitHub.
 
-### ⚠️ BO aberto: o `pytest` da raiz coleta diretório local ignorado pelo git
+### ✅ 23-09 — BO FECHADO: a coleta do `pytest` da raiz é por seleção positiva
 
-`ros2_packages/twist_mux` é vendorizado (está no `.gitignore`) e o
-`test_joystick_relay.py` é teste de `launch` de terceiro que faz
-`while priority is None: pass`, **sem timeout**. Antes da correção do
-carregador ele errava rápido; com o rclpy real ele **gira para sempre** e leva
-a suíte junto.
+O `pytest` da raiz coletava **diretório local ignorado pelo git**. Dois casos:
+`ros2_packages/twist_mux` (vendorizado; o `test_joystick_relay.py` de terceiro
+faz `while priority is None: pass` **sem timeout** — com o rclpy real ele gira
+para sempre e leva a suíte junto) e `ESTAGIO-2026/` (2 falhas de `flake8` e
+`pep257` do `robo_exemplos`, que viravam o código de saída em 1).
 
-A causa é geral: **o `pytest` da raiz também coleta diretórios locais
-ignorados pelo git**. Além do `ros2_packages/twist_mux`, neste PC ele
-encontrou `ESTAGIO-2026/`, acrescentando 2 falhas de testes externos
-(`robo_exemplos`: `test_flake8`, `test_pep257`) — os 1237 próprios passam
-igual, mas o código de saída vira 1. Para reproduzir os 1237 testes próprios:
-`--ignore=ros2_packages/twist_mux --ignore=ESTAGIO-2026`.
+Contorno até 22-09: `--ignore` na mão. **Isso não fecha** — qualquer
+diretório novo ao lado entra na suíte sem avisar.
 
-Merece decisão própria (excluir de vez no `conftest.py`? `pytest-timeout`?) —
-em commit próprio, **depois** do merge da etapa 5, para não mexer na baseline
-do gate.
+Fechado por `pytest.ini` com `testpaths`: `pytest` sem argumento coleta só os
+13 caminhos do projeto; chamada explícita (`pytest ros2_packages/twist_mux`)
+continua alcançando terceiro quando a gente quiser. **Suíte: 1239 passed,
+código 0, sem `--ignore`.**
 
-⬜ **Próximo:** levar a `etapa5-contrato` à `main` — **com o ok do dono**
-(plano §9: a `main` só recebe a etapa inteira). Depois, etapa 6: a `pilha` com
+Seleção positiva tem o risco simétrico — teste NOSSO some da suíte em
+silêncio. Travado por `test_coleta_da_suite.py`: todo arquivo de teste
+versionado no `git ls-files` tem de cair sob algum `testpaths`, e todo
+`testpaths` tem de existir. Provado vermelho por mutação nos dois lados
+(entrada removida, entrada morta).
+
+✅ **23-09: a etapa 5 inteira está na `main`** (`f23ac4f..a283213`,
+fast-forward, com o ok do dono; plano §9 cumprido — a `main` recebeu a etapa
+inteira). A `etapa5-contrato` aponta para o mesmo commit.
+
+🔴 **Antes da etapa 6, um BO novo:** o **SDK Livox não está instalado neste
+PC** — `colcon build` sem `--packages-skip livox_ros_driver2 fast_lio` reprova
+em `LIVOX_LIDAR_SDK_LIBRARY` não encontrada, e o `install/livox_ros_driver2`
+que existe aqui é de antes. A etapa 6 não deve começar apoiada nesse
+`install/` velho: ou instala o SDK, ou a ausência vira registro formal.
+
+⬜ **Próximo:** resolver/formalizar o SDK Livox; depois, etapa 6: a `pilha` com
 `robo:=3`. Deploy segue a regra do CLAUDE.md, e nada da etapa 5 foi para robô.
 
 ---
