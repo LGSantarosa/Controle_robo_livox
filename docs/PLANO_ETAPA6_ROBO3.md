@@ -29,7 +29,7 @@ Seis achados, e três deles mudam o desenho.
 | **B** | **Momento errado.** `generate_launch_description()` roda **sem contexto**; `robo` só existe dentro de um `LaunchContext`. Escolher o perfil pelo argumento exige `OpaqueFunction` ou ler o `argv` — e ler `argv` já tem precedente na casa (`_passou`) | `pilha.launch.py:150–162`, `:108` |
 | **C** | **O include do simulador não troca só de arquivo.** A pilha inclui `robot_base/launch/sim.launch.py` passando `planta`, e o `sim_robo3.launch.py` **não declara `planta`** (ele declara `mundo`, `x`, `y`, `yaw`, `gui`, `placa`). Include com argumento não declarado morre na subida. O mundo padrão também difere: a pilha usa `worlds/pista_obstaculos.sdf` da raiz; o `sim_robo3`, `robot_base/worlds/pista_livre.sdf` | `pilha.launch.py:596–621`; `sim_robo3.launch.py:56–70` |
 | **D** | **No Gazebo a cadeia NÃO termina no `cmd_vel_to_wheels`.** Ela termina no `hoverboard_base_controller`: `compensador_rumo` → `/cmd_vel_bruto` → `placa_simulada` → `ros2_control`. O `sim_robo3` **já sobe** a placa fingida e o controlador. A fronteira da decisão 054 (`WheelSpeeds` → MEGA) é do **hardware**, e `WheelSpeeds` não tem consumidor no Gazebo — foi exatamente isto que derrubou a "etapa 3" da v1 | `placa_simulada.py:186`; `sim_robo3.launch.py:94–150`; `PLANO_NAV2_ROBO3.md:91` |
-| **E** | **Nenhum dos dois muxes serve inteiro ao robô 3.** O da pilha tem cinco faixas — `joy_vel` 100, `key_vel` 90, `web_vel` 50, **`unstuck_vel` 30** e `auto_vel` 10 — e **não tem `dpad_vel`**. O do robô 3 tem `dpad_vel` (110) e `joy_vel` (100), e **não tem nem `auto_vel` nem `unstuck_vel`** — com ele, a autonomia **e o desencalhe** publicam para o vazio, e o sintoma seria robô parado com o Nav2 dizendo que está navegando | `robot_motion/config/twist_mux.yaml:60–104`; `robot_motion/config/twist_mux_robo3.yaml` |
+| **E** | **Nenhum dos dois muxes serve inteiro ao robô 3.** O da pilha tem cinco faixas — `joy_vel` 100, `key_vel` 90, `web_vel` 50, **`unstuck_vel` 30** e `auto_vel` 10 — e **não tem `dpad_vel`**. O do robô 3 tem `dpad_vel` (110) e `joy_vel` (100), e **não tem nem `auto_vel` nem `unstuck_vel`** — com ele, a autonomia **e o desencalhe** publicam para o vazio, e o sintoma seria robô parado com o Nav2 dizendo que está navegando | `robot_motion/config/twist_mux.yaml:60–104`; `robot_nav/config/twist_mux_robo3.yaml` |
 | **E′** | 🔧 **Correção da revisão de 23-09** (a primeira redação deste achado errou): o mux da pilha **já tem** `unstuck_vel`, e quem publica nele é o **`path_follower`** (`path_follower.py:741`), não um supervisor à parte. O comentário do topo do `twist_mux.yaml` ("lá existe uma entrada `unstuck_vel` … aqui ela não existe AINDA") está **vencido** desde que o desencalhe entrou. Não corrigir aqui: é arquivo do robô 2, e o §6 proíbe | `twist_mux.yaml:28` × `:98`; `path_follower.py:741` |
 | **F** | O `sim_robo3` fixa `use_sim_time: True` **literal** nos nós dele; a pilha passa a **substituição** `sim` nos dela. A prova viva tem de cobrir os dois lados, porque são dois mecanismos diferentes de chegar ao mesmo valor | `sim_robo3.launch.py`; `pilha.launch.py` |
 
@@ -110,7 +110,8 @@ Cada item vira teste, e cada teste falha **antes** de existir a implementação.
    `robot_motion/config/twist_mux_pilha_robo3.yaml`, com `dpad_vel` 110,
    `joy_vel` 100, `unstuck_vel` 30 e `auto_vel` 10 — conferidas **vivas**, por
    `ros2 param get`, não só no arquivo. O `controle_robo3.launch.py` **não** é
-   incluído pela pilha, e `robot_nav/config/twist_mux.yaml` não é tocado.
+   incluído pela pilha, e `robot_nav/config/twist_mux_robo3.yaml` — o mux do
+   controle físico do robô 3 — não é tocado.
 2. **Quem encerra a cadeia no simulador**: `placa_simulada` consumindo
    `/cmd_vel_bruto` e publicando ao `hoverboard_base_controller`. E a prova
    pela negativa: **nenhum** `cmd_vel_to_wheels`, `mega_bridge` ou tópico
@@ -193,7 +194,8 @@ O robô 2 é o que funciona hoje. Esta etapa fecha só se **as quatro** valerem:
   `ros2_packages/robot_motion/config/perfil_robo3.yaml`,
   `ros2_packages/robot_motion/test/` e `ESTADO_PROJETO.md`.
   **Nenhum** arquivo de `robot_base/`, de `robot_nav/` (inclusive o
-  `robot_nav/config/twist_mux.yaml`, o mux do controle físico), nem
+  `robot_nav/config/twist_mux_robo3.yaml`, o mux do controle físico do
+  robô 3, e `robot_nav/config/twist_mux.yaml`), nem
   `robot_motion/config/{nav2,collision_monitor,twist_mux,movimentacao*}.yaml`;
 - **(b) a suíte inteira verde**, com o número de hoje como piso: **1262**
   (coletados em `1f49981`, conferido — não o 1239 de 22-09, que envelheceu);
@@ -265,7 +267,8 @@ certificado de que funciona.
 6. **Os muxes aparecem qualificados pelo pacote**, e o novo arquivo chama-se
    `robot_motion/config/twist_mux_pilha_robo3.yaml` — nome inequívoco, para
    não existirem duas fontes aparentemente canônicas com o mesmo nome. O
-   `robot_nav/config/twist_mux.yaml` (controle físico) fica **intocado**, e o
+   `robot_nav/config/twist_mux_robo3.yaml` (o mux do controle físico do robô 3)
+   fica **intocado**, e o
    §6(a) passou a dizer isso explicitamente.
 
 Também da revisão, nas decisões: a trava do D1 ganhou as **três bocas**

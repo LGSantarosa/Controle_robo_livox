@@ -10,7 +10,8 @@ correções obrigatórias já incorporadas (`PLANO_ETAPA6_ROBO3.md` §9). Passa 
 **Não toca**: nada do robô 2 —
 `robot_motion/config/{nav2,collision_monitor,twist_mux,movimentacao*}.yaml`,
 `robot_base/` e `robot_nav/` inteiros (inclusive
-`robot_nav/config/twist_mux.yaml`, o mux do controle físico).
+`robot_nav/config/twist_mux_robo3.yaml`, o mux do controle físico do
+robô 3).
 **Vem de**: etapa 6 — a pilha com `robo:=3` no Gazebo.
 
 ---
@@ -96,7 +97,7 @@ novo no robô 3 exige decisão própria, e não entra por herança do mux do rob
 | **materializar também para o robô 2**, por uniformidade | uniformidade custaria o gate: o caminho é o valor do parâmetro, e ele mudaria. Perder a comparação byte a byte contra `1f49981` para deixar o código simétrico é trocar a proteção do robô que funciona por estética |
 | **escrever os arquivos antes de validar `robo` e `sim`** | subida recusada deixaria pasta com YAML dentro — **falsa evidência** de uma corrida que não houve. Num projeto em que a pasta da corrida é a prova, isso é pior do que não ter prova |
 | **só acrescentar `auto_vel` ao mux do robô 3** | deixaria o **desencalhe** publicando para o vazio, com o perfil do robô 3 configurando ré e pivô que nunca chegariam ao atuador. Zona morta de novo: configurado, silencioso, inoperante |
-| **reaproveitar o nome `twist_mux_robo3.yaml`** para o mux da pilha | passariam a existir dois arquivos com o mesmo nome curto e papéis diferentes (controle físico × pilha), e a próxima pessoa a abrir um deles não teria como saber qual é o canônico |
+| **reaproveitar o nome `twist_mux_robo3.yaml`** para o mux da pilha | esse nome **já existe**, em `robot_nav/config/`, e é o mux do controle físico do robô 3 (`controle_robo3.launch.py:149`). Passariam a existir dois arquivos de mesmo nome curto e papéis diferentes, e a próxima pessoa a abrir um deles não teria como saber qual é o canônico |
 | **um `twist_mux.yaml` único com as cinco faixas** para os dois robôs | mexe no mux do robô 2, que o gate de não regressão da etapa proíbe. E a prioridade do direcional (110, acima do analógico) é decisão do robô 3, da etapa 5 |
 | **deixar o robô 3 com o mux do robô 2** | o direcional some sem aviso; a faixa que a etapa 5 acabou de criar morreria na primeira integração |
 
