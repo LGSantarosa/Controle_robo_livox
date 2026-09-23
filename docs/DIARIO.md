@@ -117,8 +117,11 @@ etapa 4, registrada como tal.
 
 - Baseline do gate: `0c70691` → `5e12f0e` → **`f23ac4f`**, dois commits, os
   dois de infraestrutura de teste, nenhum toca comportamento de robô.
-- Gate do §3.4 contra `f23ac4f`: **passa ao pé da letra** — a etapa 5 só toca
-  `robot_nav/`, `tools/` e `docs/`.
+- Gate do §3.4 contra `f23ac4f`: **passa ao pé da letra** — a etapa 5 toca
+  somente `bin/`, `docs/`, `ros2_packages/robot_nav/`, `tools/` e
+  `ESTADO_PROJETO.md`. (Escrito primeiro como "só `robot_nav/`, `tools/` e
+  `docs/`": o gate passava do mesmo jeito, mas a descrição era inexata —
+  corrigida em 23-09 contra `git diff --name-only f23ac4f HEAD`.)
 - Suíte: **1237 passed**, código de saída 0. Na `main`, 1174.
 - Decisão 054 escrita (a fronteira, as alternativas, o que não prova, e a
   baseline).

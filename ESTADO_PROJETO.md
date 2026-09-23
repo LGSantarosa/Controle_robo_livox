@@ -26,12 +26,14 @@ não vem pelo git (custou 21 falsas reprovações em 22-09).
   cadeia `Twist` 26/26 (baseline) e cadeia `TwistStamped` **26/26**, com os
   MESMOS frames byte a byte nas três condições, prioridade, timeout do mux
   (0,35 s), homem-morto, perda do controle e TF com yaw 0.
-- **Gate do §3.4: passa ao pé da letra** contra `f23ac4f` — a etapa 5 só toca
-  `robot_nav/`, `tools/` e `docs/`. Nenhum arquivo de `robot_motion/`,
-  `robot_base/`, `robot.launch.py` ou `twist_mux.yaml`.
+- **Gate do §3.4: passa ao pé da letra** contra `f23ac4f` — a etapa 5 toca
+  somente `bin/`, `docs/`, `ros2_packages/robot_nav/`, `tools/` e
+  `ESTADO_PROJETO.md`. Nenhum arquivo de `robot_motion/`, `robot_base/`,
+  `robot.launch.py` ou `twist_mux.yaml`.
 - **Suíte: 1237 passed**, código de saída 0 (na `main`, 1174). Rodar com o
   overlay do repo carregado, com o código de saída conferido, sem `| tail`, e
-  com `--ignore=ros2_packages/twist_mux` (ver o ⚠️ abaixo).
+  com `--ignore=ros2_packages/twist_mux --ignore=ESTAGIO-2026` (ver o ⚠️
+  abaixo).
 - 🔴 **D4 em aberto:** com o `/joy` sumindo, os frames cessam e o **último
   fica não-zero**; quem para o robô é o watchdog do firmware. Watchdog no PC
   seria decisão própria.
@@ -54,14 +56,24 @@ gate, por morarem em `robot_base/`):
 Baseline: `0c70691` → `5e12f0e` → **`f23ac4f`**. Backup do estado anterior ao
 rebase: branch `backup/etapa5-contrato-antes-rebase-22-09`, no GitHub.
 
-### ⚠️ BO aberto: o `pytest` da raiz pendura no `twist_mux`
+### ⚠️ BO aberto: o `pytest` da raiz coleta diretório local ignorado pelo git
 
 `ros2_packages/twist_mux` é vendorizado (está no `.gitignore`) e o
 `test_joystick_relay.py` é teste de `launch` de terceiro que faz
 `while priority is None: pass`, **sem timeout**. Antes da correção do
 carregador ele errava rápido; com o rclpy real ele **gira para sempre** e leva
-a suíte junto. Contorno de hoje: `--ignore=ros2_packages/twist_mux`.
-Merece decisão própria (excluir de vez no `conftest.py`? `pytest-timeout`?).
+a suíte junto.
+
+A causa é geral: **o `pytest` da raiz também coleta diretórios locais
+ignorados pelo git**. Além do `ros2_packages/twist_mux`, neste PC ele
+encontrou `ESTAGIO-2026/`, acrescentando 2 falhas de testes externos
+(`robo_exemplos`: `test_flake8`, `test_pep257`) — os 1237 próprios passam
+igual, mas o código de saída vira 1. Para reproduzir os 1237 testes próprios:
+`--ignore=ros2_packages/twist_mux --ignore=ESTAGIO-2026`.
+
+Merece decisão própria (excluir de vez no `conftest.py`? `pytest-timeout`?) —
+em commit próprio, **depois** do merge da etapa 5, para não mexer na baseline
+do gate.
 
 ⬜ **Próximo:** levar a `etapa5-contrato` à `main` — **com o ok do dono**
 (plano §9: a `main` só recebe a etapa inteira). Depois, etapa 6: a `pilha` com

@@ -1,8 +1,8 @@
 # 054 — A fronteira do contrato é o `cmd_vel_to_wheels`, por parâmetro
 
 **Data**: 2026-09-22 (PC de dev, robô desligado; nada foi ao robô)
-**Status**: aplicada na branch `etapa5-contrato` (`e66d06b` o nó dual,
-`4ab61b9` o corte atômico da cadeia); **não testada em hardware** — a etapa 5
+**Status**: aplicada na branch `etapa5-contrato` (`e12b1f4` o nó dual,
+`ba32571` o corte atômico da cadeia); **não testada em hardware** — a etapa 5
 prova a cadeia de software, não o chão.
 **Toca**: `robot_nav/robot_nav/cmd_vel_to_wheels.py` (`use_stamped`),
 `robot_nav/robot_nav/dpad_reto.py` (publica `TwistStamped`),

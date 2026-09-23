@@ -169,4 +169,4 @@ anda certo (etapa 8) nem que a `pilha` sobe o robô 3 (etapa 6).
 5. "tipo errado não recebe" com controle positivo, barreira de descoberta e o
    tipo conferido no grafo;
 6. o default do `cmd_vel_to_wheels` garantido por comportamento, não por
-   "mesmo nó"; o diff contra `0c70691` é gate de fechamento.
+   "mesmo nó"; o diff contra `f23ac4f` é gate de fechamento.
