@@ -26,6 +26,13 @@ LIVOX_COMMIT="6b9356c"
 FASTLIO_URL="https://github.com/Ericsii/FAST_LIO.git"
 FASTLIO_COMMIT="18418bc"
 SDK_URL="https://github.com/Livox-SDK/Livox-SDK2.git"
+# O SDK também é fixado, como os dois drivers. Até 23-09 ele era clonado com
+# '--depth 1' sem revisão: quem rodasse o script hoje pegaria o `main` do dia,
+# e a lib que vai para /usr/local — código nativo, fora do git, que nenhum
+# teste nosso cobre — seria outra a cada máquina. A tag é a que está compilada
+# neste PC desde 24-07; o SHA existe porque tag pode ser movida no upstream.
+SDK_TAG="v1.3.1"
+SDK_COMMIT="f5d9375f84efe2b15bc0a052d3e18482ed13adf4"
 SDK_LIB="/usr/local/lib/liblivox_lidar_sdk_shared.so"
 
 clonar() {
@@ -40,21 +47,86 @@ clonar() {
     git -C "$PKGS/$dir" checkout --quiet "$commit"
 }
 
+echo "==> 0/5  Pré-condição: dependências ROS dos drivers de terceiros"
+# ANTES de qualquer coisa em /usr/local, e antes de clonar/compilar: se faltar
+# dependência ROS, o script ia até o passo 5/5 e só lá quebrava — com erro de
+# CMake ("By not providing Findpcl_ros.cmake...") que não diz o que instalar,
+# e já tendo mexido no sistema. Achado em 23-09: o fast_lio reprovou assim,
+# com o SDK já instalado.
+#
+# A lista é fixa, e não lida dos package.xml, porque esta conferência roda
+# ANTES do clone — em máquina nova os package.xml ainda nem existem. São as
+# dependências dos drivers de terceiros que a instalação padrão do ROS não
+# traz; subir a lista é mudança deliberada, como os commits fixados.
+ROS_SHARE="/opt/ros/jazzy/share"
+DEPS_ROS=(pcl_ros pcl_conversions)
+faltando=()
+for dep in "${DEPS_ROS[@]}"; do
+    [ -d "$ROS_SHARE/$dep" ] || faltando+=("$dep")
+done
+if [ ${#faltando[@]} -gt 0 ]; then
+    apt_nomes=()
+    for dep in "${faltando[@]}"; do
+        apt_nomes+=("ros-jazzy-${dep//_/-}")
+    done
+    echo "ERRO: faltam dependências ROS dos drivers de terceiros:" >&2
+    for dep in "${faltando[@]}"; do
+        echo "      - $dep (nada em $ROS_SHARE/$dep)" >&2
+    done
+    echo >&2
+    echo "      Instale e rode o script de novo:" >&2
+    echo "        sudo apt install ${apt_nomes[*]}" >&2
+    echo >&2
+    echo "      (nada foi alterado no sistema nem clonado)" >&2
+    exit 1
+fi
+echo "    ok: ${DEPS_ROS[*]}"
+
 echo "==> 1/5  SDK nativo da Livox (Livox-SDK2)"
 # O livox_ros_driver2 NÃO embute o SDK: o CMakeLists dele faz
 #   find_library(LIVOX_LIDAR_SDK_LIBRARY liblivox_lidar_sdk_shared.so /usr/local/lib REQUIRED)
 # ou seja, exige a lib C++ já instalada em /usr/local. Sem ela o colcon falha com
 # "Could not find LIVOX_LIDAR_SDK_LIBRARY" — que não diz o que fazer. Daí este passo.
 # É o único ponto do setup que precisa de sudo (instala em /usr/local).
+# Fonte em local fixo (fora do git, ver .gitignore) e não em /tmp: o passo de
+# instalação pede sudo, e se a senha falhar dá pra repetir o script sem
+# recompilar o SDK inteiro de novo.
+SDK_SRC="$WS/third_party/Livox-SDK2"
+
+# A conferência da revisão vem ANTES da guarda do $SDK_LIB, de propósito: se o
+# clone existir com outra revisão, a gente quer saber disso mesmo que a lib já
+# esteja instalada — é justamente o caso em que o instalado e o fonte divergem
+# em silêncio. E aqui o script RECUSA em vez de atualizar ou resetar sozinho:
+# mexer em fonte de terceiro é mudança deliberada, com registro, não efeito
+# colateral de rodar o setup.
+if [ -d "$SDK_SRC/.git" ]; then
+    SDK_HEAD="$(git -C "$SDK_SRC" rev-parse HEAD)"
+    if [ "$SDK_HEAD" != "$SDK_COMMIT" ]; then
+        echo "ERRO: $SDK_SRC está em outra revisão do Livox-SDK2." >&2
+        echo "      esperado: $SDK_COMMIT ($SDK_TAG)" >&2
+        echo "      presente: $SDK_HEAD" >&2
+        echo "      Decida e registre: ou apague o diretório para reclonar a" >&2
+        echo "      tag fixada, ou mude SDK_TAG/SDK_COMMIT neste script." >&2
+        exit 1
+    fi
+    echo "    fonte em $SDK_SRC @ $SDK_TAG ($SDK_COMMIT)"
+fi
+
 if [ -f "$SDK_LIB" ]; then
     echo "    já instalado ($SDK_LIB)."
 else
-    # Fonte em local fixo (fora do git, ver .gitignore) e não em /tmp: o passo de
-    # instalação pede sudo, e se a senha falhar dá pra repetir o script sem
-    # recompilar o SDK inteiro de novo.
-    SDK_SRC="$WS/third_party/Livox-SDK2"
-    echo "    fonte em $SDK_SRC"
-    [ -d "$SDK_SRC/.git" ] || git clone --depth 1 "$SDK_URL" "$SDK_SRC"
+    if [ ! -d "$SDK_SRC/.git" ]; then
+        echo "    clonando Livox-SDK2 @ $SDK_TAG em $SDK_SRC"
+        git clone --depth 1 --branch "$SDK_TAG" "$SDK_URL" "$SDK_SRC"
+        SDK_HEAD="$(git -C "$SDK_SRC" rev-parse HEAD)"
+        # A tag do upstream pode ser movida; o SHA é quem fecha.
+        if [ "$SDK_HEAD" != "$SDK_COMMIT" ]; then
+            echo "ERRO: a tag $SDK_TAG do upstream não aponta mais para o SHA fixado." >&2
+            echo "      esperado: $SDK_COMMIT" >&2
+            echo "      veio:     $SDK_HEAD" >&2
+            exit 1
+        fi
+    fi
     # '-include cstdint' contorna um bug do upstream: vários headers do SDK usam
     # std::uint8_t / uint64_t sem incluir <cstdint>, e o GCC 13+ (Ubuntu 24.04)
     # deixou de puxar esse header transitivamente. O erro que aparece sem isso é
