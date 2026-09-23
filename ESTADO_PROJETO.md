@@ -114,6 +114,15 @@ auditar o NUC.
 
 ⬜ **Próximo:** etapa 6 — a `pilha` com `robo:=3`, em duas trilhas paralelas: o
 Gazebo (software, daqui) e a auditoria do **NOTEBOOK** (hardware, na máquina).
+
+🟡 **Trilha Gazebo: plano escrito, em revisão do dono** —
+`docs/PLANO_ETAPA6_ROBO3.md` e a decisão **056** como **proposta**. Nenhuma
+linha de código antes do ok. O plano fecha a matriz das quatro combinações
+(`robo` × `sim`), com `robo:=3 sim:=false` **recusado de propósito**, e o gate
+de não regressão do robô 2. Achado que mudou o desenho: a trava não é o
+`_recusa_robo` — é a pilha não saber aplicar as **7 reescritas** do perfil do
+robô 3, e o perfil ser escolhido antes de o argumento `robo` existir.
+
 **O roteiro da auditoria está pronto e versionado:**
 `docs/ROTEIRO_ETAPA6_PRECONDICAO.md` (robô pode estar DESLIGADO). O auditor é
 `bin/audita-livox`, na branch **`etapa6-pilha-robo3`** — três vereditos
