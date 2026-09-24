@@ -10589,3 +10589,49 @@ eu de fato achei na hora; vale esta correção para as duas.
 
 Sem sexta corrida. `8515a25` e as cinco pastas preservados. O passo 7 continua
 fechado.
+
+## 🎯 2026-09-24 (PC de dev, sem subir nada) — O CONTRATO DO TERCEIRO CRITÉRIO, ANTES DO PRIMEIRO TESTE
+
+O passo 7 continua fechado; o que se fechou hoje foi o **contrato** dele, que é
+o que decide o validador antes de existir uma linha dele.
+
+**A decisão do dono:** observar no **consumidor final**,
+`/hoverboard_base_controller/cmd_vel` — depois do modelo de atuador —, e
+transformar "não nulo" em **"acima do patamar vivo da placa simulada"**:
+
+```
+ve = v - wz·bitola/2 ;  vd = v + wz·bitola/2 ;  comando_efetivo = max(|ve|,|vd|)
+patamar = deadband_speed · escala_real · raio
+```
+
+**Conferi os números na captura viva da quinta corrida** em vez de aceitar a
+conta: `/placa_simulada` traz `modelo: medido`, `deadband_speed` 100,0,
+`escala_real` 0,0372, `raio` 0,0825 → **patamar 0,3069 m/s**, igual ao que o
+dono calculou. E o grafo confirma o sentido do tópico
+(`placa_simulada.py:184-186`: publica em `/hoverboard_base_controller/cmd_vel`,
+assina `/cmd_vel_bruto`).
+
+**Um achado que só apareceu por conferir:** a `bitola` viva é **0,32**, e o
+default do nó é **0,270** (`placa_simulada.py:177`). Se o teste redigitasse o
+número — ou lesse o default —, `ve`/`vd` sairiam errados e o critério mediria
+outra coisa. É o melhor argumento concreto para a regra "consulta, não
+redigita", que agora está escrita no plano.
+
+**E uma propriedade do modelo que precisa estar dita**, senão o critério é lido
+como mais forte do que é: no modelo `medido`, comando entre 1 unidade e
+`deadband_speed` é **multiplicado** por `k = deadband_speed/mx`
+(`placa_simulada.py:408-411`), então a saída cai **exatamente** no patamar.
+Medido na saída, o teste é na prática "**o comando não foi engolido**" —
+sobreviveu ao corte `mx <= 1.0` e ao zeramento por latência. É o que se quer
+provar do caminho, mas **não** afirma que o Nav2 pediu o bastante (isso é o
+`/cmd_vel_bruto`, diagnóstico). E é a igualdade exata com o patamar que torna a
+tolerância de `1e-3` necessária, não cosmética.
+
+Contrato escrito no `PLANO_ETAPA6_ROBO3.md` **§4.6.1** (novo) e na **decisão
+056 §4.1**, com o "fora de alcance" da 056 corrigido: continua fora a zona morta
+**real do robô 3** — o critério valida **apenas a placa simulada herdada do robô
+2**. Também entrou no plano a exigência de **registrar a pose inicial** (sem
+ela, não se prova que o objetivo não nasceu dentro da tolerância) e a recusa
+explícita de um quarto critério de deslocamento.
+
+Nenhum código escrito. O passo 7 abre quando o dono pedir.

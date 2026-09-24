@@ -135,10 +135,72 @@ Cada item vira teste, e cada teste falha **antes** de existir a implementação.
 6. **O objetivo curto**, e o critério é exato: pista livre, robô na pose de
    spawn, goal a **1,0 m à frente na mesma orientação**. Aprovado quando as
    **três** valem: o BT devolve `SUCCEEDED`; a pose final está dentro do
-   `xy_goal_tolerance` vigente (0,25 m, `nav2.yaml:140`); e o
-   `hoverboard_base_controller` recebeu comando **não nulo** — sem este
+   `xy_goal_tolerance` **vivo** (0,25 m na 5ª corrida, lido do
+   `perfil_nav2.yaml` materializado, não redigitado); e **um comando acima do
+   patamar vivo chegou ao controlador final** (contrato no §4.6.1). Sem este
    terceiro, "chegou" pode ser "já estava lá", que é o modo de falha mais
    provável com um alvo curto. Teto: 60 s de **tempo simulado**.
+
+   **A pose inicial tem de ser registrada** na evidência: sem ela, não se prova
+   que o objetivo não nasceu dentro da tolerância. Um quarto critério de
+   deslocamento **não** entra — sair de 1,0 m e terminar dentro de 0,25 m já é
+   deslocamento.
+
+### 4.6.1 — O contrato do terceiro critério (decidido em 24-09, antes dos testes vermelhos)
+
+**Onde se observa: `/hoverboard_base_controller/cmd_vel`** — o consumidor
+final, **depois** do modelo de atuador. Ele é publicado pela `placa_simulada` e
+consumido pelo `hoverboard_base_controller` (conferido no grafo vivo da 5ª
+corrida: `placa_simulada.py:184-186` publica nele e assina `/cmd_vel_bruto`).
+Observar ali prova que o comando **atravessou** reflexo, mux, compensador,
+latência e zona morta simulada. **`/cmd_vel_bruto` fica só como diagnóstico**:
+o que passa por ele ainda pode ser engolido pela placa.
+
+**"Não nulo" vira:**
+
+> Durante o objetivo ativo, o controlador recebe ao menos um comando efetivo
+> cuja maior velocidade equivalente de roda alcança o **patamar vivo** da placa
+> simulada.
+
+```
+ve = v - wz · bitola/2
+vd = v + wz · bitola/2
+comando_efetivo = max(|ve|, |vd|)
+
+patamar = deadband_speed · escala_real · raio
+```
+
+Com os parâmetros **vivos** da 5ª corrida (lidos de
+`captura/parametros_normalizados.yaml`, nó `/placa_simulada`):
+`deadband_speed` 100,0 · `escala_real` 0,0372 · `raio` 0,0825 =
+**patamar 0,3069 m/s**; `bitola` **0,32**.
+
+🔴 **O teste CONSULTA esses parâmetros em `/placa_simulada` e nunca redigita
+número nenhum** — inclusive a `bitola`, cujo valor vivo (0,32) **não** é o
+default do nó (0,270): redigitar teria dado a conta errada. A comparação aceita
+tolerância pequena, `comando_efetivo >= patamar - 1e-3`.
+
+E exige, junto:
+
+- `modelo == medido` (com `modelo: ideal` o nó vira fio e o critério não prova
+  nada);
+- **publicador** do tópico = `/placa_simulada`;
+- **consumidor** = `/hoverboard_base_controller`;
+- a amostra **dentro da janela** entre objetivo aceito e resultado — nem antes,
+  nem durante o teardown (a 5ª corrida mostrou o que o teardown escreve, 057).
+
+⚠️ **O que este critério prova, e o que não prova.** Ele valida **apenas a placa
+simulada herdada do robô 2**; **não mede a zona morta real do robô 3**. E há uma
+propriedade do modelo `medido` que precisa estar escrita para o critério não ser
+lido como mais forte do que é: para comandos entre 1 unidade e `deadband_speed`,
+a placa **multiplica os dois lados** por `k = deadband_speed/mx`
+(`placa_simulada.py:408-411`), de modo que a saída sai **exatamente** no
+patamar. Então, medido na saída, o teste é na prática "**o comando não foi
+engolido**" (sobreviveu ao corte `mx <= 1.0` e ao zeramento por latência) — que
+é justamente o que se quer provar do caminho. Ele **não** afirma que o Nav2
+pediu o bastante; isso se olha no `/cmd_vel_bruto`, como diagnóstico. E é essa
+igualdade exata com o patamar que torna a tolerância de `1e-3` necessária, e
+não cosmética.
 7. **Combinação recusada não deixa rastro.** A escrita dos YAMLs acontece
    **depois** da validação de `robo` e `sim`, nunca antes: uma subida recusada
    não pode deixar **falsa evidência** de uma corrida que não houve. Isto tem

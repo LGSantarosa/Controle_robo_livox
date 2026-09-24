@@ -111,10 +111,41 @@ contra o que o perfil devolve; `/Odometry`, `/scan` e TF; objetivo curto com
 critério de três partes; encerramento sem órfão; e o gate de não regressão do
 robô 2 (§6).
 
+### 4.1 — O terceiro critério do objetivo curto (contrato fechado em 24-09)
+
+O critério "o controlador recebeu comando **não nulo**", como estava escrito,
+era fraco demais para o que ele existe para pegar: um comando **abaixo da zona
+morta** passaria por ele com o robô parado em silêncio. Fechado assim, **antes**
+dos testes vermelhos do passo 7:
+
+- **observa-se em `/hoverboard_base_controller/cmd_vel`** — o consumidor final,
+  **depois** do modelo de atuador, publicado pela `placa_simulada` e consumido
+  pelo `hoverboard_base_controller`. Prova que o comando atravessou reflexo,
+  mux, compensador, latência e zona morta simulada. **`/cmd_vel_bruto` é só
+  diagnóstico**: o que passa por ele ainda pode ser engolido pela placa;
+- **"não nulo" vira "acima do patamar vivo"**: durante o objetivo ativo, ao
+  menos um comando cuja maior velocidade equivalente de roda
+  (`max(|v ∓ wz·bitola/2|)`) alcance
+  `deadband_speed · escala_real · raio`, com tolerância `- 1e-3`;
+- os parâmetros são **consultados em `/placa_simulada`**, nunca redigitados;
+- junto, exige-se `modelo == medido`, publicador `/placa_simulada`, consumidor
+  `/hoverboard_base_controller`, e a amostra **dentro da janela** entre objetivo
+  aceito e resultado (nem antes, nem no teardown — ver 057);
+- a **pose inicial** entra na evidência, para provar que o objetivo não nasceu
+  dentro da tolerância. **Sem quarto critério** de deslocamento.
+
+A conta e o que ele não prova estão no plano, §4.6.1.
+
+**Isto muda o contrato desta decisão**, e por isso está aqui e não só no plano:
+o §4 abaixo dizia que zona morta estava fora de alcance, e continua — mas o
+critério agora **encosta** nela pelo lado simulado, e a diferença precisa ficar
+dita.
+
 **Fora de alcance, e não se pretende:** 🔴 Livox, rede, IP, FAST-LIO; 🔴 escala,
 massa e dinâmica do chassi 3 (provisórias por declaração do próprio
-`sim_robo3`); 🔴 derrapada, zona morta e a placa (modelo herdado do robô 2);
-🔴 comparação entre os chassis; 🔴 a MEGA e o `frente:=-1.0`.
+`sim_robo3`); 🔴 derrapada e **a zona morta REAL do robô 3** — o §4.1 valida
+**apenas a placa simulada herdada do robô 2**, e passar nele não diz nada sobre
+o atuador físico; 🔴 comparação entre os chassis; 🔴 a MEGA e o `frente:=-1.0`.
 
 ## 5. Referências
 
