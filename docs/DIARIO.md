@@ -10367,3 +10367,71 @@ o que faz o veredito ser reproduzível da pasta, meses depois.
 
 A pasta `20260924_104529` fica **intacta** — ela é a evidência que referencia
 `93671b3`, e por isso o conserto foi commit novo, não amend.
+
+---
+
+## 🔒 2026-09-24 (PC de dev, sem subir nada) — DOIS DEFEITOS DE EVIDÊNCIA, E O SEGUNDO ERA PIOR QUE O PRIMEIRO
+
+A segunda corrida (`20260924_111431`) deu RC 0 em todos os itens funcionais. Fui
+conferir a integridade da pasta antes de declarar fechado, e achei dois defeitos
+— os dois **meus**, nenhum do robô 3.
+
+**1. O manifesto não fechava contra a própria pasta.** `sha256sum -c SHA256SUMS`
+falhava em três arquivos (`console.txt`, `resultado.txt`, `resultado.csv`) nas
+DUAS primeiras corridas. Nada estava corrompido: os YAMLs materializados e o bag
+batiam byte a byte. O erro era de ordem — eu gerava o manifesto **antes** de
+escrever as últimas linhas do resultado. Manifesto que não fecha contra a própria
+pasta faz duvidar também do que está certo, e num PIBIT a pasta é a prova.
+
+Conserto: o manifesto é a **última escrita** do validador; `resultado.txt` e
+`resultado.csv` são finalizados antes; fora dele ficam só o `console.txt` (log ao
+vivo, não pode assinar a si mesmo enquanto é escrito — o conteúdo está
+reproduzido no `resultado.txt`, assinado) e o próprio `SHA256SUMS`; o item virou
+uma conferência **prévia do escopo** que vai ser assinado; e o validador roda
+`sha256sum -c` em si mesmo, com falha forçando RC 1. O `escopo_do_manifesto.txt`
+entra no que ele lista: declaração de escopo fora do manifesto é declaração que
+se troca depois.
+
+**2. O bag assinado não abria** — e este é o defeito que me incomoda mais, porque
+ele tinha cara de estar tudo bem. 229 MB de mcap, e `ros2 bag info` respondendo
+*"Could not find metadata in bag directory"*. Evidência que não abre é pior que
+evidência que falta: ela parece estar lá.
+
+Causa **medida**, não suposta: no `limpeza.txt` da segunda corrida, os dois
+processos que sobreviveram a 20 s de SIGINT do grupo e levaram KILL foram o
+`ros2 launch` e o **`ros2 bag record`** (pid 77561, confirmado pelo `argv` na foto
+de processos). Morto por KILL, o gravador nunca escreve o `metadata.yaml`.
+
+Levei ao dono com duas saídas — recuperar por `reindex` ou prevenir no
+encerramento — e ele escolheu **prevenção localizada no gravador**, sem mexer na
+política genérica das etapas 4 e 5. É a escolha certa e eu não a teria feito tão
+bem: eu tinha recomendado a recuperação por ser menos invasiva, mas recuperação
+deixa o mcap sem índice de mensagens e, pior, deixa o mecanismo vivo para toda
+corrida futura, inclusive a do passo 7.
+
+Como ficou: SIGINT **dirigido só ao `ros2 bag record`**, com janela própria de
+30 s para ele fechar o arquivo sozinho, e só depois o grupo cai. O alvo é
+escolhido por argv e reconfirmado por (pid, starttime, marca) logo antes do
+sinal — as três primitivas novas (`acha`, `vivo`, `sinaliza_um`) entraram só na
+**minha cópia** do `processos.py`, e há teste comparando função por função que
+`sinaliza_grupos`, `sinaliza_marcados`, `_mata_se_ainda_for`, `classifica` e
+`compara` continuam idênticos aos da etapa 5 — e que as etapas 4 e 5 **não**
+ganharam as primitivas novas. Cópia é cópia; validador fechado é evidência
+congelada.
+
+E a regra que o dono fixou, que é a que dá sentido ao resto: o `reindex` entra
+**só para preservar a evidência**, marcando **RECUPERADO**, e RECUPERADO **força
+RC 1**. Recuperação não transforma encerramento defeituoso em corrida aprovada.
+Para a corrida final valer, o bag tem de fechar naturalmente.
+
+**Um erro meu que quase passou**, e fica registrado porque é da família dos
+caros: escrevi a mensagem de erro com backtick dentro de aspas duplas —
+`"(não achei o ``ros2 bag record`` marcado)"`. Em bash isso é substituição de
+comando: a mensagem **executaria um gravador**. Peguei relendo antes de rodar, e
+agora há uma varredura de backtick em linha de código.
+
+**Provas desta sessão:** suíte inteira **1352 passed**, zero vermelho; 57 testes
+do validador, incluindo os que provam que `sinaliza_um` **recusa** processo sem a
+marca e starttime diferente (a trava que impede a finalização dirigida de ser um
+`pkill` disfarçado). As duas pastas anteriores ficam **intactas**, e `a39962a`
+não foi amendado.

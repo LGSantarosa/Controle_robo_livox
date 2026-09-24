@@ -35,7 +35,11 @@ anota() {   # anota <item> <APROVADO|REPROVADO|ANOTADO> [detalhe]
     printf '"%s","%s","%s"\n' "${1//\"/\"\"}" "$2" "${3//\"/\"\"}" >> "$RESULTADO_CSV"
   fi
   local m
-  case "$2" in APROVADO) m=🟢 ;; REPROVADO) m=🔴 ;; *) m=⚪ ;; esac
+  # RECUPERADO (etapa 6): a evidência foi salva, mas por conserto e não por
+  # encerramento limpo — cor própria, porque ele NÃO é um "anotado" neutro: ele
+  # força RC 1 lá embaixo. Recuperação não vira aprovação.
+  case "$2" in APROVADO) m=🟢 ;; REPROVADO) m=🔴 ;; RECUPERADO) m=🟠 ;;
+    *) m=⚪ ;; esac
   echo "   $m $1 — $2 ${3:-}"
 }
 

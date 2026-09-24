@@ -14,6 +14,14 @@ Identidade de processo = (pid, starttime): PID e PGID sozinhos podem ser
 reusados. A marca é VALIDA_ETAPA4_MARCA=<pasta desta rodada> (o nome veio com
 a cópia), herdada por todo processo que o wrapper lança.
 
+    processos.py acha <padrão no argv>        pid e starttime dos MARCADOS
+    processos.py vivo <pid> <starttime>       código 0 se ainda é ele, e vivo
+    processos.py sinaliza_um <pid> <start> <INT|KILL>   alvo único, reconferido
+        As três da finalização DIRIGIDA da etapa 6 (fechar o `ros2 bag record`
+        antes de derrubar o grupo). Elas NÃO mudam a política de grupo: o
+        `sinaliza_grupos` e o `sinaliza_marcados` seguem idênticos aos das
+        etapas 4 e 5, e há teste comparando os arquivos.
+
     processos.py foto <saida.csv>
         Todo processo do usuário: pid, ppid, pgid, sid, starttime, estado,
         marcado, argv.
@@ -279,7 +287,45 @@ def compara(antes, depois, grupos, externos, agora_ticks_antes):
     }
 
 
+def acha_marcado(padrao, marca):
+    """Os processos MARCADOS cujo argv contém `padrao` — identidade completa.
+
+    Serve à finalização DIRIGIDA do gravador (etapa 6): para mandar SIGINT só
+    nele, primeiro é preciso saber quem ele é, e "quem" aqui é (pid, starttime),
+    nunca o nome. Nome é o que o `pkill -f` usa, e foi ele que já matou uma
+    sessão ssh neste projeto.
+    """
+    return [p for p in foto(marca)
+            if p['marcado'] and padrao in p['argv'] and p['pid'] != os.getpid()]
+
+
 def main(argv):
+    marca_ = os.environ.get(MARCA)
+    # ── as três primitivas da finalização dirigida (etapa 6) ────────────────
+    #
+    # 🔴 ELAS NÃO MUDAM NADA DA POLÍTICA DE GRUPO. O `sinaliza_grupos` e o
+    # `sinaliza_marcados` continuam idênticos aos das etapas 4 e 5 (há teste
+    # comparando os arquivos), porque aquela política protege corridas já
+    # fechadas. Isto é um alvo único, escolhido por argv e confirmado por
+    # (pid, starttime, marca) logo antes do sinal — a mesma trava de sempre.
+    if len(argv) == 2 and argv[0] == 'acha':
+        for p in acha_marcado(argv[1], marca_):
+            print(f"{p['pid']} {p['starttime']}")
+        return 0
+    if len(argv) == 3 and argv[0] == 'vivo':
+        try:
+            estado, _, _, _, start = _stat(int(argv[1]))
+        except (OSError, ValueError, IndexError):
+            return 1                      # sumiu = não está vivo
+        return 0 if (start == int(argv[2]) and estado not in ('Z', 'X')) else 1
+    if len(argv) == 4 and argv[0] == 'sinaliza_um' and argv[3] in SINAIS:
+        if not marca_:
+            print(f'{MARCA} ausente — não sinalizo nada')
+            return 2
+        alvo = {'pid': int(argv[1]), 'starttime': int(argv[2])}
+        r = _mata_se_ainda_for(alvo, SINAIS[argv[3]], marca_)
+        print(f"alvo {alvo['pid']} (starttime {alvo['starttime']}): {r}")
+        return 0 if r == 'sinalizado' else 1
     if len(argv) >= 2 and argv[0] == 'foto':
         grava(foto(), argv[1])
         return 0

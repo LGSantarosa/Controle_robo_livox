@@ -421,3 +421,243 @@ def test_o_wrapper_nao_apaga_a_pasta_de_evidencia():
     """A pasta é a prova, sobretudo quando reprova."""
     texto = open(WRAPPER).read()
     assert 'rm -rf' not in texto
+
+
+# ─── a finalização dirigida do gravador (conserto de 24-09) ──────────────────
+#
+# Na segunda corrida o `ros2 bag record` sobreviveu a 20 s de SIGINT do grupo e
+# levou KILL — e morto por KILL ele nunca escreve o `metadata.yaml`. Resultado:
+# 229 MB de bag assinado que o `ros2 bag info` recusa. Evidência que não abre é
+# pior que evidência que falta, porque parece estar lá.
+
+def _indice(codigo, trecho):
+    achados = [i for i, l in enumerate(codigo) if trecho in l]
+    assert achados, f'não achei {trecho!r} no código do wrapper'
+    return achados
+
+
+def test_o_gravador_recebe_sigint_antes_de_o_grupo_cair():
+    """A ordem é o conserto: SIGINT dirigido → espera → só então `limpa`."""
+    codigo = _codigo_do_wrapper()
+    sigint = min(_indice(codigo, 'sinaliza_um'))
+    espera = min(_indice(codigo, "processos.py\" vivo"))
+    queda = min(i for i, l in enumerate(codigo) if l.strip() == 'limpa')
+    assert sigint < espera < queda, (sigint, espera, queda)
+
+
+def test_a_espera_do_gravador_e_de_30_segundos():
+    """300 voltas de 0,1 s. O número importa: a janela do grupo é de 20 s, e foi
+    ela que não bastou."""
+    texto = open(WRAPPER).read()
+    assert 'seq 1 300' in texto and 'sleep 0.1' in texto
+
+
+def test_o_gravador_que_nao_fecha_reprova():
+    """Timeout não pode virar aviso: se ele não saiu sozinho, o item reprova."""
+    texto = open(WRAPPER).read()
+    bloco = texto.split('finalização DIRIGIDA', 1)[1].split('derrubar e provar', 1)[0]
+    assert 'REPROVADO' in bloco
+    assert 'não saiu em 30 s' in bloco
+
+
+def test_o_reindex_marca_recuperado_e_nao_aprovado():
+    """🔴 A regra que o dono fixou: reindex preserva a evidência, mas NÃO
+    transforma encerramento defeituoso em corrida aprovada."""
+    texto = open(WRAPPER).read()
+    assert 'ros2 bag reindex' in texto
+    bloco = texto.split('FECHAR SOZINHO', 1)[1]
+    assert 'RECUPERADO' in bloco
+    # E o RECUPERADO tem de chegar ao código de saída.
+    assert 'REPROVADO|RECUPERADO' in texto
+
+
+def test_o_bag_info_e_exigido_com_codigo_zero():
+    assert 'ros2 bag info' in open(WRAPPER).read()
+
+
+def test_a_politica_de_grupo_das_etapas_4_e_5_nao_muda():
+    """🔴 A prova de que o conserto é LOCALIZADO.
+
+    As etapas 4 e 5 são validadores fechados, e corridas já aprovadas dependem
+    da política de sinal delas. A finalização dirigida entrou como primitiva
+    NOVA na cópia da etapa 6; as funções compartilhadas têm de continuar com o
+    mesmo texto, linha por linha.
+    """
+    import re
+    p6 = open(os.path.join(AQUI, 'processos.py')).read()
+    p5 = open(os.path.join(RAIZ, 'tools/valida_etapa5/processos.py')).read()
+
+    def corpo(texto, nome):
+        m = re.search(rf'^def {nome}\(.*?(?=^def |\Z)', texto,
+                      re.S | re.M)
+        assert m, nome
+        return m.group(0)
+
+    for compartilhada in ('sinaliza_grupos', 'sinaliza_marcados',
+                          '_mata_se_ainda_for', 'classifica', 'compara'):
+        assert corpo(p6, compartilhada) == corpo(p5, compartilhada), compartilhada
+
+
+def _roda_processos(args, marca):
+    import subprocess
+    env = {**os.environ, 'VALIDA_ETAPA4_MARCA': marca}
+    return subprocess.run(
+        ['python3', os.path.join(AQUI, 'processos.py'), *args],
+        capture_output=True, text=True, env=env, timeout=30)
+
+
+def test_sinaliza_um_recusa_processo_sem_a_marca(tmp_path):
+    """🔴 A trava que impede isto de ser um `pkill` disfarçado.
+
+    O alvo é escolhido por argv, e argv qualquer um pode ter. Quem autoriza o
+    sinal é a MARCA desta rodada mais o starttime: sem as duas, o validador
+    poderia matar um processo do dono que por acaso casa com o padrão.
+    """
+    import subprocess
+    vitima = subprocess.Popen(['sleep', '30'])
+    try:
+        start = open(f'/proc/{vitima.pid}/stat').read()
+        start = start[start.rindex(')') + 2:].split()[19]
+        r = _roda_processos(['sinaliza_um', str(vitima.pid), start, 'KILL'],
+                            str(tmp_path))
+        assert r.returncode != 0, r.stdout
+        assert 'sem marca' in r.stdout, r.stdout
+        assert vitima.poll() is None, 'o processo sem marca foi morto'
+    finally:
+        vitima.kill()
+        vitima.wait()
+
+
+def test_sinaliza_um_recusa_starttime_diferente(tmp_path):
+    """PID é reusado pelo sistema; (pid, starttime) é que é identidade."""
+    import subprocess
+    vitima = subprocess.Popen(['sleep', '30'])
+    try:
+        r = _roda_processos(['sinaliza_um', str(vitima.pid), '1', 'KILL'],
+                            str(tmp_path))
+        assert r.returncode != 0, r.stdout
+        assert 'outro processo' in r.stdout, r.stdout
+        assert vitima.poll() is None
+    finally:
+        vitima.kill()
+        vitima.wait()
+
+
+def test_vivo_diz_nao_para_pid_que_nao_existe(tmp_path):
+    r = _roda_processos(['vivo', '999999', '1'], str(tmp_path))
+    assert r.returncode == 1
+
+
+def test_acha_nao_lista_processo_sem_a_marca(tmp_path):
+    """O `acha` só enxerga o que é desta rodada — é assim que o SIGINT dirigido
+    não alcança um gravador de outra sessão do dono."""
+    import subprocess
+    outro = subprocess.Popen(['sleep', '30'])
+    try:
+        r = _roda_processos(['acha', 'sleep 30'], str(tmp_path))
+        assert r.returncode == 0
+        assert str(outro.pid) not in r.stdout, r.stdout
+    finally:
+        outro.kill()
+        outro.wait()
+
+
+def test_as_etapas_4_e_5_nao_ganharam_as_primitivas_novas():
+    """E a recíproca: as primitivas da etapa 6 NÃO foram para os validadores
+    fechados. Cópia é cópia; mexer neles é mexer em evidência congelada."""
+    for etapa in ('valida_etapa4', 'valida_etapa5'):
+        texto = open(os.path.join(RAIZ, 'tools', etapa, 'processos.py')).read()
+        assert 'sinaliza_um' not in texto, etapa
+        assert 'acha_marcado' not in texto, etapa
+
+
+# ─── o manifesto (conserto de 24-09, depois da segunda corrida) ──────────────
+#
+# Nas duas primeiras corridas o SHA256SUMS era gerado ANTES das últimas linhas do
+# resultado, e o `sha256sum -c` da própria pasta falhava em três arquivos. Nada
+# estava corrompido — os YAMLs e o bag batiam byte a byte —, mas manifesto que
+# não fecha contra a própria pasta faz duvidar também do que está certo.
+
+def _codigo_do_wrapper():
+    """As linhas de CÓDIGO, sem comentário: o que o shell executa."""
+    return [l for l in open(WRAPPER).read().splitlines()
+            if not l.lstrip().startswith('#')]
+
+
+def _indice_da_geracao(codigo):
+    alvos = [i for i, l in enumerate(codigo) if 'sha256sum > SHA256SUMS' in l]
+    assert len(alvos) == 1, f'esperava UMA geração do manifesto, achei {alvos}'
+    return alvos[0]
+
+
+def test_nenhuma_chamada_a_anota_depois_da_geracao_do_manifesto():
+    """🔴 A trava central do conserto: `anota` escreve no resultado.txt e no
+    resultado.csv, e os dois são ASSINADOS. Uma chamada depois da geração
+    invalidaria o manifesto de novo — o defeito exato das duas primeiras
+    corridas."""
+    codigo = _codigo_do_wrapper()
+    depois = codigo[_indice_da_geracao(codigo) + 1:]
+    assert not [l for l in depois if 'anota ' in l], \
+        [l for l in depois if 'anota ' in l]
+
+
+def test_nada_escreve_no_resultado_depois_da_geracao():
+    """Nem por `anota`, nem por redirecionamento direto."""
+    codigo = _codigo_do_wrapper()
+    depois = codigo[_indice_da_geracao(codigo) + 1:]
+    for l in depois:
+        assert '>> "$RESULTADO' not in l and '> "$RESULTADO' not in l, l
+
+
+def test_o_console_e_o_proprio_manifesto_ficam_fora_do_manifesto():
+    """O `console.txt` é o log AO VIVO: ele não pode assinar a si mesmo enquanto
+    ainda está sendo escrito. É o ÚNICO arquivo de fora, e o conteúdo dele está
+    reproduzido no `resultado.txt`, que fica assinado."""
+    texto = open(WRAPPER).read()
+    assert '! -name console.txt' in texto
+    assert '! -name SHA256SUMS' in texto
+
+
+def test_o_escopo_assinado_inclui_a_si_mesmo():
+    """A declaração do que foi assinado não pode ficar fora do manifesto: fora
+    dele, é declaração que se troca depois."""
+    texto = open(WRAPPER).read()
+    assert 'echo "./$(basename "$ESCOPO")" >> "$ESCOPO"' in texto
+
+
+def test_o_validador_confere_o_proprio_manifesto_e_pode_reprovar():
+    """`sha256sum -c` dentro do próprio validador, e a falha FORÇA RC 1.
+
+    Sem isso, "tem SHA256SUMS" passaria por "o SHA256SUMS fecha" — que é
+    exatamente a diferença entre a segunda corrida e a terceira.
+    """
+    codigo = _codigo_do_wrapper()
+    checagem = [i for i, l in enumerate(codigo) if 'sha256sum -c SHA256SUMS' in l]
+    assert checagem, 'o validador não confere o próprio manifesto'
+    # E depois da geração, não antes: conferir um manifesto que ainda vai mudar
+    # não prova nada.
+    assert min(checagem) > _indice_da_geracao(codigo)
+    # A falha tem de chegar ao código de saída.
+    saida = [l for l in codigo if 'MANIFESTO' in l and 'exit 1' not in l]
+    assert any('MANIFESTO=1' in l for l in saida), saida
+    assert any('"$MANIFESTO" -ne 0' in l for l in codigo), \
+        'a falha do manifesto não entra na decisão do código de saída'
+
+
+def test_a_conferencia_previa_e_do_escopo_nao_do_manifesto_feito():
+    """Regra 3: confere-se o que VAI ser assinado, antes de assinar — e o que
+    importa são os dois YAMLs materializados e o bag."""
+    codigo = _codigo_do_wrapper()
+    geracao = _indice_da_geracao(codigo)
+    # A própria linha de geração LÊ o escopo (é a lista do que assinar), então
+    # ela não conta: o que se exige é que o escopo tenha sido escrito e
+    # conferido antes dela.
+    escopo = [i for i, l in enumerate(codigo) if '"$ESCOPO"' in l and i != geracao]
+    assert escopo and max(escopo) < geracao, (escopo, geracao)
+    # E a lista assinada é a que o `find` montou, não um `find` refeito na hora
+    # de assinar — refazer abriria espaço para assinar coisa que não foi
+    # conferida.
+    assert 'xargs -a' in codigo[geracao], codigo[geracao]
+    texto = open(WRAPPER).read()
+    for exigido in ('perfil_nav2.yaml', 'perfil_collision_monitor.yaml', 'bag'):
+        assert exigido in texto, exigido

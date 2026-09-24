@@ -184,28 +184,152 @@ erros_do_launch() {
 }
 erros_do_launch "$SAIDA/launch.log" "$SAIDA/launch_erros.txt"
 
-# ── derrubar e provar que não sobrou órfão ────────────────────────────────────
+# ── finalização DIRIGIDA do gravador, ANTES de derrubar o resto ──────────────
+#
+# 🔴 O DEFEITO QUE ISTO CONSERTA foi medido na segunda corrida
+# (20260924_111431): o `ros2 bag record` estava entre os dois processos que
+# sobreviveram a 20 s de SIGINT do grupo e levaram KILL — e morto por KILL ele
+# nunca escreve o `metadata.yaml`. Resultado: 229 MB de bag ASSINADO que o
+# `ros2 bag info` recusa a abrir. Evidência que não abre é pior que evidência
+# que falta, porque parece estar lá.
+#
+# Por que aqui e não na `lib.sh`: a política de grupo (sinal por identidade,
+# INT e depois KILL) é COMPARTILHADA com as etapas 4 e 5, e corridas já fechadas
+# dependem dela — há teste provando que aqueles arquivos continuam idênticos.
+# Isto é um alvo ÚNICO, escolhido por argv e reconfirmado por (pid, starttime,
+# marca) logo antes do sinal, com janela própria de 30 s para ele fechar o
+# arquivo sozinho. Só depois o grupo cai.
 python3 "$V/processos.py" foto "$SAIDA/antes_da_limpeza.csv"
+ALVO="$(python3 "$V/processos.py" acha 'ros2 bag record' | head -1)"
+if [ -n "$ALVO" ]; then
+  # shellcheck disable=SC2086
+  python3 "$V/processos.py" sinaliza_um $ALVO INT >> "$SAIDA/gravador.txt" 2>&1
+  FECHOU=0
+  for i in $(seq 1 300); do
+    # shellcheck disable=SC2086
+    if ! python3 "$V/processos.py" vivo $ALVO; then FECHOU=1; break; fi
+    sleep 0.1
+  done
+  echo "alvo=$ALVO fechou=$FECHOU esperas=$i" >> "$SAIDA/gravador.txt"
+  if [ "$FECHOU" -eq 1 ]; then
+    anota "gravador: SIGINT dirigido e saída natural em até 30 s" APROVADO \
+      "($(( i / 10 )) s)"
+  else
+    anota "gravador: SIGINT dirigido e saída natural em até 30 s" REPROVADO \
+      "(não saiu em 30 s; gravador.txt)"
+  fi
+else
+  # ⚠️ SEM BACKTICK aqui: dentro de aspas duplas ele é substituição de comando, e
+  # a mensagem "não achei o ros2 bag record" EXECUTARIA um gravador.
+  anota "gravador: SIGINT dirigido e saída natural em até 30 s" REPROVADO \
+    "(nenhum processo marcado com 'ros2 bag record' no argv)"
+fi
+
+# ── derrubar e provar que não sobrou órfão ────────────────────────────────────
 limpa
 python3 "$V/processos.py" foto "$SAIDA/depois_da_limpeza.csv"
 
-# ── SHA256SUMS: a pasta é a prova, e prova sem impressão digital não fecha ────
-( cd "$SAIDA" && find . -type f ! -name SHA256SUMS -print0 \
-    | sort -z | xargs -0 sha256sum > SHA256SUMS )
+# ── o bag tem de FECHAR SOZINHO, e ser legível ───────────────────────────────
+#
+# ⚠️ O `ros2 bag reindex` recupera o `metadata.yaml` de um mcap não finalizado
+# (provado numa cópia em 24-09: 70 626 mensagens recuperadas). Ele entra aqui SÓ
+# para preservar a evidência — e marca RECUPERADO, que força RC 1. Recuperação
+# não transforma encerramento defeituoso em corrida aprovada: se o gravador não
+# fechou sozinho, a corrida não presta para fechar a etapa, e o bag fica legível
+# apenas para eu poder ler o que houve.
+if [ -n "$CORRIDA" ] && [ -d "$CORRIDA/bag" ]; then
+  if [ -f "$CORRIDA/bag/metadata.yaml" ]; then
+    anota "bag: metadata.yaml escrito pelo próprio gravador" APROVADO
+  else
+    roda "$SAIDA/reindex.log" ros2 bag reindex "$CORRIDA/bag"
+    anota "bag: metadata.yaml escrito pelo próprio gravador" RECUPERADO \
+      "(reindex; encerramento defeituoso — RC 1)"
+  fi
+  if roda "$SAIDA/bag_info.txt" ros2 bag info "$CORRIDA/bag"; then
+    anota "bag: ros2 bag info com código 0" APROVADO
+  else
+    anota "bag: ros2 bag info com código 0" REPROVADO "(bag_info.txt)"
+  fi
+else
+  anota "bag: metadata.yaml escrito pelo próprio gravador" REPROVADO \
+    "(não há pasta bag)"
+fi
+
+# ── o escopo do manifesto, conferido ANTES de assinar ─────────────────────────
+#
+# 🔴 A ORDEM AQUI É O CONSERTO DE 24-09, e ela vem de um defeito medido: nas duas
+# primeiras corridas o `SHA256SUMS` era gerado ANTES das últimas linhas do
+# resultado, e o `sha256sum -c` da própria pasta falhava em três arquivos
+# (`console.txt`, `resultado.txt`, `resultado.csv`). Nada estava corrompido — os
+# YAMLs materializados e o bag batiam byte a byte —, mas manifesto que não fecha
+# contra a própria pasta faz duvidar também do que está certo, e num PIBIT a
+# pasta é a prova.
+#
+# A regra passou a ser: o manifesto é a ÚLTIMA ESCRITA do validador. Depois dele,
+# só saída para o `console.txt` — que é o único arquivo de fora, porque ele é o
+# log AO VIVO e não pode assinar a si mesmo enquanto ainda está sendo escrito. O
+# conteúdo dele está reproduzido no `resultado.txt`, que fica assinado.
+ESCOPO="$SAIDA/escopo_do_manifesto.txt"
+( cd "$SAIDA" && find . -type f ! -name SHA256SUMS ! -name console.txt \
+    ! -name "$(basename "$ESCOPO")" -print | sort ) > "$ESCOPO"
+# E o próprio escopo entra no que ele lista: ele é a declaração do que foi
+# assinado, e declaração fora do manifesto é declaração que se pode trocar
+# depois. Nada mais escreve nele daqui em diante, então o hash fecha.
+echo "./$(basename "$ESCOPO")" >> "$ESCOPO"
 if [ -n "$CORRIDA" ]; then
   for y in "$CORRIDA"/*.yaml; do
     [ -e "$y" ] && echo "   YAML materializado: $y"
   done
-  grep -c "corrida_" "$SAIDA/SHA256SUMS" > /dev/null \
-    && anota "SHA256SUMS inclui a pasta da corrida" APROVADO \
-    || anota "SHA256SUMS inclui a pasta da corrida" REPROVADO
+fi
+# A conferência é do ESCOPO, não do manifesto já feito: o que se quer garantir é
+# que os artefatos que importam VÃO SER assinados. Os dois YAMLs materializados e
+# o bag são a prova da corrida; assinar a pasta sem eles seria assinar o invólucro.
+FALTA_NO_ESCOPO=""
+if [ -n "$CORRIDA" ]; then
+  C="$(basename "$CORRIDA")"
+  for exigido in "$C/perfil_nav2.yaml" "$C/perfil_collision_monitor.yaml"; do
+    grep -qx "./$exigido" "$ESCOPO" || FALTA_NO_ESCOPO="$FALTA_NO_ESCOPO $exigido"
+  done
+  grep -q "^\./$C/bag/" "$ESCOPO" || FALTA_NO_ESCOPO="$FALTA_NO_ESCOPO $C/bag/*"
+else
+  FALTA_NO_ESCOPO=" (não houve pasta de corrida)"
+fi
+grep -qx "./resultado.csv" "$ESCOPO" || FALTA_NO_ESCOPO="$FALTA_NO_ESCOPO resultado.csv"
+# ⚠️ ESTA É A ÚLTIMA CHAMADA A `anota` DO VALIDADOR. Há teste estático travando
+# isso (test_valida_etapa6.py): `anota` depois do manifesto o invalidaria de
+# novo, que é exatamente o defeito que este bloco existe para consertar.
+if [ -z "$FALTA_NO_ESCOPO" ]; then
+  anota "escopo a assinar inclui os YAMLs, o bag e o resultado" APROVADO \
+    "$(wc -l < "$ESCOPO") arquivos"
+else
+  anota "escopo a assinar inclui os YAMLs, o bag e o resultado" REPROVADO \
+    "(falta:$FALTA_NO_ESCOPO)"
 fi
 
 echo
 echo "== resultado ($RESULTADO_CSV) =="
 sed 's/^/   /' "$RESULTADO"
-if grep -q " REPROVADO" "$RESULTADO"; then
-  echo "   🔴 REPROVADO em algum item — NÃO mexa em nada; a pasta é a prova: $SAIDA"
+# 🔴 RECUPERADO conta como reprovação para o código de saída: um bag que só abriu
+# porque foi reindexado é evidência preservada, não corrida aprovada.
+REPROVOU=0
+grep -qE " (REPROVADO|RECUPERADO)" "$RESULTADO" && REPROVOU=1
+
+# ── o manifesto, e ele é a ÚLTIMA ESCRITA ────────────────────────────────────
+( cd "$SAIDA" && xargs -a "$(basename "$ESCOPO")" -d '\n' sha256sum > SHA256SUMS )
+
+# ── e o validador confere o próprio manifesto ────────────────────────────────
+# Sem isto, "tem SHA256SUMS" passaria por "o SHA256SUMS fecha" — que é a
+# diferença entre as duas primeiras corridas e esta. Falha aqui força RC 1.
+MANIFESTO=0
+if ( cd "$SAIDA" && sha256sum -c SHA256SUMS --quiet ); then
+  echo "   🟢 SHA256SUMS confere com a pasta ($(wc -l < "$SAIDA/SHA256SUMS") arquivos)"
+else
+  echo "   🔴 SHA256SUMS NÃO confere com a própria pasta"
+  MANIFESTO=1
+fi
+
+if [ "$REPROVOU" -ne 0 ] || [ "$MANIFESTO" -ne 0 ]; then
+  echo "   🔴 REPROVADO — NÃO mexa em nada; a pasta é a prova: $SAIDA"
   exit 1
 fi
 echo "   🟢 APROVADO — pasta: $SAIDA"
