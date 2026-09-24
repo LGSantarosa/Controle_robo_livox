@@ -77,7 +77,10 @@
    também diferencial de 2 motoras. O robô 1 é 4x4 skid-steer, não faz curva, só
    pivô: a lei de movimento dele não serve aqui.
 
-⚠️ **Enquanto o robô 3 navega, o robô 2 não navega.** Só há um Mid-360.
+⚠️ Este plano nasceu assumindo **um Mid-360 emprestado**, logo um robô por vez.
+Em 24-09 apareceram dois pares IP/MAC distintos; a quantidade de unidades ficou
+aberta na decisão 058 até conferência física. Não usar isso ainda para liberar
+navegação simultânea.
 
 ---
 

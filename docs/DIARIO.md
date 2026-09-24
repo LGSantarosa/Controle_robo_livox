@@ -4,6 +4,72 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-09-24 (dev, lidar desligado) — MÁQUINA E UNIDADE LIVOX DEIXAM DE SER UM PAR FIXO
+
+Continuação offline da bancada registrada abaixo. O dono autorizou o item 1 e
+apontou quatro restrições que mudaram a proposta inicial: `robo2`/`robo3`
+misturariam computador e sensor; `.158` e `.169` têm MACs diferentes; o IP da
+unidade não pode voltar como constante muda; e o host do perfil precisa existir
+localmente antes de o setup fazer qualquer outra coisa.
+
+O trabalho foi isolado na worktree/branch `livox-config-maquina-sensor`, sem
+tocar `origin/etapa6-pilha-robo3` nem os artefatos do rebuild conduzido em
+paralelo no diretório original.
+
+### Causa confirmada
+
+O único `MID360_config.json` versionado misturava dois eixos independentes:
+host receptor `.2` e unidade transmissora `.158`. O setup copiava o par sem
+olhar a máquina local. Foi exatamente essa combinação que subiria aparentemente
+normal no notebook `.5` e deixaria a nuvem voltar para o endereço errado.
+
+Além disso, os registros não sustentam mais “só há um Mid-360” como fato:
+
+| quando/onde observado | IP | MAC |
+|---|---|---|
+| 15-09, junto ao NUC / robô 2 | `.158` | `e4:7a:2c:95:df:da` |
+| 24-09, junto ao notebook / robô 3 | `.169` | `e4:7a:2c:90:1d:f1` |
+
+Isso sugere duas unidades, mas não substitui conferir etiquetas/números de
+série. O inventário ficou aberto na decisão 058; nenhum dos IPs ganhou nome de
+robô.
+
+### Mudança
+
+- perfis `nuc=.2/24` e `notebook=.5/24` descrevem **só a máquina**;
+- o JSON fixo `.2/.158` virou template sem IP real;
+- sem `--lidar-ip`, o setup varre a rede e exige exatamente um respondente com
+  OUI Livox; com o argumento, a escolha fica explícita e um sensor desligado
+  gera aviso `NÃO confirmado` em vez de falsa prova;
+- IP e máscara do host têm de existir em exatamente uma interface local;
+- toda essa conferência ocorre antes do passo 0/5, logo antes de clone, SDK,
+  `/usr/local` ou build;
+- o JSON gerado é copiado para o clone e conferido com `cmp`.
+
+### Prova offline
+
+| prova | resultado |
+|---|---|
+| `bash -n setup_livox.sh` | ✅ |
+| `python3 -m py_compile tools/prepara_config_livox.py` | ✅ |
+| testes dirigidos da decisão 058 | ✅ **15 passed** |
+| suíte de `robot_base` inteira | ✅ **127 passed** |
+| preflight real neste dev sem `.5/24` | ✅ recusou com rc=1 e listou os IPs presentes |
+| clone/SDK criados pela prova negativa | ✅ nenhum |
+
+Foi tentado também `pytest -q` da raiz nesta worktree. A execução não serve de
+veredito porque a worktree isolada não tem `install/`: a primeira falha
+reproduzível veio só depois de **570 passes**, com
+`PackageNotFoundError: robot_motion`; o `AMENT_PREFIX_PATH` herdado listava
+`Controle_robo_web` e `/opt/ros/jazzy`, não este workspace. Não foi feito build
+aqui nem usado o `install/` que o item 3 reconstrói no diretório original. A
+suíte completa continua sendo a prova separada daquele item.
+
+O Mid-360 permaneceu desligado e nenhuma interface foi alterada. Logo ainda
+faltam a prova da varredura automática, a geração/cópia no notebook ou NUC e o
+stream real após um setup. O BO do `--packages-select` sem
+`hoverboard_driver` continua separado para o item 2; não foi corrigido aqui.
+
 ## 2026-09-24 (lab, robô 3) — MID-360, FAST-LIO, `/scan` E TF VIVOS; A CONFIG ATIVA É LOCAL E DESCARTÁVEL
 
 Evidência bruta pequena preservada em

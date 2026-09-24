@@ -1,0 +1,14 @@
+{
+  "perfis": {
+    "nuc": {
+      "descricao": "Intel NUC",
+      "host_ip": "192.168.1.2",
+      "prefix_length": 24
+    },
+    "notebook": {
+      "descricao": "notebook de bancada",
+      "host_ip": "192.168.1.5",
+      "prefix_length": 24
+    }
+  }
+}

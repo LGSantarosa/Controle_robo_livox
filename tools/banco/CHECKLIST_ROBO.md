@@ -111,9 +111,10 @@ for i in $(seq 1 254); do ping -c1 -W1 192.168.1.$i >/dev/null 2>&1 & done; wait
 ip neigh | grep -i 'e4:7a:2c'
 ```
 
-Mudou? Editar `ros2_packages/robot_base/config/MID360_config.json` (**não** o
-arquivo de dentro do driver, que se perde no próximo setup) e rodar
-`./setup_livox.sh` de novo.
+O setup agora separa máquina de sensor. Não editar um par host/lidar universal:
+rodar `./setup_livox.sh --perfil nuc` para descobrir a unidade viva, ou passar
+`--lidar-ip <IP>` deliberadamente se ela estiver desligada. O script recusa o
+perfil se o IP local não existir e regenera a cópia de dentro do driver.
 
 **Mas em 07-30 o IP estava CERTO e o lidar mesmo assim não streamava.** Ele
 pingava e ACKava todo comando, com `/livox/lidar` mudo e RX de ~6 pacotes/3 s.
