@@ -436,8 +436,14 @@ def _indice(codigo, trecho):
     return achados
 
 
-def test_o_gravador_recebe_sigint_antes_de_o_grupo_cair():
-    """A ordem é o conserto: SIGINT dirigido → espera → só então `limpa`."""
+def test_o_gravador_recebe_sigterm_antes_de_o_grupo_cair():
+    """A ordem é o conserto: SIGTERM dirigido → espera → só então `limpa`.
+
+    🔧 O sinal era SIGINT até 24-09. Quatro experimentos sem Gazebo mostraram que
+    o `ros2 bag record` deste Jazzy NÃO responde a SIGINT (nem no pid, nem no
+    grupo, nem com 30 s); com SIGTERM ele sai em 0,42 s e escreve o
+    `metadata.yaml`. Não era janela curta, era sinal errado.
+    """
     codigo = _codigo_do_wrapper()
     sigint = min(_indice(codigo, 'sinaliza_um'))
     espera = min(_indice(codigo, "processos.py\" vivo"))
@@ -450,6 +456,17 @@ def test_a_espera_do_gravador_e_de_30_segundos():
     ela que não bastou."""
     texto = open(WRAPPER).read()
     assert 'seq 1 300' in texto and 'sleep 0.1' in texto
+
+
+def test_o_sinal_dirigido_ao_gravador_e_term_e_nao_int():
+    """E o INT não pode voltar por descuido: ele não para o gravador, então um
+    validador que o use volta a assinar bag que não abre."""
+    codigo = _codigo_do_wrapper()
+    dirigidos = [l for l in codigo if 'sinaliza_um' in l]
+    assert dirigidos, 'não há encerramento dirigido'
+    for l in dirigidos:
+        assert ' TERM' in l, l
+        assert ' INT' not in l, l
 
 
 def test_o_gravador_que_nao_fecha_reprova():
@@ -488,14 +505,42 @@ def test_a_politica_de_grupo_das_etapas_4_e_5_nao_muda():
     p5 = open(os.path.join(RAIZ, 'tools/valida_etapa5/processos.py')).read()
 
     def corpo(texto, nome):
-        m = re.search(rf'^def {nome}\(.*?(?=^def |\Z)', texto,
-                      re.S | re.M)
-        assert m, nome
-        return m.group(0)
+        """Só o bloco `def`, e nada do que vem depois dele.
+
+        ⚠️ Antes isto ia até o próximo `def`, e engolia o que estivesse no meio —
+        o `SINAIS`, por exemplo. O teste então acusava diferença onde a função
+        era idêntica, e acusaria IGUALDADE se alguém mexesse na função e
+        compensasse fora dela. Corta na primeira linha de topo depois do corpo.
+        """
+        linhas = texto.splitlines()
+        inicio = next(i for i, l in enumerate(linhas)
+                      if l.startswith(f'def {nome}('))
+        fim = inicio + 1
+        while fim < len(linhas) and (not linhas[fim].strip()
+                                     or linhas[fim][:1] in (' ', '\t')):
+            fim += 1
+        return '\n'.join(linhas[inicio:fim]).rstrip()
 
     for compartilhada in ('sinaliza_grupos', 'sinaliza_marcados',
                           '_mata_se_ainda_for', 'classifica', 'compara'):
         assert corpo(p6, compartilhada) == corpo(p5, compartilhada), compartilhada
+
+
+def test_a_politica_de_grupo_nao_ganhou_o_sinal_novo():
+    """🔴 O SIGTERM é do encerramento DIRIGIDO, e só dele.
+
+    A derrubada do grupo continua INT e depois KILL, igual às etapas 4 e 5: é
+    ela que protege corridas já fechadas, e trocar o sinal dela mudaria o
+    significado daquelas provas. Quem chama `sinaliza_grupos` é a `lib.sh`.
+    """
+    lib = open(os.path.join(AQUI, 'lib.sh')).read()
+    chamadas = [l for l in lib.splitlines() if 'sinaliza_grupos' in l
+                and not l.lstrip().startswith('#')]
+    assert chamadas
+    for l in chamadas:
+        assert 'TERM' not in l, l
+    assert 'sinaliza_grupos "$GRUPOS" INT' in lib
+    assert 'sinaliza_grupos "$GRUPOS" KILL' in lib
 
 
 def _roda_processos(args, marca):

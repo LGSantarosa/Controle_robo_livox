@@ -10435,3 +10435,59 @@ do validador, incluindo os que provam que `sinaliza_um` **recusa** processo sem 
 marca e starttime diferente (a trava que impede a finalização dirigida de ser um
 `pkill` disfarçado). As duas pastas anteriores ficam **intactas**, e `a39962a`
 não foi amendado.
+
+---
+
+## 📏 2026-09-24 (PC de dev) — TERCEIRA CORRIDA: O SINAL ESTAVA ERRADO, NÃO A JANELA
+
+`~/etapa6/20260924_113332/`, `5391d0e`, **RC 1**. O conserto do manifesto
+funcionou inteiro: `sha256sum -c SHA256SUMS` retorna **0** com 41 arquivos, e a
+máquina de veredito se comportou como projetada — o `reindex` marcou
+**RECUPERADO** e isso **forçou RC 1**, sem transformar encerramento defeituoso em
+corrida aprovada.
+
+**Mas o encerramento dirigido falhou, e não por pouco:** o SIGINT foi entregue
+(`alvo 165731: sinalizado`) e o gravador ficou vivo as 300 esperas inteiras.
+
+**Medi em vez de aumentar o tempo.** Quatro experimentos, sem Gazebo, sem pilha:
+
+| sinal e alvo | saiu? | `metadata.yaml` |
+|---|---|---|
+| SIGINT no pid | não, ≥20 s | não |
+| SIGINT no pid, com `--use-sim-time` | não, ≥20 s | não |
+| SIGINT no **grupo** (o que o Ctrl+C do terminal faz) | não, ≥30 s | não |
+| **SIGTERM no pid** | **sim, 0,42 s** | **sim** |
+
+Ou seja: o `ros2 bag record` deste Jazzy **não responde a SIGINT**, de jeito
+nenhum. Não era janela curta — 60 s ou 120 s não mudariam o mecanismo —, e não
+era o `--use-sim-time`, que tinha sido minha primeira suspeita. Com SIGTERM ele
+fecha em 0,42 s, escreve o `metadata.yaml` e o bag abre no `ros2 bag info`.
+
+*Hipótese do mecanismo, não medida e não necessária para decidir:* o CLI `ros2`,
+em Python, instala tratador próprio de SIGINT, que não roda enquanto a execução
+está bloqueada no C++ do gravador; o SIGTERM não passa por esse caminho e alcança
+o tratador do `rclcpp`.
+
+**Levei ao dono em vez de trocar por conta própria**, porque o sinal era instrução
+nominal dele. Autorizado, ficou: SIGTERM no alvo dirigido, janela de 30 s, e três
+conferências que não existiam antes — o `launch.log` tem de registrar
+`finished cleanly [pid N]` (o status de saída não dá para colher com `wait`: o
+gravador é filho do `ros2 launch`, não do validador), nenhum processo do gravador
+pode sobrar, e o `metadata.yaml` tem de ser dele, não do `reindex`.
+
+**A política de grupo continua INT e depois KILL**, igual às etapas 4 e 5. Há
+duas travas: uma compara **função por função** o `processos.py` desta etapa com o
+da etapa 5 (`sinaliza_grupos`, `sinaliza_marcados`, `_mata_se_ainda_for`,
+`classifica`, `compara`), e outra confere que a `lib.sh` não ganhou TERM nas
+chamadas de grupo. Conferi que a primeira **morde**: perturbei uma linha de
+`sinaliza_grupos` e ela reprovou.
+
+**Um conserto no próprio teste, e vale registrar o porquê:** a comparação ia do
+`def` até o próximo `def`, e engolia o que estivesse no meio — foi assim que ela
+acusou diferença quando eu só acrescentei `TERM` ao `SINAIS`, que fica entre duas
+funções. Pior que o falso positivo era o falso negativo que isso permitia: mexer
+na função e compensar fora dela passaria. Agora ela corta na primeira linha de
+topo depois do corpo.
+
+Suíte inteira: **1354 passed**. As três pastas anteriores ficam intactas, e
+`5391d0e` não foi amendado.

@@ -213,7 +213,15 @@ def _mata_se_ainda_for(p, sig, marca, exige_pgid=None):
     return 'sinalizado'
 
 
-SINAIS = {'INT': signal.SIGINT, 'KILL': signal.SIGKILL}
+# TERM entrou na etapa 6, para o encerramento DIRIGIDO do gravador. Medido em
+# 24-09, quatro experimentos sem Gazebo: o `ros2 bag record` deste Jazzy NÃO
+# responde a SIGINT — nem no pid, nem no grupo, nem com 30 s. Com SIGTERM ele sai
+# em 0,42 s e escreve o `metadata.yaml`. O sinal chega ao tratador do `rclcpp`; o
+# SIGINT fica preso no tratador do CLI em Python, que não roda enquanto a
+# execução está bloqueada no C++ do gravador.
+# ⚠️ A política de GRUPO não usa TERM: ela segue INT e depois KILL, igual às
+# etapas 4 e 5.
+SINAIS = {'INT': signal.SIGINT, 'TERM': signal.SIGTERM, 'KILL': signal.SIGKILL}
 
 
 def sinaliza_grupos(grupos, sig, marca, log=print):

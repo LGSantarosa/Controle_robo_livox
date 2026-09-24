@@ -199,29 +199,60 @@ erros_do_launch "$SAIDA/launch.log" "$SAIDA/launch_erros.txt"
 # Isto é um alvo ÚNICO, escolhido por argv e reconfirmado por (pid, starttime,
 # marca) logo antes do sinal, com janela própria de 30 s para ele fechar o
 # arquivo sozinho. Só depois o grupo cai.
+# 🔴 O SINAL É SIGTERM, E ISSO FOI MEDIDO (24-09, quatro experimentos sem
+# Gazebo). O `ros2 bag record` deste Jazzy NÃO responde a SIGINT: nem no pid, nem
+# no grupo (o que o Ctrl+C do terminal faz), nem com 30 s de espera, e nem a
+# diferença estava no `--use-sim-time`. Com SIGTERM ele sai em 0,42 s e escreve o
+# `metadata.yaml`. Não é janela curta, é sinal errado — aumentar o tempo não
+# mudaria o mecanismo.
 python3 "$V/processos.py" foto "$SAIDA/antes_da_limpeza.csv"
 ALVO="$(python3 "$V/processos.py" acha 'ros2 bag record' | head -1)"
 if [ -n "$ALVO" ]; then
+  echo "== encerramento dirigido do gravador ==" >> "$SAIDA/gravador.txt"
+  echo "sinal: TERM · alvo (pid starttime): $ALVO" >> "$SAIDA/gravador.txt"
+  T0=$(date +%s.%N)
   # shellcheck disable=SC2086
-  python3 "$V/processos.py" sinaliza_um $ALVO INT >> "$SAIDA/gravador.txt" 2>&1
+  python3 "$V/processos.py" sinaliza_um $ALVO TERM >> "$SAIDA/gravador.txt" 2>&1
   FECHOU=0
   for i in $(seq 1 300); do
     # shellcheck disable=SC2086
     if ! python3 "$V/processos.py" vivo $ALVO; then FECHOU=1; break; fi
     sleep 0.1
   done
-  echo "alvo=$ALVO fechou=$FECHOU esperas=$i" >> "$SAIDA/gravador.txt"
+  DUR=$(echo "$(date +%s.%N) - $T0" | bc)
+  { echo "fechou=$FECHOU esperas=$i duracao_s=$DUR"
+    # O status de saída não dá para colher com `wait`: o gravador é filho do
+    # `ros2 launch`, não deste shell. Quem sabe dele é o launch, e ele registra
+    # — "finished cleanly" contra "died". É essa a linha que vira evidência.
+    echo "--- o que o launch diz do pid ${ALVO%% *}:"
+    grep -E "process|pid" "$SAIDA/launch.log" | grep -F "${ALVO%% *}" | tail -3
+  } >> "$SAIDA/gravador.txt"
   if [ "$FECHOU" -eq 1 ]; then
-    anota "gravador: SIGINT dirigido e saída natural em até 30 s" APROVADO \
-      "($(( i / 10 )) s)"
+    anota "gravador: SIGTERM dirigido e saída natural em até 30 s" APROVADO \
+      "(${DUR} s)"
   else
-    anota "gravador: SIGINT dirigido e saída natural em até 30 s" REPROVADO \
+    anota "gravador: SIGTERM dirigido e saída natural em até 30 s" REPROVADO \
       "(não saiu em 30 s; gravador.txt)"
+  fi
+  if grep -qF "finished cleanly [pid ${ALVO%% *}]" "$SAIDA/launch.log"; then
+    anota "gravador: o launch registrou saída limpa" APROVADO
+  else
+    anota "gravador: o launch registrou saída limpa" REPROVADO "(gravador.txt)"
+  fi
+  # Nenhum filho sobrevivente: gravador que deixa processo atrás continua
+  # escrevendo no mcap depois de assinado, e aí o manifesto mente.
+  SOBRAS="$(python3 "$V/processos.py" acha 'bag record'; \
+            python3 "$V/processos.py" acha rosbag2)"
+  if [ -z "$SOBRAS" ]; then
+    anota "gravador: nenhum processo dele sobrou" APROVADO
+  else
+    echo "sobras: $SOBRAS" >> "$SAIDA/gravador.txt"
+    anota "gravador: nenhum processo dele sobrou" REPROVADO "(gravador.txt)"
   fi
 else
   # ⚠️ SEM BACKTICK aqui: dentro de aspas duplas ele é substituição de comando, e
   # a mensagem "não achei o ros2 bag record" EXECUTARIA um gravador.
-  anota "gravador: SIGINT dirigido e saída natural em até 30 s" REPROVADO \
+  anota "gravador: SIGTERM dirigido e saída natural em até 30 s" REPROVADO \
     "(nenhum processo marcado com 'ros2 bag record' no argv)"
 fi
 
