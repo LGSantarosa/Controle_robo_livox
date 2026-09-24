@@ -157,7 +157,15 @@ source install/setup.bash
 echo "== subindo a pilha do robô 3 COM Gazebo GUI e RViz =="
 sobe_grupo "pilha_robo3_gui" "$SAIDA/launch.log" \
   ros2 launch robot_motion pilha.launch.py \
-    robo:=3 sim:=true gui:=true rviz:=true log_dir:="$SAIDA" || exit 1
+    robo:=3 sim:=true gui:=true rviz:=true localizacao:=fixa \
+    log_dir:="$SAIDA" || exit 1
+# ⚠️ `localizacao:=fixa` é EXPLÍCITO de propósito, mesmo sendo o default. O
+# `/Odometry` está em `odom` e o objetivo vai em `map`: hoje eles coincidem
+# porque o `tf_map_odom` publica `map→odom` como identidade — o que só vale na
+# localização fixa. Depender do default aqui repetiria exatamente o erro do
+# spawn: um valor que "é assim hoje" e que ninguém escreveu em lugar nenhum.
+# Com `localizacao:=amcl` a identidade some e a conta pose+1 m passaria a
+# misturar dois referenciais.
 
 # ── esperar o que o objetivo PRECISA, e só isso ─────────────────────────────
 #
@@ -261,24 +269,36 @@ fi
 echo "$POSE_YAML" > "$SAIDA/pose_inicial_bruta.yaml"
 CALCULO="$(python3 - "$SAIDA/pose_inicial_bruta.yaml" "$DISTANCIA_DO_OBJETIVO" <<'EOF_PY'
 import math, sys, yaml
-d = yaml.safe_load(open(sys.argv[1]))
+# 🔴 O `ros2 topic echo --once` deste Jazzy FECHA a mensagem com `---`, que em
+# YAML é separador de documento. O arquivo tem, então, um documento com a pose
+# e um segundo vazio — e `yaml.safe_load` recusa isso com
+# `ComposerError: expected a single document in the stream`. O wrapper abortaria
+# ANTES de mandar o objetivo.
+#
+# `safe_load_all` lê o fluxo inteiro; os documentos vazios (None) caem fora; e
+# exige-se EXATAMENTE um sobrando — duas poses aqui significariam que o `--once`
+# não foi respeitado, e escolher uma delas em silêncio seria adivinhar qual é a
+# pose da corrida.
+docs = [d for d in yaml.safe_load_all(open(sys.argv[1])) if d is not None]
+if len(docs) != 1:
+    sys.exit('esperava 1 documento com a pose, achei %d' % len(docs))
+d = docs[0]
 dist = float(sys.argv[2])
 p, o = d['position'], d['orientation']
 # yaw do quatérnio (z-up): a fórmula padrão, sem depender de tf_transformations
 yaw = math.atan2(2.0 * (o['w'] * o['z'] + o['x'] * o['y']),
                  1.0 - 2.0 * (o['y'] ** 2 + o['z'] ** 2))
-print('%.4f %.4f %.4f %.4f %.6f %.6f %.6f %.6f'
+print('%.4f %.4f %.4f %.4f %.6f %.6f %.6f %.6f %.4f'
       % (p['x'], p['y'], p['x'] + dist * math.cos(yaw), p['y'] + dist * math.sin(yaw),
-         o['x'], o['y'], o['z'], o['w']))
-print('%.4f' % yaw, file=sys.stderr)
+         o['x'], o['y'], o['z'], o['w'], yaw))
 EOF_PY
 )" || { anota "pose inicial lida do /Odometry" REPROVADO "(quatérnio ilegível)"; exit 1; }
 # shellcheck disable=SC2086
 set -- $CALCULO
 POSE_X="$1"; POSE_Y="$2"; META_X="$3"; META_Y="$4"
-Q_X="$5"; Q_Y="$6"; Q_Z="$7"; Q_W="$8"
-anota "pose inicial lida do /Odometry" ANOTADO "($POSE_X, $POSE_Y)"
-anota "objetivo calculado = pose + 1 m no rumo atual" ANOTADO \
+Q_X="$5"; Q_Y="$6"; Q_Z="$7"; Q_W="$8"; YAW="$9"
+anota "pose inicial lida do /Odometry" ANOTADO "($POSE_X, $POSE_Y) yaw $YAW rad"
+anota "objetivo calculado = pose + ${DISTANCIA_DO_OBJETIVO} m no rumo atual" ANOTADO \
   "($META_X, $META_Y), orientação preservada (z=$Q_Z w=$Q_W)"
 
 # ── o objetivo ─────────────────────────────────────────────────────────────
