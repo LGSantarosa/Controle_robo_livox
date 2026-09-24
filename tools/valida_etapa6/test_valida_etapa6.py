@@ -59,6 +59,15 @@ def test_a_lista_nao_tem_amcl_nem_rviz():
         assert obrigatorio in nos, obrigatorio
 
 
+def test_a_contagem_de_listeners_e_tres_sem_rviz():
+    """🔧 Corrigido de 4 para 3 depois da primeira corrida: 1 do `scan_2d` + 2 do
+    Nav2. O quarto da baseline do robô 2 era do `rviz2`, e aqui `rviz:=false`."""
+    vol = yaml.safe_load(open(ESPERADOS))['grafo_somente']['volateis']
+    listener = [v for v in vol if 'transform_listener' in v['padrao']]
+    assert len(listener) == 1
+    assert listener[0]['quantidade'] == 3
+
+
 def test_a_lista_nao_tem_no_da_fronteira_de_hardware():
     """No Gazebo a cadeia termina no `hoverboard_base_controller` (achado D)."""
     nos = yaml.safe_load(open(ESPERADOS))['nos']
@@ -132,6 +141,57 @@ def test_no_fora_da_lista_versionada_reprova(confere):
 def test_no_sem_o_parametro_reprova(confere):
     ok, det = confere.item_use_sim_time({'/a': {}}, ['/a'])
     assert not ok and det['sem_use_sim_time'] == ['/a']
+
+
+# ─── §4.3 a exceção nominal (e por que ela não é tapete) ─────────────────────
+
+PERMITIDO = [{'no': '/gz_ros_control', 'motivo': 'plugin dentro do Gazebo',
+              'origem': 'corrida 20260924_104529'}]
+
+
+def test_excecao_nominal_usada_aprova(confere):
+    params = {'/a': {'use_sim_time': True},
+              '/gz_ros_control': {'use_sim_time': False}}
+    ok, det = confere.item_use_sim_time(params, ['/a', '/gz_ros_control'],
+                                        PERMITIDO)
+    assert ok, det
+    assert det['excecoes_usadas'] == ['/gz_ros_control']
+
+
+def test_excecao_nominal_sem_uso_reprova(confere):
+    """🔴 A regra que impede a exceção de virar tapete: se o nó passou a estar em
+    tempo simulado (ou saiu do grafo), a permissão tem de sair junto — senão ela
+    fica autorizando o próximo caso em silêncio."""
+    params = {'/a': {'use_sim_time': True},
+              '/gz_ros_control': {'use_sim_time': True}}
+    ok, det = confere.item_use_sim_time(params, ['/a', '/gz_ros_control'],
+                                        PERMITIDO)
+    assert not ok
+    assert det['excecoes_sem_uso'] == ['/gz_ros_control']
+
+
+def test_excecao_de_um_no_nao_libera_outro(confere):
+    """O `/rosbag2_recorder` é o caso real: ele foi CONSERTADO
+    (`--use-sim-time` no bag do robô 3), não dispensado."""
+    params = {'/gz_ros_control': {'use_sim_time': False},
+              '/rosbag2_recorder': {'use_sim_time': False}}
+    ok, det = confere.item_use_sim_time(
+        params, ['/gz_ros_control', '/rosbag2_recorder'], PERMITIDO)
+    assert not ok
+    assert det['use_sim_time_nao_true'] == {'/rosbag2_recorder': False}
+
+
+def test_a_excecao_do_arquivo_versionado_e_so_o_gz_ros_control():
+    """Quem lê o arquivo tem de achar UMA exceção, com motivo e origem — e o
+    `/rosbag2_recorder` NÃO pode estar lá: ele foi consertado."""
+    cfg = yaml.safe_load(open(ESPERADOS))
+    excecoes = cfg['use_sim_time_falso_permitido']
+    assert [e['no'] for e in excecoes] == ['/gz_ros_control']
+    for e in excecoes:
+        assert e['motivo'].strip() and e['origem'].strip()
+        # Redação: ele é dirigido pelo passo de atualização do Gazebo. Chamá-lo
+        # de publicador do /clock seria descrever outro mecanismo.
+        assert '/clock' not in e['motivo'] or 'não' in e['motivo'].lower()
 
 
 # ─── §4.4 footprint vivo contra o perfil ─────────────────────────────────────

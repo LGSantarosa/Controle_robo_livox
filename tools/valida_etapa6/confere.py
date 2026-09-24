@@ -15,7 +15,9 @@ Quatro itens do §4 do plano, e cada um tem uma armadilha própria:
      pegar.
   2. §4.3 `use_sim_time` verdadeiro em TODOS os nós da lista versionada, e nó no
      dump fora da lista REPROVA. É esta segunda metade que impede a prova de
-     envelhecer em silêncio a cada nó novo.
+     envelhecer em silêncio a cada nó novo. A exceção é NOMINAL e mora no
+     `esperados` (`use_sim_time_falso_permitido`, com nó exato, motivo e origem);
+     exceção sem uso também reprova, senão ela autoriza o próximo caso calada.
   3. §4.4 `footprint` e `footprint_padding` vivos nos dois costmaps, comparados
      com o que `perfil.parametros(3, …)` devolve — 🔴 NUNCA redigitados aqui. Um
      número redigitado prova que dois lugares concordam com o teste, não que o
@@ -107,26 +109,40 @@ def item_mux(params):
                 'faltando': sorted(set(FAIXAS) - set(vivas))}
 
 
-def item_use_sim_time(params, esperados):
+def item_use_sim_time(params, esperados, permitidos=()):
     """§4.3 — todos true, e a lista versionada tem de cobrir o grafo.
 
-    Duas metades, e a segunda é a que importa a longo prazo: nó no dump que não
-    está na lista REPROVA. Sem ela, um nó novo entraria sem ninguém conferir se
-    ele também está no tempo do simulador.
+    Três metades, e as duas últimas são as que importam a longo prazo:
+
+      · nó no dump que não está na lista versionada REPROVA. Sem isso um nó novo
+        entraria sem ninguém conferir se ele também está no tempo do simulador;
+      · `permitidos` é a exceção NOMINAL (nó exato + motivo + origem), e exceção
+        que não foi USADA reprova. Exceção que sobra é a que vira tapete: o nó
+        passou a estar em tempo simulado (ou saiu do grafo) e a permissão fica
+        lá, autorizando em silêncio o próximo caso.
+
+    Qualquer outro nó com `use_sim_time` falso continua reprovando.
     """
     esperados = set(esperados)
+    liberados = {p['no'] if isinstance(p, dict) else p for p in permitidos}
     fora = sorted(set(params) - esperados)
-    ausente, falso = [], {}
+    ausente, falso, usadas = [], {}, set()
     for no in sorted(set(params) & esperados):
         if 'use_sim_time' not in params[no]:
             ausente.append(no)
         elif params[no]['use_sim_time'] is not True:
-            falso[no] = params[no]['use_sim_time']
-    return (not fora and not ausente and not falso), {
+            if no in liberados:
+                usadas.add(no)
+            else:
+                falso[no] = params[no]['use_sim_time']
+    excecoes_sem_uso = sorted(liberados - usadas)
+    return (not fora and not ausente and not falso and not excecoes_sem_uso), {
         'nos_conferidos': len(set(params) & esperados),
         'fora_da_lista_versionada': fora,
         'sem_use_sim_time': ausente,
-        'use_sim_time_nao_true': falso}
+        'use_sim_time_nao_true': falso,
+        'excecoes_usadas': sorted(usadas),
+        'excecoes_sem_uso': excecoes_sem_uso}
 
 
 def item_footprint(params, perfil_robo3):
@@ -235,7 +251,8 @@ def julga(captura, pasta_corrida, esperados_yaml, share_motion, share_base):
     itens['4.2 fronteira de hardware fora do grafo'] = \
         item_fronteira_de_hardware(nos)
     itens['4.3 use_sim_time true na lista versionada'] = \
-        item_use_sim_time(params, esperados.get('nos') or [])
+        item_use_sim_time(params, esperados.get('nos') or [],
+                          esperados.get('use_sim_time_falso_permitido') or [])
     itens['4.4 footprint/padding vivos = perfil.parametros(3)'] = \
         item_footprint(params, p3)
     itens['D2 os dois YAMLs materializados + bag em subpasta'] = \

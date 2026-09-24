@@ -274,6 +274,24 @@ def generate_launch_description():
     # evidência. No robô 2 nada materializa, a pasta não existe, e o destino
     # segue sendo exatamente o de antes (D2 do plano da etapa 6).
     destino_do_bag = [*pasta_corrida, '/bag'] if ROBO == '3' else pasta_corrida
+    # 🔴 `--use-sim-time` NO BAG, e SÓ no robô 3 (etapa 6, primeira corrida).
+    #
+    # O defeito é medido, não suposto: na corrida 20260924_104529 o
+    # `/rosbag2_recorder` apareceu com `use_sim_time` false. O `ExecuteProcess`
+    # do bag não é um `Node` e nunca recebeu o parâmetro, então numa corrida em
+    # tempo SIMULADO ele carimbava a hora de recebimento pelo relógio de parede
+    # — dois mundos de tempo no mesmo arquivo de evidência.
+    #
+    # Por que só no robô 3: no robô 2 o comando tem de ficar byte a byte o de
+    # `1f49981` (gate §6 da etapa 6). O mesmo conserto para o robô 2 é achado
+    # próprio, com decisão do dono — ele muda todo bag de simulação do projeto.
+    #
+    # ⚠️ CONSEQUÊNCIA ACEITA, e está no `--help` do Jazzy: até chegar a primeira
+    # mensagem de `/clock`, o gravador NÃO escreve nada. Ou seja, o prelúdio da
+    # subida (antes de o Gazebo publicar o relógio) fica fora do bag. Trocamos um
+    # pedaço do começo, quando ainda não há simulação, por carimbo coerente no
+    # resto — que é onde a corrida acontece.
+    bag_em_tempo_simulado = ['--use-sim-time'] if ROBO == '3' else []
     destinos = {
         chave: ([*pasta_corrida, '/' + perfil.NOMES[chave]]
                 if perfil_robo[f'{chave}_rewrites'] else perfil_robo[chave])
@@ -1001,7 +1019,8 @@ def generate_launch_description():
         # espaço em disco é uma consequência explícita e aceita deste protocolo.
         ExecuteProcess(
             cmd=['ros2', 'bag', 'record', '-o', destino_do_bag,
-                 '--all-topics', '--storage-preset-profile', 'fastwrite'],
+                 '--all-topics', *bag_em_tempo_simulado,
+                 '--storage-preset-profile', 'fastwrite'],
             output='log',
             condition=IfCondition(LaunchConfiguration('bag'))),
 

@@ -75,14 +75,43 @@ grafo_somente:
     # nav2_behavior_tree/bt_action_server_impl.hpp.
     - /bt_navigator_navigate_to_pose_rclcpp_node
   volateis:
-    # Quatro TransformListener internos (sufixo hexadecimal = identidade de
-    # runtime): UM é do `scan_2d`, atribuído por execução isolada em 22-09; os
-    # outros TRÊS são do Nav2 e NÃO foram atribuídos individualmente. A
-    # contagem 4 é a observada na pilha do robô 2 — se o robô 3 mostrar outra,
-    # reprova e a diferença é para explicar, não para ajustar aqui.
+    # TransformListener internos (sufixo hexadecimal = identidade de runtime).
+    #
+    # 🔧 CORRIGIDO DE 4 PARA 3 depois da primeira corrida (20260924_104529), e a
+    # correção é da PREVISÃO, não do critério: eu havia copiado o 4 da lista da
+    # pilha do robô 2 e tirado o `/rviz2` da lista de nós SEM descontar o
+    # listener que ele carrega junto. A conta fecha com duas observações que já
+    # existiam:
+    #
+    #   sim_robo3 sozinho (etapa 4, passo 7) ......... 1   → scan_2d
+    #   pilha do robô 2 no Gazebo, COM rviz .......... 4   → 1 + 2 + 1
+    #   pilha do robô 3 agora, SEM rviz .............. 3   → 1 scan_2d + 2 Nav2
+    #
+    # Logo: 1 é do `scan_2d` (atribuído por execução isolada em 22-09), 2 são do
+    # Nav2 (não atribuídos individualmente) e o quarto da baseline era do
+    # `rviz2`. Se uma corrida mostrar outra contagem, reprova — e a diferença é
+    # para explicar, não para ajustar aqui.
     - padrao: '^/transform_listener_impl_[0-9a-f]+$'
-      quantidade: 4
+      quantidade: 3
       alias: /transform_listener_impl_<hex>
+
+# Nós que o §4.3 permite ter `use_sim_time` FALSO — lista própria, e de
+# propósito separada dos "parâmetros ilegíveis" abaixo: são coisas diferentes
+# (um nó que não está no tempo do simulador contra um parâmetro que não se
+# consegue ler), e misturá-las faria a exceção de uma passar pela outra.
+#
+# 🔴 AS REGRAS, e elas são o que impede isto de virar tapete: nó EXATO, motivo,
+# origem da prova; exceção que não for USADA reprova (se o nó passou a estar em
+# tempo simulado, ou saiu do grafo, a exceção tem de sair também); e qualquer
+# OUTRO nó com `use_sim_time` falso continua reprovando.
+use_sim_time_falso_permitido:
+  - 'no': /gz_ros_control
+    motivo: >-
+      É o nó do plugin gz_ros2_control, que roda DENTRO do processo do Gazebo e
+      é dirigido pelo passo de atualização do simulador, não por uma assinatura
+      de /clock. Não há caminho por onde a nossa launch lhe passe parâmetro: ele
+      é criado pelo plugin declarado no URDF.
+    origem: 'primeira corrida da etapa 6: ~/etapa6/20260924_104529/captura/parametros_brutos.yaml'
 
 # Parâmetros que o nó LISTA mas não consegue LER (o `get_parameters` do rclcpp é
 # tudo-ou-nada: um desses zera o lote inteiro). Exceção por nó + parâmetro

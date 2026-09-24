@@ -224,6 +224,28 @@ Se um arquivo do robô 2 precisar mudar, o passo **para e volta ao dono**.
 Os passos 6 e 7 sobem Gazebo neste PC — **anuncio e espero o "pode"** antes de
 cada um; robô **desligado** o tempo todo, e nenhum deles toca no notebook.
 
+## 7.1 A primeira corrida (24-09) — o que ela mostrou
+
+`~/etapa6/20260924_104529/`, `93671b3`, **RC 1**. Pasta preservada intacta: é a
+primeira evidência da etapa e a referência dos três achados abaixo.
+
+**Aprovou de primeira** o que a etapa existe para provar: `footprint`
+`[[0.0825, 0.19], …, [-0.2913, 0.19]]` **vivo nos dois costmaps** (contra o
+`[[0.35, 0.2775], …]` do robô 2, que estaria lá se a reescrita não tivesse
+pegado), `padding` 0,01, mux com as **quatro faixas** e `use_stamped`, os **dois
+YAMLs materializados** na pasta da corrida com o bag em `bag/`, `/Odometry` e
+`/scan` com publicador **e** mensagem, as duas TFs, publicador único de
+`map→odom`, nenhum tópico `WheelSpeeds`, zero linha ERROR/FATAL no `launch.log`
+e limpeza sem órfão com o domínio vazio.
+
+**Três achados, e nenhum deles era do robô 3:**
+
+| # | achado | o que foi feito |
+|---|---|---|
+| **1** | `transform_listener_impl`: previ **4**, apareceram **3** | Erro da minha PREVISÃO: copiei o 4 da lista do robô 2 e tirei o `/rviz2` **sem descontar o listener que ele carrega**. A conta fecha com observação que já existia: `sim_robo3` sozinho = 1 (`scan_2d`), pilha do robô 2 COM rviz = 4, pilha do robô 3 SEM rviz = 3 → 1 + 2 do Nav2. Corrigido para 3, com a aritmética escrita no arquivo. Ele também causava o segundo motivo do mesmo item ("grafo não ficou estável"): `pronto()` exige `volateis_invalidos` vazio, então a captura **não podia** ficar pronta |
+| **2** | `/rosbag2_recorder` com `use_sim_time` **false** | 🔧 **CONSERTADO, não dispensado**: o bag do robô 3 passou a levar `--use-sim-time` (existe no Jazzy instalado). O `ExecuteProcess` não é `Node` e nunca recebeu o parâmetro — numa corrida em tempo simulado ele carimbava relógio de parede. ⚠️ **No robô 2 o comando fica byte a byte como antes** (gate §6): o mesmo conserto lá muda o carimbo de todo bag de simulação do projeto e é decisão do dono, fora desta etapa. Consequência aceita e documentada: até a primeira mensagem de `/clock` o gravador não escreve nada, então o prelúdio da subida fica fora do bag |
+| **3** | `/gz_ros_control` com `use_sim_time` **false** | **Exceção nominal própria**, em `use_sim_time_falso_permitido` — separada dos "parâmetros ilegíveis", que são outra coisa. Nó exato, motivo e origem; **exceção sem uso reprova**; qualquer outro nó com falso continua reprovando. Motivo: é o nó do plugin `gz_ros2_control`, que roda dentro do processo do Gazebo e é dirigido pelo **passo de atualização do simulador**; não há caminho por onde a nossa launch lhe passe parâmetro |
+
 ## 8. O que isto NÃO prova
 
 O Gazebo aprova **integração de software**, e só. Não prova:

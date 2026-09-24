@@ -487,6 +487,22 @@ def test_o_bag_vai_para_subdiretorio_da_pasta_da_corrida(monkeypatch, tmp_path):
     assert destino == os.path.join(str(pasta), 'bag'), destino
 
 
+def test_o_bag_do_robo3_grava_em_tempo_simulado(monkeypatch, tmp_path):
+    """🔴 Achado da PRIMEIRA CORRIDA (20260924_104529): o `/rosbag2_recorder`
+    apareceu com `use_sim_time` false.
+
+    O bag é um `ExecuteProcess`, não um `Node`, então ele nunca recebeu o
+    parâmetro — e numa corrida em tempo SIMULADO ele carimbava a hora de
+    recebimento pelo relógio de parede. Dois mundos de tempo no mesmo arquivo
+    de evidência, e a pasta da corrida é a prova do PIBIT.
+    """
+    ld, _pasta, _ = _corrida_do_robo3(monkeypatch, tmp_path)
+    bags = [e for e in ld.entities if isinstance(e, ExecuteProcess)
+            and 'bag' in [_txt(p) for p in e.cmd]]
+    assert len(bags) == 1
+    assert '--use-sim-time' in [_txt(p) for p in bags[0].cmd]
+
+
 # ─── §3 D3: o mux, e as quatro faixas ────────────────────────────────────────
 
 def test_o_mux_do_robo3_tem_as_quatro_faixas(monkeypatch):

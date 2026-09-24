@@ -10306,3 +10306,64 @@ do robô 2.
 **O que isto NÃO prova:** que existe UM mux no grafo com as quatro faixas
 **vivas**. Aqui o que se provou é que o arquivo tem as faixas e que o nó recebe o
 arquivo. `ros2 param get` no mux de pé é o passo 6.
+
+---
+
+## 🟢 2026-09-24 (PC de dev, GAZEBO headless, robô DESLIGADO) — A PILHA SOBE O ROBÔ 3, E OS TRÊS ACHADOS NÃO ERAM DO ROBÔ 3
+
+Passo 6 da etapa 6: nasceram `bin/valida-etapa6` e `tools/valida_etapa6/`
+(`93671b3`), e rodou a **primeira corrida** — `~/etapa6/20260924_104529/`,
+**RC 1**. Gazebo headless neste PC; robô e notebook fora, desligados.
+
+**O que a corrida aprovou de primeira** é justamente o que a etapa existe para
+provar. O `footprint` vivo nos DOIS costmaps é
+`[[0.0825, 0.19], …, [-0.2913, 0.19]]` — o do robô 3 —, e o controle positivo é
+gritante: se a reescrita não tivesse pegado, ali estaria o `[[0.35, 0.2775], …]`
+do robô 2. Mais: mux com as quatro faixas e `use_stamped` vivos, os dois YAMLs
+materializados na pasta da corrida com o bag em `bag/`, `/Odometry` e `/scan`
+com publicador **e** mensagem, as duas TFs (`map→base_link`,
+`base_link→livox_frame`), publicador único de `map→odom`, nenhum tópico
+`WheelSpeeds`, **zero** linha ERROR/FATAL no `launch.log`, e a derrubada sem
+órfão com o domínio 47 vazio.
+
+**Os três vermelhos, e a parte que me interessa: nenhum era do robô 3.**
+
+**1. Contei listener errado — erro meu de previsão.** Esperava 4
+`transform_listener_impl`, apareceram 3. Copiei o 4 da lista da pilha do robô 2 e
+tirei o `/rviz2` da lista de nós **sem descontar o listener que ele carrega
+junto**. A conta fecha com dado que já existia: `sim_robo3` sozinho tinha 1 (o do
+`scan_2d`, atribuído por execução isolada em 22-09); a pilha do robô 2 COM rviz,
+4; a do robô 3 SEM rviz, 3 = 1 + 2 do Nav2. Corrigido para 3 com a aritmética
+escrita no arquivo. E ele explicava o segundo motivo do mesmo item: `pronto()`
+exige `volateis_invalidos` vazio, então a captura **não tinha como** ficar
+pronta — os 180 s do prazo foram gastos por isso.
+
+**2. O bag gravava em relógio de parede.** O `/rosbag2_recorder` apareceu com
+`use_sim_time` false: ele é um `ExecuteProcess`, não um `Node`, e nunca recebeu o
+parâmetro. Numa corrida em tempo simulado isso põe dois mundos de tempo no mesmo
+arquivo de evidência. Eu levei ao dono como possível exceção; a resposta foi
+**consertar** — o Jazzy instalado tem `ros2 bag record --use-sim-time`, conferido
+no `--help`. Entrou **só no ramo do robô 3**: no robô 2 o comando fica byte a
+byte o de `1f49981`, e o mesmo conserto lá muda o carimbo de todo bag de
+simulação já gravado no projeto — achado próprio, decisão do dono, fora desta
+etapa. ⚠️ Consequência aceita: até a primeira mensagem de `/clock` o gravador não
+escreve nada, então o prelúdio da subida sai do bag. Troquei um pedaço do começo,
+quando ainda não há simulação, por carimbo coerente no resto.
+
+**3. `/gz_ros_control` também com false — e este não é nosso.** É o nó do plugin
+`gz_ros2_control`, que roda DENTRO do processo do Gazebo e é dirigido pelo passo
+de atualização do simulador; não há caminho por onde a nossa launch lhe passe
+parâmetro. Virou **exceção nominal própria** (`use_sim_time_falso_permitido`),
+deliberadamente **separada** dos "parâmetros ilegíveis" — são mecanismos
+diferentes, e misturar faria a exceção de um passar pela do outro. Com as travas:
+nó exato, motivo, origem da prova, **exceção sem uso reprova**, e qualquer outro
+nó com false continua reprovando.
+
+**Método que funcionou, e vale anotar:** o julgamento é **offline**, a partir do
+dump da captura. A sessão de Gazebo só observa; quem decide APROVADO/REPROVADO é
+código com 45 testes estáticos, cada item com o caso que passa e o que reprova.
+Foi isso que permitiu diagnosticar os três achados sem subir Gazebo de novo, e é
+o que faz o veredito ser reproduzível da pasta, meses depois.
+
+A pasta `20260924_104529` fica **intacta** — ela é a evidência que referencia
+`93671b3`, e por isso o conserto foi commit novo, não amend.

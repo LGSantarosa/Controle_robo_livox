@@ -153,6 +153,38 @@ def test_a_recusa_do_robo_vem_antes_de_qualquer_acao_operacional():
     assert recusas[0] < min(operacionais)
 
 
+def test_o_bag_do_robo2_nao_ganha_use_sim_time():
+    """🔴 CONTROLE POSITIVO do gate §6 da etapa 6.
+
+    O `--use-sim-time` entrou no bag do ROBÔ 3 por um defeito medido na primeira
+    corrida (o `/rosbag2_recorder` com `use_sim_time` false). Aqui ele NÃO pode
+    entrar: o comando do robô 2 tem de ficar byte a byte o de `1f49981`.
+
+    O mesmo conserto para o robô 2 é achado próprio, e é do dono: ele muda o
+    carimbo de todo bag de simulação já gravado neste projeto, e portanto a
+    comparação com tudo o que foi medido antes.
+    """
+    from launch.utilities import perform_substitutions
+    ld = _descricao()
+    ctx = _contexto(ld, sim='true', log_dir='/tmp/qualquer')
+    # ⚠️ `launch_ros.actions.Node` HERDA de `ExecuteProcess`, então o teste de
+    # tipo sozinho pegaria os 22 nós da pilha junto — e resolver o `cmd` de um
+    # `Node` fora de uma subida de verdade explode (ele quer o
+    # `ros_specific_arguments` do contexto). O processo cru é o que NÃO é `Node`.
+    bags = [e for e in ld.entities
+            if isinstance(e, ExecuteProcess) and not isinstance(e, Node)]
+    assert len(bags) == 1, 'esperava UM gravador'
+    argumentos = [perform_substitutions(ctx, p) if isinstance(p, list)
+                  else str(p) for p in bags[0].cmd]
+    assert '--use-sim-time' not in argumentos, argumentos
+    # E a sequência inteira continua a de sempre, na mesma ordem: o bag do
+    # robô 2 é linha de base, não é lugar de arrumação. O destino (o único
+    # elemento que depende do `log_dir`) sai da conferência por posição.
+    assert argumentos[:4] == ['ros2', 'bag', 'record', '-o'], argumentos
+    assert argumentos[5:] == ['--all-topics', '--storage-preset-profile',
+                              'fastwrite'], argumentos
+
+
 # ─── o perfil consumido ──────────────────────────────────────────────────────
 
 NOS_DO_NAV2 = ('map_server', 'planner_server', 'smoother_server',
