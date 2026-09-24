@@ -9,8 +9,9 @@
 #     build.sh próprio (renomear package_ROS2.xml e launch_ROS2/). Sem esse
 #     passo o colcon quebra com "package.xml does not exist" / member_of_group.
 #   - a config de rede do Mid-360 mora DENTRO do clone. Como o clone é
-#     descartável, a config versionada fica em robot_base/config/ e é copiada
-#     para dentro aqui — senão se perde a cada reclone.
+#     descartável, o modelo e os perfis de MÁQUINA ficam versionados em
+#     robot_base/config/. O IP do SENSOR vem de varredura ou argumento
+#     explícito: unidade física e computador não são o mesmo eixo.
 #
 # Commits fixados de propósito: são os que foram verificados neste robô.
 # Subir versão é uma mudança deliberada, não um efeito colateral de rodar o setup.
@@ -20,6 +21,73 @@ set -euo pipefail
 
 WS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PKGS="$WS/ros2_packages"
+
+uso() {
+    cat <<'EOF'
+Uso:
+  ./setup_livox.sh --perfil <nuc|notebook> [--lidar-ip A.B.C.D]
+
+O perfil escolhe somente o IP desta máquina. Sem --lidar-ip, o script varre a
+sub-rede e exige exatamente um MAC Livox respondendo. Com --lidar-ip, aceita a
+escolha explícita mesmo se o sensor estiver desligado, mas avisa que não houve
+confirmação.
+EOF
+}
+
+PERFIL=""
+LIDAR_IP=""
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --perfil)
+            [ "$#" -ge 2 ] || { echo "ERRO: --perfil exige um valor" >&2; uso >&2; exit 2; }
+            PERFIL="$2"
+            shift 2
+            ;;
+        --lidar-ip)
+            [ "$#" -ge 2 ] || { echo "ERRO: --lidar-ip exige um valor" >&2; uso >&2; exit 2; }
+            LIDAR_IP="$2"
+            shift 2
+            ;;
+        -h|--help)
+            uso
+            exit 0
+            ;;
+        *)
+            echo "ERRO: argumento desconhecido: $1" >&2
+            uso >&2
+            exit 2
+            ;;
+    esac
+done
+if [ -z "$PERFIL" ]; then
+    echo "ERRO: --perfil é obrigatório; não há máquina padrão segura" >&2
+    uso >&2
+    exit 2
+fi
+
+# Esta pré-condição vem ANTES de dependência, clone, /usr/local e build. O
+# defeito de 24-09 foi exatamente o driver subir com host .2 numa máquina .5:
+# sem validar o IP local, o setup parecia bom e a nuvem nunca voltava.
+CFG_MODELO="$PKGS/robot_base/config/MID360_config.template.json"
+CFG_PERFIS="$PKGS/robot_base/config/livox_host_profiles.json"
+CFG_GERADA="$(mktemp "${TMPDIR:-/tmp}/MID360_config.XXXXXX")"
+limpa_config_temporaria() {
+    rm -f -- "$CFG_GERADA"
+}
+trap limpa_config_temporaria EXIT
+
+echo "==> Pré-condição: máquina e unidade do Mid-360"
+PREPARA_CONFIG=(
+    python3 "$WS/tools/prepara_config_livox.py"
+    --perfis "$CFG_PERFIS"
+    --modelo "$CFG_MODELO"
+    --perfil "$PERFIL"
+    --saida "$CFG_GERADA"
+)
+if [ -n "$LIDAR_IP" ]; then
+    PREPARA_CONFIG+=(--lidar-ip "$LIDAR_IP")
+fi
+"${PREPARA_CONFIG[@]}"
 
 LIVOX_URL="https://github.com/Livox-SDK/livox_ros_driver2.git"
 LIVOX_COMMIT="6b9356c"
@@ -152,17 +220,22 @@ echo "==> 3/5  Preparo pró-ROS2 do livox_ros_driver2"
 )
 
 echo "==> 4/5  Config de rede do Mid-360"
-# A fonte da verdade é robot_base/config/ (versionada). Ver o README de lá:
-# IP errado = 'bind failed' = FAST-LIO sem nuvem = /Odometry nunca publicado.
-CFG="$PKGS/robot_base/config/MID360_config.json"
-cp -f "$CFG" "$PKGS/livox_ros_driver2/config/MID360_config.json"
-python3 - "$CFG" <<'PY'
+# A fonte da verdade é a combinação validada no início: perfil da máquina +
+# sensor descoberto/explicitado. O arquivo ativo continua dentro do clone e é
+# descartável; por isso ele é sempre regenerado pelo setup.
+CFG_ATIVA="$PKGS/livox_ros_driver2/config/MID360_config.json"
+cp -f "$CFG_GERADA" "$CFG_ATIVA"
+if ! cmp -s "$CFG_GERADA" "$CFG_ATIVA"; then
+    echo "ERRO: a config gerada não foi copiada integralmente para o driver" >&2
+    exit 1
+fi
+python3 - "$CFG_ATIVA" <<'PY'
 import json, sys
 c = json.load(open(sys.argv[1]))
-print(f"    host (NUC): {c['MID360']['host_net_info']['cmd_data_ip']}")
+print(f"    host:       {c['MID360']['host_net_info']['cmd_data_ip']}")
 print(f"    lidar:      {c['lidar_configs'][0]['ip']}")
 PY
-echo "    (conferir contra a rede real — ver ros2_packages/robot_base/config/README.md)"
+echo "    config ativa: $CFG_ATIVA"
 
 echo "==> 5/5  Build"
 # O setup.bash do ROS lê variáveis não definidas; 'set -u' aborta nele.

@@ -1,16 +1,54 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-09-24** (lab; Mid-360, FAST-LIO,
-> `/scan` e TF do robô 3 provados com placa/motores desligados. O lidar foi
-> encerrado limpo e **desligado novamente pelo dono**; nenhum objetivo foi
-> enviado e o robô não se moveu. A configuração que funcionou está só no clone
-> ignorado pelo git e ainda precisa virar solução por máquina).
+> Atualizado em **2026-09-24** (depois da bancada, decisão 058 implementada
+> offline na branch `livox-config-maquina-sensor`: máquina e unidade Livox são
+> eixos separados, sem IP de sensor default e com host local obrigatório. Ainda
+> não implantada nem provada contra hardware. Na bancada, Mid-360, FAST-LIO,
+> `/scan` e TF do robô 3 foram provados com placa/motores desligados; ao fim o
+> lidar foi encerrado limpo e **desligado pelo dono**).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+---
+
+## 🧩 24-09 (dev, lidar DESLIGADO) — DECISÃO 058 IMPLEMENTADA OFFLINE
+
+Branch/worktree isolada: `livox-config-maquina-sensor`; a branch da etapa 6 não
+foi tocada.
+
+| contrato novo | estado |
+|---|---|
+| perfil de **máquina** `nuc` | `192.168.1.2/24`, sem IP de sensor acoplado |
+| perfil de **máquina** `notebook` | `192.168.1.5/24`, sem IP de sensor acoplado |
+| sensor sem `--lidar-ip` | varredura viva; exige exatamente um MAC Livox |
+| sensor com `--lidar-ip` | escolha explícita; se desligado, aviso `NÃO confirmado` |
+| host ausente/máscara errada | reprova antes de dependência, clone, SDK e build |
+| validação offline | ✅ `bash -n`, `py_compile`, **15 dirigidos + 127 de `robot_base`** |
+| prova de recusa neste dev | ✅ perfil `notebook` recusado: `.5/24` não existe localmente |
+| hardware/deploy | 🔴 não executados; lidar permaneceu desligado |
+
+A suíte raiz nesta worktree sem `install/` chegou a 570 passes e então
+reprovou em `PackageNotFoundError: robot_motion`; o overlay herdado apontava
+para outro workspace. Não é usada como prova da 058. Rebuild/suíte com o
+overlay correto continuam no item 3 separado.
+
+O `MID360_config.json` universal `.2/.158` deixou de ser fonte versionada. O
+setup gera a cópia ativa a partir do perfil de máquina e do sensor
+descoberto/explicitado. Decisão: `docs/decisoes/058-maquina-e-unidade-livox-sao-eixos-separados.md`.
+
+🔴 **Inventário aberto:** `.158`/`e4:7a:2c:95:df:da` (15-09) e
+`.169`/`e4:7a:2c:90:1d:f1` (24-09) são MACs distintos. Isso sugere duas
+unidades, contrariando “só há um Mid-360”, mas falta conferir fisicamente
+etiqueta/número de série. Até lá os IPs são observações, não sensores de um
+robô específico.
+
+⬜ **Próximo desta frente:** testar o setup na máquina correta com sensor ligado
+e reconciliar as duas identidades físicas. O BO do `--packages-select` sem
+`hoverboard_driver` continua sendo o item 2 separado.
 
 ---
 
@@ -33,13 +71,13 @@ Evidência: `docs/dados/2026-09-24-robo3-lio/` (logs pequenos, medidas e
 | movimento/mapa/Nav2 | 🔴 não testados; nenhum objetivo enviado |
 | estado físico atual | ✅ lidar desligado depois de zerar processos e grafo ROS; avisar e esperar “pode” antes de religar/testar |
 
-- Para casar com a interface `.5`, foi alterada **somente** a cópia ignorada
+- Naquele ensaio, para casar com a interface `.5`, foi alterada **somente** a cópia ignorada
   `ros2_packages/livox_ros_driver2/config/MID360_config.json` no notebook: host
-  `.2` → `.5`; o sensor já estava em `.169`. O versionado em
-  `robot_base/config/` permanece `.2/.158`, pois descreve o robô 2.
-- 🔴 **Config descartável:** `setup_livox.sh` ou reclone repõe a cópia
-  versionada e apaga o ajuste que funcionou. Falta decidir configuração por
-  máquina; não esconder os números do robô 3 no arquivo do robô 2.
+  `.2` → `.5`; o sensor já estava em `.169`. O versionado ainda era `.2/.158`.
+- ✅ **Resolvido em código depois do ensaio, decisão 058:** não há mais par
+  universal nem IP de sensor default. O setup combina perfil da máquina com
+  varredura/`--lidar-ip` e recusa host inexistente. Ainda falta implantar e
+  provar esse caminho em hardware.
 - O launch isolado `1537986` sobreviveu à primeira pausa e retomou quando o
   lidar foi religado. Depois foi encerrado com `SIGINT`; a localização completa
   subiu sem tração e, no fim, foi encerrada por PGID. Conferência final:
@@ -64,8 +102,8 @@ Evidência: `docs/dados/2026-09-24-robo3-lio/` (logs pequenos, medidas e
   filhos órfãos. A limpeza final foi por PGID, sem `SIGKILL`, e foi conferida
   antes de autorizar o desligamento.
 
-⬜ **Próximo:** tornar `.5/.169` reproduzível sem quebrar `.2/.158`; medir a
-pose 6D do lidar; transformar localização + RSP num bringup único do robô 3;
+⬜ **Próximo:** implantar/provar a decisão 058 e reconciliar os dois MACs; medir
+a pose 6D do lidar; transformar localização + RSP num bringup único do robô 3;
 depois validar percepção e parada física independente. Só então liberar um
 goal curto. O lidar só volta a ser ligado depois de aviso explícito ao dono.
 
@@ -200,9 +238,11 @@ hoje.
 
 🔴 **Tarefa explícita de deploy da etapa 6 — auditar o NUC.** Tudo acima
 conserta o clone **deste PC**. Lá pode haver outra revisão de SDK, faltar
-`ros-jazzy-pcl-ros` e estar o `.169` velho. Os dois comandos a rodar no robô:
-`git -C third_party/Livox-SDK2 rev-parse HEAD` (esperado `f5d9375…`) e
-`cmp ros2_packages/robot_base/config/MID360_config.json ros2_packages/livox_ros_driver2/config/MID360_config.json`.
+`ros-jazzy-pcl-ros` e estar o `.169` velho. Conferir o SDK com
+`git -C third_party/Livox-SDK2 rev-parse HEAD` (esperado `f5d9375…`). A antiga
+conferência por `cmp` contra um JSON universal foi **superada pela decisão
+058**: agora é preciso rodar o setup com `--perfil nuc` e sensor
+descoberto/explicitado, depois conferir a cópia ativa que ele imprime.
 
 ⬜ **Próximo:** etapa 6 — a `pilha` com `robo:=3`, começando pela auditoria do
 NUC acima. Deploy segue a regra do CLAUDE.md, e nada da etapa 5 foi para robô.
@@ -503,7 +543,7 @@ activated"), e a `placa_simulada` morre com `RCLError` ao derrubar (cosmético).
 
 ## 🤖 15-09 noite — ROBÔ 2 DE PÉ NO NAV2 (lidar em `.158`)
 
-- **O lidar do robô 2 agora está em `192.168.1.158`**; o config dizia `.169`,
+- **A unidade observada junto ao robô 2 estava em `192.168.1.158`**; o config dizia `.169`,
   por isso não havia `/Odometry` e o Nav2 abortava. Diário de 15-09.
 - NUC: IP `10.127.116.205` (Wi-Fi `Trafico de banana`), cabo do lidar em `enp1s0`.
 - 🔴 **O NUC não consegue `git fetch`** (sem chave do GitHub). Deploy de hoje:
@@ -533,7 +573,9 @@ vem emprestado do robô 2**, no centro do robô, no topo. Atuador se baseia no
 robô 1 (MEGA), seguidor e navegação no robô 2 (também diferencial de 2 motoras;
 o robô 1 é 4x4 e só faz pivô).
 
-- ⚠️ **Enquanto o robô 3 navega, o robô 2 não navega** — só há um Mid-360.
+- ⚠️ O plano assumia **um Mid-360 emprestado** e, portanto, um robô por vez.
+  Desde 24-09 há dois pares IP/MAC incompatíveis com essa certeza; inventário
+  aberto na decisão 058. Não planejar concorrência até conferir as unidades.
 - 🟢 O chute do URDF (`livox_z_solo` 0,24, centro da caixa) **já casa** com a
   montagem decidida: topo da caixa 0,205 + meio cilindro = 0,2375 m.
 - 🔴 O `scan_2d.yaml` **não se herda**: com o sensor a 0,24 m (era 0,42 no robô

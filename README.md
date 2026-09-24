@@ -34,14 +34,15 @@ apoiada na stack antiga — sua integração com a base nova está pendente.
 ## Subir a base
 
 ```bash
-./setup_livox.sh                      # 1ª vez: traz e compila os drivers (pede sudo)
+./setup_livox.sh --perfil nuc         # ou notebook; traz/compila drivers (pede sudo)
 source install/setup.bash
 ros2 launch robot_base base.launch.py # robô LIGADO
 ```
 
-Antes da primeira vez, conferir o IP do lidar —
-`ros2_packages/robot_base/config/README.md`. IP errado = `bind failed` = sem
-`/Odometry`, e a falha é **silenciosa**.
+O perfil identifica somente a máquina; o sensor é descoberto na rede ou
+informado com `--lidar-ip`. Antes da primeira vez, ler
+`ros2_packages/robot_base/config/README.md`. IP errado = driver sem nuvem = sem
+`/Odometry`, e a falha pode parecer uma inicialização normal.
 
 ## Origem
 
