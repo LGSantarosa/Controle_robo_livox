@@ -1,0 +1,4 @@
+[WARN] [1790283269.741197657] [robot_state_publisher]: No robot_description parameter, but command-line argument available.  Assuming argument is name of URDF file.  This backwards compatibility fallback will be removed in the future.
+[WARN] [1790283269.761519884] [kdl_parser]: The root link base_link has an inertia specified in the URDF, but KDL does not support a root link with an inertia.  As a workaround, you can add an extra dummy link to your URDF.
+[INFO] [1790283269.761653440] [robot_state_publisher]: Robot initialized
+[INFO] [1790283550.201076923] [rclcpp]: signal_handler(SIGINT/SIGTERM)

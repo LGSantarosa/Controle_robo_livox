@@ -1,11 +1,11 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-09-24** (lab, robô e lidar
-> DESLIGADOS — bateria carregando; **notebook do robô 3 sincronizado com a
-> `main` `cc064fb` e compilando**. A etapa 5 inteira está na `main`, passos
-> 1–6, e a pilha de localização compila no dev (055); em aberto, auditar o NUC
-> na etapa 6).
+> Versionado na `main`. Atualizado em **2026-09-24** (lab; Mid-360, FAST-LIO,
+> `/scan` e TF do robô 3 provados com placa/motores desligados. O lidar foi
+> encerrado limpo e **desligado novamente pelo dono**; nenhum objetivo foi
+> enviado e o robô não se moveu. A configuração que funcionou está só no clone
+> ignorado pelo git e ainda precisa virar solução por máquina).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
@@ -14,7 +14,64 @@
 
 ---
 
-## 🖥️ 24-09 (lab, robô e lidar DESLIGADOS) — NOTEBOOK DO ROBÔ 3 NA `main`
+## 🔌 24-09 (lab, robô 3; lidar DESLIGADO ao fim) — MID-360 + LIO + SCAN + TF PROVADOS PARADOS
+
+Evidência: `docs/dados/2026-09-24-robo3-lio/` (logs pequenos, medidas e
+`SHA256SUMS`; sem bag).
+
+| o quê | estado medido |
+|---|---|
+| `enp1s0` / perfil NetworkManager `livox` | ✅ `192.168.1.5` |
+| Mid-360 presente | ✅ `192.168.1.169`, MAC `e4:7a:2c:90:1d:f1` |
+| `/livox/lidar` | ✅ 10,2 Hz, `CustomMsg`, 20 064 pontos/quadro, `livox_frame` |
+| `/livox/imu` | ✅ 199,8 Hz |
+| driver | ✅ inicialização do lidar, modo `Normal`, IMU habilitada |
+| `/Odometry` | ✅ 10,33 Hz; deriva máx. em 15 s: 8,5 mm xy, 8,0 mm z, 0,274° yaw |
+| `/livox/pontos` | ✅ 7,25 Hz, `PointCloud2` |
+| `/scan` | ✅ 7,24 Hz, 360 raios em `base_link`; mediana 355 finitos |
+| TF | ✅ `base_link → livox_frame` estática + `odom → base_link` viva |
+| movimento/mapa/Nav2 | 🔴 não testados; nenhum objetivo enviado |
+| estado físico atual | ✅ lidar desligado depois de zerar processos e grafo ROS; avisar e esperar “pode” antes de religar/testar |
+
+- Para casar com a interface `.5`, foi alterada **somente** a cópia ignorada
+  `ros2_packages/livox_ros_driver2/config/MID360_config.json` no notebook: host
+  `.2` → `.5`; o sensor já estava em `.169`. O versionado em
+  `robot_base/config/` permanece `.2/.158`, pois descreve o robô 2.
+- 🔴 **Config descartável:** `setup_livox.sh` ou reclone repõe a cópia
+  versionada e apaga o ajuste que funcionou. Falta decidir configuração por
+  máquina; não esconder os números do robô 3 no arquivo do robô 2.
+- O launch isolado `1537986` sobreviveu à primeira pausa e retomou quando o
+  lidar foi religado. Depois foi encerrado com `SIGINT`; a localização completa
+  subiu sem tração e, no fim, foi encerrada por PGID. Conferência final:
+  **nenhum processo e nenhum nó relevante vivo** antes de cortar a energia.
+- 🔴 **Ainda não dá para “só mandar um ponto” no robô 3:** a `main` recusa
+  `robo:=3`; `origin/etapa6-pilha-robo3` aceita o perfil 3 apenas no Gazebo e
+  recusa deliberadamente `robo:=3 sim:=false`, pois ainda faltam a fronteira
+  do atuador e a localização reais. Não usar o perfil do robô 2 como atalho.
+- O que esta prova fecha: Ethernet, controle do Mid-360, nuvem crua, IMU,
+  FAST-LIO, conversão `PointCloud2`, fatia `/scan` e a cadeia de TF **parada**.
+  **Não fecha** pose 6D medida, sinal do yaw, scan contra mapa, autorretorno,
+  AMCL, Nav2 ou atuador.
+- ⚠️ O RSP foi avulso e revelou exatamente a falta de bringup prevista: sem
+  ele o `tf_odom` se recusou corretamente a publicar. A TF usou a pose ainda
+  provisória do URDF: xyz `(−0,093; 0; 0,240)`, yaw zero.
+- ⚠️ Custo observado: `nuvem_pontos` **97,5% de um core**, driver 28,5% e
+  FAST-LIO 34,1%; o fluxo convertido caiu de ~10 Hz para ~7,2 Hz.
+- ⚠️ O RViz que o launch upstream tenta abrir morreu no headless (`Qt`, código
+  −6); a localização continuou viva. Retirar esse processo é dívida de
+  bringup, não falha do LIO.
+- ⚠️ Encerramento por PID não bastou: `SIGTERM` matou o launch pai e deixou
+  filhos órfãos. A limpeza final foi por PGID, sem `SIGKILL`, e foi conferida
+  antes de autorizar o desligamento.
+
+⬜ **Próximo:** tornar `.5/.169` reproduzível sem quebrar `.2/.158`; medir a
+pose 6D do lidar; transformar localização + RSP num bringup único do robô 3;
+depois validar percepção e parada física independente. Só então liberar um
+goal curto. O lidar só volta a ser ligado depois de aviso explícito ao dono.
+
+---
+
+### Antes de ligar o lidar — notebook sincronizado e compilado
 
 Sessão só de PC (bateria carregando). Diário de 24-09 tem a sequência.
 
@@ -47,9 +104,10 @@ Sessão só de PC (bateria carregando). Diário de 24-09 tem a sequência.
 - 🔴 **Não prova hardware nenhum.** Lidar desligado, `enp1s0` sem IP, MEGA não
   falou com a placa, robô não se moveu.
 
-⬜ **Próximo, quando a bateria voltar:** cabo no `enp1s0`, IP `192.168.1.2`,
-varredura `192.168.1.x` atrás do OUI `e4:7a:2c` para confirmar o IP do lidar e
-só então acertar a config de dentro do driver.
+Esse “próximo” foi executado mais tarde no mesmo dia, com um resultado
+diferente do palpite: a interface real era `.5`, o sensor presente era `.169`,
+e os fluxos passaram depois de casar o host da cópia ativa com `.5`. Ver o
+bloco acima e a entrada mais nova do diário.
 
 ---
 

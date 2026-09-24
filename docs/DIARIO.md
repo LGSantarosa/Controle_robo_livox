@@ -4,6 +4,140 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-09-24 (lab, robô 3) — MID-360, FAST-LIO, `/scan` E TF VIVOS; A CONFIG ATIVA É LOCAL E DESCARTÁVEL
+
+Evidência bruta pequena preservada em
+`docs/dados/2026-09-24-robo3-lio/` (logs, frequências, janela parada e
+`SHA256SUMS`; nenhum bag).
+
+Continuação da sessão abaixo, agora com o cabo Ethernet e o Mid-360 ligados.
+O objetivo desta parte foi somente fechar a rede e provar a saída crua do
+sensor. **O robô não recebeu objetivo e não se moveu.** Ao fim, o dono desligou
+o lidar e pediu aviso explícito antes de tornar a ligá-lo.
+
+### O que foi medido
+
+| item | resultado |
+|---|---|
+| interface do lidar | `enp1s0`, perfil NetworkManager `livox`, host `192.168.1.5` |
+| Mid-360 encontrado | `192.168.1.169`, MAC `e4:7a:2c:90:1d:f1` |
+| `/livox/lidar` | **10,2 Hz**, `livox_ros_driver2/msg/CustomMsg`, **20 064 pontos/quadro**, `frame_id: livox_frame` |
+| `/livox/imu` | **199,8 Hz** |
+| log do driver | `Init lds lidar success`, modo de trabalho `Normal`, IMU habilitada |
+
+Isso prova a ligação Ethernet, o comando do sensor e os dois fluxos crus.
+**Não prova FAST-LIO, `/Odometry`, `/scan`, TF completa, mapa, AMCL, Nav2 nem
+atuador.** Nenhum desses elos foi exercitado nesta parte.
+
+### O ajuste que fez os pacotes chegarem — e por que ainda não é solução
+
+O JSON versionado em `robot_base/config/` descreve o NUC/Livox do robô 2:
+host `192.168.1.2`, sensor `192.168.1.158`. Neste notebook, porém, a interface
+já estava em `.5` e o sensor presente respondeu em `.169`. O driver pode subir
+e comandar o lidar com o host errado, mas a nuvem não volta para o endereço em
+que o notebook realmente está.
+
+Não foi possível trocar a interface para `.2` porque o NetworkManager pediu
+senha de `sudo`. Foi alterada **somente a cópia local, ignorada pelo git**, em
+`ros2_packages/livox_ros_driver2/config/MID360_config.json`: os quatro campos
+de host passaram de `192.168.1.2` para `192.168.1.5`. O IP do lidar nessa cópia
+já era `.169`. O arquivo versionado do robô 2 ficou intacto.
+
+Esse ajuste é deliberadamente provisório: `setup_livox.sh` copia o JSON
+versionado por cima do clone, e um reclone também elimina a cópia ativa. Logo,
+**rodar o setup neste notebook devolve `.2/.158` e quebra o fluxo que acabou de
+ser medido**. Configuração por máquina continua uma decisão em aberto; não foi
+resolvida escondendo os números do robô 3 no arquivo do robô 2.
+
+### O pedido de “carregar um mapa e mandar um ponto à frente” ainda não é um launch
+
+A leitura do estado versionado encontrou uma trava intencional: a `main`
+recusa `robo:=3` na `pilha.launch.py`. A branch
+`origin/etapa6-pilha-robo3` já ensina a pilha a montar o perfil 3, mas somente
+com `sim:=true`; `robo:=3 sim:=false` continua recusado porque faltam a
+fronteira do atuador real e a localização real. Portanto não é seguro subir o
+robô 3 fingindo que ele é o robô 2 só para mandar um goal.
+
+**Estado naquela pausa:** lidar fisicamente desligado pelo dono. O launch do
+driver tinha PID `1537986` na última observação e ainda não tinha sido
+consultado; seu estado ficou **desconhecido** até a retomada abaixo.
+
+### Segunda parte — localização inteira, ainda sem tração
+
+Depois do aviso explícito, o dono ligou somente o lidar; placa e motores
+continuaram desligados. A primeira leitura corrigiu o estado desconhecido: o
+launch `1537986` **continuava vivo** e retomou o fluxo quando o sensor voltou.
+A configuração instalada era um symlink para a cópia `.5/.169` acima. Com um
+único publicador, a nova medida deu `/livox/lidar` **9,97 Hz** e `/livox/imu`
+**200,1 Hz**.
+
+O driver isolado foi encerrado com `SIGINT` e saiu. Em seguida subiu apenas
+`robot_base/localizacao.launch.py`: driver, FAST-LIO, `tf_odom`, conversor
+`CustomMsg → PointCloud2` e `scan_2d`. **Nenhum nó de tração, mux, MEGA ou
+comando de velocidade subiu.**
+
+O primeiro resultado separou exatamente o elo ausente: o FAST-LIO inicializou
+a IMU e o mapa k-d, `/Odometry` nasceu, e a primeira nuvem convertida teve
+18 652 pontos; mas o `tf_odom` recusou publicar porque não existia
+`livox_frame → base_link`. Era a ausência já prevista de
+`robot_state_publisher` quando a localização do robô 3 sobe sozinha. Para medir
+somente a árvore, foi iniciado um RSP avulso com o `robo3.urdf.xacro`, sem
+serial, mux ou atuador. A TF estática apareceu e o `tf_odom` publicou a primeira
+TF composta.
+
+| medida, robô parado | resultado |
+|---|---|
+| `/Odometry` | **10,33 Hz**, `camera_init → body` |
+| deriva máxima em 15 s | **8,5 mm** em xy; **8,0 mm** em z; **0,274°** em yaw |
+| `/livox/pontos` | **7,25 Hz**, `PointCloud2` |
+| `/scan` | **7,24 Hz**, 360 raios em `base_link` |
+| raios finitos por scan | mediana **355**, mínimo **352** |
+| alcance finito observado | **0,350–6,840 m** |
+| `base_link → livox_frame` do URDF | xyz **(−0,093; 0; 0,240) m**, RPY **(0; 0; 0)** |
+
+A deriva é uma janela curta, não calibração. E a última linha é o valor
+**provisório do URDF**, não uma pose 6D medida no robô: a etapa 7 ainda precisa
+medir x/y/z/roll/pitch/yaw e provar o sinal do yaw. Do mesmo modo, os cortes do
+`scan_2d` seguem herdados; 355 raios válidos provam que há scan, não que ele
+esteja geometricamente certo contra o mapa nem que preserve obstáculo junto ao
+nariz.
+
+O custo também ficou medido no instante da janela: `nuvem_pontos` usou **97,5%
+de um core**, driver **28,5%** e FAST-LIO **34,1%**. É compatível com a dívida já
+conhecida da ponte Python e explica `/livox/lidar` a ~10 Hz virar
+`/livox/pontos`/`/scan` a ~7,2 Hz; não foi otimizado nesta sessão.
+
+O launch upstream tentou abrir RViz no notebook sem tela e o processo morreu
+com erro do Qt (`exit -6`). Os cinco nós úteis permaneceram vivos e todas as
+medidas acima vieram depois disso. É ruído real de bringup a retirar depois,
+mas **não** foi confundido com falha do LIO.
+
+### Encerramento — o driver saiu antes de cortar a energia
+
+No pedido para desligar, `SIGINT` dirigido apenas ao launch iniciado por
+`setsid nohup` foi ignorado. `SIGTERM` encerrou o pai, mas deixou os filhos
+órfãos no PGID `1695964`. A limpeza correta foi pelo **grupo inteiro**:
+
+1. `SIGINT` no grupo encerrou driver Livox, FAST-LIO, `scan_2d` e RSP;
+2. `SIGTERM` no mesmo grupo encerrou os dois nós Python restantes
+   (`tf_odom` e `nuvem_pontos`);
+3. conferência final por processos **e** grafo ROS: lista vazia.
+
+Não houve `SIGKILL`, e o dono só desligou o lidar depois da confirmação. Isso
+repete a razão de o `sobe-robo3` registrar PGID: sinalizar só o pai não garante
+que a árvore morreu.
+
+### O que ficou aberto
+
+- mapa, AMCL, Nav2 e objetivo **não foram testados**;
+- a pilha física do robô 3 continua bloqueada de propósito no código;
+- a pose 6D do lidar e a percepção perto do corpo continuam provisórias;
+- a configuração `.5/.169` continua descartável dentro do clone;
+- nenhuma roda foi energizada e o robô não se moveu.
+
+**Estado final:** lidar desligado pelo dono, nenhum processo/nó relevante vivo.
+Próxima ação de hardware só depois de novo aviso e novo “pode”.
+
 ## 2026-09-24 (lab, robô e lidar DESLIGADOS) — O NOTEBOOK DO ROBÔ 3 VOLTA PARA A `main`, E EU QUASE REGISTREI UM ESTADO QUE NÃO EXISTIA MAIS
 
 Sessão curta e só de PC: a bateria do robô 3 estava carregando, então o lidar
