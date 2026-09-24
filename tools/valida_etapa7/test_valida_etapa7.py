@@ -456,7 +456,14 @@ def test_campo_vivo_ausente_reprova_em_vez_de_assumir(julga, campo, item):
 # dado era inválido. Veredito certo por motivo errado não é evidência.
 
 NUMERICOS_DA_PLACA = ('deadband_speed', 'escala_real', 'raio', 'bitola')
-INVALIDOS = (0.0, -1.0, float('nan'), float('inf'), 'texto')
+
+# 🔴 `True` e `'1.0'` estão aqui de propósito, e são o par mais traiçoeiro:
+# `float(True)` vale 1,0 e `float('1.0')` vale 1,0, então um julgador que
+# converta antes de conferir o TIPO aceita os dois calado. Nenhum dos dois é
+# leitura de parâmetro do ROS: `True` é um bool que passou por onde devia vir
+# número, e `'1.0'` é YAML lido como texto — os dois são colheita quebrada, e o
+# valor "plausível" é justamente o que os torna perigosos.
+INVALIDOS = (0.0, -1.0, float('nan'), float('inf'), 'texto', True, '1.0')
 
 
 def _detalhe_nomeia(detalhe, *pedacos):
@@ -496,7 +503,7 @@ def test_campo_vivo_nao_finito_ou_nao_positivo_reprova(julga, campo, valor):
     ev['placa'][campo] = valor
     ok, detalhe = julga.avalia(ev)[PATAMAR]
     assert not ok, detalhe
-    assert _detalhe_nomeia(detalhe, campo, 'inválid'), detalhe
+    assert _detalhe_nomeia(detalhe, campo, 'inválid', valor), detalhe
 
 
 @pytest.mark.parametrize('campo', ('v', 'wz'))
@@ -510,19 +517,50 @@ def test_comando_nao_finito_reprova(julga, campo, valor):
     ev['amostras'][0][campo] = valor
     ok, detalhe = julga.avalia(ev)[PATAMAR]
     assert not ok, detalhe
-    assert _detalhe_nomeia(detalhe, campo, 'inválid'), detalhe
+    assert _detalhe_nomeia(detalhe, campo, 'inválid', valor), detalhe
 
 
-@pytest.mark.parametrize('valor', (float('inf'), float('nan'), 'texto'))
-def test_timestamp_nao_finito_reprova_dizendo_o_porque(julga, valor):
+@pytest.mark.parametrize('item', (JANELA, PATAMAR))
+@pytest.mark.parametrize('valor', (float('inf'), float('nan'), 'texto', True))
+def test_timestamp_nao_finito_reprova_os_dois_itens(julga, valor, item):
     """Com `t = nan` o item já reprovava — mas por acidente: toda comparação com
     NaN é falsa. O veredito tem de vir da regra, e o detalhe tem de nomear o
-    `t`, senão o leitor procura amostra fora da janela que não existe."""
+    `t` e o valor, senão o leitor procura amostra fora da janela que não existe.
+
+    E derruba os DOIS: sem instante confiável não se sabe se a amostra é da
+    corrida, então ela não pode aprovar o patamar por um lado enquanto a janela
+    reprova pelo outro.
+    """
     ev = _com_amostra(TOPICO_FINAL, 20.0, PATAMAR_VIVO)
     ev['amostras'][0]['t'] = valor
-    ok, detalhe = julga.avalia(ev)[JANELA]
+    ok, detalhe = julga.avalia(ev)[item]
     assert not ok, detalhe
-    assert _detalhe_nomeia(detalhe, 't', 'inválid'), detalhe
+    assert _detalhe_nomeia(detalhe, 't', 'inválid', valor), detalhe
+
+
+@pytest.mark.parametrize('v, wz', ((0.0, 0.0), (-0.5, 0.0), (0.0, -3.0),
+                                   (-0.2, -1.0)))
+def test_comando_zero_ou_negativo_e_valido_e_nao_pode_virar_invalido(julga, v, wz):
+    """⚠️ O contrapeso da severidade: `v` e `wz` PODEM ser zero ou negativos —
+    ré e giro para a direita são comando legítimo. O que não pode é não ser
+    número finito. Reprovar por patamar é uma coisa; chamar de evidência
+    inválida é outra, e confundir as duas esconderia o robô parado atrás de uma
+    mensagem de colheita quebrada."""
+    ev = _com_amostra(TOPICO_FINAL, 20.0, v, wz=wz)
+    _ok, detalhe = julga.avalia(ev)[PATAMAR]
+    assert 'inválid' not in str(detalhe).lower(), detalhe
+    assert julga.avalia(ev)[JANELA][0], 'a janela não tem nada com o módulo'
+
+
+def test_timestamp_zero_e_valido_se_a_janela_comeca_em_zero(julga):
+    """Zero é instante legítimo — o tempo simulado nasce em zero, e a quinta
+    corrida da etapa 6 abriu o bag em 0,002 s. O que se exige é finito e dentro
+    da janela."""
+    ev = _com_amostra(TOPICO_FINAL, 0.0, PATAMAR_VIVO)
+    ev['janela'] = {'objetivo_aceito': 0.0, 'resultado': 35.0}
+    itens = julga.avalia(ev)
+    assert itens[JANELA][0], itens[JANELA]
+    assert itens[PATAMAR][0], itens[PATAMAR]
 
 
 @pytest.mark.parametrize('item', (JANELA, PATAMAR))
@@ -536,16 +574,37 @@ def test_janela_incompleta_reprova_os_dois_itens(julga, item):
     assert _detalhe_nomeia(detalhe, 'resultado'), detalhe
 
 
+@pytest.mark.parametrize('item', (TOLERANCIA, NASCEU_FORA))
+@pytest.mark.parametrize('valor', INVALIDOS)
+def test_tolerancia_invalida_reprova_os_dois_itens_de_pose(julga, valor, item):
+    """A tolerância viva é o RAIO da prova de chegada: sem ela válida, nem
+    "chegou" nem "não nasceu dentro" significam coisa alguma.
+
+    Zero e negativo entram na lista porque tolerância nula aprovaria só a pose
+    exata (e reprovaria toda corrida boa), e negativa reprovaria tudo —
+    vereditos que parecem regra e são defeito de colheita.
+    """
+    ev = dict(_evidencia_boa(), xy_goal_tolerance=valor)
+    ok, detalhe = julga.avalia(ev)[item]
+    assert not ok, detalhe
+    assert _detalhe_nomeia(detalhe, 'xy_goal_tolerance', 'inválid', valor), detalhe
+
+
+@pytest.mark.parametrize('item', (JANELA, PATAMAR))
 @pytest.mark.parametrize('janela', (
     {'objetivo_aceito': 35.0, 'resultado': 10.0},          # invertida
     {'objetivo_aceito': float('nan'), 'resultado': 35.0},  # não finita
     {'objetivo_aceito': 10.0, 'resultado': float('inf')},
+    {'objetivo_aceito': '10.0', 'resultado': 35.0},        # texto que vira 10,0
+    {'objetivo_aceito': True, 'resultado': 35.0},
 ))
-def test_janela_nao_finita_ou_desordenada_reprova(julga, janela):
+def test_janela_nao_finita_ou_desordenada_reprova_os_dois_itens(julga, janela, item):
     """Janela invertida hoje reprova em silêncio, porque nenhuma amostra cai
-    nela. O motivo certo é outro: a janela não é uma janela."""
+    nela. O motivo certo é outro: a janela não é uma janela — e sem janela
+    válida o patamar também não tem como ser julgado, porque "dentro da
+    corrida" deixa de ter sentido."""
     ev = dict(_evidencia_boa(), janela=janela)
-    ok, detalhe = julga.avalia(ev)[JANELA]
+    ok, detalhe = julga.avalia(ev)[item]
     assert not ok, detalhe
     assert _detalhe_nomeia(detalhe, 'janela', 'inválid'), detalhe
 
@@ -564,6 +623,24 @@ def test_amostra_malformada_reprova_sem_excecao(julga, amostra):
     itens = julga.avalia(ev)
     assert not itens[PATAMAR][0], itens[PATAMAR]
     assert not itens[JANELA][0], itens[JANELA]
+    # Índice e causa: com uma lista de milhares de amostras, "alguma está
+    # quebrada" não é achável.
+    for item in (PATAMAR, JANELA):
+        assert _detalhe_nomeia(itens[item][1], 'amostra'), itens[item]
+
+
+def test_o_detalhe_diz_o_INDICE_da_amostra_quebrada(julga):
+    """Com milhares de amostras, "alguma está quebrada" não é achável. A
+    quebrada aqui é a de índice 3, e o detalhe tem de dizer 3 — por isso o
+    índice é conferido num caso próprio, e não por um '0' que casaria com
+    qualquer '0.0' da mensagem."""
+    boa = {'topico': TOPICO_FINAL, 't': 20.0, 'v': PATAMAR_VIVO, 'wz': 0.0}
+    ev = dict(_evidencia_boa(), amostras=[dict(boa), dict(boa), dict(boa),
+                                          {'topico': TOPICO_FINAL, 't': 21.0,
+                                           'v': None, 'wz': 0.0}])
+    itens = julga.avalia(ev)
+    assert not itens[PATAMAR][0], itens[PATAMAR]
+    assert _detalhe_nomeia(itens[PATAMAR][1], 'amostra', '3'), itens[PATAMAR]
 
 
 def test_uma_amostra_boa_nao_e_salva_por_uma_quebrada_ao_lado(julga):
@@ -573,5 +650,8 @@ def test_uma_amostra_boa_nao_e_salva_por_uma_quebrada_ao_lado(julga):
     ev = _evidencia_boa()
     ev['amostras'] = [None, {'topico': TOPICO_FINAL, 't': 20.0,
                              'v': PATAMAR_VIVO, 'wz': 0.0}]
-    ok, detalhe = julga.avalia(ev)[PATAMAR]
-    assert not ok, detalhe
+    itens = julga.avalia(ev)
+    assert not itens[PATAMAR][0], itens[PATAMAR]
+    assert not itens[JANELA][0], itens[JANELA]
+    for item in (PATAMAR, JANELA):
+        assert _detalhe_nomeia(itens[item][1], 'amostra'), itens[item]
