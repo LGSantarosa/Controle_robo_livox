@@ -10491,3 +10491,44 @@ topo depois do corpo.
 
 Suíte inteira: **1354 passed**. As três pastas anteriores ficam intactas, e
 `5391d0e` não foi amendado.
+
+## 🧾 2026-09-24 (PC de dev, sem subir nada) — A PASTA CONTRADIZIA O ARQUIVO QUE ELA ASSINA
+
+A auditoria da quarta corrida (`5cee221`, `~/etapa6/20260924_114704`) confirmou
+tudo o que importava — manifesto de 40 arquivos fechando com `sha256sum -c` 0,
+bag com 89 300 mensagens em 26,174 s abrindo no `ros2 bag info`, gravador
+encerrado limpo sem `reindex`, nenhum processo marcado sobrando — e ainda assim
+o passo 6 não podia fechar.
+
+**O defeito:** `resultado.csv:17` declarava `0` linhas `ERROR/FATAL/died`,
+enquanto o `launch.log:624` **assinado pelo mesmo manifesto** tinha cinco
+`process has died ... exit code 1` (`heading_controller`, `placa_simulada`,
+`compensador_rumo`, `path_follower`, `freeze_capture`). A contagem acontecia
+antes do `limpa`; essas linhas nascem durante o teardown. Nada corrompido — mas
+a pasta afirmava algo falso sobre um arquivo que ela própria assina, e é
+exatamente o tipo de contradição que faz duvidar também do que está certo.
+
+**O conserto: dois exames, três números.** Snapshot `launch_execucao.log`
+tirado antes de qualquer sinal, e o `launch.log` final examinado **depois** do
+`limpa`. O resultado passa a registrar (1) execução antes da limpeza, (2) total
+do `launch.log` final assinado, (3) trecho após o snapshot de pré-limpeza.
+
+**Por fronteira de POSIÇÃO, não por diff.** O recorte do trecho posterior usa a
+quantidade de linhas do snapshot (`awk -F: '($1+0) > (n+0)'`). Comparação
+textual anularia duas linhas de erro idênticas, e sumiria justamente a repetida.
+O rótulo também é deliberado: **"após o snapshot"**, nunca "causado pelo sinal"
+— o que se mediu foi posição no arquivo; atribuir causa a cada linha seria
+afirmar mais do que a fronteira prova. Há teste travando a palavra.
+
+**Os cinco encerramentos viraram dívida separada** (decisão 057): são falhas de
+teardown, não erros durante a execução; **não** foram declarados aceitáveis para
+hardware real; consertá-los alcança `robot_base/`, `robot_nav/` e nós existentes
+— os pacotes que a 056 declara intocados —, então fica fora do gate desta etapa.
+O critério de pronto é esses nós saírem com código 0. A 056 segue 🟡 proposta
+até o passo 8.
+
+Quatro travas novas no `test_valida_etapa6.py`: a ordem (snapshot → `limpa` →
+exame final → manifesto), os três rótulos exatos, o recorte por posição, e os
+quatro arquivos novos entrando no escopo assinado. Suíte focada da etapa 6:
+**56 passed, 7 skipped**. `5cee221` e as quatro pastas ficam intactos — a quinta
+corrida só sai com o diff auditado. O passo 7 permanece fechado.

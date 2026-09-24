@@ -706,3 +706,67 @@ def test_a_conferencia_previa_e_do_escopo_nao_do_manifesto_feito():
     texto = open(WRAPPER).read()
     for exigido in ('perfil_nav2.yaml', 'perfil_collision_monitor.yaml', 'bag'):
         assert exigido in texto, exigido
+
+
+# ─── os dois exames do launch.log ────────────────────────────────────────────
+#
+# 🔴 Na quarta corrida (20260924_114704) o resultado dizia "0 linhas
+# ERROR/FATAL/died" porque contava ANTES de `limpa`, enquanto o `launch.log`
+# ASSINADO terminava com cinco `process has died ... exit code 1` escritos no
+# teardown. A pasta contradizia o arquivo que ela mesma assina. Estas travas
+# existem para que a ordem não volte a se perder.
+
+def _indice_unico(codigo, trecho):
+    alvos = [i for i, l in enumerate(codigo) if trecho in l]
+    assert len(alvos) == 1, f'esperava UMA linha com {trecho!r}, achei {alvos}'
+    return alvos[0]
+
+
+def test_o_launch_log_e_examinado_antes_e_depois_da_limpeza():
+    """Snapshot < `limpa` < exame do log final < geração do manifesto."""
+    codigo = _codigo_do_wrapper()
+    snapshot = _indice_unico(codigo, 'cp "$SAIDA/launch.log"')
+    queda = min(i for i, l in enumerate(codigo) if l.strip() == 'limpa')
+    final = _indice_unico(codigo, '> "$SAIDA/launch_erros_final.txt"')
+    geracao = _indice_da_geracao(codigo)
+    assert snapshot < queda < final < geracao, (snapshot, queda, final, geracao)
+
+
+def test_o_resultado_registra_os_tres_numeros():
+    """Dois números não bastam: sem o total do arquivo final, a pasta continua
+    sem dizer quantos erros há no `launch.log` que ela assina."""
+    codigo = _codigo_do_wrapper()
+    rotulos = [l for l in codigo if 'anota "ERROR/FATAL/died' in l]
+    assert len(rotulos) == 3, rotulos
+    texto = ' '.join(rotulos)
+    assert 'durante a execução (antes da limpeza)' in texto, texto
+    assert 'no launch.log final (o assinado)' in texto, texto
+    # ⚠️ "após o snapshot" e NÃO "causado pelo sinal": a fronteira prova
+    # posição no arquivo, não causa de cada linha.
+    assert 'após o snapshot de pré-limpeza' in texto, texto
+    assert 'causad' not in texto, texto
+
+
+def test_o_trecho_posterior_sai_da_fronteira_de_posicao_nao_de_diff():
+    """Por diferença textual, duas linhas de erro idênticas se anulariam e a
+    repetida sumiria do relatório. O recorte é pela contagem de linhas do
+    snapshot."""
+    codigo = _codigo_do_wrapper()
+    recorte = _indice_unico(codigo, '> "$SAIDA/launch_erros_apos_snapshot.txt"')
+    assert 'awk' in codigo[recorte - 1], codigo[recorte - 1]
+    assert 'LINHAS_SNAPSHOT' in codigo[recorte - 1], codigo[recorte - 1]
+    assert not [l for l in codigo if 'diff ' in l and 'launch' in l]
+    fronteira = _indice_unico(codigo, 'LINHAS_SNAPSHOT="$(wc -l')
+    assert fronteira < recorte, (fronteira, recorte)
+
+
+def test_os_tres_relatorios_entram_no_manifesto():
+    """Eles nascem em `$SAIDA` antes do escopo, e o escopo só exclui três
+    nomes — então basta não terem sido excluídos."""
+    codigo = _codigo_do_wrapper()
+    geracao = _indice_da_geracao(codigo)
+    for arquivo in ('launch_erros_execucao.txt', 'launch_erros_final.txt',
+                    'launch_erros_apos_snapshot.txt', 'launch_execucao.log'):
+        escrita = [i for i, l in enumerate(codigo) if arquivo in l]
+        assert escrita and max(escrita) < geracao, (arquivo, escrita, geracao)
+        assert not [l for l in codigo if f'! -name {arquivo}' in l], arquivo

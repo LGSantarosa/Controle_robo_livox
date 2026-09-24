@@ -177,12 +177,38 @@ while IFS= read -r linha; do
   esac
 done < "$SAIDA/confere.log"
 
-erros_do_launch() {
-  grep -nE "\[ERROR\]|\[FATAL\]|process has died" "$1" > "$2"
-  anota "linhas ERROR/FATAL/died em $(basename "$1")" ANOTADO \
-    "$(wc -l < "$2") ($(basename "$2"))"
-}
-erros_do_launch "$SAIDA/launch.log" "$SAIDA/launch_erros.txt"
+# ── ERROR/FATAL/died no launch, em DOIS momentos e TRÊS números ──────────────
+#
+# 🔴 O DEFEITO QUE ISTO CONSERTA foi medido na quarta corrida
+# (20260924_114704): a contagem era UMA só, feita AQUI — antes de `limpa` —, e
+# gravava "0" no `resultado.csv`. Só que o `limpa` derruba o grupo, o launch
+# escreve mais linhas, e o `launch.log` que o `SHA256SUMS` assina terminou com
+# cinco `process has died ... exit code 1`. A pasta assinava um arquivo que
+# contradizia o próprio resultado dela. Nada estava errado na integração em
+# execução — mas evidência que se contradiz não serve de evidência.
+#
+# A regra passou a ser: DOIS exames, TRÊS números no resultado.
+#
+#   · snapshot `launch_execucao.log`, tirado aqui, antes de qualquer sinal —
+#     é o que responde "houve erro COM A PILHA DE PÉ?";
+#   · `launch.log` final, examinado depois de `limpa` — é o arquivo que o
+#     manifesto assina, e o número dele tem de ser o número dele;
+#   · o trecho "após o snapshot de pré-limpeza", recortado pela FRONTEIRA DE
+#     POSIÇÃO (a quantidade de linhas do snapshot), nunca por diferença de
+#     texto: duas linhas idênticas se anulariam numa comparação textual, e
+#     sumiria justamente a linha repetida que interessa.
+#
+# ⚠️ O rótulo é "após o snapshot", não "causado pelo sinal": o que se mediu é
+# POSIÇÃO no arquivo. Atribuir causa a cada linha seria afirmar mais do que a
+# fronteira prova.
+PADRAO_ERRO="\[ERROR\]|\[FATAL\]|process has died"
+
+cp "$SAIDA/launch.log" "$SAIDA/launch_execucao.log"
+LINHAS_SNAPSHOT="$(wc -l < "$SAIDA/launch_execucao.log")"
+grep -nE "$PADRAO_ERRO" "$SAIDA/launch_execucao.log" \
+  > "$SAIDA/launch_erros_execucao.txt"
+anota "ERROR/FATAL/died durante a execução (antes da limpeza)" ANOTADO \
+  "$(wc -l < "$SAIDA/launch_erros_execucao.txt") (launch_erros_execucao.txt)"
 
 # ── finalização DIRIGIDA do gravador, ANTES de derrubar o resto ──────────────
 #
@@ -259,6 +285,16 @@ fi
 # ── derrubar e provar que não sobrou órfão ────────────────────────────────────
 limpa
 python3 "$V/processos.py" foto "$SAIDA/depois_da_limpeza.csv"
+
+# ── o segundo exame: o launch.log FINAL, o que o manifesto assina ────────────
+# (o porquê dos dois exames está no bloco `PADRAO_ERRO`, lá em cima)
+grep -nE "$PADRAO_ERRO" "$SAIDA/launch.log" > "$SAIDA/launch_erros_final.txt"
+awk -F: -v n="$LINHAS_SNAPSHOT" '($1 + 0) > (n + 0)' \
+  "$SAIDA/launch_erros_final.txt" > "$SAIDA/launch_erros_apos_snapshot.txt"
+anota "ERROR/FATAL/died no launch.log final (o assinado)" ANOTADO \
+  "$(wc -l < "$SAIDA/launch_erros_final.txt") (launch_erros_final.txt)"
+anota "ERROR/FATAL/died após o snapshot de pré-limpeza" ANOTADO \
+  "$(wc -l < "$SAIDA/launch_erros_apos_snapshot.txt") (launch_erros_apos_snapshot.txt)"
 
 # ── o bag tem de FECHAR SOZINHO, e ser legível ───────────────────────────────
 #
