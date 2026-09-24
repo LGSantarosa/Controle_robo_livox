@@ -1,0 +1,92 @@
+# Arbitragem de comando do ROBÔ 3 na PILHA — quem manda quando dois falam junto.
+#
+# Este arquivo existe porque nenhum dos dois muxes que já havia servia inteiro
+# ao robô 3, e a diferença não dava erro: dava SILÊNCIO (etapa 6, decisão 056,
+# D3).
+#
+#   - `robot_motion/config/twist_mux.yaml` (o mux do robô 2) não tem
+#     `dpad_vel` — o direcional que a etapa 5 acabou de criar sumiria na
+#     primeira integração;
+#   - `robot_nav/config/twist_mux_robo3.yaml` (o mux do CONTROLE FÍSICO do
+#     robô 3, que o `controle_robo3.launch.py` sobe) não tem `auto_vel` nem
+#     `unstuck_vel` — com ele, a autonomia e o desencalhe publicariam para o
+#     vazio, e o sintoma seria robô parado com o Nav2 dizendo que está
+#     navegando.
+#
+# 🔴 O NOME É LONGO DE PROPÓSITO. `twist_mux_robo3.yaml` já existe, em
+# `robot_nav/config/`, com papel diferente — e ele fica INTOCADO. Dois arquivos
+# de mesmo nome curto e papéis diferentes deixariam a próxima pessoa sem saber
+# qual é o canônico.
+#
+# A cadeia, e onde este nó entra:
+#
+#     direcional (LB+dpad)  ──/dpad_vel─────┐
+#     joystick (analógico)  ──/joy_vel──────┤  twist_mux
+#     path_follower (ré)    ──/unstuck_vel──┤      │
+#     collision_monitor     ──/auto_vel─────┘      ▼  /cmd_vel_out
+#                                           compensador_rumo
+#                                                  ▼
+#                                          /cmd_vel_bruto (Gazebo)
+#
+# ⚠️ O que este arquivo NÃO decide: canal humano novo. `key_vel` e `web_vel`
+# ficam FORA (D4), e ficam fora explicitamente — não por esquecimento e não por
+# herança do mux do robô 2. Canal humano novo no robô 3 exige decisão própria,
+# porque cada um deles é uma mão a mais podendo dirigir o robô de outra sala.
+twist_mux:
+  ros__parameters:
+    use_sim_time: false        # a launch sobrescreve no simulador
+
+    # 🔴 TwistStamped na cadeia inteira. Casa com o `publish_stamped_twist` do
+    # teleop do robô 3, com o TwistStamped do `dpad_reto`, com a
+    # `placa_simulada` e com o `hoverboard_base_controller`. Valor errado aqui
+    # não dá erro de subida: o DDS rejeita por type hash e o mux publica no
+    # vazio, sem ninguém consumir — a mesma família de falha muda que este
+    # arquivo inteiro existe para evitar.
+    use_stamped: true
+
+    topics:
+      # --- HUMANO: sempre vence, e nunca é filtrado por nada ---
+      #
+      # 🎮 O DIRECIONAL ACIMA DO ANALÓGICO (110 > 100), e isso é decisão da
+      # etapa 5: o dpad é reta PURA, e ele existe para o operador pedir uma
+      # coisa que o analógico não consegue dar sem derivar de lado. Enquanto o
+      # direcional está apertado, ele manda.
+      #
+      # ⚠️ Os dois canais humanos têm FREIO DE MÃO físico: o teleop só publica
+      # com o LB apertado. Soltou, o canal emudece, o `timeout` expira e o mux
+      # devolve o comando para quem vier a seguir.
+      direcional:
+        topic: dpad_vel
+        timeout: 0.3           # soltou o dpad -> em 0,3 s o analógico volta
+        priority: 110
+      joystick:
+        topic: joy_vel
+        timeout: 0.5           # soltou o LB por 0,5 s -> devolve o comando
+        priority: 100
+
+      # --- AUTONOMIA, e o canal que FURA o reflexo ---
+      #
+      # 🔴 O DESENCALHE TEM DE ESTAR AQUI (correção da revisão de 23-09). O
+      # perfil do robô 3 CONFIGURA a ré e o pivô de desencalhe (`perfil.py`:
+      # `re_largura`, `re_recuo_para_choque`, `desencalhe_pivo_folga`), e quem
+      # publica em `/unstuck_vel` é o `path_follower`. Sem a faixa, tudo isso
+      # ficaria configurado, silencioso e inoperante — configurado sem efeito é
+      # pior que ausente, porque parece pronto.
+      #
+      # Ele entra DEPOIS do `collision_monitor`, então o reflexo não o vê e não
+      # o veta (decisão 025): o `PolygonStop` é cego para DIREÇÃO e zeraria
+      # até o comando que AFASTA o robô da parede que o prendeu.
+      #
+      # ⚠️ 30 é abaixo dos dois humanos DE PROPÓSITO. Um desencalhe automático
+      # que o operador não consegue interromper é pior que um robô parado.
+      desencalhe:
+        topic: unstuck_vel
+        timeout: 0.5
+        priority: 30
+      # Prioridade mais baixa, e o `timeout` é o que faz o robô PARAR quando a
+      # navegação morre: sem publicação nova em 0,5 s o mux deixa de repetir a
+      # fonte e as rodas param. Comando velho é comando perigoso.
+      autonomia:
+        topic: auto_vel
+        timeout: 0.5
+        priority: 10

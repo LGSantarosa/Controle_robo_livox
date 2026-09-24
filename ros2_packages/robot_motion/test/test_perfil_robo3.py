@@ -91,10 +91,16 @@ def _declarados_do_seguidor():
 def test_robo3_monta():
     p = _p3()
     assert set(p) == {'nav2', 'nav2_rewrites', 'collision_monitor',
-                      'collision_monitor_rewrites', 'path_follower'}
+                      'collision_monitor_rewrites', 'twist_mux',
+                      'path_follower'}
     # A mesma base do robô 2: o robô 3 é sobreposição, não cópia.
     assert p['nav2'] == os.path.join(PKG, 'config', 'nav2.yaml')
     assert p['collision_monitor'] == os.path.join(PKG, 'config', 'collision_monitor.yaml')
+    # 🔴 O mux é a exceção, e é ARQUIVO PRÓPRIO (etapa 6, D3): o que muda são as
+    # próprias faixas. E não é o `robot_nav/config/twist_mux_robo3.yaml` — esse
+    # é o mux do controle FÍSICO do robô 3, e fica intocado.
+    assert p['twist_mux'] == os.path.join(PKG, 'config',
+                                          'twist_mux_pilha_robo3.yaml')
 
 
 def test_robo3_sem_share_base_recusa():

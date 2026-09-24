@@ -9,7 +9,13 @@ mora o artefato de geometria), e devolve caminhos e dicionários. A `pilha.launc
     nav2_rewrites               {caminho: valor} a reescrever nesse YAML ({} = nenhuma)
     collision_monitor           o YAML do reflexo
     collision_monitor_rewrites  {caminho: valor} a reescrever nele ({} = nenhuma)
+    twist_mux                   o YAML do árbitro de comando (arquivo INTEIRO)
     path_follower               sobreposição dos defaults do nó ({} = nenhuma)
+
+O `twist_mux` é arquivo inteiro e não reescrita porque o que muda entre os dois
+robôs são as PRÓPRIAS FAIXAS — o robô 3 tem `dpad_vel` e não tem `key_vel` nem
+`web_vel`. Reescrever folha por folha aqui seria descrever um arquivo dentro de
+outro; e faixa que não existe não dá erro, dá silêncio (etapa 6, D3).
 
 Reescrita é por CAMINHO COMPLETO (tupla de chaves), aplicada por
 `aplica_reescritas` — os costmaps são nós dentro dos servidores do Nav2, e
@@ -44,6 +50,12 @@ def parametros(robo: int, share_motion: str, *, share_base: str = None) -> dict:
             'collision_monitor': os.path.join(share_motion, 'config',
                                               'collision_monitor.yaml'),
             'collision_monitor_rewrites': {},
+            # 🔴 O MUX DO ROBÔ 2 É O `twist_mux.yaml`, exatamente este, e o
+            # caminho é o valor do parâmetro que o nó recebe: apontar para
+            # outro arquivo aqui, ainda que de conteúdo igual, quebraria a
+            # comparação byte a byte que protege o robô que funciona.
+            'twist_mux': os.path.join(share_motion, 'config',
+                                      'twist_mux.yaml'),
             'path_follower': {},
         }
     if type(robo) is int and robo == 3:
@@ -119,6 +131,14 @@ def _robo3(share_motion, share_base):
         'nav2_rewrites': nav2_rw,
         'collision_monitor': os.path.join(share_motion, 'config', 'collision_monitor.yaml'),
         'collision_monitor_rewrites': cm_rw,
+        # Mux PRÓPRIO, e de nome inequívoco (D3): o do robô 2 não tem
+        # `dpad_vel`, e o do controle físico do robô 3
+        # (`robot_nav/config/twist_mux_robo3.yaml`, que fica intocado) não tem
+        # `auto_vel` nem `unstuck_vel`. Faltar faixa não dá erro: a autonomia e
+        # o desencalhe publicariam para o vazio, com o Nav2 dizendo que está
+        # navegando.
+        'twist_mux': os.path.join(share_motion, 'config',
+                                  'twist_mux_pilha_robo3.yaml'),
         # float explícito: parâmetro double do ROS recebendo int derruba o nó.
         'path_follower': {k: float(round(v, 6)) for k, v in seguidor.items()},
     }

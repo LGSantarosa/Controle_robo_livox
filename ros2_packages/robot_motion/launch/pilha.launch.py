@@ -301,7 +301,11 @@ def generate_launch_description():
 
     nav2_params = destinos['nav2']
     amcl_params = os.path.join(pkg, 'config', 'localizacao_amcl.yaml')
-    mux_params = os.path.join(pkg, 'config', 'twist_mux.yaml')
+    # 🔴 O MUX VEM DO PERFIL, e não de um caminho escrito aqui (etapa 6, D3):
+    # as FAIXAS mudam com o robô, e faixa que não existe não dá erro — dá
+    # silêncio. Para o robô 2 o perfil devolve exatamente o `twist_mux.yaml` de
+    # sempre.
+    mux_params = perfil_robo['twist_mux']
     cm_params = destinos['collision_monitor']
     mov_params_real = os.path.join(pkg, 'config', 'movimentacao.yaml')
     mov_params_sim = os.path.join(pkg, 'config', 'movimentacao_sim.yaml')

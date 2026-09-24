@@ -39,10 +39,18 @@ def _perfil():
 def test_robo2_devolve_os_caminhos_de_hoje():
     share = '/qualquer/share/robot_motion'
     p = _perfil().parametros(2, share)
+    # Conjunto EXATO, e é isso que faz dele contrato: chave nova no perfil tem
+    # de passar por aqui. O `twist_mux` entrou na etapa 6 (D3), quando as
+    # FAIXAS do árbitro deixaram de ser as mesmas nos dois robôs.
     assert set(p) == {'nav2', 'nav2_rewrites', 'collision_monitor',
-                      'collision_monitor_rewrites', 'path_follower'}
+                      'collision_monitor_rewrites', 'twist_mux',
+                      'path_follower'}
     assert p['nav2'] == os.path.join(share, 'config', 'nav2.yaml')
     assert p['collision_monitor'] == os.path.join(share, 'config', 'collision_monitor.yaml')
+    # 🔴 O mux do robô 2 é o de sempre, e o caminho é o valor do parâmetro:
+    # apontar para outro arquivo aqui quebraria a comparação byte a byte que
+    # protege o robô que funciona (gate §6 da etapa 6).
+    assert p['twist_mux'] == os.path.join(share, 'config', 'twist_mux.yaml')
 
 
 def test_robo2_nao_reescreve_nem_sobrepoe_nada():

@@ -500,8 +500,15 @@ def test_o_mux_do_robo3_tem_as_quatro_faixas(monkeypatch):
     arquivo = _params(ctx, mux[0])[0]
     assert os.path.basename(arquivo) == 'twist_mux_pilha_robo3.yaml', arquivo
     with open(arquivo) as f:
-        topicos = yaml.safe_load(f)['twist_mux']['ros__parameters']['topics']
-    assert {v['topic']: v['priority'] for v in topicos.values()} == FAIXAS_ROBO3
+        params = yaml.safe_load(f)['twist_mux']['ros__parameters']
+    assert {v['topic']: v['priority']
+            for v in params['topics'].values()} == FAIXAS_ROBO3
+    # 🔴 E `use_stamped: true`, que é contrato e não detalhe. `false` aqui não
+    # dá erro de subida nenhum: o DDS rejeita por type hash e o mux publica no
+    # VAZIO — o robô fica parado com a pilha inteira de pé, que é a mesma
+    # família de falha muda da faixa que não existe. Sem esta linha alguém
+    # trocaria o valor com a suíte inteira verde.
+    assert params['use_stamped'] is True, params.get('use_stamped')
 
 
 def test_o_mux_do_robo2_nao_muda(monkeypatch):

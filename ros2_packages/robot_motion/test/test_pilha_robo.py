@@ -163,7 +163,8 @@ def test_a_pilha_monta_pelo_perfil(monkeypatch, tmp_path):
     """Troca o perfil e confere que o que os nós recebem trocou junto."""
     nav2 = tmp_path / 'nav2_do_perfil.yaml'
     cm = tmp_path / 'cm_do_perfil.yaml'
-    for f in (nav2, cm):
+    mux = tmp_path / 'mux_do_perfil.yaml'
+    for f in (nav2, cm, mux):
         f.write_text('{}\n')
     chamadas = []
 
@@ -171,6 +172,10 @@ def test_a_pilha_monta_pelo_perfil(monkeypatch, tmp_path):
         chamadas.append((robo, share))
         return {'nav2': str(nav2), 'nav2_rewrites': {},
                 'collision_monitor': str(cm), 'collision_monitor_rewrites': {},
+                # 🔄 Etapa 6, passo 5: o mux passou a vir do perfil, porque as
+                # FAIXAS mudam com o robô. Entra aqui como os outros — se a
+                # launch voltar a escrever o caminho à mão, este teste cai.
+                'twist_mux': str(mux),
                 'path_follower': {'passagem_margem': 0.99}}
 
     monkeypatch.setattr(_perfil(), 'parametros', falso)
@@ -181,6 +186,7 @@ def test_a_pilha_monta_pelo_perfil(monkeypatch, tmp_path):
         for no in _nos(ld, nome):
             assert _params(ctx, no)[0] == str(nav2), nome
     assert _params(ctx, _nos(ld, 'collision_monitor')[0])[0] == str(cm)
+    assert _params(ctx, _nos(ld, 'twist_mux')[0])[0] == str(mux)
     assert _params(ctx, _nos(ld, 'path_follower')[0])[-1] == {'passagem_margem': 0.99}
 
 

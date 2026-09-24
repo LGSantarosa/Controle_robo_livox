@@ -10249,5 +10249,60 @@ YAMLs do robô 2.
 
 **O que isto NÃO prova:** nada roda. Percorrer a descrição é aviso cedo — o
 grafo vivo, o `use_sim_time`, o `footprint` nos costmaps e o objetivo curto são
-os passos 6 e 7, com aviso prévio e "pode". E o `install/` deste PC ainda tem a
-launch antiga: quem for subir de verdade precisa reconstruir o pacote.
+os passos 6 e 7, com aviso prévio e "pode".
+
+> 🔧 **Correção, no passo 5 (mesmo dia):** eu fechei esta entrada dizendo que o
+> `install/` deste PC tinha a launch antiga e que subir exigiria reconstruir o
+> pacote. **Está errado** — o `install/` é `--symlink-install`, e
+> `install/.../launch/pilha.launch.py` aponta, via `build/`, para o arquivo do
+> fonte. Editar a launch já basta. O que **de fato** precisa de rebuild é
+> arquivo **novo**, que não tem symlink ainda — foi o caso do
+> `twist_mux_pilha_robo3.yaml` no passo 5.
+
+---
+
+## 🎚️ 2026-09-24 (PC de dev, robô DESLIGADO) — O MUX VIRA CHAVE DO PERFIL: PASSO 5 DA ETAPA 6
+
+Passo 5 do `PLANO_ETAPA6_ROBO3.md` §7, em cima de `7ca5afe`. Sem Gazebo, sem
+hardware: só arquivo de configuração e descrição de launch.
+
+**Nasceu `robot_motion/config/twist_mux_pilha_robo3.yaml`**, com as quatro
+faixas exatas — `dpad_vel` 110, `joy_vel` 100, `unstuck_vel` 30, `auto_vel` 10 —
+e `use_stamped: true`. Sem `key_vel` e sem `web_vel`, e a ausência está escrita
+no arquivo como decisão (D4), não como esquecimento: canal humano novo no robô 3
+é escopo próprio e não entra por herança do mux do robô 2.
+
+**O mux virou chave do perfil** (`perfil['twist_mux']`), e é arquivo INTEIRO em
+vez de reescrita porque o que muda entre os robôs são as próprias faixas —
+reescrever folha por folha aqui seria descrever um arquivo dentro de outro. O
+perfil 2 devolve exatamente `config/twist_mux.yaml`, o de sempre; o perfil 3
+devolve o arquivo novo. A launch parou de escrever o caminho à mão e passou a
+consumir só a chave.
+
+**`robot_nav/config/twist_mux_robo3.yaml` não foi tocado** — é o mux do controle
+FÍSICO do robô 3, papel diferente, e é por isso que o arquivo novo tem nome
+longo: dois arquivos de mesmo nome curto deixariam a próxima pessoa sem saber
+qual é o canônico.
+
+**Três testes acompanharam a chave nova.** Os dois que fecham o conjunto de
+chaves do perfil (`test_perfil.py`, `test_perfil_robo3.py`) passaram a exigir o
+`twist_mux` — o conjunto exato é o contrato, e chave nova tem de passar por lá.
+E o `test_a_pilha_monta_pelo_perfil`, que monta um perfil falso, ganhou o mux no
+dicionário **e uma asserção nova**: o nó tem de receber o mux do perfil, senão a
+launch pode voltar a escrever o caminho à mão sem ninguém notar.
+
+**Tropeço mecânico, e vale registrar porque custa minutos:** o arquivo novo não
+aparecia no `share/`, e o teste ficava vermelho por um motivo que não era o
+contrato. O `install/` é `--symlink-install` — arquivo **existente** é symlink
+para o fonte (editar já basta), mas arquivo **novo** só ganha symlink com
+`colcon build --packages-select robot_motion`. Foi isso, não o YAML.
+
+**Provas.** Suíte estática inteira **verde**, e o gate §6(c) refeito agora que o
+mux é parâmetro de nó: parâmetros de cada nó do robô 2 **idênticos byte a byte**
+aos de `1f49981` nas duas bordas, com o `twist_mux.yaml` aparecendo na
+comparação. Gate §6(a): o diff não toca `robot_base/`, `robot_nav/` nem os YAMLs
+do robô 2.
+
+**O que isto NÃO prova:** que existe UM mux no grafo com as quatro faixas
+**vivas**. Aqui o que se provou é que o arquivo tem as faixas e que o nó recebe o
+arquivo. `ros2 param get` no mux de pé é o passo 6.
