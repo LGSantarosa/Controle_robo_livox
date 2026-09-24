@@ -10635,3 +10635,129 @@ ela, não se prova que o objetivo não nasceu dentro da tolerância) e a recusa
 explícita de um quarto critério de deslocamento.
 
 Nenhum código escrito. O passo 7 abre quando o dono pedir.
+
+## 🚗 2026-09-24 (PC de dev, GAZEBO **COM JANELA**, robô DESLIGADO) — O ROBÔ 3 RECEBE OBJETIVO E ANDA — E A PLACA HERDADA COMEÇA O ARCO
+
+Duas corridas **exploratórias**, em `~/etapa7-explora/`. 🔴 **Nenhuma delas fecha
+o passo 7**: o contrato do §4.6.1 exige três critérios medidos, e aqui o
+instrumento foi o olho do dono com Gazebo e RViz abertos. O juiz
+(`tools/valida_etapa7/julga.py`) ficou estacionado em `f2f8f3e`, com os 77
+vermelhos de evidência inválida ainda abertos.
+
+**Por que sair da ordem:** o dono pediu a corrida antes do juiz — ver o robô
+andar vale mais, agora, do que refinar quem julga. Estava certo: em duas horas
+apareceram quatro defeitos que nenhum teste de bancada teria mostrado.
+
+### Primeira corrida (`20260924_154659`) — a minha falhou, a dele andou
+
+O wrapper esperou 180 s e **derrubou tudo sem mandar objetivo**, com os três nós
+do Nav2 **`active [3]`** no `lifecycle.txt`. A causa é minha e é besta:
+`ros2 action list --spin-time 2` — **este Jazzy não aceita `--spin-time` no
+`action list`** (só `-t` e `-c`). O comando saía com código 2, o `2>/dev/null`
+engolia a mensagem, a condição nunca passava e o `tf2_echo` jamais rodou.
+**Erro descartado é erro que mente**, e este mentiu por 180 s.
+
+O que se mexeu na tela foram **dois goals que o dono mandou pelo RViz**, ambos
+`Goal succeeded`. O `seguidor_*.csv` guardou:
+
+| medida | valor |
+|---|---|
+| amostras / duração | 532 em **32,75 s** simulados |
+| percorrido / líquido | **7,003 m** / **5,714 m** |
+| estado / modo | `seguindo`/`normal` o tempo inteiro — **zero desencalhe** |
+| velocidade alvo | média **0,491 m/s** (teto do perfil: 0,5) |
+
+**Quatro defeitos, os quatro registrados porque custam caro de reachar:**
+
+1. `--spin-time` inválido no `action list` (acima);
+2. **o robô NÃO nasce em (0,0), nasce em (2,0; 5,0)** — o default `x=0 y=0` é do
+   `sim_robo3.launch.py`, mas a `pilha.launch.py` passa outra pose. Meu goal
+   "1 m à frente" (`x=1, y=0`) era, na verdade, **~5 m atravessando o mapa**. A
+   corrida teria medido isso chamando de um metro;
+3. `ros2 topic echo --once` deste Jazzy **fecha a mensagem com `---`**, que em
+   YAML abre um segundo documento: `yaml.safe_load` recusa com
+   `ComposerError: expected a single document in the stream`. O wrapper abortaria
+   antes de mandar o objetivo (agora é `safe_load_all`, com **exatamente um**
+   documento exigido — duas poses no fluxo falham em vez de adivinhar qual é);
+4. a saída antecipada **pulou o encerramento dirigido do gravador**: sobraram
+   **1,7 GB** de `bag_0.mcap` **sem `metadata.yaml`**, que o `ros2 bag info` não
+   abre. Agora `fecha_gravador` é função idempotente dentro do
+   `trap 'fecha_gravador; limpa' EXIT`.
+
+Mais dois consertos de referencial: o objetivo passou a ser **relativo à pose
+viva** (`goal = pose + 1 m no rumo atual`, yaw tirado do quatérnio, orientação
+preservada, conferido contra yaw 0/90/180/−90), e `localizacao:=fixa` virou
+**explícita** na chamada — o `/Odometry` está em `odom` e o goal vai em `map`, e
+eles só coincidem porque `map→odom` é identidade na localização fixa. Depender
+desse default repetiria exatamente o erro do spawn.
+
+### Segunda corrida (`20260924_160148`) — objetivo automático, `SUCCEEDED`
+
+| | |
+|---|---|
+| pose inicial lida | **(2,000; 5,000)**, yaw 0 |
+| objetivo calculado | **(3,000; 5,000)** — 1 m à frente, orientação preservada |
+| resultado da ação | `Goal accepted` → **`SUCCEEDED`** (425 feedbacks) |
+| pose final | (2,778; 4,912) → **0,2387 m do alvo** |
+| deslocamento / duração | **0,783 m** em **~3,3 s** simulados |
+| desvio lateral máximo | **9,56 cm** para a direita; rumo foi a **−10,4°** e voltou a **+7,9°** |
+
+⚠️ Ele encerrou ao **entrar na tolerância de 0,25 m**, não ao parar no centro —
+e essa tolerância é **herdada do robô 2**. "Chegou" aqui é "entrou no raio".
+
+**Defeito meu que a própria evidência delatou:** o `trajeto.csv` saiu **vazio** e
+o wrapper reprovou honestamente ("nenhuma amostra"). A navegação durou 3,3 s
+simulados e cada volta do meu laço de amostragem gasta até 10 s no
+`ros2 topic echo --once` — acabou antes da primeira amostra. O conserto não é
+apertar o laço: é **ler do bag / do `seguidor_*.csv`**, que já têm tudo. Fica
+para mudança separada.
+
+### A leitura OFFLINE do bag, e ela corrige a hipótese que eu tinha
+
+A pergunta do dono foi: *o Nav2 dele não tem relação com o do robô 2?* Tem —
+**é o mesmo**. O perfil 3 troca geometria, `footprint`/`padding`, os polígonos e
+tempos do monitor de colisão, os derivados geométricos do seguidor e o mux; mas
+`perfil_robo3.yaml:54+` declara **herdados provisórios** a velocidade, o
+lookahead, a tolerância de chegada, os pesos do planner/suavizador e o
+`desired_linear_vel` — este último com a origem escrita: *"robô 2: controlador do
+Nav2 sintonizado para a dinâmica do robô 2"*. Fecham nas etapas 8 e 10.
+
+Eu atribuí o arco ao controlador herdado. **O bag desmente a ordem dos fatos.**
+Na janela do objetivo, 68 amostras comparando `/cmd_vel_bruto` (o pedido) com
+`/hoverboard_base_controller/cmd_vel` (o entregue):
+
+- o pedido começou **exatamente** em `v=0,500, wz=0` — reta pura;
+- a placa **segurou zero por ~0,30 s** (a `latencia`);
+- e então entregou **`v=0,3668, wz=−0,3746`** — curva à direita que **ninguém
+  pediu**;
+- **só depois** o controlador passou a pedir `wz` positivo, corrigindo;
+- o pedido terminou em 38,60 s e a **saída da placa continuou até 39,45 s**
+  (o `atraso_desliga`);
+- entrada e saída divergiram em **todas** as 68 amostras.
+
+Ou seja: **o arco começou no modelo simulado do atuador, não na decisão de
+navegação.** E isso está escrito no código, sem surpresa nenhuma —
+`placa_simulada.py:163` injeta `curvatura_frente −0,817 1/m` (raio 1,22 m,
+medida no robô **2**), e a própria placa avisa no log ao subir
+(`placa_simulada.py:226`): **"Não espere reta deste robô."** O
+`sim_robo3.launch.py:97-100` admite junto que `rendimento_giro` 0,80 também é do
+robô 2 — *"bitola diferente e quatro apoios em vez de três mudam quanto do giro
+pedido o chão entrega… é dos primeiros a remedir na bancada"*.
+
+**O que isto prova e o que NÃO prova.** Prova que a placa transformou o comando
+e iniciou o desvio. **Não** separa quanto dos 9,56 cm finais é do modelo da placa
+e quanto é dinâmica de contato do chassi 3 — para isso faltaria uma corrida
+contrafactual com `placa:=ideal` (o modo em que o nó vira fio) ou instrumentação
+de roda. Fica declarado como não sabido.
+
+### O que fica
+
+O chassi e o simulador são do robô 3; **boa parte do "cérebro fino" de navegação
+ainda é sintonia do robô 2**, e agora sabe-se que **o modelo do atuador também
+é** — e que ele, sozinho, já basta para tirar o robô da reta. Nada disso é
+notícia ruim para uma primeira corrida: 9,56 cm corrigidos e chegada limpa.
+
+🔴 **E nada disso libera hardware.** O que foi liberado é outra simulação. A
+pilha continua recusando `robo:=3 sim:=false` de propósito, a fronteira física
+não foi validada, e o primeiro movimento em hardware segue sendo **auditar o
+notebook com o robô desligado** (`docs/ROTEIRO_ETAPA6_PRECONDICAO.md`).
