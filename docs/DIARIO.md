@@ -10532,3 +10532,60 @@ exame final → manifesto), os três rótulos exatos, o recorte por posição, e
 quatro arquivos novos entrando no escopo assinado. Suíte focada da etapa 6:
 **56 passed, 7 skipped**. `5cee221` e as quatro pastas ficam intactos — a quinta
 corrida só sai com o diff auditado. O passo 7 permanece fechado.
+
+## 🧮 2026-09-24 (PC de dev, GAZEBO headless, robô DESLIGADO) — QUINTA CORRIDA: 0 / 7 / 7, E O SÉTIMO ERA UM SEGFAULT
+
+Corrida em `8515a25`, pasta `~/etapa6/20260924_132510`, **RC 0**. Zero
+REPROVADO, zero RECUPERADO. Manifesto de **43 arquivos** com `sha256sum -c`
+retornando 0; o bag abriu no `ros2 bag info` **sem `reindex`** (61 022
+mensagens, 17,8 s, início em 0,002 s); os quatro artefatos novos
+(`launch_execucao.log` e os três relatórios) entraram no escopo assinado; e o
+resultado **concorda numericamente** com o `launch.log` que ele assina — que era
+o ponto de tudo isto.
+
+**Os três números deram `0 / 7 / 7`, e eu esperava `0 / 5 / 5`.** Os cinco
+conhecidos (código 1) reapareceram iguais. Os dois a mais:
+
+- `launch.log:631` — **`collision_monitor` morreu com código −11 (SIGSEGV)**,
+  não 1. Na quarta corrida esse mesmo nó saiu `finished cleanly`. É
+  **intermitente**, e é binário de prateleira do Nav2, não código nosso.
+- `launch.log:463` — `collision_monitor` com `[ERROR] getTransform: ...
+  extrapolation into the future. Requested time 18.501000 but the latest data
+  is at time 18.500000`. Um milissegundo. Não existia na quarta corrida.
+
+**Parei a corrida ali mesmo, com RC 0**, porque a regra combinada era essa:
+contagem diferente da esperada preserva a pasta e para, já que essas linhas são
+ANOTADO e o RC não as vê.
+
+**A sequência resolveu a dúvida, e ela é do teardown:** linha 382 o gravador
+fecha limpo → 383–408 o `signal_handler(SIGINT/SIGTERM)` chega aos nós → 459
+`collision_monitor: Cleaning up` → 463 o erro de TF → 631 a saída −11. Os dois
+achados novos vêm **depois** do sinal geral e **dentro** do `Cleaning up`. Logo
+`0 / 7 / 7` descreve a corrida corretamente, e execução, integração e limpeza
+sem órfãos seguem aprovadas.
+
+**Eu havia proposto mover a fronteira do snapshot** para depois de o gravador
+fechar, achando que a linha 463 fosse erro com a pilha de pé. A sequência mostra
+que não: ela já cai do lado certo. Proposta descartada — não mudaria nenhum dos
+três números. Fica registrado porque o raciocínio errado também é evidência.
+
+**A 057 foi ampliada, não suavizada**: virou "saídas **não limpas** no
+teardown", com os **seis** nós (cinco código 1 + o `collision_monitor` −11,
+intermitente), o erro de TF registrado **sem** afirmar que causou o segfault,
+Nav2 **1.3.12 instalado / 1.3.13 candidato** (sem correção nominal para este
+caso — não se troca versão no meio da prova) e a ausência de backtrace
+(`systemd-coredump` não instalado aqui). Tirei de lá as palavras "cosmético" e
+"ruído de teardown": **isto é dívida real e potencialmente relevante em
+hardware** — no robô, o caminho de saída é o que zera atuador, e sendo
+intermitente não dá para ser descartado por uma corrida que passou. Critério de
+pronto: os seis com `finished cleanly`, nenhum erro depois do início do
+encerramento, e `0 / 0 / 0`.
+
+**Correção histórica no `PLANO_ETAPA6_ROBO3.md` §238**: onde se lia "zero linha
+ERROR/FATAL no `launch.log`", passa a ser "zero **no snapshot anterior à
+limpeza**". A mesma frase aparece na entrada deste diário de 24-09 sobre a
+primeira corrida (linha ~10326) — não reescrevi o registro passado, que é o que
+eu de fato achei na hora; vale esta correção para as duas.
+
+Sem sexta corrida. `8515a25` e as cinco pastas preservados. O passo 7 continua
+fechado.

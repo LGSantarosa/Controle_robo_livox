@@ -235,8 +235,16 @@ primeira evidência da etapa e a referência dos três achados abaixo.
 pegado), `padding` 0,01, mux com as **quatro faixas** e `use_stamped`, os **dois
 YAMLs materializados** na pasta da corrida com o bag em `bag/`, `/Odometry` e
 `/scan` com publicador **e** mensagem, as duas TFs, publicador único de
-`map→odom`, nenhum tópico `WheelSpeeds`, zero linha ERROR/FATAL no `launch.log`
-e limpeza sem órfão com o domínio vazio.
+`map→odom`, nenhum tópico `WheelSpeeds`, zero linha ERROR/FATAL **no snapshot
+anterior à limpeza** e limpeza sem órfão com o domínio vazio.
+
+> 🔧 **Correção de 24-09 (quinta corrida).** Onde antes se lia "zero linha
+> ERROR/FATAL no `launch.log`", leia-se **"zero no snapshot anterior à
+> limpeza"**: aquela contagem era feita antes do `limpa`, e o `launch.log`
+> final — o que o manifesto assina — tem linhas escritas no teardown. Desde
+> `8515a25` o resultado registra **três** números (execução / log final /
+> trecho após o snapshot de pré-limpeza), e os encerramentos não limpos estão
+> na decisão 057.
 
 **Três achados, e nenhum deles era do robô 3:**
 
