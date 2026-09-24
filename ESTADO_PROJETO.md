@@ -1,14 +1,55 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-09-23** (PC de dev, robô
-> desligado — a **etapa 5 inteira está na `main`**, passos 1–6, e a pilha de
-> localização já compila aqui (055); em aberto, auditar o NUC na etapa 6).
+> Versionado na `main`. Atualizado em **2026-09-24** (lab, robô e lidar
+> DESLIGADOS — bateria carregando; **notebook do robô 3 sincronizado com a
+> `main` `cc064fb` e compilando**. A etapa 5 inteira está na `main`, passos
+> 1–6, e a pilha de localização compila no dev (055); em aberto, auditar o NUC
+> na etapa 6).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+---
+
+## 🖥️ 24-09 (lab, robô e lidar DESLIGADOS) — NOTEBOOK DO ROBÔ 3 NA `main`
+
+Sessão só de PC (bateria carregando). Diário de 24-09 tem a sequência.
+
+| o quê | estado |
+|---|---|
+| notebook `ubuntu@10.127.116.150` (Latitude 3490, 24.04 + Jazzy) | ✅ na **`main` `cc064fb`** (veio de `fa828f4`, 15-09) |
+| `colcon build` lá (o comando do cabeçalho deste doc) | ✅ **rc=0**, 6 pacotes em 8,0 s |
+| `livox_ros_driver2` + `FAST_LIO` no notebook | ✅ clonados e **compilados** (build de 22-09, 8 pacotes); os oito aparecem no `ros2 pkg list` do overlay |
+| MEGA | ✅ `/dev/ttyACM0` |
+| `enp1s0` (cabo do lidar) | 🔴 **DOWN, sem IP** — falta cabo e o IP fixo `192.168.1.2` |
+| `git fetch origin` no notebook | 🔴 publickey (esperado). Deploy = `git push notebook main:main` daqui + `fetch`/`reset --hard notebook/main` lá |
+| rede | ✅ os dois na `Trafico de banana` (dev `10.127.116.5`) |
+
+- ⚠️ **BO do `setup_livox.sh`, aberto e diferente do que a 055 resolveu:** ele
+  reprova no próprio passo 5/5 porque o `--packages-select livox_ros_driver2
+  fast_lio robot_base` não inclui o `hoverboard_driver`, que o `robot_base`
+  exige instalado (`package.sh` ausente). Um `colcon build` comum depois
+  **passa** com os oito pacotes — o defeito é da lista do script, não do
+  ambiente. A 055 endureceu o script noutro ponto (SDK fixado) e não tocou
+  nessa linha. Sem conserto hoje: mexer nele é mudança de código.
+- ⚠️ **O `MID360_config.json` de dentro do driver tem `192.168.1.169`**; o
+  versionado em `robot_base/config/` tem `.158` desde `56e6bda`. A cópia veio
+  do checkout de 15-09 e o `reset --hard` não alcança o clone (está no
+  `.gitignore`). **Não corrigido de propósito** — o README manda a varredura
+  ser a fonte da verdade, e o lidar está desligado.
+- ⚠️ **Método:** abri a sessão lendo o estado local sem `git fetch` e trabalhei
+  com uma `main` de nove dias atrás (cheguei a sincronizar o notebook com
+  `f23ac4f` e a afirmar que a etapa 5 não estava na `main`). Corrigido no mesmo
+  dia. **`git fetch origin` antes de ler este documento**, sempre.
+- 🔴 **Não prova hardware nenhum.** Lidar desligado, `enp1s0` sem IP, MEGA não
+  falou com a placa, robô não se moveu.
+
+⬜ **Próximo, quando a bateria voltar:** cabo no `enp1s0`, IP `192.168.1.2`,
+varredura `192.168.1.x` atrás do OUI `e4:7a:2c` para confirmar o IP do lidar e
+só então acertar a config de dentro do driver.
 
 ---
 

@@ -4,6 +4,111 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-09-24 (lab, robô e lidar DESLIGADOS) — O NOTEBOOK DO ROBÔ 3 VOLTA PARA A `main`, E EU QUASE REGISTREI UM ESTADO QUE NÃO EXISTIA MAIS
+
+Sessão curta e só de PC: a bateria do robô 3 estava carregando, então o lidar
+ficou desligado e nada de hardware foi exercitado. O pedido do dono foi
+"arruma o PC por agora".
+
+**Rede:** os dois lados na `Trafico de banana` (dev `10.127.116.5`, notebook
+`10.127.116.150`). A primeira tentativa foi da `Visitantes` e não passava ping
+em ninguém — mesmo tropeço de 22-09, agora conferido antes de qualquer coisa.
+
+### O erro de método do dia: trabalhei 40 min com uma `main` de nove dias
+
+Abri a sessão lendo o `ESTADO_PROJETO.md` e o `git log` **locais**, sem
+`git fetch`. Eles diziam "etapa 5 fechada na branch, esperando o ok do dono" —
+e foi isso que eu repeti para o dono, e foi com base nisso que sincronizei o
+notebook com `f23ac4f`. Só na hora de empurrar o commit é que a `origin`
+recusou: **a `main` já estava 16 commits à frente** (`cc064fb`), porque em
+23-09 a etapa 5 inteira foi para a `main`, a coleta do pytest virou seleção
+positiva e nasceu a decisão 055. Existe ainda a branch `etapa6-pilha-robo3`
+com corridas exploratórias da etapa 7 **de hoje**, que não são desta sessão.
+
+Ou seja: eu implantei no notebook um estado que era o correto *na semana
+passada*. Ninguém se machucou porque o alvo era só sincronizar, mas o registro
+que eu tinha escrito afirmava "a etapa 5 NÃO foi para a `main`" — falso, e ia
+para o artigo. **A lição, escrita para valer: `git fetch origin` ANTES de ler o
+estado, não depois de trabalhar nele.** O `ESTADO_PROJETO.md` é handoff entre
+máquinas justamente porque outra máquina mexe nele; lê-lo sem sincronizar é ler
+o handoff de ontem achando que é o de hoje.
+
+Correção aplicada: `reset --hard origin/main`, notebook re-sincronizado com
+`cc064fb` e recompilado, e esta entrada reescrita sobre o estado real.
+
+### Pré-voo: o notebook estava nove dias atrás
+
+| o quê | estado encontrado |
+|---|---|
+| repo em `~/Workspace/Controle_robo_livox` | `fa828f4` (15-09) |
+| pilha ROS de pé | nenhuma |
+| MEGA | `/dev/ttyACM0` |
+| `enp1s0` (cabo do lidar) | **DOWN, sem IP** |
+| `git fetch origin` de lá | publickey (esperado: a chave de lá é de outra conta) |
+
+### O BO do `setup_livox.sh` é do script, não da máquina — e a 055 não o cobre
+
+Havia dois logs soltos no notebook (`log_setup_livox.txt`, `log_build.txt`) de
+22-09. O `setup_livox.sh` **reprovou no próprio passo 5/5**, exatamente como o
+registro de 10-09 previa:
+
+```
+Failed to find the following files:
+- install/hoverboard_driver/share/hoverboard_driver/package.sh
+```
+
+O `colcon build` do script é `--packages-select livox_ros_driver2 fast_lio
+robot_base`, e o `robot_base` exige o `hoverboard_driver` **instalado** — que
+não está nessa lista. **Mas um `colcon build` comum logo depois passou**, com
+os oito pacotes, `fast_lio` incluído (1min59s). O ambiente do notebook está
+bom; o defeito é a lista de pacotes do script.
+
+Conferi contra a `main` de hoje: a decisão **055** (`c6a7b46`) endureceu o
+script noutro ponto — fixa o SDK nativo e recusa cedo — e a linha do
+`--packages-select` **continua igual**. Então este BO segue aberto, e é
+diferente do que a 055 resolveu. Sem conserto hoje: mexer nele é mudança de
+código e não vai blind.
+
+### Deploy e build
+
+Como o notebook não alcança o GitHub, o caminho continua sendo o repositório
+bare de lá: `git push notebook main:main` daqui, e no notebook
+`git fetch notebook && git reset --hard notebook/main`.
+
+Resultado final: notebook em **`cc064fb`**, e
+`colcon build --base-paths ros2_packages --symlink-install --packages-skip
+livox_ros_driver2 fast_lio` → **rc=0**, 6 pacotes em 8,0 s (é o comando que o
+próprio ESTADO manda usar). Pulei os dois de terceiro de propósito: o fonte
+deles não mudou e já estavam compilados. Com o overlay carregado, o
+`ros2 pkg list` mostra os oito: `robot_base`, `robot_motion`, `robot_nav`,
+`robot_planning`, `wheel_msgs`, `livox_ros_driver2`, `fast_lio`, `twist_mux`.
+
+### O achado: o driver do Livox guarda o IP da outra unidade
+
+O `MID360_config.json` **de dentro do `livox_ros_driver2`** (que é o que o
+driver lê) tem `192.168.1.169`; o versionado em `robot_base/config/` tem
+`192.168.1.158` desde o commit `56e6bda`. Não é corrupção: o `setup_livox.sh`
+copiou a config do checkout de 15-09, quando o valor versionado ainda era o
+`.169`. O `reset --hard` atualiza o versionado e **não** a cópia de dentro do
+clone, que está no `.gitignore` — é exatamente o modo de falha que o
+`README.md` da config descreve, com os nós subindo e nenhuma nuvem chegando.
+
+**Não corrigi**, e de propósito: o lidar está desligado, e o mesmo README é
+explícito em que a varredura da sub-rede é a fonte da verdade — o número
+commitado é só o último conhecido, e o último octeto acompanha o número de
+série da unidade. Copiar `.158` por cima agora seria trocar um palpite por
+outro sem medir.
+
+### 🔴 O que esta sessão NÃO prova
+
+Hardware nenhum. O lidar não foi ligado, o `enp1s0` não recebeu IP, a MEGA não
+falou com a placa e o robô não se moveu. A única afirmação é sobre o PC: o
+notebook do robô 3 está em `cc064fb` e compila.
+
+**Próximo, quando a bateria voltar:** cabo no `enp1s0`, IP fixo `192.168.1.2`
+nele, varredura `192.168.1.x` atrás do OUI `e4:7a:2c` para confirmar o IP do
+lidar e só então acertar a config de dentro do driver.
+
 ## 2026-09-23 (PC de dev, robô desligado) — A ETAPA 5 VAI PARA A `main`, E A SUÍTE PARA DE DEPENDER DE `--ignore`
 
 Sessão de dev, offline. Peguei o trabalho de 22-09 que veio do lab: a
