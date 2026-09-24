@@ -1,0 +1,211 @@
+#!/usr/bin/env bash
+# Validação da etapa 6 — a PILHA sobe o ROBÔ 3 no Gazebo, headless
+# (docs/PLANO_ETAPA6_ROBO3.md §5.2). Os bin/valida-etapa4 e bin/valida-etapa5
+# são evidência congelada e NÃO mudam; a infraestrutura de segurança foi
+# COPIADA para tools/valida_etapa6/ (marca, sinal só com identidade reconferida,
+# consulta ao grafo com erro reprova, limpeza em EXIT).
+#
+#   bash bin/valida-etapa6
+#
+# Sobe `pilha.launch.py robo:=3 sim:=true gui:=false rviz:=false`, espera o grafo
+# ficar PRONTO e ESTÁVEL, colhe as provas, derruba e confere que não sobrou
+# nada. Os oito itens do §4 menos o objetivo curto (§4.6), que é o passo 7 —
+# aqui NÃO se manda objetivo nenhum.
+#
+# Pasta nova por chamada: ~/etapa6/<carimbo>/, e ela é a RAIZ DE EVIDÊNCIAS:
+# console, launch.log, resultado.csv, a pasta da corrida (com os DOIS YAMLs
+# materializados e o bag) e o SHA256SUMS. 🔴 A pasta É PRESERVADA mesmo quando
+# reprova — sobretudo quando reprova: é a única cópia do que aconteceu.
+#
+# NUNCA mata por nome, e NUNCA `pkill -f` (já matou uma sessão ssh neste
+# projeto). Robô físico e notebook NÃO participam desta validação.
+set +u
+R="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+DOMINIO=47
+
+CARIMBO="$(date +%Y%m%d_%H%M%S)"
+SAIDA="$HOME/etapa6/$CARIMBO"
+[ -e "$SAIDA" ] && { echo "🔴 $SAIDA já existe — não reaproveito pasta"; exit 1; }
+mkdir -p "$SAIDA" || exit 1
+exec > >(tee -a "$SAIDA/console.txt") 2>&1
+GRUPOS="$SAIDA/grupos_wrapper.txt"; : > "$GRUPOS"
+RESULTADO="$SAIDA/resultado.txt"; : > "$RESULTADO"
+RESULTADO_CSV="$SAIDA/resultado.csv"
+printf '"item","veredito","detalhe"\n' > "$RESULTADO_CSV"
+V="$R/tools/valida_etapa6"
+export ROS_DOMAIN_ID="$DOMINIO"
+export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
+# O transporte do Gazebo não olha o ROS_DOMAIN_ID: partição própria por rodada.
+export GZ_PARTITION="valida_etapa6_$CARIMBO"
+DOMINIOS_USADOS="$DOMINIO"
+
+# anota, roda, stat_de, sobe_grupo, nos_do_dominio, limpa, instala_limpeza
+source "$V/lib.sh"
+
+# ── pré-condições (antes de subir QUALQUER coisa) ─────────────────────────────
+
+echo "== validação etapa 6 · pilha do robô 3 no Gazebo · $CARIMBO =="
+echo "   pasta: $SAIDA · ROS_DOMAIN_ID=$DOMINIO · só localhost · GZ_PARTITION=$GZ_PARTITION"
+{ echo "commit: $(git -C "$R" rev-parse HEAD)"; git -C "$R" log -1 --format='%h %ad %s' --date=iso
+  echo "branch: $(git -C "$R" rev-parse --abbrev-ref HEAD)"
+  echo "status --porcelain (vazio = limpo):"; git -C "$R" status --porcelain; } > "$SAIDA/git.txt"
+if [ -n "$(git -C "$R" status --porcelain)" ]; then
+  echo "   🔴 árvore com mudança não commitada — a proveniência seria falsa:"
+  git -C "$R" status --porcelain | sed 's/^/      /'; exit 1
+fi
+PRE="$(ps -eo pid,user,args | grep -E '(^|[ /])(ros2|gz|rviz2|_ros2_daemon)( |$)|/opt/ros/[a-z]+/lib/|/install/[a-z_]+/lib/|ros2cli\.daemon' | grep -vE 'grep -E|valida-etapa[456]')"
+if [ -n "$PRE" ]; then
+  echo "   🔴 já tem ROS/Gazebo de pé neste PC — não subo por cima nem mato nada:"
+  echo "$PRE" | sed 's/^/      /'; exit 1
+fi
+if grep -lsa "VALIDA_ETAPA4_MARCA=" /proc/[0-9]*/environ 2>/dev/null | grep -q .; then
+  echo "   🔴 há processo marcado de uma rodada anterior:"
+  grep -lsa "VALIDA_ETAPA4_MARCA=" /proc/[0-9]*/environ | sed 's|/environ||;s|^|      |'; exit 1
+fi
+
+# A marca entra SÓ agora, depois das pré-condições: antes disso o próprio grep
+# que procura marca de rodada anterior a teria (e se acharia). Daqui em diante
+# todo processo lançado a herda.
+export VALIDA_ETAPA4_MARCA="$SAIDA"
+# Daqui em diante TODA saída (build falhou, Ctrl+C, fim normal) passa pela
+# limpeza — idempotente.
+instala_limpeza
+
+cd "$R" || exit 1
+source /opt/ros/jazzy/setup.bash
+
+# ── reconstruir ANTES de rodar, e provar que o install/ é o fonte ─────────────
+#
+# 🔴 O `install/` deste projeto é `--symlink-install`: arquivo EXISTENTE aponta
+# para o fonte, mas arquivo NOVO só ganha symlink no build. Foi exatamente isso
+# que escondeu o `twist_mux_pilha_robo3.yaml` no passo 5. Reconstruir aqui é o
+# que impede a corrida de medir uma árvore que não é a do commit.
+echo "== compilando robot_base robot_motion robot_nav (build.log) =="
+if ! roda "$SAIDA/build.log" colcon build --symlink-install \
+     --packages-select robot_base robot_motion robot_nav; then
+  anota "build" REPROVADO; exit 1
+fi
+source install/setup.bash
+DIF=0
+while read -r pkg padrao destino; do
+  while IFS= read -r f; do
+    cmp -s "$f" "install/$pkg/share/$pkg/$destino/$(basename "$f")" \
+      || { echo "   🔴 install/ difere do fonte: $f"; DIF=1; }
+  done < <(git ls-files "$padrao")
+done <<'EOF_LISTA'
+robot_base   ros2_packages/robot_base/package.xml            .
+robot_base   ros2_packages/robot_base/launch/*.py            launch
+robot_base   ros2_packages/robot_base/config/*               config
+robot_base   ros2_packages/robot_base/description/*.xacro    description
+robot_base   worlds/*.sdf                                    worlds
+robot_motion ros2_packages/robot_motion/package.xml          .
+robot_motion ros2_packages/robot_motion/config/*.yaml        config
+robot_motion ros2_packages/robot_motion/launch/*.py          launch
+robot_motion ros2_packages/robot_motion/rviz/*.rviz          rviz
+robot_motion ros2_packages/robot_motion/behavior_trees/*.xml behavior_trees
+robot_nav    ros2_packages/robot_nav/package.xml             .
+robot_nav    ros2_packages/robot_nav/launch/*.py             launch
+robot_nav    ros2_packages/robot_nav/urdf/*                  urdf
+robot_nav    ros2_packages/robot_nav/config/*                config
+robot_nav    ros2_packages/robot_nav/behavior_trees/*.xml    behavior_trees
+EOF_LISTA
+[ "$DIF" -ne 0 ] && { anota "install/ igual ao fonte" REPROVADO; exit 1; }
+anota "build + install/ igual ao fonte" APROVADO
+
+SHARE_MOTION="$(ros2 pkg prefix --share robot_motion 2>/dev/null)"
+SHARE_BASE="$(ros2 pkg prefix --share robot_base 2>/dev/null)"
+{ date -Is; uname -a; echo "hostname: $(hostname)"
+  echo "ROS_DISTRO=$ROS_DISTRO"; echo "ros2 no PATH: $(command -v ros2)"
+  echo "share robot_motion: $SHARE_MOTION"; echo "share robot_base: $SHARE_BASE"
+  printenv | grep -E '^(ROS|RMW|AMENT|COLCON|GZ|IGN|FASTRTPS|CYCLONEDDS|PYTHONPATH|VALIDA)' | sort
+} > "$SAIDA/ambiente.txt"
+
+# ── a corrida ─────────────────────────────────────────────────────────────────
+#
+# `log_dir:=$SAIDA` faz a pasta da corrida nascer DENTRO da raiz de evidências:
+# é lá que os dois YAMLs materializados e o bag vão ficar, ao lado do console.
+# `rviz:=false` e `gui:=false` porque isto roda headless; `robo:=3` no argv é
+# obrigatório — a seleção do perfil é por argv (decisão 056), e passar só pelo
+# contexto morre na trava de coerência, de propósito.
+echo "== subindo a pilha do robô 3 (headless) =="
+sobe_grupo "pilha_robo3" "$SAIDA/launch.log" \
+  ros2 launch robot_motion pilha.launch.py \
+    robo:=3 sim:=true gui:=false rviz:=false log_dir:="$SAIDA" || exit 1
+
+# A pasta da corrida: o carimbo é da SUBIDA da launch, então não se adivinha —
+# procura-se. Com prazo: se ela não aparecer, a materialização não rodou.
+CORRIDA=""
+for i in $(seq 1 300); do
+  CORRIDA="$(find "$SAIDA" -maxdepth 1 -type d -name 'corrida_*' | head -1)"
+  [ -n "$CORRIDA" ] && break
+  sleep 0.2
+done
+if [ -n "$CORRIDA" ]; then
+  anota "pasta da corrida criada (raiz de evidências)" APROVADO "$(basename "$CORRIDA")"
+else
+  anota "pasta da corrida criada (raiz de evidências)" REPROVADO "(nenhuma corrida_* em $SAIDA)"
+fi
+
+echo "== captura: grafo pronto e estável + parâmetros vivos =="
+if roda "$SAIDA/captura.log" python3 tools/linha_de_base/captura.py \
+     "$V/esperados_pilha_robo3.yaml" "$SAIDA/captura" --prazo 180; then
+  anota "grafo pronto e estável, lista de nós = esperada" APROVADO
+else
+  anota "grafo pronto e estável, lista de nós = esperada" REPROVADO "(captura/resumo.yaml)"
+fi
+nos_do_dominio "$DOMINIO" "$SAIDA/nos.txt"
+sort "$SAIDA/nos.txt" | uniq -d > "$SAIDA/nos_uniq_d.txt"
+[ -s "$SAIDA/nos_uniq_d.txt" ] \
+  && anota "nenhum nome de nó duplicado no grafo" REPROVADO "(nos_uniq_d.txt)" \
+  || anota "nenhum nome de nó duplicado no grafo" APROVADO
+
+echo "== provas vivas: /Odometry, /scan, TF, WheelSpeeds ausente =="
+roda "$SAIDA/topicos.log" python3 "$V/topicos.py" "$SAIDA/topicos.yaml" --prazo 60
+while IFS= read -r linha; do
+  case "$linha" in
+    APROVADO*|REPROVADO*) anota "${linha#* }" "${linha%% *}" "(topicos.yaml)" ;;
+  esac
+done < "$SAIDA/topicos.log"
+
+echo "== conferência offline: mux, use_sim_time, footprint, materializados =="
+roda "$SAIDA/confere.log" python3 "$V/confere.py" "$SAIDA/captura" \
+  "${CORRIDA:-$SAIDA/corrida_ausente}" "$V/esperados_pilha_robo3.yaml" \
+  "$SAIDA/confere.yaml" --share-motion "$SHARE_MOTION" --share-base "$SHARE_BASE"
+while IFS= read -r linha; do
+  case "$linha" in
+    APROVADO*|REPROVADO*) anota "${linha#* }" "${linha%% *}" "(confere.yaml)" ;;
+  esac
+done < "$SAIDA/confere.log"
+
+erros_do_launch() {
+  grep -nE "\[ERROR\]|\[FATAL\]|process has died" "$1" > "$2"
+  anota "linhas ERROR/FATAL/died em $(basename "$1")" ANOTADO \
+    "$(wc -l < "$2") ($(basename "$2"))"
+}
+erros_do_launch "$SAIDA/launch.log" "$SAIDA/launch_erros.txt"
+
+# ── derrubar e provar que não sobrou órfão ────────────────────────────────────
+python3 "$V/processos.py" foto "$SAIDA/antes_da_limpeza.csv"
+limpa
+python3 "$V/processos.py" foto "$SAIDA/depois_da_limpeza.csv"
+
+# ── SHA256SUMS: a pasta é a prova, e prova sem impressão digital não fecha ────
+( cd "$SAIDA" && find . -type f ! -name SHA256SUMS -print0 \
+    | sort -z | xargs -0 sha256sum > SHA256SUMS )
+if [ -n "$CORRIDA" ]; then
+  for y in "$CORRIDA"/*.yaml; do
+    [ -e "$y" ] && echo "   YAML materializado: $y"
+  done
+  grep -c "corrida_" "$SAIDA/SHA256SUMS" > /dev/null \
+    && anota "SHA256SUMS inclui a pasta da corrida" APROVADO \
+    || anota "SHA256SUMS inclui a pasta da corrida" REPROVADO
+fi
+
+echo
+echo "== resultado ($RESULTADO_CSV) =="
+sed 's/^/   /' "$RESULTADO"
+if grep -q " REPROVADO" "$RESULTADO"; then
+  echo "   🔴 REPROVADO em algum item — NÃO mexa em nada; a pasta é a prova: $SAIDA"
+  exit 1
+fi
+echo "   🟢 APROVADO — pasta: $SAIDA"

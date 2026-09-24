@@ -1,0 +1,112 @@
+# Nós esperados de `ros2 launch robot_motion pilha.launch.py robo:=3 sim:=true
+# gui:=false rviz:=false` — etapa 6 (PLANO_ETAPA6_ROBO3.md §4.3). Formato do
+# tools/linha_de_base/captura.py.
+#
+# 🔴 ESTA LISTA É O CONTRATO, não um filtro de conveniência. O §4.3 pede lista
+# NOMINAL VERSIONADA, e o ponto é: nó que aparecer no grafo e não estiver aqui
+# REPROVA. Sem isso a prova do `use_sim_time` envelhece em silêncio — cada nó
+# novo entraria sem ninguém conferir se ele também está no tempo do simulador, e
+# um nó no relógio de parede dentro de uma pilha em tempo simulado é o tipo de
+# defeito que aparece como "o robô às vezes trava".
+#
+# 🔴 DE ONDE VEM A PREVISÃO, e ela não é chute: é a lista da pilha do robô 2 no
+# Gazebo (`tools/linha_de_base/esperados_robo2_sim.yaml`, observada na baseline
+# v2 de 21-09) **menos o `/rviz2`** (aqui `rviz:=false`), com a parte do
+# simulador conferida contra `esperados_robo3_sim.yaml` (etapa 4, passo 7). Os
+# nomes de nó do `sim_robo3.launch.py` são os MESMOS do `sim.launch.py` — o que
+# muda entre os dois simuladores é o URDF e a geometria, não quem sobe.
+# Divergência reprova e fica na pasta; nó a mais é IDENTIFICADO antes de entrar
+# aqui — nunca acrescentado só para o vermelho sumir.
+nos:
+  # --- Nav2 (pilha.launch.py), servidores de ciclo de vida
+  - /map_server            # com_mapa: o default do sim é o mapa da pista
+  - /planner_server
+  # Os costmaps são nós DENTRO dos servidores, e é neles que o `footprint` do
+  # perfil do robô 3 tem de aparecer VIVO (§4.4): dicionário passado ao `Node`
+  # do servidor não desce até aqui, e foi por isso que a reescrita virou
+  # arquivo.
+  - /global_costmap/global_costmap   # criado pelo planner_server
+  - /smoother_server
+  - /controller_server
+  - /local_costmap/local_costmap     # criado pelo controller_server
+  - /bt_navigator
+  - /collision_monitor
+  - /lifecycle_manager_pilha         # a versão com_mapa_fixa
+  # --- TF provisória (localizacao:=fixa, o default)
+  # 🔴 E o `/amcl` NÃO está aqui de propósito: os dois publicam `map→odom`, e
+  # juntos a pose pisca entre "identidade" e a verdade a cada consulta. A prova
+  # de publicador único de `map→odom` está no topicos.py.
+  - /tf_map_odom
+  # --- os nossos (pilha.launch.py); nenhum cria nó interno (conferido em 21-09)
+  - /heading_controller
+  - /twist_mux                       # o do perfil do robô 3, quatro faixas
+  - /compensador_rumo                # a versão IfCondition(sim)
+  - /path_follower
+  - /freeze_capture
+  # --- o gravador da corrida (bag: true)
+  - /rosbag2_recorder
+  # --- simulador do ROBÔ 3 (robot_base/sim_robo3.launch.py + scan_2d)
+  - /robot_state_publisher
+  # A placa fingida é quem encerra a cadeia no Gazebo (achado D): consome
+  # `/cmd_vel_bruto` e entrega ao `hoverboard_base_controller`. A fronteira de
+  # hardware (`cmd_vel_to_wheels`, `mega_bridge`, `WheelSpeeds`) está FORA deste
+  # grafo por construção, e há prova pela negativa no topicos.py.
+  - /placa_simulada
+  - /ros_gz_bridge         # parameter_bridge
+  - /scan_2d               # a fatia 2D da nuvem (decisão 021); publica /scan
+  # --- dentro do processo do Gazebo (plugin gz_ros2_control)
+  - /gz_ros_control
+  - /controller_manager
+  - /joint_state_broadcaster
+  - /hoverboard_base_controller
+  # Transitórios que NÃO entram: o `create` do ros_gz_sim e os dois `spawner`.
+  # Eles nascem, fazem o trabalho e saem — e a espera por grafo ESTÁVEL da
+  # captura é o que os absorve. Declará-los seria pior: a cardinalidade do
+  # `volateis` é exata, então a declaração passaria a EXIGIR que eles estivessem
+  # vivos na hora da captura. Spawner que fica preso (o modo de falha real,
+  # quando o controlador não ativa) reprova por "sobrando", que é o certo.
+
+# Nós reais do grafo que, por desenho das bibliotecas (Nav2, tf2_ros), não
+# oferecem list_parameters/get_parameters: provam composição do grafo, mas não
+# têm dump a capturar. Observados e identificados na baseline v2 (21-09/22-09).
+grafo_somente:
+  exatos:
+    # Criado por BtActionServer para a ação NavigateToPose. Nome montado em
+    # nav2_behavior_tree/bt_action_server_impl.hpp.
+    - /bt_navigator_navigate_to_pose_rclcpp_node
+  volateis:
+    # Quatro TransformListener internos (sufixo hexadecimal = identidade de
+    # runtime): UM é do `scan_2d`, atribuído por execução isolada em 22-09; os
+    # outros TRÊS são do Nav2 e NÃO foram atribuídos individualmente. A
+    # contagem 4 é a observada na pilha do robô 2 — se o robô 3 mostrar outra,
+    # reprova e a diferença é para explicar, não para ajustar aqui.
+    - padrao: '^/transform_listener_impl_[0-9a-f]+$'
+      quantidade: 4
+      alias: /transform_listener_impl_<hex>
+
+# Parâmetros que o nó LISTA mas não consegue LER (o `get_parameters` do rclcpp é
+# tudo-ou-nada: um desses zera o lote inteiro). Exceção por nó + parâmetro
+# EXATOS: ilegível fora daqui reprova, e exceção daqui que não aparecer também
+# reprova. Herdadas da pilha do robô 2 e do sim_robo3 — mesmo
+# `collision_monitor`, mesmo plugin `gz_ros2_control` e mesmos nomes de
+# controlador (`hoverboard_controllers_sim_robo3.yaml`).
+# ⚠️ 'no' ENTRE ASPAS: sem elas o YAML 1.1 lê a chave como o booleano False.
+ilegiveis_permitidos:
+  - 'no': /collision_monitor
+    parametro: PolygonApproach.max_points
+    origem: 'reprodução isolada com collision_monitor ativo: docs/dados/2026-09-21-collision-monitor-ilegiveis/saida.txt'
+  - 'no': /collision_monitor
+    parametro: PolygonStop.max_points
+    origem: 'reprodução isolada com collision_monitor ativo: docs/dados/2026-09-21-collision-monitor-ilegiveis/saida.txt'
+  - 'no': /controller_manager
+    parametro: hoverboard_base_controller.fallback_controllers
+    origem: 'captura 1 da baseline v2 + releitura na pilha viva: docs/dados/2026-09-21-controller-manager-ilegiveis/saida.txt'
+  - 'no': /controller_manager
+    parametro: hoverboard_base_controller.node_options_args
+    origem: 'captura 1 da baseline v2 + releitura na pilha viva: docs/dados/2026-09-21-controller-manager-ilegiveis/saida.txt'
+  - 'no': /controller_manager
+    parametro: joint_state_broadcaster.fallback_controllers
+    origem: 'captura 1 da baseline v2 + releitura na pilha viva: docs/dados/2026-09-21-controller-manager-ilegiveis/saida.txt'
+  - 'no': /controller_manager
+    parametro: joint_state_broadcaster.node_options_args
+    origem: 'captura 1 da baseline v2 + releitura na pilha viva: docs/dados/2026-09-21-controller-manager-ilegiveis/saida.txt'
