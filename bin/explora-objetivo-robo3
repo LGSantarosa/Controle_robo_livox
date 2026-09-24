@@ -311,24 +311,19 @@ setsid ros2 action send_goal --feedback /navigate_to_pose \
 PID_GOAL=$!
 echo "   send_goal em PID $PID_GOAL — objetivo.log tem o feedback e o resultado"
 
-# ── acompanhar: CSV de pose por tempo simulado, e o teto ────────────────────
+# ── esperar a ação, SEM sondar tópico ───────────────────────────────────────
 #
-# O CSV é o que EU leio depois; a tela é o que o DONO lê agora. A pose vem do
-# `/Odometry` (a mesma fonte que a etapa 6 provou viva), e a distância ao alvo é
-# calculada aqui para não depender de ninguém interpretar coluna.
-echo '"t_sim","x","y","dist_ao_alvo"' > "$SAIDA/trajeto.csv"
+# 🔴 O QUE ISTO CONSERTA (corrida 20260924_160148): o laço anterior sondava
+# `/Odometry` com `ros2 topic echo --once` a cada volta. Cada volta custava até
+# 10 s; a navegação inteira durou **3,3 s simulados**. A corrida acabou antes da
+# primeira amostra, e o `trajeto.csv` saiu só com o cabeçalho.
 #
-# 🔴 O TETO É DE TEMPO SIMULADO, e o laço tem de medir isso — não um número de
-# voltas. A versão anterior era `seq 1 240` sem `sleep`, o que não é 60 s de
-# nada: com o Gazebo a 0,3 de fator de tempo real seriam ~10 s simulados, e com
-# ele rápido as 240 voltas acabariam antes do robô sair do lugar.
-#
-# E o relógio simulado PODE TRAVAR (Gazebo pausado, física parada, `/clock` sem
-# publicar). Aí `DECORRIDO` nunca cresce e o laço não termina nunca. Por isso há
-# dois limites independentes: o simulado, que é o critério, e um watchdog de
-# tempo de PAREDE, que é a rede de segurança.
+# Apertar o laço seria remendo: sondagem de fora nunca vai amostrar mais rápido
+# do que o nó que já grava tudo. Quem tem a trajetória é o `path_follower`, no
+# `seguidor_*.csv` — e o bag tem o resto. Aqui só se ESPERA, pelo relógio
+# simulado, e a trajetória se lê depois, do arquivo.
 T0_PAREDE=$(date +%s)
-TETO_PAREDE=$((TETO_SIMULADO * 6))       # 6 min de parede para 60 s simulados
+TETO_PAREDE=$((TETO_SIMULADO * 6))       # rede de segurança: relógio travado
 FIM=""
 while :; do
   if ! kill -0 "$PID_GOAL" 2>/dev/null; then FIM="a ação terminou sozinha"; break; fi
@@ -340,21 +335,10 @@ while :; do
   AGORA="$(relogio)"
   if [ -z "$AGORA" ]; then sleep 0.25; continue; fi
   DECORRIDO=$((AGORA - T0_SIM))
-  POSE="$(timeout 5 ros2 topic echo --once --field pose.pose.position /Odometry 2>/dev/null \
-          | tr -d ' ' | grep -E '^(x|y):' | cut -d: -f2 | paste -sd' ')"
-  if [ -n "$POSE" ]; then
-    # shellcheck disable=SC2086
-    set -- $POSE
-    python3 -c "
-import math,sys
-x,y=float(sys.argv[1]),float(sys.argv[2])
-print('%d,%.4f,%.4f,%.4f' % (int(sys.argv[3]), x, y,
-      math.hypot(x-$META_X, y-$META_Y)))" "$1" "$2" "$DECORRIDO" >> "$SAIDA/trajeto.csv"
-  fi
   if [ "$DECORRIDO" -ge "$TETO_SIMULADO" ]; then
     FIM="teto de ${TETO_SIMULADO}s simulados (parede: ${PAREDE}s)"
-    # O send_goal é filho DIRETO deste shell e líder do próprio grupo: sinal
-    # nele é seguro e não alcança mais ninguém.
+    # Filho direto deste shell e líder do próprio grupo: o sinal não alcança
+    # mais ninguém.
     kill -INT "$PID_GOAL" 2>/dev/null
     break
   fi
@@ -399,25 +383,88 @@ RESULTADO_ACAO="$(grep -iE '^Result|status|SUCCEEDED|ABORTED|CANCELED' \
   "$SAIDA/objetivo.log" | tail -3 | paste -sd' | ')"
 anota "resultado relatado pela ação" ANOTADO "${RESULTADO_ACAO:-(nada no objetivo.log)}"
 
-# ── a pose final, e o caso de NÃO haver amostra ────────────────────────────
+# ── a POSE FINAL, medida AGORA e com procedência declarada ─────────────────
 #
-# 🔴 `tail -1` num CSV só com cabeçalho grava O CABEÇALHO como pose final — e
-# aí a evidência afirma uma pose que ninguém mediu. Sem linha de dados, o que se
-# registra é a ausência.
-LINHAS_TRAJETO=$(($(wc -l < "$SAIDA/trajeto.csv") - 1))
-if [ "$LINHAS_TRAJETO" -ge 1 ]; then
-  tail -1 "$SAIDA/trajeto.csv" > "$SAIDA/pose_final.txt"
-  anota "pose final medida" ANOTADO \
-    "$(cat "$SAIDA/pose_final.txt") ($LINHAS_TRAJETO amostras)"
+# ⚠️ Uma leitura só, e depois do fim da ação — não é sondagem. Ela é necessária
+# porque o último registro do seguidor acontece ANTES de o robô entrar por
+# completo na tolerância: na corrida 20260924_160148 a ação terminou em 38,60 s
+# e a placa ainda empurrava até 39,45 s (o `atraso_desliga`). Pose final tirada
+# do CSV seria a pose de antes de parar.
+POSE_FIM_YAML="$(timeout 15 ros2 topic echo --once --field pose.pose.position /Odometry 2>/dev/null)"
+if [ -n "$POSE_FIM_YAML" ]; then
+  echo "$POSE_FIM_YAML" > "$SAIDA/pose_final_bruta.yaml"
+  FINAL="$(python3 - "$SAIDA/pose_final_bruta.yaml" "$META_X" "$META_Y" <<'EOF_PY'
+import math, sys, yaml
+docs = [d for d in yaml.safe_load_all(open(sys.argv[1])) if d is not None]
+if len(docs) != 1:
+    sys.exit('esperava 1 documento com a posição, achei %d' % len(docs))
+p = docs[0]
+print('%.4f %.4f %.4f' % (p['x'], p['y'],
+      math.hypot(p['x'] - float(sys.argv[2]), p['y'] - float(sys.argv[3]))))
+EOF_PY
+)" && anota "pose final (fonte: /Odometry, uma leitura após o fim)" ANOTADO "$FINAL" \
+   || anota "pose final (fonte: /Odometry, uma leitura após o fim)" REPROVADO "(ilegível)"
 else
-  echo "SEM AMOSTRA: nenhuma pose de /Odometry chegou durante o objetivo" \
-    > "$SAIDA/pose_final.txt"
-  anota "pose final medida" REPROVADO \
-    "(nenhuma amostra — o trajeto.csv só tem cabeçalho)"
+  anota "pose final (fonte: /Odometry, uma leitura após o fim)" REPROVADO \
+    "(nenhuma mensagem em 15 s)"
 fi
-echo "   trajeto: $LINHAS_TRAJETO amostra(s) · $(cat "$SAIDA/pose_final.txt")"
-sed -n '1,80p' "$SAIDA/objetivo.log" | sed 's/^/      /'
-timeout 5 ros2 run tf2_ros tf2_echo map base_link > "$SAIDA/tf_final.txt" 2>&1
+
+# ── o TRAJETO, lido do CSV do seguidor ─────────────────────────────────────
+#
+# O `path_follower` grava em disco a cada `log_periodo_s` — 5,0 s vivos
+# (`path_follower.py:672,828`). Então, terminada a ação, espera-se UMA gravação
+# periódica antes de ler: sem isso as últimas linhas da corrida ainda estão no
+# buffer dele, e o trajeto sairia truncado justamente no fim, que é a parte que
+# interessa.
+PERIODO_SEGUIDOR=5
+echo "== esperando a gravação periódica do seguidor (${PERIODO_SEGUIDOR}s + folga) =="
+ANTES=$(cat "$SAIDA"/seguidor_*.csv 2>/dev/null | wc -l)
+for i in $(seq 1 $(( (PERIODO_SEGUIDOR + 3) * 2 ))); do
+  sleep 0.5
+  DEPOIS=$(cat "$SAIDA"/seguidor_*.csv 2>/dev/null | wc -l)
+  [ "$DEPOIS" -gt "$ANTES" ] && break
+done
+anota "gravação periódica do seguidor observada" ANOTADO \
+  "$ANTES -> $DEPOIS linhas"
+
+# 🔴 EXATAMENTE UM CSV. Dois arquivos aqui significam duas corridas na mesma
+# pasta (ou um nó extra), e escolher um em silêncio — o mais novo, o primeiro do
+# glob — seria adivinhar de qual corrida é a trajetória que vai para o artigo.
+CSVS=("$SAIDA"/seguidor_*.csv)
+if [ ! -e "${CSVS[0]}" ]; then
+  anota "trajeto (fonte: seguidor_*.csv do path_follower)" REPROVADO \
+    "(nenhum seguidor_*.csv na pasta)"
+elif [ "${#CSVS[@]}" -ne 1 ]; then
+  anota "trajeto (fonte: seguidor_*.csv do path_follower)" REPROVADO \
+    "(${#CSVS[@]} arquivos — não escolho um em silêncio)"
+else
+  TRAJETO="$(python3 - "${CSVS[0]}" "$META_X" "$META_Y" "$SAIDA/trajeto.csv" <<'EOF_PY'
+import csv, math, sys
+origem, gx, gy, destino = sys.argv[1], float(sys.argv[2]), float(sys.argv[3]), sys.argv[4]
+linhas = list(csv.DictReader(open(origem)))
+if not linhas:
+    sys.exit('o seguidor_*.csv não tem linha de dados')
+with open(destino, 'w', newline='') as f:
+    w = csv.writer(f)
+    w.writerow(['t_sim', 'x', 'y', 'dist_ao_alvo', 'estado', 'modo', 'v_alvo'])
+    perc = 0.0
+    ant = None
+    for l in linhas:
+        x, y = float(l['x']), float(l['y'])
+        if ant is not None:
+            perc += math.hypot(x - ant[0], y - ant[1])
+        ant = (x, y)
+        w.writerow([l['t'], '%.4f' % x, '%.4f' % y,
+                    '%.4f' % math.hypot(x - gx, y - gy),
+                    l['estado'], l['modo'], l['v_alvo']])
+p0 = (float(linhas[0]['x']), float(linhas[0]['y']))
+print('%d amostras, %ss a %ss, percorrido %.4f m, líquido %.4f m'
+      % (len(linhas), linhas[0]['t'], linhas[-1]['t'], perc,
+         math.hypot(ant[0] - p0[0], ant[1] - p0[1])))
+EOF_PY
+)" && anota "trajeto (fonte: seguidor_*.csv do path_follower)" ANOTADO "$TRAJETO" \
+   || anota "trajeto (fonte: seguidor_*.csv do path_follower)" REPROVADO "($TRAJETO)"
+fi
 
 # ── encerramento DIRIGIDO do gravador, ANTES de o grupo cair ────────────────
 # (mesma mecânica medida na etapa 6: SIGTERM no alvo único, janela própria, e só
