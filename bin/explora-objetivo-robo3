@@ -45,8 +45,10 @@ R="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
 # corrida exploratória, ela não se mistura com a validação.
 DOMINIO=48
 TETO_SIMULADO=60          # segundos de tempo SIMULADO para o objetivo
-META_X=1.0                # 1 m à frente do spawn (sim_robo3 nasce em 0,0, yaw 0)
-META_Y=0.0
+# ⚠️ Não há coordenada de alvo aqui de propósito: o objetivo é RELATIVO à pose
+# viva (1 m no rumo atual), calculado depois que a pilha sobe. Coordenada fixa
+# neste arquivo foi o defeito de 24-09 — ver o bloco do cálculo, lá embaixo.
+DISTANCIA_DO_OBJETIVO=1.0
 
 CARIMBO="$(date +%Y%m%d_%H%M%S)"
 SAIDA="$HOME/etapa7-explora/$CARIMBO"
@@ -101,7 +103,45 @@ if grep -lsa "VALIDA_ETAPA4_MARCA=" /proc/[0-9]*/environ 2>/dev/null | grep -q .
   grep -lsa "VALIDA_ETAPA4_MARCA=" /proc/[0-9]*/environ | sed 's|/environ||;s|^|      |'; exit 1
 fi
 export VALIDA_ETAPA4_MARCA="$SAIDA"
+
+# 🔴 O BAG PRECISA FECHAR TAMBÉM QUANDO A CORRIDA ABORTA. Na tentativa de
+# 24-09 a espera falhou, o script saiu pelo `exit 1`, e o encerramento dirigido
+# do gravador — que estava lá embaixo, no caminho feliz — foi PULADO: sobraram
+# 1,7 GB de `bag_0.mcap` sem `metadata.yaml`, que o `ros2 bag info` não abre.
+# Evidência que não abre é pior que evidência que falta, porque parece estar lá
+# (é a mesma lição da segunda corrida da etapa 6).
+#
+# Por isso o fechamento vira função idempotente e entra no `trap`, ANTES da
+# limpeza — que é quem derruba o grupo e mataria o gravador por KILL.
+GRAVADOR_FECHADO=0
+fecha_gravador() {
+  [ "$GRAVADOR_FECHADO" -eq 1 ] && return 0
+  GRAVADOR_FECHADO=1
+  local alvo i
+  alvo="$(python3 "$V/processos.py" acha 'ros2 bag record' 2>/dev/null | head -1)"
+  [ -z "$alvo" ] && return 0
+  echo "== encerramento dirigido do gravador (TERM) ==" >> "$SAIDA/gravador.txt"
+  # SIGTERM e não SIGINT: medido em 24-09 que o `ros2 bag record` deste Jazzy
+  # NÃO responde a SIGINT, e morto por KILL ele nunca escreve o metadata.yaml.
+  # shellcheck disable=SC2086
+  python3 "$V/processos.py" sinaliza_um $alvo TERM >> "$SAIDA/gravador.txt" 2>&1
+  for i in $(seq 1 300); do
+    # shellcheck disable=SC2086
+    python3 "$V/processos.py" vivo $alvo || break
+    sleep 0.1
+  done
+  # shellcheck disable=SC2086
+  if python3 "$V/processos.py" vivo $alvo; then
+    anota "gravador encerrado por SIGTERM dirigido" REPROVADO "(não fechou em 30 s)"
+  else
+    anota "gravador encerrado por SIGTERM dirigido" ANOTADO "(gravador.txt)"
+  fi
+}
+
 instala_limpeza
+# O `instala_limpeza` da etapa 6 instala `trap limpa EXIT`; aqui o gravador
+# entra ANTES dela, em toda saída — inclusive `exit 1` de pré-condição.
+trap 'fecha_gravador; limpa' EXIT
 
 cd "$R" || exit 1
 source /opt/ros/jazzy/setup.bash
@@ -126,7 +166,7 @@ sobe_grupo "pilha_robo3_gui" "$SAIDA/launch.log" \
 # TF próprios — foi essa conta que corrigiu a cardinalidade no passo 6b).
 # Espera-se o necessário para mandar goal: o servidor da ação de pé e a TF da
 # pose resolvendo.
-echo "== esperando Nav2 ATIVO + TF map->base_link (até 180 s) =="
+echo "== esperando Nav2 ATIVO + TF map->base_link (até 300 s) =="
 #
 # 🔴 AÇÃO LISTADA NÃO É NAV2 PRONTO. O `/navigate_to_pose` aparece assim que o
 # `bt_navigator` sobe — antes de o gerenciador de ciclo de vida ativar os
@@ -149,17 +189,24 @@ esta_ativo() {   # esta_ativo "<saída do lifecycle get>"
 
 # ⚠️ PRAZO DE PAREDE, não contagem de voltas: cada volta pode gastar três
 # `timeout 10` do `lifecycle get` mais o `tf2_echo`, então "180 iterações"
-# poderia durar meia hora. O que se promete é 180 s.
+# poderia durar meia hora. O que se promete é 300 s.
 PRONTO=0
 T0_ESPERA=$(date +%s)
-while [ $(( $(date +%s) - T0_ESPERA )) -lt 180 ]; do
+while [ $(( $(date +%s) - T0_ESPERA )) -lt 300 ]; do
   TODOS=1
   for no in $NOS_ATIVOS; do
     estado="$(timeout 10 ros2 lifecycle get "$no" 2>/dev/null | head -1)"
     esta_ativo "$estado" || TODOS=0
   done
+  # 🔴 A CAUSA REAL DO TIMEOUT DE 24-09: aqui havia
+  # `ros2 action list --spin-time 2`, e este Jazzy NÃO aceita `--spin-time` no
+  # `action list` (só `-t` e `-c`): o comando saía com código 2, o `2>/dev/null`
+  # engolia a mensagem, a condição nunca passava e o `tf2_echo` jamais rodava.
+  # A espera morria de 180 s com o Nav2 ATIVO — o `lifecycle.txt` daquela pasta
+  # mostra os três `active [3]`. Erro descartado é erro que mente.
   if [ "$TODOS" -eq 1 ] \
-     && ros2 action list --spin-time 2 2>/dev/null | grep -qx '/navigate_to_pose'; then
+     && timeout 5 ros2 action list 2>>"$SAIDA/action_list.err" \
+        | grep -qx '/navigate_to_pose'; then
     # ⚠️ O `tf2_echo` NÃO aceita `--spin-time` e NÃO termina sozinho: quem o
     # encerra é o `timeout`, que sai com 124. Por isso o teste é o CONTEÚDO
     # ("Translation" no arquivo), nunca o código de saída — testar o código
@@ -193,12 +240,53 @@ if [ -z "$T0_SIM" ]; then
 fi
 anota "relógio simulado (/clock) respondendo" APROVADO "t0=${T0_SIM}s"
 
-# ── o objetivo: 1 m à frente, na mesma orientação ───────────────────────────
-echo "== mandando o objetivo: x=$META_X y=$META_Y no frame map =="
-registra_cmd "ros2 action send_goal /navigate_to_pose ... x=$META_X"
+# ── a pose VIVA, e o objetivo calculado A PARTIR dela ──────────────────────
+#
+# 🔴 NADA DE COORDENADA ASSUMIDA. A primeira versão mandava `x=1.0 y=0.0`
+# porque o `sim_robo3.launch.py` declara `x` e `y` com default 0,0 — mas a
+# `pilha.launch.py` passa OUTRA pose de spawn, e o robô nasce em (2,0; 5,0).
+# Aquele objetivo não era "1 m à frente": era ~5 m atravessando o mapa, e a
+# corrida teria medido outra coisa chamando-a de 1 metro.
+#
+# Agora: lê pose e orientação vivos do `/Odometry`, e o alvo é
+#   goal_x = x + cos(yaw) ; goal_y = y + sin(yaw)
+# — 1 m no rumo ATUAL, PRESERVANDO a orientação (o mesmo quatérnio), que é o
+# que "1 m à frente na mesma orientação" quer dizer.
+echo "== lendo a pose viva para calcular o objetivo =="
+POSE_YAML="$(timeout 15 ros2 topic echo --once --field pose.pose /Odometry 2>/dev/null)"
+if [ -z "$POSE_YAML" ]; then
+  anota "pose inicial lida do /Odometry" REPROVADO "(nenhuma mensagem em 15 s)"
+  echo "   🔴 sem pose não dá para calcular objetivo relativo"; exit 1
+fi
+echo "$POSE_YAML" > "$SAIDA/pose_inicial_bruta.yaml"
+CALCULO="$(python3 - "$SAIDA/pose_inicial_bruta.yaml" "$DISTANCIA_DO_OBJETIVO" <<'EOF_PY'
+import math, sys, yaml
+d = yaml.safe_load(open(sys.argv[1]))
+dist = float(sys.argv[2])
+p, o = d['position'], d['orientation']
+# yaw do quatérnio (z-up): a fórmula padrão, sem depender de tf_transformations
+yaw = math.atan2(2.0 * (o['w'] * o['z'] + o['x'] * o['y']),
+                 1.0 - 2.0 * (o['y'] ** 2 + o['z'] ** 2))
+print('%.4f %.4f %.4f %.4f %.6f %.6f %.6f %.6f'
+      % (p['x'], p['y'], p['x'] + dist * math.cos(yaw), p['y'] + dist * math.sin(yaw),
+         o['x'], o['y'], o['z'], o['w']))
+print('%.4f' % yaw, file=sys.stderr)
+EOF_PY
+)" || { anota "pose inicial lida do /Odometry" REPROVADO "(quatérnio ilegível)"; exit 1; }
+# shellcheck disable=SC2086
+set -- $CALCULO
+POSE_X="$1"; POSE_Y="$2"; META_X="$3"; META_Y="$4"
+Q_X="$5"; Q_Y="$6"; Q_Z="$7"; Q_W="$8"
+anota "pose inicial lida do /Odometry" ANOTADO "($POSE_X, $POSE_Y)"
+anota "objetivo calculado = pose + 1 m no rumo atual" ANOTADO \
+  "($META_X, $META_Y), orientação preservada (z=$Q_Z w=$Q_W)"
+
+# ── o objetivo ─────────────────────────────────────────────────────────────
+echo "== mandando o objetivo: ($POSE_X, $POSE_Y) -> ($META_X, $META_Y) no frame map =="
+registra_cmd "ros2 action send_goal /navigate_to_pose ... x=$META_X y=$META_Y"
 setsid ros2 action send_goal --feedback /navigate_to_pose \
   nav2_msgs/action/NavigateToPose \
-  "{pose: {header: {frame_id: map}, pose: {position: {x: $META_X, y: $META_Y, z: 0.0}, orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}}}}" \
+  "{pose: {header: {frame_id: map}, pose: {position: {x: $META_X, y: $META_Y, z: 0.0}, orientation: {x: $Q_X, y: $Q_Y, z: $Q_Z, w: $Q_W}}}}" \
   > "$SAIDA/objetivo.log" 2>&1 < /dev/null &
 PID_GOAL=$!
 echo "   send_goal em PID $PID_GOAL — objetivo.log tem o feedback e o resultado"
@@ -315,18 +403,7 @@ timeout 5 ros2 run tf2_ros tf2_echo map base_link > "$SAIDA/tf_final.txt" 2>&1
 # (mesma mecânica medida na etapa 6: SIGTERM no alvo único, janela própria, e só
 # depois a limpeza derruba o resto)
 python3 "$V/processos.py" foto "$SAIDA/antes_da_limpeza.csv"
-ALVO="$(python3 "$V/processos.py" acha 'ros2 bag record' | head -1)"
-if [ -n "$ALVO" ]; then
-  echo "== encerramento dirigido do gravador (TERM) ==" >> "$SAIDA/gravador.txt"
-  # shellcheck disable=SC2086
-  python3 "$V/processos.py" sinaliza_um $ALVO TERM >> "$SAIDA/gravador.txt" 2>&1
-  for i in $(seq 1 300); do
-    # shellcheck disable=SC2086
-    python3 "$V/processos.py" vivo $ALVO || break
-    sleep 0.1
-  done
-  anota "gravador encerrado por SIGTERM dirigido" ANOTADO "(gravador.txt)"
-fi
+fecha_gravador
 
 # A limpeza roda no `trap EXIT` — idempotente, sem pkill, com prova de domínio
 # vazio no fim.
