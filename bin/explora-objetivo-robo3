@@ -137,12 +137,26 @@ echo "== esperando Nav2 ATIVO + TF map->base_link (até 180 s) =="
 #   · planner_server    — quem traça o caminho
 #   · controller_server — quem gera o comando
 NOS_ATIVOS="/bt_navigator /planner_server /controller_server"
+
+# 🔴 A COMPARAÇÃO É EXATA, E ISSO NÃO É PREFERÊNCIA DE ESTILO. O
+# `ros2 lifecycle get` responde `active [3]`, `inactive [2]`, `unconfigured [1]`
+# — e o casamento frouxo `*active*` aceita **inactive**, que é justamente o
+# estado da janela que esta espera existe para fechar. Só o PRIMEIRO campo, e
+# igual a `active`.
+esta_ativo() {   # esta_ativo "<saída do lifecycle get>"
+  [ "${1%% *}" = active ]
+}
+
+# ⚠️ PRAZO DE PAREDE, não contagem de voltas: cada volta pode gastar três
+# `timeout 10` do `lifecycle get` mais o `tf2_echo`, então "180 iterações"
+# poderia durar meia hora. O que se promete é 180 s.
 PRONTO=0
-for i in $(seq 1 180); do
+T0_ESPERA=$(date +%s)
+while [ $(( $(date +%s) - T0_ESPERA )) -lt 180 ]; do
   TODOS=1
   for no in $NOS_ATIVOS; do
     estado="$(timeout 10 ros2 lifecycle get "$no" 2>/dev/null | head -1)"
-    case "$estado" in *active*) ;; *) TODOS=0 ;; esac
+    esta_ativo "$estado" || TODOS=0
   done
   if [ "$TODOS" -eq 1 ] \
      && ros2 action list --spin-time 2 2>/dev/null | grep -qx '/navigate_to_pose'; then
@@ -155,6 +169,7 @@ for i in $(seq 1 180); do
   fi
   sleep 1
 done
+echo "   espera: $(( $(date +%s) - T0_ESPERA ))s de parede"
 { echo "estados de ciclo de vida no fim da espera:"
   for no in $NOS_ATIVOS; do
     echo "   $no: $(timeout 10 ros2 lifecycle get "$no" 2>&1 | head -1)"
@@ -238,6 +253,28 @@ print('%d,%.4f,%.4f,%.4f' % (int(sys.argv[3]), x, y,
   sleep 0.25
 done
 anota "objetivo encerrado" ANOTADO "$FIM"
+
+# ── esperar o send_goal SAIR antes de ler o que ele escreveu ────────────────
+#
+# 🔴 Sem isto, o `objetivo.log` é lido enquanto o processo ainda está vivo (ou
+# acabou de receber o SIGINT) e o buffer dele pode não ter descido para o
+# arquivo. O veredito "aceito x rejeitado" sairia de um arquivo pela metade — e
+# o pior caso é o silencioso: "não diz aceito nem rejeitado" quando a linha
+# existia e só não tinha sido gravada ainda.
+for i in $(seq 1 100); do                 # até 10 s
+  kill -0 "$PID_GOAL" 2>/dev/null || break
+  sleep 0.1
+done
+if kill -0 "$PID_GOAL" 2>/dev/null; then
+  # Ele é filho direto deste shell e líder do próprio grupo: o sinal não
+  # alcança mais ninguém.
+  kill -TERM "$PID_GOAL" 2>/dev/null; sleep 1
+  anota "send_goal encerrado" ANOTADO "(não saiu com INT em 10 s — TERM)"
+else
+  anota "send_goal encerrado" ANOTADO "(saiu sozinho)"
+fi
+wait "$PID_GOAL" 2>/dev/null
+sync
 
 # ── o goal foi ACEITO ou REJEITADO? ────────────────────────────────────────
 # São falhas diferentes e o sintoma é o mesmo (o robô não anda): rejeitado é
