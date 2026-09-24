@@ -1,14 +1,60 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-09-23** (PC de dev, robô
-> desligado — a **etapa 5 inteira está na `main`**, passos 1–6, e a pilha de
-> localização já compila aqui (055); em aberto, auditar o NOTEBOOK na etapa 6).
+> Versionado na `main`. Atualizado em **2026-09-24** (PC de dev, robô
+> desligado — a **etapa 5 inteira está na `main`**, passos 1–6; o **passo 6 da
+> etapa 6 fechou** na branch `etapa6-pilha-robo3`, e o **passo 7 não começou**;
+> em aberto, auditar o NOTEBOOK).
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+---
+
+## ✅ 24-09 — PASSO 6 DA ETAPA 6 FECHADO (branch `etapa6-pilha-robo3`, NÃO na `main`)
+
+A pilha sobe o **robô 3** no Gazebo headless e a integração está provada por
+corrida, não por leitura de código. Foram **cinco corridas**; a que vale é a
+quinta.
+
+**Corrida canônica:** código em **`8515a25`**, evidência em
+**`~/etapa6/20260924_132510`** (ESTA MÁQUINA — a pasta não vem pelo git),
+**RC 0**, zero REPROVADO e zero RECUPERADO.
+
+- manifesto **íntegro**: 43 arquivos, `sha256sum -c` código 0, e o `SHA256SUMS`
+  é a última escrita do validador;
+- **bag legível**, em tempo simulado e **sem `reindex`**: 61 022 mensagens,
+  17,8 s, início em 0,002 s;
+- contagens de `ERROR/FATAL/died` = **0 / 7 / 7** (execução antes da limpeza /
+  `launch.log` final assinado / trecho após o snapshot de pré-limpeza).
+
+**`869b1d5` é o fechamento documental** do passo 6 (só `docs/`).
+
+🟡 **Dívida ABERTA — decisão 057** (`docs/decisoes/057-saidas-nao-limpas-no-teardown-sao-divida-separada.md`):
+**seis encerramentos não limpos**, todos no teardown — cinco com código 1
+(`heading_controller`, `compensador_rumo`, `path_follower`, `placa_simulada`,
+`freeze_capture`) e o `collision_monitor` com **−11 (SIGSEGV), intermitente**.
+Não é acabamento: **pode ser relevante em hardware**, porque no robô o caminho
+de saída é o que zera atuador. Fecha quando os seis registrarem
+`finished cleanly`, não houver erro depois do início do encerramento, e as
+contagens forem **0 / 0 / 0**.
+
+🟡 **A decisão 056 continua PROPOSTA** — passa a "aplicada" só no passo 8.
+
+🛑 **Passo 7: FECHADO e não iniciado.** Ele é a **primeira execução com objetivo
+Nav2**: 1 m à frente, **teto de 60 s simulados**, e **três critérios
+simultâneos** — `SUCCEEDED`, tolerância final, e comando não nulo chegando ao
+controlador.
+
+❓ **Questão em aberto do passo 7, a decidir ANTES de escrever o validador** —
+não é decisão tomada: o terceiro critério deve ser observado **no consumidor
+final, `hoverboard_base_controller`**, e não no que o Nav2 publica; e
+**"não nulo" talvez precise virar "acima da zona morta vigente"**, senão um
+comando abaixo dela passa no critério com o robô parado em silêncio. Isso
+**altera o contrato atual**, então é decisão de projeto, não detalhe de
+implementação.
 
 ---
 
@@ -112,8 +158,9 @@ drivers e overlay; (3) verificar a rede notebook↔Mid-360; (4) só então o
 roteiro de bancada com Nav2; (5) se o chassi superar o robô 2, migrar e
 auditar o NUC.
 
-⬜ **Próximo:** etapa 6 — a `pilha` com `robo:=3`, em duas trilhas paralelas: o
-Gazebo (software, daqui) e a auditoria do **NOTEBOOK** (hardware, na máquina).
+⬜ **Próximo:** etapa 6 — o **passo 7** na trilha Gazebo (o passo 6 fechou em
+24-09; ver a seção do topo) e a auditoria do **NOTEBOOK** (hardware, na
+máquina).
 
 🟢 **Trilha Gazebo: plano APROVADO em 23-09**, com seis correções do dono já
 incorporadas (`docs/PLANO_ETAPA6_ROBO3.md` §9); a decisão **056** segue como
