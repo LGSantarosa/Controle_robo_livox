@@ -45,16 +45,33 @@ contagens forem **0 / 0 / 0**.
 
 🛑 **Passo 7: FECHADO e não iniciado.** Ele é a **primeira execução com objetivo
 Nav2**: 1 m à frente, **teto de 60 s simulados**, e **três critérios
-simultâneos** — `SUCCEEDED`, tolerância final, e comando não nulo chegando ao
-controlador.
+simultâneos** — `SUCCEEDED`; pose final dentro do `xy_goal_tolerance` vivo; e
+**um comando acima do patamar vivo chegando ao controlador final**.
 
-❓ **Questão em aberto do passo 7, a decidir ANTES de escrever o validador** —
-não é decisão tomada: o terceiro critério deve ser observado **no consumidor
-final, `hoverboard_base_controller`**, e não no que o Nav2 publica; e
-**"não nulo" talvez precise virar "acima da zona morta vigente"**, senão um
-comando abaixo dela passa no critério com o robô parado em silêncio. Isso
-**altera o contrato atual**, então é decisão de projeto, não detalhe de
-implementação.
+✅ **O contrato do terceiro critério está FECHADO** — decidido em **`6718c57`**,
+**antes** de qualquer teste, e escrito em `docs/PLANO_ETAPA6_ROBO3.md` §4.6.1 e
+na decisão **056 §4.1**:
+
+- observa-se em **`/hoverboard_base_controller/cmd_vel`**, o consumidor final,
+  depois do modelo de atuador;
+- **"não nulo" virou** a maior velocidade equivalente de roda
+  (`max(|v ∓ wz·bitola/2|)`) **≥ patamar vivo − 1e-3**, com
+  `patamar = deadband_speed · escala_real · raio`;
+- os parâmetros são **consultados em `/placa_simulada`, nunca redigitados** —
+  inclusive a `bitola`, cujo valor vivo (0,32) não é o default do nó (0,270);
+- exige-se **`modelo == medido`** (com `modelo: ideal` o nó vira fio e o
+  critério não prova nada);
+- **`/cmd_vel_bruto` é apenas diagnóstico**: o que passa por ele ainda pode ser
+  engolido pela placa;
+- a **pose inicial é registrada** na evidência, para provar que o objetivo não
+  nasceu dentro da tolerância. Sem quarto critério de deslocamento.
+
+🔴 **O que ele NÃO prova:** valida **somente a placa simulada herdada do robô
+2**; **não mede a zona morta real do robô 3**. Passar nele não diz nada sobre o
+atuador físico.
+
+O primeiro trabalho do passo 7, quando abrir, é **exclusivamente os testes
+vermelhos contra evidências sintéticas, sem Gazebo**.
 
 ---
 
