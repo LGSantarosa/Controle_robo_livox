@@ -176,9 +176,9 @@ def test_pose_final_desviada_so_em_y_reprova(julga):
 
 
 def test_pose_final_em_diagonal_dentro_do_raio_aprova(julga):
-    """O espelho: erro nas duas coordenadas, mas a distância cabe. Julgar
-    coordenada a coordenada reprovaria corrida boa (0,15 < 0,25 em cada eixo,
-    0,212 no raio)."""
+    """O espelho: erro nas duas coordenadas, mas a distância cabe — 0,212 no
+    raio. Quem reprovaria corrida boa aqui é SOMA (Manhattan): 0,15 + 0,15 =
+    0,30 > 0,25. Coordenada a coordenada isto passaria, como passa no raio."""
     ev = _evidencia_boa()
     ev['pose_final'] = {'x': 0.85, 'y': 0.15}     # distância 0,2121
     assert julga.avalia(ev)[TOLERANCIA][0]
@@ -192,13 +192,36 @@ def test_objetivo_que_nasceu_dentro_da_tolerancia_reprova(julga):
     assert not julga.avalia(ev)[NASCEU_FORA][0]
 
 
-def test_pose_inicial_desviada_so_em_y_nasceu_dentro_e_reprova(julga):
-    """Mesma armadilha, do outro lado: `x` no alvo e 0,10 m em `y`. O robô já
-    estava dentro da tolerância, e só um cálculo de distância XY vê isso —
-    medindo `|x|`, a partida "distava 1,0 m"."""
+def test_pose_inicial_desviada_so_em_y_esta_fora_e_aprova(julga):
+    """Mesma armadilha, do outro lado, e o sentido é este: partida em
+    `x` = 1,0 (o `x` do alvo) com 0,30 m de desvio lateral.
+
+    🔴 O julgador 1D lê `|Δx| = 0` e conclui que o objetivo NASCEU DENTRO —
+    reprovando corrida boa. Pela distância XY a partida está a 0,30 m, fora da
+    tolerância de 0,25, e o item APROVA. É a versão que separa os dois
+    cálculos: com `y` = 0,10 os dois reprovariam, e o teste não provaria nada.
+    """
     ev = _evidencia_boa()
-    ev['pose_inicial'] = {'x': 1.0, 'y': 0.10}    # distância 0,10 < 0,25
-    assert not julga.avalia(ev)[NASCEU_FORA][0]
+    ev['pose_inicial'] = {'x': 1.0, 'y': 0.30}    # distância 0,30 > 0,25
+    assert julga.avalia(ev)[NASCEU_FORA][0]
+
+
+def test_a_caixa_nao_e_o_raio_nas_duas_poses(julga):
+    """🔴 A armadilha da CAIXA: 0,20 em `x` E 0,20 em `y`.
+
+    Cada coordenada isolada cabe na tolerância (0,20 < 0,25), mas a distância é
+    0,2828 — está FORA. Um julgador que testasse `|Δx| < tol and |Δy| < tol`
+    aprovaria a chegada (robô 28 cm do alvo) e, na partida, diria que o objetivo
+    nasceu dentro. Os dois vereditos ficam invertidos pela mesma conta errada,
+    então o caso cobra as duas pontas de uma vez.
+    """
+    ev = _evidencia_boa()
+    ev['pose_final'] = {'x': 0.80, 'y': 0.20}     # distância 0,2828 > 0,25
+    assert not julga.avalia(ev)[TOLERANCIA][0]
+
+    ev = _evidencia_boa()
+    ev['pose_inicial'] = {'x': 0.80, 'y': 0.20}   # distância 0,2828 > 0,25
+    assert julga.avalia(ev)[NASCEU_FORA][0]
 
 
 def test_pose_inicial_em_diagonal_fora_do_raio_aprova(julga):
