@@ -108,20 +108,47 @@ MUNDO_PADRAO = os.path.join(RAIZ, 'worlds', 'pista_obstaculos.sdf')
 def _recusa_robo(contexto, *_args, **_kwargs):
     """Robô que esta pilha não sobe morre AQUI, antes de qualquer processo.
 
-    Só o texto exato "2" passa — sem aparar espaço nem converter número: " 2",
-    "02" e "2.0" não são o robô 2, e aceitar por conversão é escolher robô por
-    acidente. O robô 3 tem resposta própria (D1 da etapa 4): o perfil dele
-    entra no passo 4, mas a pilha só aprende a subi-lo na etapa 6.
+    Só os textos exatos "2" e "3" passam — sem aparar espaço nem converter
+    número: " 2", "02" e "2.0" não são o robô 2, e aceitar por conversão é
+    escolher robô por acidente.
+
+    A ordem das três perguntas é contrato (etapa 6, D1), e é ela que garante
+    que nada escolhe robô por conversão:
+
+      1. o TEXTO existe? ("02" morre aqui, antes de qualquer coisa);
+      2. o `argv` e o contexto dizem o MESMO robô? É a segunda boca da trava:
+         o perfil foi montado na descrição, lendo o `argv`, e quem sobe é o
+         contexto. Divergir é subir com o footprint do robô errado sem uma
+         linha de aviso — e é também onde cai o include PROGRAMÁTICO, porque
+         para ele o `argv` entrega o default "2";
+      3. e só então a combinação: `robo:=3 sim:=false` é trava desta etapa.
+
+    A primeira boca (`robo:=` repetido) mata mais cedo ainda, na descrição, em
+    `_robo_do_argv` — antes mesmo de existir perfil.
     """
     robo = LaunchConfiguration('robo').perform(contexto)
-    if robo == '2':
-        return []
-    if robo == '3':
+    if robo not in ('2', '3'):
         raise RuntimeError(
-            'robo:=3 ainda não sobe nesta pilha: o perfil do robô 3 entra no '
-            'passo 4 da etapa 4, mas a pilha do robô 3 só é liberada na '
-            'etapa 6.')
-    raise RuntimeError(f'robo:={robo!r} não existe. Esta pilha sobe o robô "2".')
+            f'robo:={robo!r} não existe. Esta pilha sobe os robôs "2" e "3".')
+    pedido = _robo_do_argv()
+    if robo != pedido:
+        raise RuntimeError(
+            f'o robô do contexto ({robo!r}) não é o da linha de comando '
+            f'({pedido!r}), e o perfil da pilha foi montado pelo argv. Seguir '
+            'seria subir um robô com a geometria do outro — costmap e reflexo '
+            'com o footprint errado, sem uma linha de aviso. Se esta launch '
+            'está sendo incluída por outra, o `robo:=` tem de aparecer na '
+            'linha de comando: a seleção por argv é ponte deliberada (decisão '
+            '056), não API de include.')
+    if robo == '3' and LaunchConfiguration('sim').perform(contexto) != 'true':
+        raise RuntimeError(
+            'robo:=3 sobe SÓ com sim:=true, e a recusa aqui é trava, não '
+            'pendência: no robô 3 de verdade faltam as duas pontas da cadeia. '
+            'A fronteira do atuador real (o nó que entrega WheelSpeeds à MEGA, '
+            'decisão 054) não está nesta árvore, e a localização não existe — '
+            'o FAST-LIO do Mid-360 é a etapa 7. Subir assim seria mandar '
+            'comando para uma cadeia sem fim, com pose que ninguém estima.')
+    return []
 
 
 def _recusa_combinacao_sem_sentido(contexto, *_args, **_kwargs):
@@ -160,16 +187,61 @@ def _passou(nome):
                for a in sys.argv)
 
 
+def _robo_do_argv():
+    """Qual robô a LINHA DE COMANDO pediu — o texto exato, sem conversão.
+
+    Esta é a ponte da decisão 056 (D1): o perfil tem de ser escolhido em
+    `generate_launch_description()`, que roda SEM contexto, e `robo` só existe
+    dentro de um `LaunchContext`. Ler o `argv` é o mecanismo que esta launch já
+    usa (`_passou`), e o `_recusa_robo` — que roda no contexto — é quem confere.
+
+    🔴 DEVOLVE TEXTO, e nunca `int`. `int('02')` é 2, e aí "02" escolheria o
+    perfil do robô 2 antes de o `_recusa_robo` o recusar por não ser o texto
+    "2" — robô escolhido por conversão, que é justamente o que a recusa existe
+    para impedir. Aqui só "3" é o robô 3; todo o resto monta provisoriamente o
+    perfil SEGURO (o 2) e morre na recusa, sem ter chegado a ação nenhuma.
+
+    🔴 PRIMEIRA BOCA DA TRAVA: `robo:=` repetido morre AQUI, na descrição,
+    antes de existir perfil. Qualquer desempate (o primeiro, o último)
+    escolheria robô por acidente.
+
+    Sem `robo:=` no `argv` devolve "2" — o mesmo default do
+    `DeclareLaunchArgument`, e é por isso que o include programático com
+    `robo:=3` cai na segunda boca em vez de passar calado.
+    """
+    import sys
+    passados = [a.split(':=', 1)[1] for a in sys.argv if a.startswith('robo:=')]
+    if len(passados) > 1:
+        raise RuntimeError(
+            f'`robo:=` apareceu repetido na linha de comando ({passados}). '
+            'Não há desempate honesto: escolher o primeiro ou o último seria '
+            'escolher robô por acidente. Passe UM.')
+    return passados[0] if passados else '2'
+
+
 def generate_launch_description():
     # Carimbo de tempo da SUBIDA — resolvido aqui, em Python, e não por
     # substituição: `PythonExpression` com `__import__` funciona até o dia
     # em que não funciona, e o preço seria a corrida sem registro.
     CARIMBO = time.strftime('%Y-%m-%d_%H%M%S')
     pkg = get_package_share_directory('robot_motion')
-    # O robô 2 é montado pelo perfil (etapa 4, passo 3) — ESTÁTICO: escolher o
-    # perfil pelo argumento `robo` é a etapa 6. Quem recusa outro robô é o
-    # `_recusa_robo`, na subida.
-    perfil_robo = perfil.parametros(2, pkg)
+    # 🔴 O PERFIL SEGUE O `robo` DA LINHA DE COMANDO (etapa 6, passo 4, D1).
+    #
+    # Só o texto "3" monta o robô 3. Todo o resto — inclusive "02", "2.0" e
+    # texto vazio — monta provisoriamente o perfil SEGURO, o do robô 2, e morre
+    # no `_recusa_robo` antes de qualquer ação: montar o perfil não é subir o
+    # robô, e nenhum processo nasce entre aqui e a recusa.
+    #
+    # O `share/` do `robot_base` (onde mora a geometria do robô 3) é resolvido
+    # SÓ para o robô 3, de propósito: o robô 2 não pode passar a depender de um
+    # artefato do robô 3 para subir — artefato faltando derrubaria o robô que
+    # funciona (alternativa descartada na decisão 056).
+    ROBO = _robo_do_argv()
+    if ROBO == '3':
+        perfil_robo = perfil.parametros(
+            3, pkg, share_base=get_package_share_directory('robot_base'))
+    else:
+        perfil_robo = perfil.parametros(2, pkg)
     # 🔴 A REESCRITA DO PERFIL VIRA ARQUIVO (etapa 6, passo 3, decisão 056).
     #
     # Quem lê a configuração dos costmaps é o SERVIDOR do Nav2, por caminho de
@@ -194,11 +266,14 @@ def generate_launch_description():
     # `Node` precisa dele na descrição; os BYTES são escritos depois, pelo
     # `_materializa_perfil`, que só roda passada a validação do robô.
     #
-    # ⚠️ Hoje o `ros2 bag record -o` lá embaixo aponta para esta MESMA pasta, e
-    # ele exige diretório inexistente. Enquanto nenhum perfil materializa (o
-    # robô 2 não tem reescrita), não há colisão; quando o robô 3 entrar, o bag
-    # desce para `<pasta>/bag`. Está no plano da etapa 6, §4 (D2).
     pasta_corrida = [LaunchConfiguration('log_dir'), f'/corrida_{CARIMBO}']
+    # ⚠️ O `ros2 bag record -o` EXIGE diretório inexistente, e no robô 3 a pasta
+    # da corrida já existe quando ele sobe — os YAMLs materializados nasceram
+    # lá. Por isso o bag do robô 3 desce um nível, e desce DENTRO da mesma
+    # pasta: evidência espalhada em duas pastas irmãs parecidas não é
+    # evidência. No robô 2 nada materializa, a pasta não existe, e o destino
+    # segue sendo exatamente o de antes (D2 do plano da etapa 6).
+    destino_do_bag = [*pasta_corrida, '/bag'] if ROBO == '3' else pasta_corrida
     destinos = {
         chave: ([*pasta_corrida, '/' + perfil.NOMES[chave]]
                 if perfil_robo[f'{chave}_rewrites'] else perfil_robo[chave])
@@ -393,16 +468,75 @@ def generate_launch_description():
                  parameters=overlay, condition=sem_mapa, **kwargs),
         ]
 
+    # ------------------------------------------- qual simulador, e com o quê
+    #
+    # 🔴 O ALVO MUDA COM O ROBÔ, E A LISTA DE ARGUMENTOS MUDA COM ELE (achado C
+    # da etapa 6). O `sim_robo3.launch.py` NÃO declara `planta` — e include com
+    # argumento não declarado morre na subida. Ele declara `mundo`, `x`, `y`,
+    # `yaw`, `gui` e `placa`, e é exatamente isso que ele recebe.
+    #
+    # ⚠️ O `mundo` continua sendo o DESTA launch (`pista_obstaculos.sdf`), e não
+    # o default do `sim_robo3` (`pista_livre.sdf`): quem inclui é dono do
+    # argumento, e aqui o mundo anda EM PAR com o `mapa`
+    # (`maps/pista_obstaculos.yaml`). Trocar só o mundo poria o robô numa pista
+    # e o costmap global noutra — parede onde não há nada, o defeito da decisão
+    # 014 de volta. O `sim_robo3` sozinho segue nascendo na pista livre; a prova
+    # curta da etapa 6 acontece num TRECHO LIVRE da pista de obstáculos.
+    #
+    # Nasce num ponto LIVRE: a origem da pista cai dentro da parede do
+    # perímetro, que começa em 0.
+    #
+    # 🔴 O SPAWN E A POSE INICIAL DO AMCL SÃO O MESMO ARGUMENTO, e isso é trava
+    # e não conveniência: com dois números separados alguém nasce o robô num
+    # lugar e diz ao AMCL que ele está em outro. O filtro então "corrige" uma
+    # diferença que não existe no mundo, converge para a pose errada, e o
+    # sintoma é mapa e nuvem desalinhados — que se parece exatamente com fatia
+    # 2D mal ajustada. Dois defeitos com o mesmo rosto é o que faz perder o dia.
+    # Há teste.
+    # ⚠️ O NOME DO ARQUIVO E OS ARGUMENTOS FICAM DENTRO DA CHAMADA, literais, e
+    # isso não é estilo: `test_configs_coerentes` confere por AST que o include
+    # do simulador passa `pose_x`/`pose_y` — o guarda do parágrafo acima. Ele
+    # acha o include pelo nome do arquivo no próprio trecho, então guardar o
+    # nome numa variável tiraria a garra dele em silêncio. Assim, com UMA
+    # chamada para os dois robôs, o guarda passa a cobrir os dois.
+    include_do_sim = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(os.path.join(
+            get_package_share_directory('robot_base'), 'launch',
+            'sim_robo3.launch.py' if ROBO == '3' else 'sim.launch.py')),
+        condition=IfCondition(sim),
+        launch_arguments={'mundo': LaunchConfiguration('mundo'),
+                          'x': LaunchConfiguration('pose_x'),
+                          'y': LaunchConfiguration('pose_y'),
+                          # Sem isto o `pose_yaw` só chegava ao AMCL e o robô
+                          # nascia de lado (20-08).
+                          'yaw': LaunchConfiguration('pose_yaw'),
+                          'placa': placa,
+                          'gui': LaunchConfiguration('gui'),
+                          # A `planta` (o modelo dinâmico de 05-08) é argumento
+                          # do simulador do robô 2, e SÓ dele: o `sim_robo3` não
+                          # a declara, e include com argumento não declarado
+                          # morre na subida.
+                          **({} if ROBO == '3'
+                             else {'planta': LaunchConfiguration('planta')})
+                          }.items(),
+    )
+
     return LaunchDescription([
-        # Qual robô (etapa 4). Declarado e recusado ANTES de tudo: nada sobe
-        # para um robô que esta pilha não monta.
+        # Qual robô (etapa 4, e a escolha do perfil na etapa 6). Declarado e
+        # recusado ANTES de tudo: nada sobe para um robô que esta pilha não
+        # monta, nem para uma combinação que ela recusa.
         DeclareLaunchArgument(
             'robo', default_value='2',
-            description='"2" (o único que esta pilha sobe). "3" recusa: a '
-                        'pilha do robô 3 é a etapa 6'),
-        OpaqueFunction(function=_recusa_robo),
+            description='"2" (o robô que funciona) ou "3" — este só com '
+                        'sim:=true, porque no robô 3 faltam a fronteira do '
+                        'atuador real e a localização (etapa 7)'),
         DeclareLaunchArgument('sim', default_value='false',
                               description='true sobe o Gazebo junto'),
+        # 🔴 A RECUSA LÊ O `sim`, e por isso vem depois de ele ser declarado —
+        # mas continua ANTES de qualquer ação operacional, que é o que o
+        # contrato pede: `robo:=3 sim:=false` é trava desta etapa, e trava que
+        # dispara depois do primeiro processo não é trava.
+        OpaqueFunction(function=_recusa_robo),
         # 🔴 O DEFAULT SEGUE O `sim`, e isto é uma correção de 11-08.
         #
         # A decisão 015 diz que `mapa:=nenhum` é OBRIGATÓRIO no robô real — e
@@ -657,32 +791,7 @@ def generate_launch_description():
         OpaqueFunction(function=_materializa_perfil),
 
         # ---------------------------------------------------- o simulador
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(os.path.join(
-                get_package_share_directory('robot_base'),
-                'launch', 'sim.launch.py')),
-            condition=IfCondition(sim),
-            # Nasce num ponto LIVRE: a origem da pista cai dentro da parede do
-            # perímetro, que começa em 0.
-            #
-            # 🔴 O SPAWN E A POSE INICIAL DO AMCL SÃO O MESMO ARGUMENTO, e isso
-            # é trava e não conveniência: com dois números separados alguém
-            # nasce o robô num lugar e diz ao AMCL que ele está em outro. O
-            # filtro então "corrige" uma diferença que não existe no mundo,
-            # converge para a pose errada, e o sintoma é mapa e nuvem
-            # desalinhados — que se parece exatamente com fatia 2D mal
-            # ajustada. Dois defeitos com o mesmo rosto é o que faz perder o
-            # dia. Há teste.
-            launch_arguments={'mundo': LaunchConfiguration('mundo'),
-                              'x': LaunchConfiguration('pose_x'),
-                              'y': LaunchConfiguration('pose_y'),
-                              # Sem isto o `pose_yaw` só chegava ao AMCL e o
-                              # robô nascia de lado (20-08).
-                              'yaw': LaunchConfiguration('pose_yaw'),
-                              'planta': LaunchConfiguration('planta'),
-                              'placa': placa,
-                              'gui': LaunchConfiguration('gui')}.items(),
-        ),
+        include_do_sim,
 
         # ---------------------------------------------------------- Nav2
         #
@@ -887,8 +996,7 @@ def generate_launch_description():
         # preset fastwrite evita gastar CPU comprimindo durante a própria prova;
         # espaço em disco é uma consequência explícita e aceita deste protocolo.
         ExecuteProcess(
-            cmd=['ros2', 'bag', 'record', '-o',
-                 [LaunchConfiguration('log_dir'), f'/corrida_{CARIMBO}'],
+            cmd=['ros2', 'bag', 'record', '-o', destino_do_bag,
                  '--all-topics', '--storage-preset-profile', 'fastwrite'],
             output='log',
             condition=IfCondition(LaunchConfiguration('bag'))),

@@ -10195,3 +10195,59 @@ E conflita com o relato da troca de cabos (a frente puxando igual nas duas
 montagens), que nunca foi medido antes da troca. Repetir limpo antes de mexer em
 qualquer explicação. Roteiro de 16-09 no `ESTADO_PROJETO.md`; gravador
 versionado em `tools/grava_pivo.py` (com bateria).
+
+---
+
+## 🧱 2026-09-24 (PC de dev, robô DESLIGADO) — A PILHA ESCOLHE O ROBÔ: PASSO 4 DA ETAPA 6
+
+Passo 4 do `PLANO_ETAPA6_ROBO3.md` §7, partindo de `0c27f26` (infraestrutura de
+materialização) na `etapa6-pilha-robo3`. Nada de Gazebo, nada de hardware: só a
+descrição da launch percorrida num `LaunchContext`.
+
+**O que entrou.** `_robo_do_argv()` lê o `robo:=` do `argv` e devolve **texto**,
+nunca `int` — correção do dono sobre o meu desenho: `int('02')` é 2, e "02"
+escolheria o perfil do robô 2 antes de ser recusado por não ser o texto "2",
+que é escolher robô por conversão. Só `'3'` monta o perfil 3; todo o resto monta
+provisoriamente o perfil **seguro** (o 2) e morre na recusa, sem ação nenhuma no
+meio. As três bocas da trava: `robo:=` repetido morre na descrição, antes de
+existir perfil; contexto ≠ `argv` morre na recusa (e é onde cai o include
+programático, porque para ele o `argv` entrega o default "2"); e `robo:=3
+sim:=false` morre nomeando as duas coisas que faltam — a fronteira do atuador
+real e a localização.
+
+**Uma reordenação, e ela é deliberada.** O `OpaqueFunction(_recusa_robo)` passou
+para **depois** do `DeclareLaunchArgument('sim')`, porque a recusa agora lê o
+`sim`. Continua antes de qualquer ação operacional, que é o que o contrato pede.
+
+**Onde eu quebrei um guarda e desfiz.** A primeira versão pôs o nome do arquivo
+do simulador e os `launch_arguments` em variáveis — e isso tirou a garra do
+`test_o_spawn_do_simulador_e_a_pose_do_amcl_sao_O_MESMO_argumento`, que acha o
+include por AST pelo nome do arquivo no próprio trecho. Ele ficou vermelho, e
+estava **certo**: o jeito de o afrouxar seria mexer no teste. Voltei o nome e os
+argumentos para dentro da chamada (o robô escolhido por uma condicional inline),
+e agora **uma** chamada serve os dois robôs — o guarda passou a cobrir os dois.
+
+**Mundo, decidido pelo dono:** a pilha mantém `pista_obstaculos.sdf`. Ela também
+usa `maps/pista_obstaculos.yaml`, e trocar só o mundo poria o robô numa pista e
+o costmap global noutra. O `sim_robo3` sozinho segue nascendo na `pista_livre`;
+quando incluído, quem manda é a pilha, e o par mundo/mapa se preserva. A prova
+curta vai acontecer num **trecho livre** da pista de obstáculos.
+
+**Dois testes do passo 3 mudaram de motivo, não de rigor.** Eles fixavam o texto
+da recusa da etapa 4 ("o perfil entra no passo 4, a pilha na etapa 6") — texto
+que deixou de existir quando a pilha aprendeu a subir o robô 3. Um passou a
+provar a trava de coerência; o outro usa `robo:="9"` para continuar provando que
+o robô fala antes da localização.
+
+**Provas.** Suíte inteira: **1 failed, 1292 passed** — e o único vermelho é
+`test_o_mux_do_robo3_tem_as_quatro_faixas`, que é o passo 5 de propósito (o
+`twist_mux_pilha_robo3.yaml` não existe ainda). Gate §6(c): parâmetros de cada
+nó do robô 2 comparados com os de `1f49981` nas duas bordas, **idênticos byte a
+byte** (`sim:=true` 7182 B, `sim:=false` 7133 B), e o robô 2 não criou pasta de
+corrida nenhuma. Gate §6(a): o diff não toca `robot_base/`, `robot_nav/` nem os
+YAMLs do robô 2.
+
+**O que isto NÃO prova:** nada roda. Percorrer a descrição é aviso cedo — o
+grafo vivo, o `use_sim_time`, o `footprint` nos costmaps e o objetivo curto são
+os passos 6 e 7, com aviso prévio e "pode". E o `install/` deste PC ainda tem a
+launch antiga: quem for subir de verdade precisa reconstruir o pacote.

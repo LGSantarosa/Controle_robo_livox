@@ -3,9 +3,10 @@
 Dois contratos, testados com a launch de verdade num `LaunchContext` real:
 
 1. **Recusa antes de tudo.** `robo:=2` (o texto exato, e o default) segue;
-   `robo:=3` morre dizendo que o perfil entra no passo 4 mas a pilha do robô 3
-   só na etapa 6 (D1); qualquer outro texto morre dizendo que o robô não
-   existe. Sem aparar espaço nem converter número: `" 2"`, `"02"` e `"2.0"` não
+   qualquer outro texto morre dizendo que o robô não existe — e `robo:=3`, que
+   desde a etapa 6 é robô que esta pilha sobe, morre aqui pela trava de
+   coerência quando vem SÓ no contexto, sem o `argv` (decisão 056; a matriz das
+   quatro combinações mora em `test_pilha_robo3.py`). Sem aparar espaço nem converter número: `" 2"`, `"02"` e `"2.0"` não
    são o robô 2. E a recusa vem antes da validação que já existia e antes de
    QUALQUER ação que sobe processo — uma pilha meio de pé com o robô errado é
    pior do que nenhuma.
@@ -103,10 +104,23 @@ def test_robo2_passa_e_a_pilha_sobe(argumentos):
     assert alcancadas
 
 
-def test_robo3_recusa_ate_a_etapa6():
+def test_robo3_sem_o_argv_morre_pela_trava_de_coerencia():
+    """🔧 ETAPA 6, PASSO 4: este teste MUDOU de motivo, não de rigor.
+
+    Até o passo 3 ele fixava o texto da recusa da etapa 4 ("o perfil entra no
+    passo 4, a pilha na etapa 6"). Esse texto deixou de existir quando a pilha
+    aprendeu a subir o robô 3, e manter a asserção seria pedir que a
+    implementação anunciasse para sempre uma pendência já fechada.
+
+    O que continua valendo — e é o ponto — é que `{'robo': '3'}` montado SÓ no
+    contexto não sobe: o perfil é escolhido no `argv` (decisão 056), e contexto
+    divergindo do `argv` é a segunda boca da trava. A matriz inteira das quatro
+    combinações está em `test_pilha_robo3.py`.
+    """
     alcancadas, erro = _percorre(_descricao(), {'robo': '3'})
     assert isinstance(erro, RuntimeError), erro
-    assert 'passo 4' in str(erro) and 'etapa 6' in str(erro), str(erro)
+    assert 'argv' in str(erro).lower() or 'linha de comando' in str(erro).lower(), \
+        str(erro)
     assert alcancadas == []
 
 
@@ -120,9 +134,14 @@ def test_robo_que_nao_existe_recusa(robo):
 
 
 def test_a_recusa_do_robo_vem_antes_da_validacao_que_ja_existia():
-    """Com o robô E a localização inválidos, quem fala é o robô."""
-    _, erro = _percorre(_descricao(), {'robo': '3', 'localizacao': 'xyz'})
-    assert 'etapa 6' in str(erro), str(erro)
+    """Com o robô E a localização inválidos, quem fala é o robô.
+
+    🔧 Etapa 6, passo 4: o robô inválido passou a ser `"9"` em vez de `"3"`,
+    porque o 3 agora é um robô que esta pilha sobe — e o que este teste mede é
+    a ORDEM das validações, não o texto de uma recusa que mudou.
+    """
+    _, erro = _percorre(_descricao(), {'robo': '9', 'localizacao': 'xyz'})
+    assert 'não existe' in str(erro) and repr('9') in str(erro), str(erro)
 
 
 def test_a_recusa_do_robo_vem_antes_de_qualquer_acao_operacional():
