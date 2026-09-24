@@ -166,12 +166,45 @@ def test_a_tolerancia_e_a_viva_nao_um_numero_redigitado(julga):
     assert not julga.avalia(ev)[TOLERANCIA][0]
 
 
+def test_pose_final_desviada_so_em_y_reprova(julga):
+    """🔴 O caso que um julgador de uma dimensão só deixa passar: `x` cravado no
+    alvo e 0,30 m de desvio lateral. Medindo só `|x|`, o erro dá ZERO e a
+    corrida aprova com o robô 30 cm fora."""
+    ev = _evidencia_boa()
+    ev['pose_final'] = {'x': 1.0, 'y': 0.30}      # distância 0,30 > 0,25
+    assert not julga.avalia(ev)[TOLERANCIA][0]
+
+
+def test_pose_final_em_diagonal_dentro_do_raio_aprova(julga):
+    """O espelho: erro nas duas coordenadas, mas a distância cabe. Julgar
+    coordenada a coordenada reprovaria corrida boa (0,15 < 0,25 em cada eixo,
+    0,212 no raio)."""
+    ev = _evidencia_boa()
+    ev['pose_final'] = {'x': 0.85, 'y': 0.15}     # distância 0,2121
+    assert julga.avalia(ev)[TOLERANCIA][0]
+
+
 def test_objetivo_que_nasceu_dentro_da_tolerancia_reprova(julga):
     """"Chegou" que era "já estava lá" — o modo de falha mais provável com um
     alvo curto, e o motivo de a pose inicial ser evidência obrigatória."""
     ev = _evidencia_boa()
     ev['pose_inicial'] = {'x': 0.90, 'y': 0.0}    # 0,10 m do goal < 0,25
     assert not julga.avalia(ev)[NASCEU_FORA][0]
+
+
+def test_pose_inicial_desviada_so_em_y_nasceu_dentro_e_reprova(julga):
+    """Mesma armadilha, do outro lado: `x` no alvo e 0,10 m em `y`. O robô já
+    estava dentro da tolerância, e só um cálculo de distância XY vê isso —
+    medindo `|x|`, a partida "distava 1,0 m"."""
+    ev = _evidencia_boa()
+    ev['pose_inicial'] = {'x': 1.0, 'y': 0.10}    # distância 0,10 < 0,25
+    assert not julga.avalia(ev)[NASCEU_FORA][0]
+
+
+def test_pose_inicial_em_diagonal_fora_do_raio_aprova(julga):
+    ev = _evidencia_boa()
+    ev['pose_inicial'] = {'x': 0.80, 'y': 0.80}   # distância 0,8246 > 0,25
+    assert julga.avalia(ev)[NASCEU_FORA][0]
 
 
 def test_pose_inicial_ausente_reprova(julga):
@@ -302,11 +335,19 @@ def test_amostra_fora_da_janela_nao_aprova_o_patamar(julga):
 
 
 def test_amostra_nas_bordas_da_janela_aprova(julga):
-    """Inclusiva nas duas pontas: o instante do aceite e o do resultado são da
-    corrida."""
+    """Inclusiva nas duas pontas (decidido em 24-09): o instante do aceite e o
+    do resultado são da corrida — `objetivo_aceito <= t <= resultado`."""
     for t in (10.0, 35.0):
         ev = _com_amostra(TOPICO_FINAL, t, PATAMAR_VIVO)
         assert julga.avalia(ev)[JANELA][0], t
+
+
+def test_o_teardown_comeca_estritamente_depois_do_resultado(julga):
+    """1 ms depois do resultado já é teardown. Sem folga temporal inventada: a
+    janela é a janela, e tolerância artificial aqui só serviria para salvar
+    corrida ruim."""
+    ev = _com_amostra(TOPICO_FINAL, 35.001, PATAMAR_VIVO)
+    assert not julga.avalia(ev)[JANELA][0]
 
 
 # ─── 7.3 os parâmetros são os VIVOS, nunca redigitados ───────────────────────
@@ -347,10 +388,23 @@ def test_bitola_menor_muda_o_veredito_do_mesmo_comando(julga):
     assert not julga.avalia(ev)[PATAMAR][0]
 
 
-def test_parametro_da_placa_ausente_reprova_em_vez_de_assumir(julga):
-    """Faltando parâmetro, o julgador NÃO pode cair num default: ele reprova e
-    diz o que faltou. Assumir é como a evidência mente."""
+@pytest.mark.parametrize('campo, item', [
+    ('modelo', MODELO),
+    ('deadband_speed', PATAMAR),
+    ('escala_real', PATAMAR),
+    ('raio', PATAMAR),
+    ('bitola', PATAMAR),
+])
+def test_campo_vivo_ausente_reprova_em_vez_de_assumir(julga, campo, item):
+    """Faltando QUALQUER um dos cinco, o julgador NÃO pode cair num default: ele
+    reprova e diz o que faltou.
+
+    🔴 É a mesma armadilha da `bitola` vista de frente. O nó tem default para
+    todos eles (`placa_simulada.py:144-178`), então um julgador distraído
+    "completa" o dump e devolve veredito com número que não é o da corrida —
+    erro invisível, porque o resultado tem a cara certa. Ausência de evidência
+    reprova; nunca vira aprovação nem número assumido.
+    """
     ev = _evidencia_boa()
-    ev['placa'].pop('escala_real')
-    itens = julga.avalia(ev)
-    assert not itens[PATAMAR][0]
+    ev['placa'].pop(campo)
+    assert not julga.avalia(ev)[item][0]
