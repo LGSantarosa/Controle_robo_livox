@@ -431,3 +431,147 @@ def test_campo_vivo_ausente_reprova_em_vez_de_assumir(julga, campo, item):
     ev = _evidencia_boa()
     ev['placa'].pop(campo)
     assert not julga.avalia(ev)[item][0]
+
+
+# ─── evidência INVÁLIDA: reprova com veredito, nunca com exceção ─────────────
+#
+# 🔴 Achados reproduzidos em 24-09 contra o `julga.py` de `d0069ce`, TODOS fora
+# dos 39 casos de contrato — e cada um contradiz uma promessa escrita no topo do
+# próprio arquivo:
+#
+#   · `deadband_speed = 0`   → patamar 0, e TUDO aprova (comando nulo inclusive);
+#   · `escala_real < 0`      → patamar NEGATIVO, e tudo aprova;
+#   · `v = inf`              → comando infinito "alcança" o patamar, e tudo aprova;
+#   · janela sem `resultado` com `amostras` vazia → **KeyError** escapando do
+#     `avalia`, na f-string da mensagem de reprovação;
+#   · `amostras: [None]`     → **AttributeError** escapando do `avalia`.
+#
+# As duas promessas violadas: evidência inválida não pode virar VERDE, e dado
+# ruim não pode INTERROMPER o CSV — quem chama isto escreve resultado, e exceção
+# no meio perde a corrida inteira (é o mesmo raciocínio da decisão 057: a pasta
+# tem de dizer o que houve).
+#
+# O silêncio também conta como defeito: `t = nan` e janela invertida hoje
+# reprovam, mas por acidente da comparação com NaN, e o detalhe não diz que o
+# dado era inválido. Veredito certo por motivo errado não é evidência.
+
+NUMERICOS_DA_PLACA = ('deadband_speed', 'escala_real', 'raio', 'bitola')
+INVALIDOS = (0.0, -1.0, float('nan'), float('inf'), 'texto')
+
+
+def _detalhe_nomeia(detalhe, *pedacos):
+    """O detalhe é o que vai para o `resultado.csv` — ele tem de dizer QUAL
+    campo e QUAL valor derrubaram a corrida. "REPROVADO" sozinho manda o leitor
+    adivinhar."""
+    baixo = str(detalhe).lower()
+    return all(str(p).lower() in baixo for p in pedacos)
+
+
+def test_avalia_nunca_levanta_excecao(julga):
+    """A trava mais grossa, e a que pega os dois casos reproduzidos: seja qual
+    for o lixo, sai dicionário de veredito."""
+    lixos = [
+        {},
+        {'placa': None, 'grafo': None, 'janela': None, 'amostras': None},
+        dict(_evidencia_boa(), janela={'objetivo_aceito': 10.0}, amostras=[]),
+        dict(_evidencia_boa(), amostras=[None]),
+        dict(_evidencia_boa(), amostras=['isto não é amostra']),
+        dict(_evidencia_boa(), amostras=[{'topico': TOPICO_FINAL}]),
+        dict(_evidencia_boa(), grafo={TOPICO_FINAL: None}),
+        dict(_evidencia_boa(), pose_final={'x': 'aqui', 'y': None}),
+    ]
+    for lixo in lixos:
+        itens = julga.avalia(lixo)
+        assert isinstance(itens, dict) and itens, lixo
+
+
+@pytest.mark.parametrize('campo', NUMERICOS_DA_PLACA)
+@pytest.mark.parametrize('valor', INVALIDOS)
+def test_campo_vivo_nao_finito_ou_nao_positivo_reprova(julga, campo, valor):
+    """Os quatro números da placa são grandezas FÍSICAS: velocidade de patamar,
+    escala, raio e bitola. Zero, negativo, NaN, infinito ou texto não são
+    "valor baixo" — são evidência quebrada, e com `deadband_speed = 0` o
+    patamar vira 0 e o critério aprova o robô parado."""
+    ev = _evidencia_boa()
+    ev['placa'][campo] = valor
+    ok, detalhe = julga.avalia(ev)[PATAMAR]
+    assert not ok, detalhe
+    assert _detalhe_nomeia(detalhe, campo, 'inválid'), detalhe
+
+
+@pytest.mark.parametrize('campo', ('v', 'wz'))
+@pytest.mark.parametrize('valor', (float('inf'), float('-inf'), float('nan'),
+                                   'texto'))
+def test_comando_nao_finito_reprova(julga, campo, valor):
+    """🔴 `v = inf` aprovava: infinito "alcança" qualquer patamar. Comando que
+    não é número finito não prova que a roda andou — prova que a colheita
+    quebrou."""
+    ev = _com_amostra(TOPICO_FINAL, 20.0, 0.0)
+    ev['amostras'][0][campo] = valor
+    ok, detalhe = julga.avalia(ev)[PATAMAR]
+    assert not ok, detalhe
+    assert _detalhe_nomeia(detalhe, campo, 'inválid'), detalhe
+
+
+@pytest.mark.parametrize('valor', (float('inf'), float('nan'), 'texto'))
+def test_timestamp_nao_finito_reprova_dizendo_o_porque(julga, valor):
+    """Com `t = nan` o item já reprovava — mas por acidente: toda comparação com
+    NaN é falsa. O veredito tem de vir da regra, e o detalhe tem de nomear o
+    `t`, senão o leitor procura amostra fora da janela que não existe."""
+    ev = _com_amostra(TOPICO_FINAL, 20.0, PATAMAR_VIVO)
+    ev['amostras'][0]['t'] = valor
+    ok, detalhe = julga.avalia(ev)[JANELA]
+    assert not ok, detalhe
+    assert _detalhe_nomeia(detalhe, 't', 'inválid'), detalhe
+
+
+@pytest.mark.parametrize('item', (JANELA, PATAMAR))
+def test_janela_incompleta_reprova_os_dois_itens(julga, item):
+    """🔴 O KeyError: sem `resultado` e com `amostras` vazia, a mensagem de
+    reprovação tentava imprimir a chave que não veio e estourava para fora do
+    `avalia`."""
+    ev = dict(_evidencia_boa(), janela={'objetivo_aceito': 10.0}, amostras=[])
+    ok, detalhe = julga.avalia(ev)[item]
+    assert not ok, detalhe
+    assert _detalhe_nomeia(detalhe, 'resultado'), detalhe
+
+
+@pytest.mark.parametrize('janela', (
+    {'objetivo_aceito': 35.0, 'resultado': 10.0},          # invertida
+    {'objetivo_aceito': float('nan'), 'resultado': 35.0},  # não finita
+    {'objetivo_aceito': 10.0, 'resultado': float('inf')},
+))
+def test_janela_nao_finita_ou_desordenada_reprova(julga, janela):
+    """Janela invertida hoje reprova em silêncio, porque nenhuma amostra cai
+    nela. O motivo certo é outro: a janela não é uma janela."""
+    ev = dict(_evidencia_boa(), janela=janela)
+    ok, detalhe = julga.avalia(ev)[JANELA]
+    assert not ok, detalhe
+    assert _detalhe_nomeia(detalhe, 'janela', 'inválid'), detalhe
+
+
+@pytest.mark.parametrize('amostra', (
+    None,
+    'isto não é amostra',
+    {'topico': TOPICO_FINAL},                    # sem t, v, wz
+    {'topico': TOPICO_FINAL, 't': 20.0},         # sem v, wz
+    {'topico': TOPICO_FINAL, 't': 20.0, 'v': 0.5},   # sem wz
+))
+def test_amostra_malformada_reprova_sem_excecao(julga, amostra):
+    """🔴 O AttributeError: `amostras: [None]` estourava no `.get`. Amostra
+    quebrada é evidência quebrada — reprova e diz o que faltou."""
+    ev = dict(_evidencia_boa(), amostras=[amostra])
+    itens = julga.avalia(ev)
+    assert not itens[PATAMAR][0], itens[PATAMAR]
+    assert not itens[JANELA][0], itens[JANELA]
+
+
+def test_uma_amostra_boa_nao_e_salva_por_uma_quebrada_ao_lado(julga):
+    """E o inverso também não vale: amostra quebrada na lista não pode ser
+    ignorada em silêncio para a boa aprovar. Colheita com buraco é colheita
+    suspeita, e o resultado tem de contar isso."""
+    ev = _evidencia_boa()
+    ev['amostras'] = [None, {'topico': TOPICO_FINAL, 't': 20.0,
+                             'v': PATAMAR_VIVO, 'wz': 0.0}]
+    ok, detalhe = julga.avalia(ev)[PATAMAR]
+    assert not ok, detalhe
