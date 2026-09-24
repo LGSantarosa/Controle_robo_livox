@@ -1,0 +1,301 @@
+#!/usr/bin/env bash
+# Corrida EXPLORATÓRIA: o robô 3 recebe um objetivo de 1 m no Gazebo, COM JANELA.
+#
+#   bash bin/explora-objetivo-robo3
+#
+# 🔴 ISTO NÃO FECHA O PASSO 7, E NÃO É EVIDÊNCIA DE FECHAMENTO. O contrato do
+# passo 7 (`docs/PLANO_ETAPA6_ROBO3.md` §4.6.1) exige TRÊS critérios medidos —
+# `SUCCEEDED`, tolerância final e comando acima do patamar vivo chegando ao
+# consumidor final. Aqui não se mede nada disso: sobe com `gui:=true
+# rviz:=true`, manda UM objetivo e o dono OLHA. A janela muda o grafo e a carga,
+# então nem a lista de nós nem os tempos desta corrida comparam com as cinco da
+# etapa 6.
+#
+# Para que serve: descobrir CEDO se o movimento básico funciona — e, se não
+# funcionar, ver COMO quebra (gira no lugar, sai de ré, trava em obstáculo que
+# não existe). Duas horas de CSV não contam o que a tela conta em dois segundos.
+#
+# O que ele reaproveita da etapa 6, sem tocar em nada de lá: as pré-condições
+# (não subir por cima de ROS de pé, não deixar marca de rodada anterior), a
+# subida em grupo próprio, o encerramento DIRIGIDO do gravador com SIGTERM (o
+# `ros2 bag record` deste Jazzy não responde a SIGINT — medido em 24-09) e a
+# limpeza sem `pkill` (que já matou uma sessão ssh neste projeto).
+#
+# Robô físico e notebook NÃO participam: é tudo simulador neste PC.
+set +u
+
+# ── ambiente LIMPO, e isto é a PRIMEIRA coisa que acontece ──────────────────
+#
+# 🔴 `source /opt/ros/jazzy/setup.bash` ACRESCENTA; ele não remove o overlay que
+# já estava no shell. Quem chama isto de um terminal que já deu `source
+# install/setup.bash` (ou de outro workspace) carrega o caminho velho junto, e a
+# corrida mede uma árvore que não é a que acabou de compilar — o modo de falha
+# mais caro deste projeto, porque tudo PARECE certo.
+#
+# Por isso o wrapper se reexecuta uma vez, com as seis variáveis apagadas, e só
+# então monta o ambiente do zero.
+if [ -z "$EXPLORA_AMBIENTE_LIMPO" ]; then
+  exec env -u AMENT_PREFIX_PATH -u CMAKE_PREFIX_PATH -u COLCON_PREFIX_PATH \
+           -u PYTHONPATH -u LD_LIBRARY_PATH -u ROS_DISTRO \
+           EXPLORA_AMBIENTE_LIMPO=1 bash "$0" "$@"
+fi
+
+R="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+# Domínio PRÓPRIO, diferente do 47 da etapa 6: se sobrar alguma coisa de uma
+# corrida exploratória, ela não se mistura com a validação.
+DOMINIO=48
+TETO_SIMULADO=60          # segundos de tempo SIMULADO para o objetivo
+META_X=1.0                # 1 m à frente do spawn (sim_robo3 nasce em 0,0, yaw 0)
+META_Y=0.0
+
+CARIMBO="$(date +%Y%m%d_%H%M%S)"
+SAIDA="$HOME/etapa7-explora/$CARIMBO"
+[ -e "$SAIDA" ] && { echo "🔴 $SAIDA já existe — não reaproveito pasta"; exit 1; }
+mkdir -p "$SAIDA" || exit 1
+exec > >(tee -a "$SAIDA/console.txt") 2>&1
+GRUPOS="$SAIDA/grupos_wrapper.txt"; : > "$GRUPOS"
+RESULTADO="$SAIDA/resultado.txt"; : > "$RESULTADO"
+RESULTADO_CSV="$SAIDA/resultado.csv"
+printf '"item","veredito","detalhe"\n' > "$RESULTADO_CSV"
+# A lib e o processos.py são os da etapa 6, usados COMO ESTÃO. Nenhuma linha de
+# lá muda por causa desta corrida: a etapa 6 está fechada e as cinco pastas
+# dependem daquele comportamento.
+V="$R/tools/valida_etapa6"
+export ROS_DOMAIN_ID="$DOMINIO"
+export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
+export GZ_PARTITION="explora_objetivo_$CARIMBO"
+DOMINIOS_USADOS="$DOMINIO"
+source "$V/lib.sh"
+
+echo "== corrida EXPLORATÓRIA · objetivo de 1 m · robô 3 · $CARIMBO =="
+echo "   pasta: $SAIDA · ROS_DOMAIN_ID=$DOMINIO · GZ_PARTITION=$GZ_PARTITION"
+echo "   🔴 isto NÃO fecha o passo 7 — é para VER se anda."
+{ echo "commit: $(git -C "$R" rev-parse HEAD)"; git -C "$R" log -1 --format='%h %ad %s' --date=iso
+  echo "branch: $(git -C "$R" rev-parse --abbrev-ref HEAD)"
+  echo "status --porcelain (vazio = limpo):"; git -C "$R" status --porcelain; } > "$SAIDA/git.txt"
+# ⚠️ Árvore suja aqui AVISA e não barra (na etapa 6 ela barra, porque lá a
+# proveniência é a prova). Numa exploratória, experimentar rápido é o ponto —
+# mas o `git.txt` registra o estado, para não existir "corrida de commit
+# desconhecido".
+[ -n "$(git -C "$R" status --porcelain)" ] && \
+  echo "   ⚠️ árvore com mudança não commitada — anotado em git.txt"
+
+# ⚠️ `gui:=true rviz:=true` precisa de tela. Sem DISPLAY nem WAYLAND_DISPLAY o
+# Gazebo e o RViz morrem lá na frente, depois do build e da subida — e o erro
+# aparece como "a pilha não ficou pronta", que manda diagnosticar a coisa
+# errada. Esta corrida existe para o dono OLHAR: sem tela, ela não tem sentido.
+if [ -z "$DISPLAY" ] && [ -z "$WAYLAND_DISPLAY" ]; then
+  echo "   🔴 sem DISPLAY nem WAYLAND_DISPLAY — esta corrida é COM JANELA."
+  echo "      rode no PC (não por ssh sem X), ou use o bin/valida-etapa6 headless."
+  exit 1
+fi
+echo "   tela: DISPLAY=${DISPLAY:-(nenhum)} WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-(nenhum)}"
+
+PRE="$(ps -eo pid,user,args | grep -E '(^|[ /])(ros2|gz|rviz2|_ros2_daemon)( |$)|/opt/ros/[a-z]+/lib/|/install/[a-z_]+/lib/|ros2cli\.daemon' | grep -vE 'grep -E|valida-etapa[456]|explora-objetivo')"
+if [ -n "$PRE" ]; then
+  echo "   🔴 já tem ROS/Gazebo de pé neste PC — não subo por cima nem mato nada:"
+  echo "$PRE" | sed 's/^/      /'; exit 1
+fi
+if grep -lsa "VALIDA_ETAPA4_MARCA=" /proc/[0-9]*/environ 2>/dev/null | grep -q .; then
+  echo "   🔴 há processo marcado de uma rodada anterior:"
+  grep -lsa "VALIDA_ETAPA4_MARCA=" /proc/[0-9]*/environ | sed 's|/environ||;s|^|      |'; exit 1
+fi
+export VALIDA_ETAPA4_MARCA="$SAIDA"
+instala_limpeza
+
+cd "$R" || exit 1
+source /opt/ros/jazzy/setup.bash
+
+echo "== compilando robot_base robot_motion robot_nav (build.log) =="
+if ! roda "$SAIDA/build.log" colcon build --symlink-install \
+     --packages-select robot_base robot_motion robot_nav; then
+  anota "build" REPROVADO; exit 1
+fi
+source install/setup.bash
+
+# ── sobe COM JANELA ──────────────────────────────────────────────────────────
+echo "== subindo a pilha do robô 3 COM Gazebo GUI e RViz =="
+sobe_grupo "pilha_robo3_gui" "$SAIDA/launch.log" \
+  ros2 launch robot_motion pilha.launch.py \
+    robo:=3 sim:=true gui:=true rviz:=true log_dir:="$SAIDA" || exit 1
+
+# ── esperar o que o objetivo PRECISA, e só isso ─────────────────────────────
+#
+# Aqui NÃO se usa a captura da etapa 6: a lista de nós esperada de lá é a da
+# corrida headless, e com `rviz:=true` ela muda (o RViz traz nó e listener de
+# TF próprios — foi essa conta que corrigiu a cardinalidade no passo 6b).
+# Espera-se o necessário para mandar goal: o servidor da ação de pé e a TF da
+# pose resolvendo.
+echo "== esperando Nav2 ATIVO + TF map->base_link (até 180 s) =="
+#
+# 🔴 AÇÃO LISTADA NÃO É NAV2 PRONTO. O `/navigate_to_pose` aparece assim que o
+# `bt_navigator` sobe — antes de o gerenciador de ciclo de vida ativar os
+# servidores. Goal mandado nessa janela é aceito e morre sem plano, e o sintoma
+# ("a ação abortou") não aponta para a causa. Por isso se exige o ESTADO
+# `active` dos três que fazem o objetivo andar:
+#   · bt_navigator      — quem executa a árvore
+#   · planner_server    — quem traça o caminho
+#   · controller_server — quem gera o comando
+NOS_ATIVOS="/bt_navigator /planner_server /controller_server"
+PRONTO=0
+for i in $(seq 1 180); do
+  TODOS=1
+  for no in $NOS_ATIVOS; do
+    estado="$(timeout 10 ros2 lifecycle get "$no" 2>/dev/null | head -1)"
+    case "$estado" in *active*) ;; *) TODOS=0 ;; esac
+  done
+  if [ "$TODOS" -eq 1 ] \
+     && ros2 action list --spin-time 2 2>/dev/null | grep -qx '/navigate_to_pose'; then
+    # ⚠️ O `tf2_echo` NÃO aceita `--spin-time` e NÃO termina sozinho: quem o
+    # encerra é o `timeout`, que sai com 124. Por isso o teste é o CONTEÚDO
+    # ("Translation" no arquivo), nunca o código de saída — testar o código
+    # aqui daria "nunca pronto" com a TF funcionando.
+    timeout 5 ros2 run tf2_ros tf2_echo map base_link > "$SAIDA/tf_inicial.txt" 2>&1
+    grep -q 'Translation' "$SAIDA/tf_inicial.txt" && { PRONTO=1; break; }
+  fi
+  sleep 1
+done
+{ echo "estados de ciclo de vida no fim da espera:"
+  for no in $NOS_ATIVOS; do
+    echo "   $no: $(timeout 10 ros2 lifecycle get "$no" 2>&1 | head -1)"
+  done; } > "$SAIDA/lifecycle.txt"
+sed 's/^/   /' "$SAIDA/lifecycle.txt"
+if [ "$PRONTO" -ne 1 ]; then
+  anota "Nav2 active (bt/planner/controller) e TF prontos" REPROVADO \
+    "(lifecycle.txt, tf_inicial.txt)"
+  echo "   🔴 não ficou pronto — derrubando sem mandar objetivo"; exit 1
+fi
+anota "Nav2 active (bt/planner/controller) e TF prontos" APROVADO
+
+# ── o relógio SIMULADO, que é o que manda no teto ───────────────────────────
+relogio() {   # segundos de tempo simulado, do /clock; vazio se não vier
+  timeout 10 ros2 topic echo --once --field clock.sec /clock 2>/dev/null | head -1
+}
+T0_SIM="$(relogio)"
+if [ -z "$T0_SIM" ]; then
+  anota "relógio simulado (/clock) respondendo" REPROVADO
+  echo "   🔴 sem /clock não dá para aplicar o teto de ${TETO_SIMULADO}s simulados"; exit 1
+fi
+anota "relógio simulado (/clock) respondendo" APROVADO "t0=${T0_SIM}s"
+
+# ── o objetivo: 1 m à frente, na mesma orientação ───────────────────────────
+echo "== mandando o objetivo: x=$META_X y=$META_Y no frame map =="
+registra_cmd "ros2 action send_goal /navigate_to_pose ... x=$META_X"
+setsid ros2 action send_goal --feedback /navigate_to_pose \
+  nav2_msgs/action/NavigateToPose \
+  "{pose: {header: {frame_id: map}, pose: {position: {x: $META_X, y: $META_Y, z: 0.0}, orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}}}}" \
+  > "$SAIDA/objetivo.log" 2>&1 < /dev/null &
+PID_GOAL=$!
+echo "   send_goal em PID $PID_GOAL — objetivo.log tem o feedback e o resultado"
+
+# ── acompanhar: CSV de pose por tempo simulado, e o teto ────────────────────
+#
+# O CSV é o que EU leio depois; a tela é o que o DONO lê agora. A pose vem do
+# `/Odometry` (a mesma fonte que a etapa 6 provou viva), e a distância ao alvo é
+# calculada aqui para não depender de ninguém interpretar coluna.
+echo '"t_sim","x","y","dist_ao_alvo"' > "$SAIDA/trajeto.csv"
+#
+# 🔴 O TETO É DE TEMPO SIMULADO, e o laço tem de medir isso — não um número de
+# voltas. A versão anterior era `seq 1 240` sem `sleep`, o que não é 60 s de
+# nada: com o Gazebo a 0,3 de fator de tempo real seriam ~10 s simulados, e com
+# ele rápido as 240 voltas acabariam antes do robô sair do lugar.
+#
+# E o relógio simulado PODE TRAVAR (Gazebo pausado, física parada, `/clock` sem
+# publicar). Aí `DECORRIDO` nunca cresce e o laço não termina nunca. Por isso há
+# dois limites independentes: o simulado, que é o critério, e um watchdog de
+# tempo de PAREDE, que é a rede de segurança.
+T0_PAREDE=$(date +%s)
+TETO_PAREDE=$((TETO_SIMULADO * 6))       # 6 min de parede para 60 s simulados
+FIM=""
+while :; do
+  if ! kill -0 "$PID_GOAL" 2>/dev/null; then FIM="a ação terminou sozinha"; break; fi
+  PAREDE=$(( $(date +%s) - T0_PAREDE ))
+  if [ "$PAREDE" -ge "$TETO_PAREDE" ]; then
+    FIM="WATCHDOG de parede: ${PAREDE}s sem fechar (relógio simulado travado?)"
+    kill -INT "$PID_GOAL" 2>/dev/null; break
+  fi
+  AGORA="$(relogio)"
+  if [ -z "$AGORA" ]; then sleep 0.25; continue; fi
+  DECORRIDO=$((AGORA - T0_SIM))
+  POSE="$(timeout 5 ros2 topic echo --once --field pose.pose.position /Odometry 2>/dev/null \
+          | tr -d ' ' | grep -E '^(x|y):' | cut -d: -f2 | paste -sd' ')"
+  if [ -n "$POSE" ]; then
+    # shellcheck disable=SC2086
+    set -- $POSE
+    python3 -c "
+import math,sys
+x,y=float(sys.argv[1]),float(sys.argv[2])
+print('%d,%.4f,%.4f,%.4f' % (int(sys.argv[3]), x, y,
+      math.hypot(x-$META_X, y-$META_Y)))" "$1" "$2" "$DECORRIDO" >> "$SAIDA/trajeto.csv"
+  fi
+  if [ "$DECORRIDO" -ge "$TETO_SIMULADO" ]; then
+    FIM="teto de ${TETO_SIMULADO}s simulados (parede: ${PAREDE}s)"
+    # O send_goal é filho DIRETO deste shell e líder do próprio grupo: sinal
+    # nele é seguro e não alcança mais ninguém.
+    kill -INT "$PID_GOAL" 2>/dev/null
+    break
+  fi
+  sleep 0.25
+done
+anota "objetivo encerrado" ANOTADO "$FIM"
+
+# ── o goal foi ACEITO ou REJEITADO? ────────────────────────────────────────
+# São falhas diferentes e o sintoma é o mesmo (o robô não anda): rejeitado é
+# Nav2 recusando o pedido; aceito e sem andar é a cadeia de atuação.
+if grep -qi 'Goal accepted' "$SAIDA/objetivo.log"; then
+  anota "o objetivo foi ACEITO pelo Nav2" APROVADO
+elif grep -qi 'Goal rejected' "$SAIDA/objetivo.log"; then
+  anota "o objetivo foi ACEITO pelo Nav2" REPROVADO "(rejeitado — objetivo.log)"
+else
+  anota "o objetivo foi ACEITO pelo Nav2" ANOTADO \
+    "(objetivo.log não diz aceito nem rejeitado)"
+fi
+RESULTADO_ACAO="$(grep -iE '^Result|status|SUCCEEDED|ABORTED|CANCELED' \
+  "$SAIDA/objetivo.log" | tail -3 | paste -sd' | ')"
+anota "resultado relatado pela ação" ANOTADO "${RESULTADO_ACAO:-(nada no objetivo.log)}"
+
+# ── a pose final, e o caso de NÃO haver amostra ────────────────────────────
+#
+# 🔴 `tail -1` num CSV só com cabeçalho grava O CABEÇALHO como pose final — e
+# aí a evidência afirma uma pose que ninguém mediu. Sem linha de dados, o que se
+# registra é a ausência.
+LINHAS_TRAJETO=$(($(wc -l < "$SAIDA/trajeto.csv") - 1))
+if [ "$LINHAS_TRAJETO" -ge 1 ]; then
+  tail -1 "$SAIDA/trajeto.csv" > "$SAIDA/pose_final.txt"
+  anota "pose final medida" ANOTADO \
+    "$(cat "$SAIDA/pose_final.txt") ($LINHAS_TRAJETO amostras)"
+else
+  echo "SEM AMOSTRA: nenhuma pose de /Odometry chegou durante o objetivo" \
+    > "$SAIDA/pose_final.txt"
+  anota "pose final medida" REPROVADO \
+    "(nenhuma amostra — o trajeto.csv só tem cabeçalho)"
+fi
+echo "   trajeto: $LINHAS_TRAJETO amostra(s) · $(cat "$SAIDA/pose_final.txt")"
+sed -n '1,80p' "$SAIDA/objetivo.log" | sed 's/^/      /'
+timeout 5 ros2 run tf2_ros tf2_echo map base_link > "$SAIDA/tf_final.txt" 2>&1
+
+# ── encerramento DIRIGIDO do gravador, ANTES de o grupo cair ────────────────
+# (mesma mecânica medida na etapa 6: SIGTERM no alvo único, janela própria, e só
+# depois a limpeza derruba o resto)
+python3 "$V/processos.py" foto "$SAIDA/antes_da_limpeza.csv"
+ALVO="$(python3 "$V/processos.py" acha 'ros2 bag record' | head -1)"
+if [ -n "$ALVO" ]; then
+  echo "== encerramento dirigido do gravador (TERM) ==" >> "$SAIDA/gravador.txt"
+  # shellcheck disable=SC2086
+  python3 "$V/processos.py" sinaliza_um $ALVO TERM >> "$SAIDA/gravador.txt" 2>&1
+  for i in $(seq 1 300); do
+    # shellcheck disable=SC2086
+    python3 "$V/processos.py" vivo $ALVO || break
+    sleep 0.1
+  done
+  anota "gravador encerrado por SIGTERM dirigido" ANOTADO "(gravador.txt)"
+fi
+
+# A limpeza roda no `trap EXIT` — idempotente, sem pkill, com prova de domínio
+# vazio no fim.
+echo
+echo "== fim da corrida exploratória =="
+echo "   pasta: $SAIDA"
+echo "   o que olhar: trajeto.csv (distância ao alvo por segundo simulado),"
+echo "   objetivo.log (feedback e resultado da ação), tf_inicial/tf_final.txt"
+sed 's/^/   /' "$RESULTADO"
