@@ -79,6 +79,20 @@ def _positivo(valor, campo, onde):
     return float(valor)
 
 
+def _finito(valor, campo, onde):
+    """Número real finito, de qualquer sinal, e só `int`/`float`.
+
+    Ao contrário de `_positivo`, zero e negativo aqui são legítimos: `v` e `wz`
+    negativos são ré e giro para a direita, e `t` zero é o nascimento do tempo
+    simulado. O que não pode é não ser número finito — `v = inf` "alcançava"
+    qualquer patamar, e `t = nan` reprovava por acaso, calado.
+    """
+    if (isinstance(valor, bool) or not isinstance(valor, (int, float))
+            or not math.isfinite(valor)):
+        raise _Invalido(f'{campo} inválido em {onde}: {valor!r}')
+    return float(valor)
+
+
 def _exige(d, chave, onde):
     if not isinstance(d, dict) or chave not in d or d[chave] is None:
         raise _Falta(f'faltou {chave} em {onde}')
@@ -137,7 +151,7 @@ def _na_janela(t, janela):
     """
     inicio = float(_exige(janela, 'objetivo_aceito', 'janela'))
     fim = float(_exige(janela, 'resultado', 'janela'))
-    return inicio <= float(t) <= fim
+    return inicio <= _finito(t, 't', 'amostra') <= fim
 
 
 def _amostras_do_consumidor_final(evidencia):
@@ -223,8 +237,8 @@ def _julga_patamar(evidencia):
         if not _na_janela(_exige(a, 't', 'amostra'), janela):
             continue
         melhor = max(melhor, _comando_efetivo(
-            float(_exige(a, 'v', 'amostra')),
-            float(_exige(a, 'wz', 'amostra')), bitola))
+            _finito(_exige(a, 'v', 'amostra'), 'v', 'amostra'),
+            _finito(_exige(a, 'wz', 'amostra'), 'wz', 'amostra'), bitola))
 
     detalhe = (f'maior comando efetivo {melhor:.4f} m/s, '
                f'patamar vivo {patamar:.4f} m/s (folga {FOLGA})')
