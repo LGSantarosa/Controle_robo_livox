@@ -160,7 +160,8 @@ def _julga_sucesso(evidencia):
 
 
 def _julga_tolerancia(evidencia):
-    tol = float(_exige(evidencia, 'xy_goal_tolerance', 'evidência'))
+    tol = _positivo(_exige(evidencia, 'xy_goal_tolerance', 'evidência'),
+                    'xy_goal_tolerance', 'evidência')
     erro = _distancia_xy(_ponto(evidencia, 'pose_final'),
                          _ponto(evidencia, 'goal'))
     return erro <= tol, f'erro {erro:.4f} m, tolerância viva {tol:.4f} m'
@@ -169,7 +170,8 @@ def _julga_tolerancia(evidencia):
 def _julga_nasceu_fora(evidencia):
     """A pose inicial é evidência OBRIGATÓRIA, não enfeite: sem ela, "chegou"
     pode ser "já estava lá" — o modo de falha mais provável com alvo de 1 m."""
-    tol = float(_exige(evidencia, 'xy_goal_tolerance', 'evidência'))
+    tol = _positivo(_exige(evidencia, 'xy_goal_tolerance', 'evidência'),
+                    'xy_goal_tolerance', 'evidência')
     partida = _distancia_xy(_ponto(evidencia, 'pose_inicial'),
                             _ponto(evidencia, 'goal'))
     return partida > tol, f'partida a {partida:.4f} m, tolerância {tol:.4f} m'
