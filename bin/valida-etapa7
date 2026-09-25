@@ -1,0 +1,314 @@
+#!/usr/bin/env bash
+# A corrida que CONTA para o passo 7: o robô 3 recebe um objetivo de 1 m no
+# Gazebo, headless, e a pasta sai julgada pelos três critérios (decisão 060).
+#
+#   bash bin/valida-etapa7
+#
+# Contrato: `docs/PLANO_ETAPA6_ROBO3.md` §4.6/§4.6.1 — `SUCCEEDED`, pose final
+# dentro do `xy_goal_tolerance` VIVO e um comando acima do patamar vivo chegando
+# ao consumidor final. Quem julga é `tools/valida_etapa7/julga.py`; este wrapper
+# só produz a evidência e chama `tools/valida_etapa7/corrida.py julga`.
+#
+# O que ele faz de diferente do `bin/explora-objetivo-robo3` (que fica
+# congelado, com o `bin/valida-etapa6`):
+#   · headless (`gui:=false rviz:=false`);
+#   · a pilha sobe com `bag:=false` e o gravador é DESTE wrapper, com
+#     `--all-topics --include-hidden-topics --use-sim-time` — é o único jeito de
+#     o status da ação, tópico oculto, entrar no bag sem mexer na launch;
+#   · o goal só sai depois de o gravador assinar o status e o tópico final;
+#   · parâmetros vivos da placa e do controller_server, e o grafo do tópico final
+#     antes do goal e depois do resultado;
+#   · árvore suja BARRA: aqui a proveniência é a prova.
+#
+# ⚠️ Não prova a zona morta real do robô 3: o critério do patamar vale só para a
+# placa simulada herdada do robô 2.
+set +u
+
+# ── ambiente LIMPO, e isto é a PRIMEIRA coisa que acontece ──────────────────
+# `source` ACRESCENTA overlay e não remove o que já estava no shell; a corrida
+# mediria uma árvore que não é a compilada. Reexecuta uma vez, com as seis
+# variáveis apagadas.
+if [ -z "$VALIDA_ETAPA7_AMBIENTE_LIMPO" ]; then
+  exec env -u AMENT_PREFIX_PATH -u CMAKE_PREFIX_PATH -u COLCON_PREFIX_PATH \
+           -u PYTHONPATH -u LD_LIBRARY_PATH -u ROS_DISTRO \
+           VALIDA_ETAPA7_AMBIENTE_LIMPO=1 bash "$0" "$@"
+fi
+
+R="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+# Domínio PRÓPRIO: 47 é da etapa 6, 48 do explora.
+DOMINIO=49
+TETO_SIMULADO=60          # segundos de tempo SIMULADO para o objetivo
+DISTANCIA_DO_OBJETIVO=1.0
+STATUS_ACAO=/navigate_to_pose/_action/status
+TOPICO_FINAL=/hoverboard_base_controller/cmd_vel
+
+CARIMBO="$(date +%Y%m%d_%H%M%S)"
+SAIDA="$HOME/etapa7/$CARIMBO"
+[ -e "$SAIDA" ] && { echo "🔴 $SAIDA já existe — não reaproveito pasta"; exit 1; }
+mkdir -p "$SAIDA" || exit 1
+exec > >(tee -a "$SAIDA/console.txt") 2>&1
+GRUPOS="$SAIDA/grupos_wrapper.txt"; : > "$GRUPOS"
+RESULTADO="$SAIDA/resultado.txt"; : > "$RESULTADO"
+RESULTADO_CSV="$SAIDA/resultado.csv"
+printf '"item","veredito","detalhe"\n' > "$RESULTADO_CSV"
+# A lib e o processos.py da etapa 6, usados COMO ESTÃO.
+V="$R/tools/valida_etapa6"
+V7="$R/tools/valida_etapa7"
+export ROS_DOMAIN_ID="$DOMINIO"
+export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
+export GZ_PARTITION="valida_etapa7_$CARIMBO"
+DOMINIOS_USADOS="$DOMINIO"
+source "$V/lib.sh"
+
+echo "== passo 7 · objetivo de 1 m · robô 3 · headless · $CARIMBO =="
+echo "   pasta: $SAIDA · ROS_DOMAIN_ID=$DOMINIO · GZ_PARTITION=$GZ_PARTITION"
+{ echo "commit: $(git -C "$R" rev-parse HEAD)"; git -C "$R" log -1 --format='%h %ad %s' --date=iso
+  echo "branch: $(git -C "$R" rev-parse --abbrev-ref HEAD)"
+  echo "status --porcelain (vazio = limpo):"; git -C "$R" status --porcelain; } > "$SAIDA/git.txt"
+if [ -n "$(git -C "$R" status --porcelain)" ]; then
+  echo "   🔴 árvore com mudança não commitada — a corrida que conta precisa de commit conhecido:"
+  git -C "$R" status --porcelain | sed 's/^/      /'; exit 1
+fi
+
+PRE="$(ps -eo pid,user,args | grep -E '(^|[ /])(ros2|gz|rviz2|_ros2_daemon)( |$)|/opt/ros/[a-z]+/lib/|/install/[a-z_]+/lib/|ros2cli\.daemon' | grep -vE 'grep -E|valida-etapa[4567]|explora-objetivo')"
+if [ -n "$PRE" ]; then
+  echo "   🔴 já tem ROS/Gazebo de pé neste PC — não subo por cima nem mato nada:"
+  echo "$PRE" | sed 's/^/      /'; exit 1
+fi
+if grep -lsa "VALIDA_ETAPA4_MARCA=" /proc/[0-9]*/environ 2>/dev/null | grep -q .; then
+  echo "   🔴 há processo marcado de uma rodada anterior:"
+  grep -lsa "VALIDA_ETAPA4_MARCA=" /proc/[0-9]*/environ | sed 's|/environ||;s|^|      |'; exit 1
+fi
+export VALIDA_ETAPA4_MARCA="$SAIDA"
+
+# 🔴 O BAG PRECISA FECHAR TAMBÉM QUANDO A CORRIDA ABORTA: morto por KILL na
+# limpeza, o `ros2 bag record` nunca escreve o `metadata.yaml` (24-09). Função
+# idempotente, no `trap`, ANTES da limpeza. SIGTERM e não SIGINT: este Jazzy
+# não responde a SIGINT.
+GRAVADOR_FECHADO=0
+fecha_gravador() {
+  [ "$GRAVADOR_FECHADO" -eq 1 ] && return 0
+  GRAVADOR_FECHADO=1
+  local alvo i
+  alvo="$(python3 "$V/processos.py" acha 'ros2 bag record' 2>/dev/null | head -1)"
+  [ -z "$alvo" ] && return 0
+  echo "== encerramento dirigido do gravador (TERM) ==" >> "$SAIDA/gravador.txt"
+  # shellcheck disable=SC2086
+  python3 "$V/processos.py" sinaliza_um $alvo TERM >> "$SAIDA/gravador.txt" 2>&1
+  for i in $(seq 1 300); do
+    # shellcheck disable=SC2086
+    python3 "$V/processos.py" vivo $alvo || break
+    sleep 0.1
+  done
+  # shellcheck disable=SC2086
+  if python3 "$V/processos.py" vivo $alvo; then
+    anota "gravador encerrado por SIGTERM dirigido" REPROVADO "(não fechou em 30 s)"
+  else
+    anota "gravador encerrado por SIGTERM dirigido" APROVADO "(gravador.txt)"
+  fi
+}
+
+instala_limpeza
+trap 'fecha_gravador; limpa' EXIT
+
+cd "$R" || exit 1
+source /opt/ros/jazzy/setup.bash
+
+echo "== compilando robot_base robot_motion robot_nav (build.log) =="
+if ! roda "$SAIDA/build.log" colcon build --symlink-install \
+     --packages-select robot_base robot_motion robot_nav; then
+  anota "build" REPROVADO; exit 1
+fi
+source install/setup.bash
+
+# ── sobe headless, SEM o gravador da launch ─────────────────────────────────
+# `localizacao:=fixa` EXPLÍCITO: o goal vai em `map` e a pose vem de `odom`;
+# eles só coincidem porque o `tf_map_odom` publica identidade na localização
+# fixa.
+echo "== subindo a pilha do robô 3 headless (bag:=false) =="
+sobe_grupo "pilha_robo3" "$SAIDA/launch.log" \
+  ros2 launch robot_motion pilha.launch.py \
+    robo:=3 sim:=true gui:=false rviz:=false localizacao:=fixa bag:=false \
+    log_dir:="$SAIDA" || exit 1
+
+# ── Nav2 ATIVO + TF (a mesma espera do explora) ─────────────────────────────
+# Ação listada não é Nav2 pronto: exige-se `active` EXATO (o casamento frouxo
+# aceitaria `inactive`) dos três que fazem o objetivo andar. Prazo de parede.
+echo "== esperando Nav2 ATIVO + TF map->base_link (até 300 s) =="
+NOS_ATIVOS="/bt_navigator /planner_server /controller_server"
+esta_ativo() { [ "${1%% *}" = active ]; }
+PRONTO=0
+T0_ESPERA=$(date +%s)
+while [ $(( $(date +%s) - T0_ESPERA )) -lt 300 ]; do
+  TODOS=1
+  for no in $NOS_ATIVOS; do
+    estado="$(timeout 10 ros2 lifecycle get "$no" 2>/dev/null | head -1)"
+    esta_ativo "$estado" || TODOS=0
+  done
+  if [ "$TODOS" -eq 1 ] \
+     && timeout 5 ros2 action list 2>>"$SAIDA/action_list.err" \
+        | grep -qx '/navigate_to_pose'; then
+    # O `tf2_echo` não termina sozinho: o teste é o CONTEÚDO, não o código.
+    timeout 5 ros2 run tf2_ros tf2_echo map base_link > "$SAIDA/tf_inicial.txt" 2>&1
+    grep -q 'Translation' "$SAIDA/tf_inicial.txt" && { PRONTO=1; break; }
+  fi
+  sleep 1
+done
+{ echo "estados de ciclo de vida no fim da espera:"
+  for no in $NOS_ATIVOS; do
+    echo "   $no: $(timeout 10 ros2 lifecycle get "$no" 2>&1 | head -1)"
+  done; } > "$SAIDA/lifecycle.txt"
+if [ "$PRONTO" -ne 1 ]; then
+  anota "Nav2 active (bt/planner/controller) e TF prontos" REPROVADO \
+    "(lifecycle.txt, tf_inicial.txt)"
+  echo "   🔴 não ficou pronto — derrubando sem mandar objetivo"; exit 1
+fi
+anota "Nav2 active (bt/planner/controller) e TF prontos" APROVADO
+
+# ── o gravador DESTE wrapper, e a prova de que ele já assina ────────────────
+echo "== subindo o gravador (todos os tópicos, inclusive ocultos, tempo simulado) =="
+sobe_grupo "gravador" "$SAIDA/gravador.log" \
+  ros2 bag record --all-topics --include-hidden-topics --use-sim-time \
+    -s mcap -o "$SAIDA/bag" || exit 1
+# Goal mandado antes de o gravador assinar perderia o começo da janela: o
+# aceite e as primeiras amostras.
+ASSINOU=0
+T0_ESPERA=$(date +%s)
+while [ $(( $(date +%s) - T0_ESPERA )) -lt 60 ]; do
+  timeout 10 ros2 topic info -v "$STATUS_ACAO" > "$SAIDA/assina_status.txt" 2>&1
+  timeout 10 ros2 topic info -v "$TOPICO_FINAL" > "$SAIDA/assina_final.txt" 2>&1
+  if python3 "$V7/corrida.py" assina "$SAIDA/assina_status.txt" \
+     && python3 "$V7/corrida.py" assina "$SAIDA/assina_final.txt"; then
+    ASSINOU=1; break
+  fi
+  sleep 1
+done
+if [ "$ASSINOU" -ne 1 ]; then
+  anota "gravador assina o status da ação e o tópico final" REPROVADO \
+    "(assina_status.txt, assina_final.txt)"
+  echo "   🔴 gravador não assinou em 60 s — derrubando sem mandar objetivo"; exit 1
+fi
+anota "gravador assina o status da ação e o tópico final" APROVADO
+
+# ── o que se lê VIVO, com a pilha de pé, antes do goal ──────────────────────
+timeout 20 ros2 param dump --timeout 10 /placa_simulada > "$SAIDA/placa_simulada.yaml" 2> "$SAIDA/placa_simulada.yaml.err"
+timeout 20 ros2 param dump --timeout 10 /controller_server > "$SAIDA/controller_server.yaml" 2> "$SAIDA/controller_server.yaml.err"
+timeout 10 ros2 topic info -v "$TOPICO_FINAL" > "$SAIDA/grafo_antes.txt" 2>&1
+registra_cmd "param dump /placa_simulada e /controller_server; topic info -v $TOPICO_FINAL > grafo_antes.txt"
+
+# ── o relógio SIMULADO, que manda no teto ───────────────────────────────────
+relogio() {   # segundos de tempo simulado, do /clock; vazio se não vier
+  timeout 10 ros2 topic echo --once --field clock.sec /clock 2>/dev/null | head -1
+}
+T0_SIM="$(relogio)"
+if [ -z "$T0_SIM" ]; then
+  anota "relógio simulado (/clock) respondendo" REPROVADO
+  echo "   🔴 sem /clock não dá para aplicar o teto de ${TETO_SIMULADO}s simulados"; exit 1
+fi
+
+# ── a pose VIVA e o objetivo, gravados NORMALIZADOS em poses.yaml ───────────
+echo "== lendo a pose viva para calcular o objetivo =="
+if ! timeout 15 ros2 topic echo --once --field pose.pose /Odometry \
+     > "$SAIDA/pose_inicial_bruta.yaml" 2>&1 \
+   || ! CALCULO="$(python3 "$V7/corrida.py" objetivo "$SAIDA/pose_inicial_bruta.yaml" \
+                   "$DISTANCIA_DO_OBJETIVO" "$SAIDA/poses.yaml")"; then
+  anota "pose inicial lida do /Odometry" REPROVADO "(pose_inicial_bruta.yaml)"
+  echo "   🔴 sem pose não dá para calcular objetivo relativo"; exit 1
+fi
+# shellcheck disable=SC2086
+set -- $CALCULO
+POSE_X="$1"; POSE_Y="$2"; META_X="$3"; META_Y="$4"
+Q_X="$5"; Q_Y="$6"; Q_Z="$7"; Q_W="$8"; YAW="$9"
+anota "objetivo = pose + ${DISTANCIA_DO_OBJETIVO} m no rumo atual" ANOTADO \
+  "($POSE_X, $POSE_Y) yaw $YAW -> ($META_X, $META_Y)"
+
+# ── o objetivo ─────────────────────────────────────────────────────────────
+echo "== mandando o objetivo: ($POSE_X, $POSE_Y) -> ($META_X, $META_Y) no frame map =="
+registra_cmd "ros2 action send_goal /navigate_to_pose ... x=$META_X y=$META_Y"
+setsid ros2 action send_goal /navigate_to_pose \
+  nav2_msgs/action/NavigateToPose \
+  "{pose: {header: {frame_id: map}, pose: {position: {x: $META_X, y: $META_Y, z: 0.0}, orientation: {x: $Q_X, y: $Q_Y, z: $Q_Z, w: $Q_W}}}}" \
+  > "$SAIDA/objetivo.log" 2>&1 < /dev/null &
+PID_GOAL=$!
+
+# ── esperar a ação pelo relógio simulado, com watchdog de parede ────────────
+T0_PAREDE=$(date +%s)
+TETO_PAREDE=$((TETO_SIMULADO * 6))
+FIM=""
+while :; do
+  if ! kill -0 "$PID_GOAL" 2>/dev/null; then FIM="a ação terminou sozinha"; break; fi
+  PAREDE=$(( $(date +%s) - T0_PAREDE ))
+  if [ "$PAREDE" -ge "$TETO_PAREDE" ]; then
+    FIM="WATCHDOG de parede: ${PAREDE}s sem fechar (relógio simulado travado?)"
+    kill -INT "$PID_GOAL" 2>/dev/null; break
+  fi
+  AGORA="$(relogio)"
+  if [ -z "$AGORA" ]; then sleep 0.25; continue; fi
+  if [ $((AGORA - T0_SIM)) -ge "$TETO_SIMULADO" ]; then
+    FIM="teto de ${TETO_SIMULADO}s simulados (parede: ${PAREDE}s)"
+    kill -INT "$PID_GOAL" 2>/dev/null; break
+  fi
+  sleep 0.25
+done
+anota "objetivo encerrado" ANOTADO "$FIM"
+
+# O `objetivo.log` só se lê depois de o send_goal SAIR: com o buffer aberto, a
+# linha do UUID ou a final podem não ter descido ainda.
+for i in $(seq 1 100); do
+  kill -0 "$PID_GOAL" 2>/dev/null || break
+  sleep 0.1
+done
+kill -0 "$PID_GOAL" 2>/dev/null && { kill -TERM "$PID_GOAL" 2>/dev/null; sleep 1; }
+wait "$PID_GOAL" 2>/dev/null
+sync
+
+# ── a borda de DEPOIS: grafo e pose final, antes do teardown ───────────────
+timeout 10 ros2 topic info -v "$TOPICO_FINAL" > "$SAIDA/grafo_depois.txt" 2>&1
+# Pose final: UMA leitura depois do fim da ação (o último registro do seguidor
+# acontece antes de o robô parar — corrida 20260924_160148).
+if timeout 15 ros2 topic echo --once --field pose.pose.position /Odometry \
+     > "$SAIDA/pose_final_bruta.yaml" 2>&1 \
+   && FINAL="$(python3 "$V7/corrida.py" pose_final "$SAIDA/pose_final_bruta.yaml" \
+               "$SAIDA/poses.yaml")"; then
+  anota "pose final (uma leitura do /Odometry após o fim)" ANOTADO "$FINAL"
+else
+  anota "pose final (uma leitura do /Odometry após o fim)" REPROVADO \
+    "(pose_final_bruta.yaml)"
+fi
+
+# ── fecha o bag ANTES de ler, e só então a limpeza derruba o resto ─────────
+python3 "$V/processos.py" foto "$SAIDA/antes_da_limpeza.csv"
+fecha_gravador
+if [ -f "$SAIDA/bag/metadata.yaml" ]; then
+  anota "bag: metadata.yaml escrito pelo próprio gravador" APROVADO
+else
+  anota "bag: metadata.yaml escrito pelo próprio gravador" REPROVADO
+fi
+
+# ── o julgamento: brutos -> le_bag -> monta -> julga ───────────────────────
+echo "== julgando (corrida.py julga) =="
+python3 "$V7/corrida.py" julga "$SAIDA" > "$SAIDA/julgamento.tsv" 2> "$SAIDA/julgamento.err"
+if [ ! -s "$SAIDA/julgamento.tsv" ]; then
+  anota "julgamento executado" REPROVADO "(julgamento.err)"
+fi
+while IFS=$'\t' read -r item veredito detalhe; do
+  anota "$item" "$veredito" "$detalhe"
+done < "$SAIDA/julgamento.tsv"
+
+limpa
+
+echo
+echo "== resultado ($RESULTADO_CSV) =="
+sed 's/^/   /' "$RESULTADO"
+REPROVOU=0
+grep -qE " (REPROVADO|RECUPERADO)" "$RESULTADO" && REPROVOU=1
+
+# O manifesto é a ÚLTIMA escrita.
+( cd "$SAIDA" && find . -type f ! -name SHA256SUMS -print0 | sort -z \
+    | xargs -0 sha256sum > SHA256SUMS )
+
+if [ "$REPROVOU" -ne 0 ]; then
+  echo "   🔴 REPROVADO — NÃO mexa em nada; a pasta é a prova: $SAIDA"
+  exit 1
+fi
+echo "   🟢 APROVADO — os três critérios do passo 7 — pasta: $SAIDA"
