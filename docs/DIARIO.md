@@ -11129,3 +11129,44 @@ remove arquivo, procurar quem ainda o referencia **antes** de declarar a
 integração pronta.
 
 🔴 **Não prova hardware.** Nada foi ligado; nada foi enviado ao GitHub ainda.
+
+## ⚖️ 2026-09-25 (PC de dev, robô, lidar e Gazebo DESLIGADOS) — OS 77 VERMELHOS DO JUIZ FECHAM, O PASSO 7 CONTINUA ABERTO
+
+Sessão só de código offline, em `tools/valida_etapa7`. O juiz
+(`julga.py`, função pura) estava estacionado em `f2f8f3e` com 77 vermelhos
+deliberados: evidência inválida que ele aprovava calado, reprovava pelo motivo
+errado ou com que estourava. Foram fechados em cinco grupos, um de cada vez,
+cada um revisado antes do commit:
+
+| grupo | commit | o que passou a ser recusado | `valida_etapa7` (passam/falham) | raiz (passam/falham) |
+|---|---|---|---|---|
+| G1 | `708570f` | `deadband_speed`, `escala_real`, `raio`, `bitola` zero, negativos, não finitos, bool ou texto | 73 / 49 | 1462 / 49 |
+| G2 | `9418fe0` | `xy_goal_tolerance` inválida | 87 / 35 | 1476 / 35 |
+| G3 | `9706536` | `t`, `v`, `wz` não finitos ou bool | 103 / 19 | 1492 / 19 |
+| G4 | `e613ad9` | janela sem campo, não finita ou invertida, conferida antes de qualquer amostra | 116 / 7 | 1505 / 7 |
+| G5 | `71dbfd5` | item não dicionário ou amostra do tópico final malformada, em qualquer posição | **124 / 0** | **1513 / 0** |
+
+Três escolhas que valem registrar:
+
+- **Janela `[t, t]` é válida (G4).** A janela é fechada; recusar a igualdade
+  criaria uma duração mínima que o contrato nunca definiu. Ficou um teste de
+  caracterização, verde antes e depois.
+- **Amostra quebrada fora da janela também reprova (G5).** Amostra malformada
+  é falha da coleta, não da corrida: nem o recorte temporal nem uma amostra boa
+  ao lado a escondem. Isso reverteu de propósito a fronteira deixada no G3
+  ("v/wz só dentro da janela"), com um teste vermelho explícito antes do
+  código. O detalhe diz índice e campo (`faltou v em amostra 2`), porque com
+  milhares de amostras "alguma está quebrada" não é achável.
+- **Falha rápida.** O detalhe cita a primeira amostra e o primeiro campo
+  inválidos; os outros não são listados.
+
+A suíte da raiz só coleta com o ROS carregado
+(`source /opt/ros/jazzy/setup.bash` e `install/setup.bash`); sem isso para na
+coleta com `PackageNotFoundError`.
+
+🔴 **O que isto NÃO fecha.** O passo 7 continua **ABERTO**: nenhuma corrida
+foi julgada pelos três critérios. O juiz é puro e ainda não está ligado à
+coleta executável; o `d52b5da` (coleta do trajeto pelo CSV do seguidor)
+continua não executado. Próximo: integrar a coleta ao juiz, prová-la offline e
+só depois pedir autorização para a corrida no Gazebo. Nada foi enviado ao
+GitHub.

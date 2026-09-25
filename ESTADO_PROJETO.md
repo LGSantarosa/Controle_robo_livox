@@ -7,9 +7,10 @@
 >
 > - **PC de dev, robô desligado** — a **etapa 5 inteira está na `main`**,
 >   passos 1–6; o **passo 6 da etapa 6 fechou** na branch
->   `etapa6-pilha-robo3`; o **passo 7 está ABERTO e não fechado** — juiz
->   estacionado com 77 vermelhos e duas corridas só exploratórias (seção
->   abaixo); em aberto, auditar o NOTEBOOK.
+>   `etapa6-pilha-robo3`; o **passo 7 está ABERTO e não fechado** — o juiz
+>   offline fechou os 77 vermelhos (124/0), mas ainda não está ligado à
+>   coleta e nenhuma corrida foi julgada pelos três critérios; só duas
+>   corridas exploratórias (seção abaixo); em aberto, auditar o NOTEBOOK.
 > - **Lab** — Mid-360, FAST-LIO, `/scan` e TF do robô 3 provados com
 >   placa/motores desligados. O lidar foi encerrado limpo e **desligado
 >   novamente pelo dono**; nenhum objetivo foi enviado e o robô não se moveu.
@@ -31,7 +32,7 @@
 
 | branch | contém | observação |
 |---|---|---|
-| `etapa6-pilha-robo3` | etapa 6 + passo 7 em aberto + `main` até `1851ffb` (merge `64c0865`) + 058 (`6dc13f1`) + 059 (`f4aa7d4`) | **a branch de trabalho**; continuar daqui |
+| `etapa6-pilha-robo3` | etapa 6 + passo 7 em aberto (juiz G1–G5, `708570f`…`71dbfd5`) + `main` até `1851ffb` (merge `64c0865`) + 058 (`6dc13f1`) + 059 (`f4aa7d4`) | **a branch de trabalho**; continuar daqui |
 | `main` (`1851ffb`) | etapa 5, notebook sincronizado, prova parada do Mid-360 | **não** tem etapa 6, 058 nem 059 |
 | `livox-config-maquina-sensor` (`279f408`) | só a 058 | já incorporada aqui por cherry-pick; não é mais base de nada |
 | `backup/etapa6-pre-merge-main` (`d52b5da`, local) | etapa 6 antes do merge | ponto de volta se a integração precisar ser desfeita |
@@ -95,18 +96,26 @@ na decisão **056 §4.1**:
 2**; **não mede a zona morta real do robô 3**. Passar nele não diz nada sobre o
 atuador físico.
 
-**Onde o passo 7 parou (24-09):**
+**Onde o passo 7 parou (25-09):**
 
 - ✅ **Testes vermelhos primeiro, sem Gazebo**, como combinado: `24030e9`
   (29 casos) e `50f6a93`/`ea636f7` (conserto de um caso XY e entrada no
   `testpaths`).
 - ✅ **O juiz nasceu** — `tools/valida_etapa7/julga.py`, função pura, em
   `d0069ce`, com os **39 contratos verdes**.
-- 🔴 **O juiz está ESTACIONADO em `f2f8f3e`** com **77 vermelhos deliberados**
-  de evidência inválida (`b6844f9`, `f2f8f3e`): patamar zero/negativo, valores
-  não finitos, janela invertida, amostra malformada, bool/texto passando por
-  número. O `julga.py` **não** foi tocado depois disso e o coletor segue
-  bloqueado. São esses os 77 que a suíte da raiz mostra falhando.
+- ✅ **Os 77 vermelhos deliberados do juiz estão VERDES** (25-09). Tinham sido
+  escritos em `b6844f9`/`f2f8f3e` — evidência inválida que o juiz aceitava ou
+  com que estourava — e foram fechados em cinco grupos, um commit cada:
+  G1 parâmetros físicos da placa (`708570f`), G2 tolerância do objetivo
+  (`9418fe0`), G3 números não finitos nas amostras (`9706536`), G4 janela
+  validada antes das amostras (`e613ad9`), G5 amostras malformadas rejeitadas
+  antes da janela (`71dbfd5`). `tools/valida_etapa7` em **124/0**; suíte da
+  raiz em **1513/0**. Robô, lidar e Gazebo desligados em todos.
+- ⬜ **O juiz é PURO e ainda não está ligado à coleta executável.** Verde
+  offline quer dizer só que ele cumpre os 124 contratos offline sobre a
+  evidência que recebe; ainda
+  não existe o caminho corrida → evidência → `avalia`, e ele precisa ser
+  provado offline antes da corrida que contará.
 - 🟡 **Duas corridas exploratórias** com `bin/explora-objetivo-robo3`
   (`f86c742`), Gazebo com janela, em `~/etapa7-explora/` (ESTA MÁQUINA). A
   `20260924_154659` não mandou objetivo (defeito do wrapper, `--spin-time`); a
@@ -358,9 +367,10 @@ drivers e overlay; (3) verificar a rede notebook↔Mid-360; (4) só então o
 roteiro de bancada com Nav2; (5) se o chassi superar o robô 2, migrar e
 auditar o NUC.
 
-⬜ **Próximo:** etapa 6 — **fechar o passo 7** na trilha Gazebo: primeiro
-tornar verdes os 77 vermelhos do juiz, só depois uma corrida que conte pelos
-três critérios (ver a seção do passo 7 no topo); e a auditoria do **NOTEBOOK**
+⬜ **Próximo:** etapa 6 — **fechar o passo 7** na trilha Gazebo: integrar a
+coleta ao juiz, prová-la offline e só depois pedir autorização para a corrida
+no Gazebo que conte pelos três critérios (ver a seção do passo 7 no topo); e a
+auditoria do **NOTEBOOK**
 (hardware, na máquina), agora com o `bin/audita-livox` da decisão 059.
 
 🟢 **Trilha Gazebo: plano APROVADO em 23-09**, com seis correções do dono já
