@@ -59,6 +59,26 @@ class _Falta(Exception):
     valor assumido."""
 
 
+class _Invalido(Exception):
+    """Dado que veio, mas não é o que a grandeza pode ser. Vira REPROVADO com
+    campo, origem e valor — nunca um veredito calculado em cima dele."""
+
+
+def _positivo(valor, campo, onde):
+    """Grandeza física estritamente positiva e finita, e só `int`/`float`.
+
+    O TIPO é conferido antes de converter: `float(True)` e `float('1.0')` valem
+    1,0, e um julgador que convertesse primeiro aceitaria calado um bool ou um
+    texto de YAML no lugar do parâmetro. Zero e negativo também não são "valor
+    baixo": com `deadband_speed = 0` o patamar vira 0 e o critério aprova o robô
+    parado.
+    """
+    if (isinstance(valor, bool) or not isinstance(valor, (int, float))
+            or not math.isfinite(valor) or valor <= 0):
+        raise _Invalido(f'{campo} inválido em {onde}: {valor!r}')
+    return float(valor)
+
+
 def _exige(d, chave, onde):
     if not isinstance(d, dict) or chave not in d or d[chave] is None:
         raise _Falta(f'faltou {chave} em {onde}')
@@ -91,10 +111,10 @@ def _patamar(placa):
     É a velocidade que a placa entrega quando o comando cai dentro do patamar.
     Abaixo disto, no robô, é zona morta: o comando existe e a roda não anda.
     """
-    for campo in ('deadband_speed', 'escala_real', 'raio'):
-        _exige(placa, campo, '/placa_simulada')
-    return (float(placa['deadband_speed']) * float(placa['escala_real'])
-            * float(placa['raio']))
+    fatores = [_positivo(_exige(placa, campo, '/placa_simulada'), campo,
+                         '/placa_simulada')
+               for campo in ('deadband_speed', 'escala_real', 'raio')]
+    return fatores[0] * fatores[1] * fatores[2]
 
 
 def _comando_efetivo(v, wz, bitola):
@@ -192,7 +212,8 @@ def _julga_janela(evidencia):
 def _julga_patamar(evidencia):
     placa = _exige(evidencia, 'placa', 'evidência')
     patamar = _patamar(placa)
-    bitola = _exige(placa, 'bitola', '/placa_simulada')
+    bitola = _positivo(_exige(placa, 'bitola', '/placa_simulada'), 'bitola',
+                       '/placa_simulada')
     janela = _exige(evidencia, 'janela', 'evidência')
 
     melhor = 0.0
@@ -228,7 +249,7 @@ def avalia(evidencia):
     for nome, julga in _ITENS:
         try:
             itens[nome] = julga(evidencia)
-        except _Falta as e:
+        except (_Falta, _Invalido) as e:
             itens[nome] = (False, str(e))
         except (TypeError, ValueError) as e:
             itens[nome] = (False, f'evidência ilegível: {e}')
