@@ -6,7 +6,8 @@
 Sem ROS, sem disco, sem Gazebo: entra um dicionário de evidência, sai um
 veredito por item, no molde do `confere.py`/`topicos.py` da etapa 6. Quem colhe
 a evidência é outro programa; aqui só se JULGA, e é por isso que o contrato
-inteiro cabe em teste sem subir nada (`test_valida_etapa7.py`, 39 casos).
+inteiro cabe em teste sem subir nada, inteiramente coberto por
+`test_valida_etapa7.py`.
 
 O contrato está em `docs/PLANO_ETAPA6_ROBO3.md` §4.6.1 e na decisão 056 §4.1,
 fechado em `6718c57` **antes** deste arquivo existir. Três critérios
@@ -169,19 +170,34 @@ def _na_janela(t, janela):
     serviria para salvar corrida ruim com comando que veio depois do fim.
     """
     inicio, fim = janela
-    return inicio <= _finito(t, 't', 'amostra') <= fim
+    return inicio <= t <= fim
 
 
 def _amostras_do_consumidor_final(evidencia):
-    """Só o consumidor final entra na conta.
+    """Só o consumidor final entra na conta, como `(t, v, wz)` já validados.
 
     🔴 O `/cmd_vel_bruto` é DIAGNÓSTICO e não satisfaz o contrato: o que passa
     por ele ainda pode ser engolido pela placa — abaixo de uma unidade a saída é
     zero, e a latência zera o resto. Foi por isso que o critério antigo ("não
     nulo", observado antes do modelo) não servia: ele aprovaria o robô parado.
+
+    A lista inteira é conferida antes do recorte temporal: amostra quebrada é
+    falha da COLETA, e nem estar fora da janela nem ter uma boa ao lado a
+    escondem. Item que não é dicionário reprova porque nem o tópico dele dá
+    para saber; dos outros tópicos só se exige ser dicionário. O índice vai no
+    detalhe porque, com milhares de amostras, "alguma está quebrada" não é
+    achável.
     """
-    return [a for a in evidencia.get('amostras') or []
-            if a.get('topico') == TOPICO_FINAL]
+    validas = []
+    for i, a in enumerate(evidencia.get('amostras') or []):
+        onde = f'amostra {i}'
+        if not isinstance(a, dict):
+            raise _Invalido(f'{onde} inválida: {a!r}')
+        if a.get('topico') != TOPICO_FINAL:
+            continue
+        validas.append(tuple(_finito(_exige(a, campo, onde), campo, onde)
+                             for campo in ('t', 'v', 'wz')))
+    return validas
 
 
 # ── os itens ────────────────────────────────────────────────────────────────
@@ -236,7 +252,7 @@ def _julga_topologia(evidencia):
 def _julga_janela(evidencia):
     janela = _janela(evidencia)
     dentro = [a for a in _amostras_do_consumidor_final(evidencia)
-              if _na_janela(_exige(a, 't', 'amostra'), janela)]
+              if _na_janela(a[0], janela)]
     if not dentro:
         return False, (f'nenhuma amostra de {TOPICO_FINAL} entre '
                        f'{janela[0]} e {janela[1]}')
@@ -251,12 +267,9 @@ def _julga_patamar(evidencia):
     janela = _janela(evidencia)
 
     melhor = 0.0
-    for a in _amostras_do_consumidor_final(evidencia):
-        if not _na_janela(_exige(a, 't', 'amostra'), janela):
-            continue
-        melhor = max(melhor, _comando_efetivo(
-            _finito(_exige(a, 'v', 'amostra'), 'v', 'amostra'),
-            _finito(_exige(a, 'wz', 'amostra'), 'wz', 'amostra'), bitola))
+    for t, v, wz in _amostras_do_consumidor_final(evidencia):
+        if _na_janela(t, janela):
+            melhor = max(melhor, _comando_efetivo(v, wz, bitola))
 
     detalhe = (f'maior comando efetivo {melhor:.4f} m/s, '
                f'patamar vivo {patamar:.4f} m/s (folga {FOLGA})')

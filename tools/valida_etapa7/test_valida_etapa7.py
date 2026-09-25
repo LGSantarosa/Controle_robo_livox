@@ -667,3 +667,21 @@ def test_uma_amostra_boa_nao_e_salva_por_uma_quebrada_ao_lado(julga):
     assert not itens[JANELA][0], itens[JANELA]
     for item in (PATAMAR, JANELA):
         assert _detalhe_nomeia(itens[item][1], 'amostra'), itens[item]
+
+
+def test_amostra_quebrada_FORA_da_janela_tambem_reprova(julga):
+    """Amostra malformada é falha da COLETA, não da corrida: o recorte temporal
+    não a esconde. Aqui a boa está no meio da janela e a quebrada (índice 2,
+    `t` válido, sem `v`) veio depois do resultado — ainda assim JANELA e
+    PATAMAR reprovam, dizendo o índice e o campo que faltou."""
+    ev = _evidencia_boa()
+    ev['amostras'] = [
+        {'topico': TOPICO_DIAG, 't': 20.0, 'v': 0.05, 'wz': 0.0},
+        {'topico': TOPICO_FINAL, 't': 20.0, 'v': PATAMAR_VIVO, 'wz': 0.0},
+        {'topico': TOPICO_FINAL, 't': 40.0, 'wz': 0.0},
+    ]
+    itens = julga.avalia(ev)
+    for item in (PATAMAR, JANELA):
+        ok, detalhe = itens[item]
+        assert not ok, detalhe
+        assert _detalhe_nomeia(detalhe, 'amostra 2', 'faltou v'), detalhe
