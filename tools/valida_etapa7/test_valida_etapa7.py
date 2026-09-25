@@ -365,6 +365,18 @@ def test_amostra_nas_bordas_da_janela_aprova(julga):
         assert julga.avalia(ev)[JANELA][0], t
 
 
+def test_janela_de_duracao_zero_e_valida(julga):
+    """Caracterização, verde antes e depois da validação da janela: ela é
+    FECHADA, então `[t, t]` é janela legítima. Recusar a igualdade criaria uma
+    duração mínima que o contrato nunca definiu — só `objetivo_aceito` DEPOIS
+    de `resultado` é janela inválida."""
+    ev = _com_amostra(TOPICO_FINAL, 20.0, PATAMAR_VIVO)
+    ev['janela'] = {'objetivo_aceito': 20.0, 'resultado': 20.0}
+    itens = julga.avalia(ev)
+    assert itens[JANELA][0], itens[JANELA]
+    assert itens[PATAMAR][0], itens[PATAMAR]
+
+
 def test_o_teardown_comeca_estritamente_depois_do_resultado(julga):
     """1 ms depois do resultado já é teardown. Sem folga temporal inventada: a
     janela é a janela, e tolerância artificial aqui só serviria para salvar

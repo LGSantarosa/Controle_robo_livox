@@ -141,6 +141,25 @@ def _comando_efetivo(v, wz, bitola):
     return max(abs(v - wz * meia), abs(v + wz * meia))
 
 
+def _janela(evidencia):
+    """A janela inteira, validada ANTES de qualquer amostra.
+
+    Lida amostra a amostra, ela só era conferida se houvesse amostra: sem
+    `resultado` e com `amostras` vazia, a mensagem de reprovação estourava
+    procurando a chave que não veio, e janela invertida reprovava calada porque
+    nenhuma amostra cabia nela. Sem janela válida, "dentro da corrida" não tem
+    sentido — e isso derruba a janela E o patamar, que depende dela.
+    """
+    janela = _exige(evidencia, 'janela', 'evidência')
+    inicio = _finito(_exige(janela, 'objetivo_aceito', 'janela'),
+                     'objetivo_aceito', 'janela')
+    fim = _finito(_exige(janela, 'resultado', 'janela'), 'resultado', 'janela')
+    if inicio > fim:
+        raise _Invalido(f'janela inválida: objetivo_aceito {inicio!r} '
+                        f'depois de resultado {fim!r}')
+    return inicio, fim
+
+
 def _na_janela(t, janela):
     """Janela FECHADA: `objetivo_aceito <= t <= resultado`.
 
@@ -149,8 +168,7 @@ def _na_janela(t, janela):
     da etapa 6 mostrou o que o teardown escreve (decisão 057), e folga aqui só
     serviria para salvar corrida ruim com comando que veio depois do fim.
     """
-    inicio = float(_exige(janela, 'objetivo_aceito', 'janela'))
-    fim = float(_exige(janela, 'resultado', 'janela'))
+    inicio, fim = janela
     return inicio <= _finito(t, 't', 'amostra') <= fim
 
 
@@ -216,12 +234,12 @@ def _julga_topologia(evidencia):
 
 
 def _julga_janela(evidencia):
-    janela = _exige(evidencia, 'janela', 'evidência')
+    janela = _janela(evidencia)
     dentro = [a for a in _amostras_do_consumidor_final(evidencia)
               if _na_janela(_exige(a, 't', 'amostra'), janela)]
     if not dentro:
         return False, (f'nenhuma amostra de {TOPICO_FINAL} entre '
-                       f"{janela['objetivo_aceito']} e {janela['resultado']}")
+                       f'{janela[0]} e {janela[1]}')
     return True, f'{len(dentro)} amostra(s) na janela'
 
 
@@ -230,7 +248,7 @@ def _julga_patamar(evidencia):
     patamar = _patamar(placa)
     bitola = _positivo(_exige(placa, 'bitola', '/placa_simulada'), 'bitola',
                        '/placa_simulada')
-    janela = _exige(evidencia, 'janela', 'evidência')
+    janela = _janela(evidencia)
 
     melhor = 0.0
     for a in _amostras_do_consumidor_final(evidencia):
