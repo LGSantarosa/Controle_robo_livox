@@ -7,8 +7,8 @@ por cima, publicando em `/hoverboard_base_controller/cmd_vel`.
     ros2 launch robot_base base.launch.py
     ros2 launch robot_base base.launch.py congela_parado:=true   # só o ensaio
 
-Requisitos: robô LIGADO, placa hover no serial e Mid-360 na ethernet com os IPs
-de `config/MID360_config.json` (ver `config/README.md`).
+Requisitos: robô LIGADO, placa hover no serial e Mid-360 na Ethernet com a
+configuração ativa gerada por `setup_livox.sh` (ver `config/README.md`).
 """
 
 import os

@@ -1,13 +1,15 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-09-24**, com duas frentes no
-> mesmo dia, reunidas aqui pelo merge da `main` na `etapa6-pilha-robo3`:
+> Atualizado em **2026-09-25** (PC de dev, robô e lidar desligados). Esta é a
+> cópia da branch **`etapa6-pilha-robo3`**, que desde 25-09 reúne três frentes
+> de 24-09 (merge da `main` e cherry-pick da 058; ver tabela abaixo):
 >
 > - **PC de dev, robô desligado** — a **etapa 5 inteira está na `main`**,
 >   passos 1–6; o **passo 6 da etapa 6 fechou** na branch
->   `etapa6-pilha-robo3`, e o **passo 7 não começou**; em aberto, auditar o
->   NOTEBOOK.
+>   `etapa6-pilha-robo3`; o **passo 7 está ABERTO e não fechado** — juiz
+>   estacionado com 77 vermelhos e duas corridas só exploratórias (seção
+>   abaixo); em aberto, auditar o NOTEBOOK.
 > - **Lab** — Mid-360, FAST-LIO, `/scan` e TF do robô 3 provados com
 >   placa/motores desligados. O lidar foi encerrado limpo e **desligado
 >   novamente pelo dono**; nenhum objetivo foi enviado e o robô não se moveu.
@@ -24,6 +26,15 @@
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+**Onde está cada coisa (25-09):**
+
+| branch | contém | observação |
+|---|---|---|
+| `etapa6-pilha-robo3` | etapa 6 + passo 7 em aberto + `main` até `1851ffb` (merge `64c0865`) + 058 (`6dc13f1`) + 059 (`f4aa7d4`) | **a branch de trabalho**; continuar daqui |
+| `main` (`1851ffb`) | etapa 5, notebook sincronizado, prova parada do Mid-360 | **não** tem etapa 6, 058 nem 059 |
+| `livox-config-maquina-sensor` (`279f408`) | só a 058 | já incorporada aqui por cherry-pick; não é mais base de nada |
+| `backup/etapa6-pre-merge-main` (`d52b5da`, local) | etapa 6 antes do merge | ponto de volta se a integração precisar ser desfeita |
 
 ---
 
@@ -57,9 +68,9 @@ contagens forem **0 / 0 / 0**.
 
 🟡 **A decisão 056 continua PROPOSTA** — passa a "aplicada" só no passo 8.
 
-🛑 **Passo 7: FECHADO e não iniciado.** Ele é a **primeira execução com objetivo
-Nav2**: 1 m à frente, **teto de 60 s simulados**, e **três critérios
-simultâneos** — `SUCCEEDED`; pose final dentro do `xy_goal_tolerance` vivo; e
+🟡 **Passo 7: ABERTO, não fechado.** O contrato da corrida que fecha o passo 7
+é: **objetivo Nav2 de 1 m à frente**, **teto de 60 s simulados**, e **três
+critérios simultâneos** — `SUCCEEDED`; pose final dentro do `xy_goal_tolerance` vivo; e
 **um comando acima do patamar vivo chegando ao controlador final**.
 
 ✅ **O contrato do terceiro critério está FECHADO** — decidido em **`6718c57`**,
@@ -84,8 +95,28 @@ na decisão **056 §4.1**:
 2**; **não mede a zona morta real do robô 3**. Passar nele não diz nada sobre o
 atuador físico.
 
-O primeiro trabalho do passo 7, quando abrir, é **exclusivamente os testes
-vermelhos contra evidências sintéticas, sem Gazebo**.
+**Onde o passo 7 parou (24-09):**
+
+- ✅ **Testes vermelhos primeiro, sem Gazebo**, como combinado: `24030e9`
+  (29 casos) e `50f6a93`/`ea636f7` (conserto de um caso XY e entrada no
+  `testpaths`).
+- ✅ **O juiz nasceu** — `tools/valida_etapa7/julga.py`, função pura, em
+  `d0069ce`, com os **39 contratos verdes**.
+- 🔴 **O juiz está ESTACIONADO em `f2f8f3e`** com **77 vermelhos deliberados**
+  de evidência inválida (`b6844f9`, `f2f8f3e`): patamar zero/negativo, valores
+  não finitos, janela invertida, amostra malformada, bool/texto passando por
+  número. O `julga.py` **não** foi tocado depois disso e o coletor segue
+  bloqueado. São esses os 77 que a suíte da raiz mostra falhando.
+- 🟡 **Duas corridas exploratórias** com `bin/explora-objetivo-robo3`
+  (`f86c742`), Gazebo com janela, em `~/etapa7-explora/` (ESTA MÁQUINA). A
+  `20260924_154659` não mandou objetivo (defeito do wrapper, `--spin-time`); a
+  `20260924_160148` voltou **`SUCCEEDED`**, final a **0,2387 m** do alvo,
+  desvio lateral máx. 9,56 cm, e a leitura do bag mostrou que o arco **começa
+  na placa simulada herdada do robô 2**. **Nenhuma delas fecha o passo 7**: o
+  instrumento foi o olho do dono, não os três critérios medidos. Diário de
+  24-09.
+- ⬜ `d52b5da` trocou a coleta do trajeto para o CSV do seguidor; **não foi
+  executado** ainda.
 
 ---
 
@@ -327,9 +358,10 @@ drivers e overlay; (3) verificar a rede notebook↔Mid-360; (4) só então o
 roteiro de bancada com Nav2; (5) se o chassi superar o robô 2, migrar e
 auditar o NUC.
 
-⬜ **Próximo:** etapa 6 — o **passo 7** na trilha Gazebo (o passo 6 fechou em
-24-09; ver a seção do topo) e a auditoria do **NOTEBOOK** (hardware, na
-máquina).
+⬜ **Próximo:** etapa 6 — **fechar o passo 7** na trilha Gazebo: primeiro
+tornar verdes os 77 vermelhos do juiz, só depois uma corrida que conte pelos
+três critérios (ver a seção do passo 7 no topo); e a auditoria do **NOTEBOOK**
+(hardware, na máquina), agora com o `bin/audita-livox` da decisão 059.
 
 🟢 **Trilha Gazebo: plano APROVADO em 23-09**, com seis correções do dono já
 incorporadas (`docs/PLANO_ETAPA6_ROBO3.md` §9); a decisão **056** segue como
