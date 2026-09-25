@@ -7,9 +7,10 @@
 >
 > - **PC de dev, robô desligado** — a **etapa 5 inteira está na `main`**,
 >   passos 1–6; o **passo 6 da etapa 6 fechou** na branch
->   `etapa6-pilha-robo3`; o **passo 7 está ABERTO e não fechado** — o juiz
->   offline fechou os 77 vermelhos (124/0), mas ainda não está ligado à
->   coleta e nenhuma corrida foi julgada pelos três critérios; só duas
+>   `etapa6-pilha-robo3`; o **passo 7 está ABERTO e não fechado** — juiz,
+>   montador, extrator e `bin/valida-etapa7` prontos e provados offline, mas
+>   o wrapper **nunca rodou** e nenhuma corrida foi julgada pelos três
+>   critérios (recomeçar pelo "PAROU AQUI" da seção do passo 7); só duas
 >   corridas exploratórias (seção abaixo); em aberto, auditar o NOTEBOOK.
 > - **Lab** — Mid-360, FAST-LIO, `/scan` e TF do robô 3 provados com
 >   placa/motores desligados. O lidar foi encerrado limpo e **desligado
@@ -111,11 +112,21 @@ atuador físico.
   validada antes das amostras (`e613ad9`), G5 amostras malformadas rejeitadas
   antes da janela (`71dbfd5`). `tools/valida_etapa7` em **124/0**; suíte da
   raiz em **1513/0**. Robô, lidar e Gazebo desligados em todos.
-- ⬜ **O juiz é PURO e ainda não está ligado à coleta executável.** Verde
-  offline quer dizer só que ele cumpre os 124 contratos offline sobre a
-  evidência que recebe; ainda
-  não existe o caminho corrida → evidência → `avalia`, e ele precisa ser
-  provado offline antes da corrida que contará.
+- ✅ **A coleta foi ligada ao juiz, só offline** (25-09, decisão **060**
+  `14739b1`): montador `monta.py` (`8071a19`), extrator `le_bag.py`
+  (`f702116`, que no bag real de `160148` achou as 146 amostras e
+  `status=None`), e o wrapper **`bin/valida-etapa7`** + `corrida.py`
+  (`b11f966`). `tools/valida_etapa7` **186/0**; suíte da raiz **1575/0**.
+  ⚠️ O `b11f966` foi commitado e enviado **sem a revisão do revisor** (pedido
+  do dono no fim do dia): revisar o diff dele antes de rodar.
+- 🛑 **PAROU AQUI (25-09, fim do dia).** O `bin/valida-etapa7` **nunca rodou**.
+  **Recomeçar amanhã por:** (1) revisar o `b11f966`; (2) pedir o "pode" e
+  rodar `bash bin/valida-etapa7` neste PC (Gazebo headless, robô DESLIGADO,
+  árvore limpa); (3) ler `~/etapa7/<carimbo>/resultado.csv`. Três pontos só a
+  corrida mostra, e em todos a falha para antes do goal ou reprova pelo nome:
+  se o `ros2 topic info -v` enxerga o status oculto da ação; se o gravador se
+  chama `/rosbag2_recorder`; se o `ros2 param dump` sai com `/placa_simulada`
+  no topo.
 - 🟡 **Duas corridas exploratórias** com `bin/explora-objetivo-robo3`
   (`f86c742`), Gazebo com janela, em `~/etapa7-explora/` (ESTA MÁQUINA). A
   `20260924_154659` não mandou objetivo (defeito do wrapper, `--spin-time`); a
@@ -367,9 +378,9 @@ drivers e overlay; (3) verificar a rede notebook↔Mid-360; (4) só então o
 roteiro de bancada com Nav2; (5) se o chassi superar o robô 2, migrar e
 auditar o NUC.
 
-⬜ **Próximo:** etapa 6 — **fechar o passo 7** na trilha Gazebo: integrar a
-coleta ao juiz, prová-la offline e só depois pedir autorização para a corrida
-no Gazebo que conte pelos três critérios (ver a seção do passo 7 no topo); e a
+⬜ **Próximo:** etapa 6 — **fechar o passo 7** na trilha Gazebo: revisar o
+`b11f966` e rodar o `bin/valida-etapa7` (a coleta já está ligada ao juiz e
+provada offline; ver "PAROU AQUI" na seção do passo 7 no topo); e a
 auditoria do **NOTEBOOK**
 (hardware, na máquina), agora com o `bin/audita-livox` da decisão 059.
 

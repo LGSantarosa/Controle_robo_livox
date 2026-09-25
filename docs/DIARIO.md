@@ -11170,3 +11170,31 @@ coleta executável; o `d52b5da` (coleta do trajeto pelo CSV do seguidor)
 continua não executado. Próximo: integrar a coleta ao juiz, prová-la offline e
 só depois pedir autorização para a corrida no Gazebo. Nada foi enviado ao
 GitHub.
+
+## 🔗 2026-09-25, tarde (PC de dev, robô, lidar e Gazebo DESLIGADOS) — A COLETA LIGADA AO JUIZ, SÓ OFFLINE
+
+Depois do 124/0 do juiz, a ligação corrida → evidência → `avalia`, pela
+decisão **060** (`14739b1`), escrita antes dos testes. Cada peça teve teste
+vermelho antes do código:
+
+| peça | vermelho | código | prova |
+|---|---|---|---|
+| montador `monta.py` | `3f6d8ae` (28, todos por módulo ausente) | `8071a19` | 28/0; três mutações pegas (header, grafo textual, nome `goal_checker` fixo) |
+| extrator `le_bag.py` | `6a484e4` (6) | `f702116` | 6/0; duas mutações pegas; bag real de `160148`: 146 amostras finais, 146 brutas, `status=None` |
+| `bin/valida-etapa7` + `corrida.py` | — | `b11f966` | 28 testes (offline + travas estáticas do wrapper); `bash -n` |
+
+Totais: `tools/valida_etapa7` **186/0**; suíte da raiz **1575/0**.
+
+Achados no caminho: o `header.stamp` do tópico final fica de 1 a 35 ms antes
+da gravação (é herdado do comando de entrada, `placa_simulada.py:431`), o que
+confirma a escolha do instante do bag; e o mcap de `160148` não tem índice de
+mensagens (aviso do `rosbag2`), o que não afeta nada porque o montador ordena
+o status e o juiz não depende da ordem das amostras.
+
+Custo: o dono achou desproporcional um dia inteiro no instrumento, e com razão
+— o escopo foi congelado no meio da tarde. O `b11f966` foi commitado e enviado
+sem a revisão do revisor, a pedido do dono no fim do dia.
+
+🛑 **Parou aqui.** O `bin/valida-etapa7` nunca rodou. Recomeçar: revisar o
+`b11f966`, pedir o "pode" e rodar a corrida no Gazebo (robô desligado). O
+passo 7 continua **ABERTO**.
