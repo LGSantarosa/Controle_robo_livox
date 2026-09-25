@@ -1,0 +1,32 @@
+Janela própria de 15 s, assinando /Odometry e /scan:
+
+odom_amostras=140
+odom_taxa_hz=10.333
+odom_frames=camera_init->body
+deriva_xy_max_m=0.0085
+deriva_z_max_m=0.0080
+deriva_yaw_max_graus=0.274
+scan_amostras=105
+scan_taxa_hz=7.242
+scan_frame=base_link
+scan_raios=360
+scan_validos_mediana=355
+scan_validos_min=352
+scan_alcance_finito_m=0.350..6.840
+
+Carga instantânea logo depois da janela (`ps`, % de um core por processo):
+
+livox_ros_driver2_node   cpu=28.5%   rss=51744 KiB
+fastlio_mapping          cpu=34.1%   rss=176388 KiB
+tf_odom                  cpu=2.4%    rss=76588 KiB
+nuvem_pontos             cpu=97.5%   rss=81468 KiB
+scan_2d                  cpu=0.4%    rss=36956 KiB
+robot_state_publisher    cpu=0.5%    rss=29492 KiB
+
+TF estática lida de `tf2_echo base_link livox_frame`:
+
+translation_m=(-0.093, 0.000, 0.240)
+rpy_rad=(0.000, 0.000, 0.000)
+
+Esse é o valor provisório do URDF, não uma medição física da pose 6D.
+

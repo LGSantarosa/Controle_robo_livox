@@ -1,0 +1,108 @@
+[INFO] [launch]: All log files can be found below /home/ubuntu/.ros/log/2026-09-24-17-52-23-343306-ubuntu-Latitude-3490-1695964
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [launch.user]: [livox]    /home/ubuntu/Workspace/Controle_robo_livox/install/livox_ros_driver2/share/livox_ros_driver2/launch_ROS2/msg_MID360_launch.py
+[INFO] [launch.user]: [fast_lio] /home/ubuntu/Workspace/Controle_robo_livox/install/fast_lio/share/fast_lio/launch/mapping.launch.py (cfg: /home/ubuntu/Workspace/Controle_robo_livox/install/fast_lio/share/fast_lio/config/mid360.yaml)
+[INFO] [livox_ros_driver2_node-1]: process started with pid [1695984]
+[INFO] [fastlio_mapping-2]: process started with pid [1695985]
+[INFO] [rviz2-3]: process started with pid [1695986]
+[INFO] [tf_odom-4]: process started with pid [1695987]
+[INFO] [nuvem_pontos-5]: process started with pid [1695988]
+[INFO] [pointcloud_to_laserscan_node-6]: process started with pid [1695989]
+[livox_ros_driver2_node-1] [INFO] [1790283143.561297435] [livox_lidar_publisher]: Livox Ros Driver2 Version: 1.2.4
+[livox_ros_driver2_node-1] [INFO] [1790283143.561891226] [livox_lidar_publisher]: Data Source is raw lidar.
+[livox_ros_driver2_node-1] [INFO] [1790283143.561931054] [livox_lidar_publisher]: Config file : /home/ubuntu/Workspace/Controle_robo_livox/ros2_packages/livox_ros_driver2/launch_ROS2/../config/MID360_config.json
+[livox_ros_driver2_node-1] LdsLidar *GetInstance
+[livox_ros_driver2_node-1] config lidar type: 8
+[livox_ros_driver2_node-1] successfully parse base config, counts: 1
+[livox_ros_driver2_node-1] [INFO] [1790283143.566992509] [livox_lidar_publisher]: Init lds lidar success!
+[rviz2-3] qt.qpa.xcb: could not connect to display 
+[rviz2-3] qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it was found.
+[rviz2-3] This application failed to start because no Qt platform plugin could be initialized. Reinstalling the application may fix this problem.
+[rviz2-3] 
+[rviz2-3] Available platform plugins are: eglfs, linuxfb, minimal, minimalegl, offscreen, vnc, wayland-egl, wayland, wayland-xcomposite-egl, wayland-xcomposite-glx, xcb.
+[rviz2-3] 
+[fastlio_mapping-2] [INFO] [1790283144.047515084] [laser_mapping]: p_pre->lidar_type 1
+[fastlio_mapping-2] Multi thread started 
+[fastlio_mapping-2] ~~~~/home/ubuntu/Workspace/Controle_robo_livox/ros2_packages/FAST_LIO/ file opened
+[fastlio_mapping-2] [INFO] [1790283144.071142495] [laser_mapping]: Node init finished.
+[nuvem_pontos-5] [WARN] [1790283144.548105718] [nuvem_pontos]: raio cego do proprio robo: 0.150 m (decisão 027 — pontos mais perto que isto do EIXO do sensor são peça do robô e saem da nuvem). Com 0,000 o reflexo volta a poder disparar contra o próprio robô, que foi o defeito de 12-08.
+[nuvem_pontos-5] [WARN] [1790283144.549342344] [nuvem_pontos]: nuvem_pontos: /livox/lidar (CustomMsg) -> /livox/pontos (PointCloud2). Sem esta ponte os costmaps e o collision_monitor não recebem nuvem nenhuma no robô — medido em 10-08, com os dois costmaps em 0 células letais.
+[tf_odom-4] [WARN] [1790283145.073490489] [tf_odom]: tf_odom: /Odometry -> TF odom -> base_link. A pose do LIO é do SENSOR; a composição com o URDF é o que impede os 42 cm do Mid-360 de virarem erro silencioso de navegação.
+[livox_ros_driver2_node-1] GetFreeIndex key:livox_lidar_2835458240.
+[livox_ros_driver2_node-1] Init queue, real query size:16.
+[livox_ros_driver2_node-1] Lidar[0] storage queue size: 10
+[livox_ros_driver2_node-1] set pcl data type, handle: 2835458240, data type: 1
+[livox_ros_driver2_node-1] set scan pattern, handle: 2835458240, scan pattern: 0
+[livox_ros_driver2_node-1] begin to change work mode to 'Normal', handle: 2835458240
+[livox_ros_driver2_node-1] successfully set data type, handle: 2835458240, set_bit: 2
+[livox_ros_driver2_node-1] successfully set pattern mode, handle: 2835458240, set_bit: 0
+[livox_ros_driver2_node-1] successfully set lidar attitude, ip: 192.168.1.169
+[livox_ros_driver2_node-1] successfully change work mode, handle: 2835458240
+[livox_ros_driver2_node-1] successfully enable Livox Lidar imu, ip: 192.168.1.169
+[livox_ros_driver2_node-1] [INFO] [1790283146.568198134] [livox_lidar_publisher]: livox/imu publish use imu format
+[livox_ros_driver2_node-1] [INFO] [1790283146.578160426] [livox_lidar_publisher]: livox/lidar publish use livox custom format
+[fastlio_mapping-2] [WARN] [1790283146.892471112] [laser_mapping]: No point, skip this scan!
+[fastlio_mapping-2] 
+[fastlio_mapping-2] [WARN] [1790283146.911945592] [laser_mapping]: No point, skip this scan!
+[fastlio_mapping-2] 
+[fastlio_mapping-2] [WARN] [1790283146.919784932] [laser_mapping]: No point, skip this scan!
+[fastlio_mapping-2] 
+[fastlio_mapping-2] [WARN] [1790283146.928978618] [laser_mapping]: No point, skip this scan!
+[fastlio_mapping-2] 
+[fastlio_mapping-2] IMU Initial Done
+[fastlio_mapping-2] [WARN] [1790283146.939108593] [laser_mapping]: No point, skip this scan!
+[fastlio_mapping-2] 
+[fastlio_mapping-2] [INFO] [1790283146.962756848] [laser_mapping]: Initialize the map kdtree
+[tf_odom-4] [ERROR] [1790283147.012819572] [tf_odom]: NÃO EXISTE TF livox_frame -> base_link: "livox_frame" passed to lookupTransform argument target_frame does not exist. 
+[tf_odom-4] Sem ela a pose do sensor viraria a pose do corpo, com o offset embutido e SEM sintoma. Este nó não vai publicar. Confira se o robot_state_publisher está de pé e se o URDF descreve 'livox_frame'.
+[nuvem_pontos-5] [WARN] [1790283147.073094382] [nuvem_pontos]: primeira nuvem convertida: 18652 pontos (4580 inválidos descartados), frame "livox_frame". Se o frame não for `livox_frame`, a nuvem inteira sai deslocada e a TF não conserta.
+[nuvem_pontos-5] [INFO] [1790283147.073996765] [nuvem_pontos]: 18652 pontos, 4580 inválidos
+[ERROR] [rviz2-3]: process has died [pid 1695986, exit code -6, cmd '/opt/ros/jazzy/lib/rviz2/rviz2 -d /home/ubuntu/Workspace/Controle_robo_livox/install/fast_lio/share/fast_lio/rviz/fastlio.rviz --ros-args'].
+[nuvem_pontos-5] [INFO] [1790283157.090537894] [nuvem_pontos]: 15798 pontos, 4170 inválidos
+[nuvem_pontos-5] [INFO] [1790283167.196041229] [nuvem_pontos]: 15803 pontos, 4165 inválidos
+[nuvem_pontos-5] [INFO] [1790283177.265212469] [nuvem_pontos]: 15972 pontos, 4092 inválidos
+[nuvem_pontos-5] [INFO] [1790283187.387857824] [nuvem_pontos]: 15857 pontos, 4111 inválidos
+[pointcloud_to_laserscan_node-6] [INFO] [1790283195.491964848] [scan_2d]: Got a subscriber to laserscan, starting pointcloud subscriber
+[pointcloud_to_laserscan_node-6] [INFO] [1790283196.274763112] [scan_2d]: Message Filter dropping message: frame 'livox_frame' at time 1790283194.884 for reason 'discarding message because the queue is full'
+[nuvem_pontos-5] [INFO] [1790283197.395681733] [nuvem_pontos]: 16021 pontos, 4043 inválidos
+[pointcloud_to_laserscan_node-6] [INFO] [1790283198.780177131] [scan_2d]: Message Filter dropping message: frame 'livox_frame' at time 1790283197.385 for reason 'discarding message because the queue is full'
+[pointcloud_to_laserscan_node-6] [INFO] [1790283201.205471448] [scan_2d]: No subscribers to laserscan, shutting down pointcloud subscriber
+[nuvem_pontos-5] [INFO] [1790283207.438455312] [nuvem_pontos]: 15808 pontos, 4160 inválidos
+[pointcloud_to_laserscan_node-6] [INFO] [1790283215.426922658] [scan_2d]: Got a subscriber to laserscan, starting pointcloud subscriber
+[pointcloud_to_laserscan_node-6] [INFO] [1790283215.573903024] [scan_2d]: Message Filter dropping message: frame 'livox_frame' at time 1790283199.885 for reason 'discarding message because the queue is full'
+[nuvem_pontos-5] [INFO] [1790283217.558906180] [nuvem_pontos]: 13675 pontos, 6389 inválidos
+[pointcloud_to_laserscan_node-6] [INFO] [1790283218.115752151] [scan_2d]: Message Filter dropping message: frame 'livox_frame' at time 1790283216.684 for reason 'discarding message because the queue is full'
+[pointcloud_to_laserscan_node-6] [INFO] [1790283220.433756523] [scan_2d]: No subscribers to laserscan, shutting down pointcloud subscriber
+[nuvem_pontos-5] [INFO] [1790283227.648860068] [nuvem_pontos]: 3927 pontos, 16041 inválidos
+[nuvem_pontos-5] [INFO] [1790283237.735713563] [nuvem_pontos]: 15503 pontos, 4561 inválidos
+[nuvem_pontos-5] [INFO] [1790283247.802920860] [nuvem_pontos]: 15854 pontos, 4210 inválidos
+[nuvem_pontos-5] [INFO] [1790283257.901846917] [nuvem_pontos]: 15784 pontos, 4280 inválidos
+[nuvem_pontos-5] [INFO] [1790283267.970511672] [nuvem_pontos]: 15799 pontos, 4265 inválidos
+[tf_odom-4] [WARN] [1790283269.908119636] [tf_odom]: primeira TF publicada (pose vinha de 'livox_frame', composta com o URDF)
+[nuvem_pontos-5] [INFO] [1790283278.016535399] [nuvem_pontos]: 15711 pontos, 4353 inválidos
+[nuvem_pontos-5] [INFO] [1790283288.065830087] [nuvem_pontos]: 15742 pontos, 4322 inválidos
+[nuvem_pontos-5] [INFO] [1790283298.108035709] [nuvem_pontos]: 15736 pontos, 4232 inválidos
+[nuvem_pontos-5] [INFO] [1790283308.145316990] [nuvem_pontos]: 15601 pontos, 4367 inválidos
+[nuvem_pontos-5] [INFO] [1790283318.152911591] [nuvem_pontos]: 15641 pontos, 4423 inválidos
+[pointcloud_to_laserscan_node-6] [INFO] [1790283327.254272194] [scan_2d]: Got a subscriber to laserscan, starting pointcloud subscriber
+[nuvem_pontos-5] [INFO] [1790283328.185989489] [nuvem_pontos]: 15526 pontos, 4442 inválidos
+[nuvem_pontos-5] [INFO] [1790283338.208302372] [nuvem_pontos]: 15801 pontos, 4263 inválidos
+[pointcloud_to_laserscan_node-6] [INFO] [1790283341.770987775] [scan_2d]: No subscribers to laserscan, shutting down pointcloud subscriber
+[nuvem_pontos-5] [INFO] [1790283348.225388369] [nuvem_pontos]: 15521 pontos, 4447 inválidos
+[nuvem_pontos-5] [INFO] [1790283358.315858220] [nuvem_pontos]: 15587 pontos, 4477 inválidos
+[nuvem_pontos-5] [INFO] [1790283368.373020257] [nuvem_pontos]: 15537 pontos, 4527 inválidos
+[nuvem_pontos-5] [INFO] [1790283378.452778634] [nuvem_pontos]: 15509 pontos, 4459 inválidos
+[nuvem_pontos-5] [INFO] [1790283388.556327450] [nuvem_pontos]: 15561 pontos, 4503 inválidos
+[nuvem_pontos-5] [INFO] [1790283398.671543462] [nuvem_pontos]: 15799 pontos, 4265 inválidos
+[nuvem_pontos-5] [INFO] [1790283408.677616096] [nuvem_pontos]: 15718 pontos, 4250 inválidos
+[nuvem_pontos-5] [INFO] [1790283418.698444554] [nuvem_pontos]: 15849 pontos, 4215 inválidos
+[nuvem_pontos-5] [INFO] [1790283428.714571087] [nuvem_pontos]: 15819 pontos, 4245 inválidos
+[nuvem_pontos-5] [INFO] [1790283438.824538047] [nuvem_pontos]: 15549 pontos, 4419 inválidos
+[nuvem_pontos-5] [INFO] [1790283448.971177922] [nuvem_pontos]: 15883 pontos, 4085 inválidos
+[nuvem_pontos-5] [INFO] [1790283459.067329982] [nuvem_pontos]: 15909 pontos, 4059 inválidos
+[nuvem_pontos-5] [INFO] [1790283469.154395125] [nuvem_pontos]: 15903 pontos, 4065 inválidos
+[nuvem_pontos-5] [INFO] [1790283479.167477263] [nuvem_pontos]: 15726 pontos, 4242 inválidos
+[nuvem_pontos-5] [INFO] [1790283489.189258249] [nuvem_pontos]: 15783 pontos, 4281 inválidos
+[nuvem_pontos-5] [INFO] [1790283499.301911763] [nuvem_pontos]: 15802 pontos, 4262 inválidos
+[nuvem_pontos-5] [INFO] [1790283509.367037921] [nuvem_pontos]: 15726 pontos, 4242 inválidos
+[nuvem_pontos-5] [INFO] [1790283519.482968163] [nuvem_pontos]: 15824 pontos, 4144 inválidos

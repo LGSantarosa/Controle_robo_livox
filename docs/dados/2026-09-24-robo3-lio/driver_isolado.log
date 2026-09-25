@@ -1,0 +1,30 @@
+[INFO] [launch]: All log files can be found below /home/ubuntu/.ros/log/2026-09-24-17-19-22-396686-ubuntu-Latitude-3490-1537986
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [livox_ros_driver2_node-1]: process started with pid [1538043]
+[livox_ros_driver2_node-1] [INFO] [1790281162.800767656] [livox_lidar_publisher]: Livox Ros Driver2 Version: 1.2.4
+[livox_ros_driver2_node-1] [INFO] [1790281162.801274572] [livox_lidar_publisher]: Data Source is raw lidar.
+[livox_ros_driver2_node-1] [INFO] [1790281162.801306751] [livox_lidar_publisher]: Config file : /home/ubuntu/Workspace/Controle_robo_livox/ros2_packages/livox_ros_driver2/launch_ROS2/../config/MID360_config.json
+[livox_ros_driver2_node-1] LdsLidar *GetInstance
+[livox_ros_driver2_node-1] config lidar type: 8
+[livox_ros_driver2_node-1] successfully parse base config, counts: 1
+[livox_ros_driver2_node-1] [INFO] [1790281162.810144873] [livox_lidar_publisher]: Init lds lidar success!
+[livox_ros_driver2_node-1] GetFreeIndex key:livox_lidar_2835458240.
+[livox_ros_driver2_node-1] set pcl data type, handle: 2835458240, data type: 1
+[livox_ros_driver2_node-1] set scan pattern, handle: 2835458240, scan pattern: 0
+[livox_ros_driver2_node-1] begin to change work mode to 'Normal', handle: 2835458240
+[livox_ros_driver2_node-1] successfully set data type, handle: 2835458240, set_bit: 2
+[livox_ros_driver2_node-1] successfully set pattern mode, handle: 2835458240, set_bit: 0
+[livox_ros_driver2_node-1] successfully set lidar attitude, ip: 192.168.1.169
+[livox_ros_driver2_node-1] successfully change work mode, handle: 2835458240
+[livox_ros_driver2_node-1] successfully enable Livox Lidar imu, ip: 192.168.1.169
+[livox_ros_driver2_node-1] [INFO] [1790281165.811662881] [livox_lidar_publisher]: livox/imu publish use imu format
+[livox_ros_driver2_node-1] [INFO] [1790281165.828660261] [livox_lidar_publisher]: livox/lidar publish use livox custom format
+[livox_ros_driver2_node-1] Init queue, real query size:16.
+[livox_ros_driver2_node-1] Lidar[0] storage queue size: 10
+[WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+[INFO] [livox_ros_driver2_node-1]: sending signal 'SIGINT' to process[livox_ros_driver2_node-1]
+[livox_ros_driver2_node-1] [INFO] [1790283138.363240721] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[livox_ros_driver2_node-1] Livox Lidar SDK Deinit completely!
+[livox_ros_driver2_node-1] lddc destory!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+[livox_ros_driver2_node-1] lds destory!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+[INFO] [livox_ros_driver2_node-1]: process has finished cleanly [pid 1538043]

@@ -1,10 +1,18 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-09-24** (PC de dev, robô
-> desligado — a **etapa 5 inteira está na `main`**, passos 1–6; o **passo 6 da
-> etapa 6 fechou** na branch `etapa6-pilha-robo3`, e o **passo 7 não começou**;
-> em aberto, auditar o NOTEBOOK).
+> Versionado na `main`. Atualizado em **2026-09-24**, com duas frentes no
+> mesmo dia, reunidas aqui pelo merge da `main` na `etapa6-pilha-robo3`:
+>
+> - **PC de dev, robô desligado** — a **etapa 5 inteira está na `main`**,
+>   passos 1–6; o **passo 6 da etapa 6 fechou** na branch
+>   `etapa6-pilha-robo3`, e o **passo 7 não começou**; em aberto, auditar o
+>   NOTEBOOK.
+> - **Lab** — Mid-360, FAST-LIO, `/scan` e TF do robô 3 provados com
+>   placa/motores desligados. O lidar foi encerrado limpo e **desligado
+>   novamente pelo dono**; nenhum objetivo foi enviado e o robô não se moveu.
+>   A configuração que funcionou está só no clone ignorado pelo git e ainda
+>   precisa virar solução por máquina.
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
@@ -72,6 +80,103 @@ atuador físico.
 
 O primeiro trabalho do passo 7, quando abrir, é **exclusivamente os testes
 vermelhos contra evidências sintéticas, sem Gazebo**.
+
+---
+
+## 🔌 24-09 (lab, robô 3; lidar DESLIGADO ao fim) — MID-360 + LIO + SCAN + TF PROVADOS PARADOS
+
+Evidência: `docs/dados/2026-09-24-robo3-lio/` (logs pequenos, medidas e
+`SHA256SUMS`; sem bag).
+
+| o quê | estado medido |
+|---|---|
+| `enp1s0` / perfil NetworkManager `livox` | ✅ `192.168.1.5` |
+| Mid-360 presente | ✅ `192.168.1.169`, MAC `e4:7a:2c:90:1d:f1` |
+| `/livox/lidar` | ✅ 10,2 Hz, `CustomMsg`, 20 064 pontos/quadro, `livox_frame` |
+| `/livox/imu` | ✅ 199,8 Hz |
+| driver | ✅ inicialização do lidar, modo `Normal`, IMU habilitada |
+| `/Odometry` | ✅ 10,33 Hz; deriva máx. em 15 s: 8,5 mm xy, 8,0 mm z, 0,274° yaw |
+| `/livox/pontos` | ✅ 7,25 Hz, `PointCloud2` |
+| `/scan` | ✅ 7,24 Hz, 360 raios em `base_link`; mediana 355 finitos |
+| TF | ✅ `base_link → livox_frame` estática + `odom → base_link` viva |
+| movimento/mapa/Nav2 | 🔴 não testados; nenhum objetivo enviado |
+| estado físico atual | ✅ lidar desligado depois de zerar processos e grafo ROS; avisar e esperar “pode” antes de religar/testar |
+
+- Para casar com a interface `.5`, foi alterada **somente** a cópia ignorada
+  `ros2_packages/livox_ros_driver2/config/MID360_config.json` no notebook: host
+  `.2` → `.5`; o sensor já estava em `.169`. O versionado em
+  `robot_base/config/` permanece `.2/.158`, pois descreve o robô 2.
+- 🔴 **Config descartável:** `setup_livox.sh` ou reclone repõe a cópia
+  versionada e apaga o ajuste que funcionou. Falta decidir configuração por
+  máquina; não esconder os números do robô 3 no arquivo do robô 2.
+- O launch isolado `1537986` sobreviveu à primeira pausa e retomou quando o
+  lidar foi religado. Depois foi encerrado com `SIGINT`; a localização completa
+  subiu sem tração e, no fim, foi encerrada por PGID. Conferência final:
+  **nenhum processo e nenhum nó relevante vivo** antes de cortar a energia.
+- 🔴 **Ainda não dá para “só mandar um ponto” no robô 3:** a `main` recusa
+  `robo:=3`; `origin/etapa6-pilha-robo3` aceita o perfil 3 apenas no Gazebo e
+  recusa deliberadamente `robo:=3 sim:=false`, pois ainda faltam a fronteira
+  do atuador e a localização reais. Não usar o perfil do robô 2 como atalho.
+- O que esta prova fecha: Ethernet, controle do Mid-360, nuvem crua, IMU,
+  FAST-LIO, conversão `PointCloud2`, fatia `/scan` e a cadeia de TF **parada**.
+  **Não fecha** pose 6D medida, sinal do yaw, scan contra mapa, autorretorno,
+  AMCL, Nav2 ou atuador.
+- ⚠️ O RSP foi avulso e revelou exatamente a falta de bringup prevista: sem
+  ele o `tf_odom` se recusou corretamente a publicar. A TF usou a pose ainda
+  provisória do URDF: xyz `(−0,093; 0; 0,240)`, yaw zero.
+- ⚠️ Custo observado: `nuvem_pontos` **97,5% de um core**, driver 28,5% e
+  FAST-LIO 34,1%; o fluxo convertido caiu de ~10 Hz para ~7,2 Hz.
+- ⚠️ O RViz que o launch upstream tenta abrir morreu no headless (`Qt`, código
+  −6); a localização continuou viva. Retirar esse processo é dívida de
+  bringup, não falha do LIO.
+- ⚠️ Encerramento por PID não bastou: `SIGTERM` matou o launch pai e deixou
+  filhos órfãos. A limpeza final foi por PGID, sem `SIGKILL`, e foi conferida
+  antes de autorizar o desligamento.
+
+⬜ **Próximo:** tornar `.5/.169` reproduzível sem quebrar `.2/.158`; medir a
+pose 6D do lidar; transformar localização + RSP num bringup único do robô 3;
+depois validar percepção e parada física independente. Só então liberar um
+goal curto. O lidar só volta a ser ligado depois de aviso explícito ao dono.
+
+---
+
+### Antes de ligar o lidar — notebook sincronizado e compilado
+
+Sessão só de PC (bateria carregando). Diário de 24-09 tem a sequência.
+
+| o quê | estado |
+|---|---|
+| notebook `ubuntu@10.127.116.150` (Latitude 3490, 24.04 + Jazzy) | ✅ na **`main` `cc064fb`** (veio de `fa828f4`, 15-09) |
+| `colcon build` lá (o comando do cabeçalho deste doc) | ✅ **rc=0**, 6 pacotes em 8,0 s |
+| `livox_ros_driver2` + `FAST_LIO` no notebook | ✅ clonados e **compilados** (build de 22-09, 8 pacotes); os oito aparecem no `ros2 pkg list` do overlay |
+| MEGA | ✅ `/dev/ttyACM0` |
+| `enp1s0` (cabo do lidar) | 🔴 **DOWN, sem IP** — falta cabo e o IP fixo `192.168.1.2` |
+| `git fetch origin` no notebook | 🔴 publickey (esperado). Deploy = `git push notebook main:main` daqui + `fetch`/`reset --hard notebook/main` lá |
+| rede | ✅ os dois na `Trafico de banana` (dev `10.127.116.5`) |
+
+- ⚠️ **BO do `setup_livox.sh`, aberto e diferente do que a 055 resolveu:** ele
+  reprova no próprio passo 5/5 porque o `--packages-select livox_ros_driver2
+  fast_lio robot_base` não inclui o `hoverboard_driver`, que o `robot_base`
+  exige instalado (`package.sh` ausente). Um `colcon build` comum depois
+  **passa** com os oito pacotes — o defeito é da lista do script, não do
+  ambiente. A 055 endureceu o script noutro ponto (SDK fixado) e não tocou
+  nessa linha. Sem conserto hoje: mexer nele é mudança de código.
+- ⚠️ **O `MID360_config.json` de dentro do driver tem `192.168.1.169`**; o
+  versionado em `robot_base/config/` tem `.158` desde `56e6bda`. A cópia veio
+  do checkout de 15-09 e o `reset --hard` não alcança o clone (está no
+  `.gitignore`). **Não corrigido de propósito** — o README manda a varredura
+  ser a fonte da verdade, e o lidar está desligado.
+- ⚠️ **Método:** abri a sessão lendo o estado local sem `git fetch` e trabalhei
+  com uma `main` de nove dias atrás (cheguei a sincronizar o notebook com
+  `f23ac4f` e a afirmar que a etapa 5 não estava na `main`). Corrigido no mesmo
+  dia. **`git fetch origin` antes de ler este documento**, sempre.
+- 🔴 **Não prova hardware nenhum.** Lidar desligado, `enp1s0` sem IP, MEGA não
+  falou com a placa, robô não se moveu.
+
+Esse “próximo” foi executado mais tarde no mesmo dia, com um resultado
+diferente do palpite: a interface real era `.5`, o sensor presente era `.169`,
+e os fluxos passaram depois de casar o host da cópia ativa com `.5`. Ver o
+bloco acima e a entrada mais nova do diário.
 
 ---
 
