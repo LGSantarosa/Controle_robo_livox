@@ -20,10 +20,12 @@ Calços: `ros2`, `dpkg-query` e `ldconfig` entram por um PATH próprio (como no
 `sobe_robo3`). O `git` é o de verdade, sobre repositórios de verdade criados
 no tmp — fingir `git rev-parse` esconderia justamente o que se quer provar.
 """
+import ipaddress
 import json
 import os
 import shutil
 import subprocess
+import sys
 
 import pytest
 
@@ -31,10 +33,19 @@ RAIZ = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 AUDITOR = os.path.join(RAIZ, 'bin', 'audita-livox')
 SHA_FIXADO = 'f5d9375f84efe2b15bc0a052d3e18482ed13adf4'
 
-CONFIG = {'MID360': {'host_net_info': {'cmd_data_ip': '192.168.1.2'}},
-          'lidar_configs': [{'ip': '192.168.1.158'}]}
-CONFIG_VELHA = {'MID360': {'host_net_info': {'cmd_data_ip': '192.168.1.2'}},
-                'lidar_configs': [{'ip': '192.168.1.169'}]}
+# A árvore da decisão 058: só template e perfis são versionados. O JSON ativo
+# é o template materializado pelo MESMO gerador que o setup usa.
+CONFIG_VERSIONADA = os.path.join(RAIZ, 'ros2_packages', 'robot_base', 'config')
+TEMPLATE = os.path.join(CONFIG_VERSIONADA, 'MID360_config.template.json')
+PERFIS = os.path.join(CONFIG_VERSIONADA, 'livox_host_profiles.json')
+sys.path.insert(0, os.path.join(RAIZ, 'tools'))
+from prepara_config_livox import renderiza_config  # noqa: E402
+
+
+def config_ativa(host='192.168.1.2', lidar='192.168.1.158'):
+    from pathlib import Path
+    return renderiza_config(Path(TEMPLATE), ipaddress.ip_address(host),
+                            ipaddress.ip_address(lidar))
 
 
 def _escreve(caminho, texto, executavel=False):
@@ -64,8 +75,10 @@ class Maquina:
 
         _escreve(os.path.join(self.ros_opt, 'jazzy', 'setup.bash'), '')
         _escreve(os.path.join(self.ws, 'install', 'setup.bash'), '')
-        _escreve(os.path.join(self.ws, 'ros2_packages', 'robot_base', 'config',
-                              'MID360_config.json'), json.dumps(CONFIG))
+        self.config_ws = os.path.join(self.ws, 'ros2_packages', 'robot_base', 'config')
+        os.makedirs(self.config_ws, exist_ok=True)
+        shutil.copy(TEMPLATE, self.config_ws)
+        shutil.copy(PERFIS, self.config_ws)
 
         for pacote in ('pcl_ros', 'livox_ros_driver2', 'fast_lio'):
             prefixo = os.path.join(self.ws, 'install', pacote)
@@ -74,7 +87,7 @@ class Maquina:
         self.config_runtime = os.path.join(
             self.prefixos['livox_ros_driver2'], 'share', 'livox_ros_driver2',
             'config', 'MID360_config.json')
-        _escreve(self.config_runtime, json.dumps(CONFIG))
+        self.grava_runtime(config_ativa())
 
         self.clona_sdk(SHA_FIXADO)
         self.instala_sdk(conteudo=b'LIB-FIXADA')
@@ -109,6 +122,9 @@ class Maquina:
         os.makedirs(os.path.dirname(self.sdk_lib), exist_ok=True)
         with open(self.sdk_lib, 'wb') as f:
             f.write(conteudo)
+
+    def grava_runtime(self, config):
+        _escreve(self.config_runtime, json.dumps(config, indent=2))
 
     # --- execução -----------------------------------------------------------
     def _monta_calcos(self):
@@ -289,15 +305,144 @@ def test_sem_build_local_a_procedencia_e_inconclusiva(maquina):
     assert 'não verificável' in r.stdout
 
 
-# --- a config que o launch de fato lê ---------------------------------------
+# --- a config que o launch de fato lê (contrato da decisão 059) ------------
 
-def test_config_de_runtime_com_ip_velho_reprova_e_mostra_o_ip(maquina):
-    """O .169 mudo: bind failed, FAST-LIO sem nuvem, /Odometry nunca publicado."""
-    _escreve(maquina.config_runtime, json.dumps(CONFIG_VELHA))
+def linha(r, nome):
+    """A linha do relatório de uma checagem, para não casar texto de outra."""
+    for texto in r.stdout.splitlines():
+        if f'] {nome}' in texto:
+            return texto
+    raise AssertionError(f'sem linha "{nome}" em:\n{r.stdout}')
+
+
+def test_arvore_058_sem_json_universal_aprova(maquina):
+    """O defeito da composição etapa 6 + 058: a máquina certa reprovava.
+
+    Template e perfis versionados, NENHUM robot_base/config/MID360_config.json,
+    e um JSON ativo válido no runtime. Antes da 059 o auditor dizia
+    "sem o versionado" aqui, em qualquer máquina.
+    """
+    assert not os.path.exists(os.path.join(maquina.config_ws, 'MID360_config.json'))
+    maquina.build_sdk()
+    r = maquina.audita()
+    assert r.returncode == 0, r.stdout
+    assert 'sem o versionado' not in r.stdout
+    assert '[APROVADO' in linha(r, 'config de rede')
+
+
+def test_aprovado_nomeia_perfil_host_sensor_e_nao_alega_o_sensor(maquina):
+    maquina.build_sdk()
+    r = maquina.audita()
+    detalhe = linha(r, 'config de rede')
+    for trecho in ('nuc', '192.168.1.2/24', '192.168.1.158', 'não consultado'):
+        assert trecho in detalhe, detalhe
+
+
+def test_perfil_notebook_da_bancada_de_24_09_aprova(maquina):
+    """O par que entregou nuvem em 24-09: notebook .5 e sensor .169."""
+    maquina.grava_runtime(config_ativa('192.168.1.5', '192.168.1.169'))
+    maquina.ip_addr = 'enp1s0           UP             192.168.1.5/24'
+    maquina.build_sdk()
+    r = maquina.audita()
+    assert r.returncode == 0, r.stdout
+    assert 'notebook' in linha(r, 'config de rede')
+    assert '192.168.1.5/24 em enp1s0 (UP)' in linha(r, 'IP do host')
+
+
+def test_template_versionado_ausente_reprova(maquina):
+    os.remove(os.path.join(maquina.config_ws, 'MID360_config.template.json'))
     maquina.build_sdk()
     r = maquina.audita()
     assert r.returncode == 1
-    assert '192.168.1.169' in r.stdout
+    assert 'MID360_config.template.json' in linha(r, 'config de rede')
+
+
+def test_perfis_versionados_ausentes_reprova(maquina):
+    os.remove(os.path.join(maquina.config_ws, 'livox_host_profiles.json'))
+    maquina.build_sdk()
+    r = maquina.audita()
+    assert r.returncode == 1
+    assert 'livox_host_profiles.json' in linha(r, 'config de rede')
+
+
+def test_placeholder_no_runtime_reprova(maquina):
+    config = config_ativa()
+    config['MID360']['host_net_info']['imu_data_ip'] = '__HOST_IP__'
+    maquina.grava_runtime(config)
+    maquina.build_sdk()
+    r = maquina.audita()
+    assert r.returncode == 1
+    assert '__HOST_IP__' in linha(r, 'config de rede')
+
+
+def test_campos_de_host_divergentes_reprova(maquina):
+    config = config_ativa()
+    config['MID360']['host_net_info']['push_msg_ip'] = '192.168.1.5'
+    maquina.grava_runtime(config)
+    maquina.build_sdk()
+    r = maquina.audita()
+    assert r.returncode == 1
+    assert '[REPROVADO' in linha(r, 'config de rede')
+
+
+def test_host_net_info_que_nao_e_objeto_reprova(maquina):
+    """JSON estruturalmente inválido é defeito da máquina, não do conferidor."""
+    config = config_ativa()
+    config['MID360']['host_net_info'] = [config['MID360']['host_net_info']]
+    maquina.grava_runtime(config)
+    maquina.build_sdk()
+    r = maquina.audita()
+    assert r.returncode == 1, r.stdout
+    detalhe = linha(r, 'config de rede')
+    assert '[REPROVADO' in detalhe and 'host_net_info' in detalhe
+    assert 'conferidor falhou' not in r.stdout
+
+
+def test_entrada_de_lidar_que_nao_e_objeto_reprova(maquina):
+    config = config_ativa()
+    config['lidar_configs'] = ['192.168.1.158']
+    maquina.grava_runtime(config)
+    maquina.build_sdk()
+    r = maquina.audita()
+    assert r.returncode == 1, r.stdout
+    detalhe = linha(r, 'config de rede')
+    assert '[REPROVADO' in detalhe and 'lidar_configs[0]' in detalhe
+    assert 'conferidor falhou' not in r.stdout
+
+
+def test_host_sem_perfil_reprova(maquina):
+    maquina.grava_runtime(config_ativa('192.168.1.9', '192.168.1.158'))
+    maquina.ip_addr = 'eth0             UP             192.168.1.9/24'
+    maquina.build_sdk()
+    r = maquina.audita()
+    assert r.returncode == 1
+    assert 'perfil' in linha(r, 'config de rede')
+    # Sem perfil não há máscara esperada: a 8 não inventa uma.
+    assert '[INCONCLUSIVO' in linha(r, 'IP do host')
+
+
+@pytest.mark.parametrize('sensor', ['192.168.2.169', '192.168.1.2',
+                                    '192.168.1.0', '192.168.1.255'])
+def test_sensor_invalido_para_o_perfil_reprova_e_mostra_o_ip(maquina, sensor):
+    """Fora da rede, igual ao host, endereço de rede ou broadcast."""
+    config = config_ativa()
+    config['lidar_configs'][0]['ip'] = sensor
+    maquina.grava_runtime(config)
+    maquina.build_sdk()
+    r = maquina.audita()
+    assert r.returncode == 1
+    assert sensor in linha(r, 'config de rede')
+
+
+def test_campo_editado_a_mao_reprova(maquina):
+    """IPs válidos, mas o resto não é o template: materializar pega a porta."""
+    config = config_ativa()
+    config['MID360']['host_net_info']['point_data_port'] = 56399
+    maquina.grava_runtime(config)
+    maquina.build_sdk()
+    r = maquina.audita()
+    assert r.returncode == 1
+    assert 'template' in linha(r, 'config de rede')
 
 
 def test_config_de_runtime_ausente_reprova(maquina):
@@ -311,8 +456,10 @@ def test_audita_o_runtime_e_nao_o_clone(maquina):
     """Sem --symlink-install o install/ tem cópia real: o clone pode mentir."""
     clone_cfg = os.path.join(maquina.ws, 'ros2_packages', 'livox_ros_driver2',
                              'config', 'MID360_config.json')
-    _escreve(clone_cfg, json.dumps(CONFIG))          # clone certo
-    _escreve(maquina.config_runtime, json.dumps(CONFIG_VELHA))   # runtime errado
+    _escreve(clone_cfg, json.dumps(config_ativa()))          # clone certo
+    errada = config_ativa()
+    errada['lidar_configs'][0]['ip'] = '__LIDAR_IP__'        # runtime errado
+    maquina.grava_runtime(errada)
     maquina.build_sdk()
     r = maquina.audita()
     assert r.returncode == 1, 'auditou o clone em vez do runtime'
@@ -339,16 +486,15 @@ def test_saida_grava_arquivo_com_o_relatorio(maquina, tmp_path):
 
 
 # --- o IP do host contra a interface real -----------------------------------
-# O cmp fonte/runtime prova que os dois arquivos são iguais; NÃO prova que o
-# endereço deles existe nesta máquina. Com o notebook no lugar do NUC (23-09),
-# esse é o defeito mais provável: config idêntica dos dois lados e host que
-# nunca sobe. bind failed com tudo verde.
+# A checagem 7 prova que o JSON ativo é uma materialização válida; NÃO prova
+# que o host dele existe nesta máquina. Host lido do RUNTIME (059), máscara do
+# perfil que casou.
 
 def test_ip_do_host_presente_aprova(maquina):
     maquina.build_sdk()
     r = maquina.audita()
     assert r.returncode == 0, r.stdout
-    assert '192.168.1.2 em eth0 (UP)' in r.stdout
+    assert '192.168.1.2/24 em eth0 (UP)' in linha(r, 'IP do host')
 
 
 def test_maquina_na_rede_do_lidar_com_outro_ip_reprova(maquina):
@@ -357,7 +503,26 @@ def test_maquina_na_rede_do_lidar_com_outro_ip_reprova(maquina):
     maquina.build_sdk()
     r = maquina.audita()
     assert r.returncode == 1
-    assert '192.168.1.77' in r.stdout and '192.168.1.2' in r.stdout
+    detalhe = linha(r, 'IP do host')
+    assert '192.168.1.77' in detalhe and '192.168.1.2' in detalhe
+
+
+def test_host_com_mascara_errada_reprova(maquina):
+    maquina.ip_addr = 'eth0             UP             192.168.1.2/16'
+    maquina.build_sdk()
+    r = maquina.audita()
+    assert r.returncode == 1
+    assert '/16' in linha(r, 'IP do host')
+
+
+def test_host_em_duas_interfaces_reprova(maquina):
+    maquina.ip_addr = ('eth0             UP             192.168.1.2/24\n'
+                       'eth1             UP             192.168.1.2/24')
+    maquina.build_sdk()
+    r = maquina.audita()
+    assert r.returncode == 1
+    detalhe = linha(r, 'IP do host')
+    assert 'eth0' in detalhe and 'eth1' in detalhe
 
 
 def test_sem_nada_na_sub_rede_e_inconclusivo_nao_reprovacao(maquina):

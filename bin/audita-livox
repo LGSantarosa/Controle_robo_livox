@@ -10,6 +10,8 @@
 #   - o MID360_config.json de runtime com o IP .169, que a varredura de 15-09
 #     achou MUDO, em vez do .158 versionado. IP errado = bind failed =
 #     FAST-LIO sem nuvem = /Odometry nunca publicado.
+#     (Desde a 058 não há IP de sensor versionado; a 059 troca o cmp contra
+#     ele pela conferência do JSON ativo contra o template e os perfis.)
 # O robô pode estar em qualquer um dos três. Do PC de dev não dá para saber:
 # third_party/ e install/ não vêm pelo git.
 #
@@ -197,86 +199,68 @@ else
         "a instalada DIFERE do build fixado — reinstale pelo setup_livox.sh"
 fi
 
-# --- 7. o JSON que o launch de fato lê ---------------------------------------
+# --- 7 e 8. o JSON que o launch de fato lê, e o host dele nesta máquina ------
 # O artefato de runtime, não o clone: o clone pode nem existir, e é o
 # install/ que o launch consome. Com --symlink-install os dois são o mesmo
 # arquivo; SEM ele, o install/ tem cópia real e os dois podem divergir calados.
-JSON_FONTE="$WS/ros2_packages/robot_base/config/MID360_config.json"
+#
+# Decisão 059: sob a 058 não há mais JSON universal para um cmp. O runtime é
+# certo quando é o template materializado com os PRÓPRIOS IPs dele (host igual
+# nos quatro campos, sem placeholder, casando com exatamente um perfil; sensor
+# válido para a rede desse perfil). A 8 lê o host DESSE runtime — config certa
+# e endereço que não existe na interface = bind failed, com a 7 verde. As
+# regras são as do setup, importadas pelo conferidor, nunca reescritas aqui.
+# Nada disso consulta o sensor.
+CONFIG_VERSIONADA="$WS/ros2_packages/robot_base/config"
+CONFERIDOR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/tools/audita_livox/confere_rede.py"
 prefixo_livox="$(prefixo_de livox_ros_driver2 sim)"
 JSON_RUNTIME="$prefixo_livox/share/livox_ros_driver2/config/MID360_config.json"
 
-if [ ! -f "$JSON_FONTE" ]; then
-    registra REPROVADO "config de rede" "sem o versionado $JSON_FONTE"
-elif [ -z "$prefixo_livox" ]; then
+if [ -z "$prefixo_livox" ]; then
     registra INCONCLUSIVO "config de rede" \
-        "sem prefixo do livox_ros_driver2 — nada de runtime para comparar"
+        "sem prefixo do livox_ros_driver2 — nada de runtime para conferir"
+    registra INCONCLUSIVO "IP do host" "sem JSON de runtime para ler"
 elif [ ! -e "$JSON_RUNTIME" ]; then
     registra REPROVADO "config de rede" "$JSON_RUNTIME ausente (link quebrado?)"
-elif cmp -s "$JSON_FONTE" "$JSON_RUNTIME"; then
-    if [ -L "$JSON_RUNTIME" ]; then
-        registra APROVADO "config de rede" "igual ao versionado (link do --symlink-install)"
-    else
-        registra APROVADO "config de rede" "igual ao versionado (cópia real)"
-    fi
+    registra INCONCLUSIVO "IP do host" "sem JSON de runtime para ler"
+elif ! command -v python3 >/dev/null 2>&1; then
+    registra INCONCLUSIVO "config de rede" "python3 indisponível para conferir"
+    registra INCONCLUSIVO "IP do host" "python3 indisponível para conferir"
 else
-    ip_runtime="$(grep -o '192\.168\.[0-9]*\.[0-9]*' "$JSON_RUNTIME" | tail -1)"
-    registra REPROVADO "config de rede" \
-        "o runtime DIFERE do versionado (lidar ${ip_runtime:-?}) — rode o setup_livox.sh"
-fi
-
-# --- 8. o IP do host existe NESTA máquina? -----------------------------------
-# O cmp do passo 7 prova que fonte e runtime são o mesmo arquivo; NÃO prova que
-# esse arquivo combina com a máquina. O host_net_info.cmd_data_ip está
-# documentado como o IP do NUC, e em 23-09 o computador de bordo da etapa 6
-# passou a ser o NOTEBOOK. Config igual nos dois lados e endereço que não
-# existe na interface = bind failed, com os dois cmp verdes.
-ip_do_host() {
-    local arquivo="$1"
-    if command -v python3 >/dev/null 2>&1; then
-        python3 -c "
-import json, sys
-try:
-    c = json.load(open(sys.argv[1]))
-    print(c['MID360']['host_net_info']['cmd_data_ip'])
-except Exception:
-    pass" "$arquivo" 2>/dev/null
+    if command -v ip >/dev/null 2>&1; then
+        saida="$(ip -brief addr 2>/dev/null | python3 "$CONFERIDOR" \
+            --runtime "$JSON_RUNTIME" \
+            --modelo "$CONFIG_VERSIONADA/MID360_config.template.json" \
+            --perfis "$CONFIG_VERSIONADA/livox_host_profiles.json" 2>&1)"
     else
-        grep -o '\"cmd_data_ip\"[^,]*' "$arquivo" 2>/dev/null |
-            grep -o '[0-9][0-9.]*' | head -1
+        saida="$(python3 "$CONFERIDOR" --sem-ip \
+            --runtime "$JSON_RUNTIME" \
+            --modelo "$CONFIG_VERSIONADA/MID360_config.template.json" \
+            --perfis "$CONFIG_VERSIONADA/livox_host_profiles.json" 2>&1)"
     fi
-}
-
-if [ ! -f "$JSON_FONTE" ]; then
-    registra INCONCLUSIVO "IP do host" "sem o JSON versionado para ler"
-elif ! command -v ip >/dev/null 2>&1; then
-    registra INCONCLUSIVO "IP do host" "comando 'ip' indisponível"
-else
-    esperado="$(ip_do_host "$JSON_FONTE")"
-    enderecos="$(ip -brief addr 2>/dev/null)"
-    if [ -z "$esperado" ]; then
-        registra INCONCLUSIVO "IP do host" "não consegui ler cmd_data_ip do JSON"
-    # Ponto é curinga em regex: '192.168.1.' casa com '192.168.18.9'. Escapar
-    # não é preciosismo — sem isso o auditor REPROVA uma máquina por estar
-    # numa sub-rede que só PARECE a do lidar (achado em 23-09, aqui mesmo).
-    elif esc="$(printf '%s' "$esperado" | sed 's/\./\\./g')";
-         printf '%s\n' "$enderecos" | grep -qE "(^| )${esc}/"; then
-        iface="$(printf '%s\n' "$enderecos" | grep -E "(^| )${esc}/" | awk '{print $1" ("$2")"}' | head -1)"
-        registra APROVADO "IP do host" "$esperado em $iface"
+    rc=$?
+    v_config=""; v_host=""
+    while IFS=$'\t' read -r nome veredito detalhe; do
+        case "$nome" in
+            config) v_config="$veredito"; d_config="$detalhe" ;;
+            host)   v_host="$veredito";   d_host="$detalhe" ;;
+        esac
+    done <<< "$saida"
+    if [ "$rc" -ne 0 ] || [ -z "$v_config" ] || [ -z "$v_host" ]; then
+        # Falha do conferidor não é defeito da máquina: não deu para provar.
+        registra INCONCLUSIVO "config de rede" \
+            "o conferidor falhou (código $rc): $(printf '%s' "$saida" | tail -1)"
+        registra INCONCLUSIVO "IP do host" "o conferidor falhou"
     else
-        # Interface na MESMA sub-rede com outro endereço é caso diferente de
-        # sub-rede nenhuma: a primeira é máquina errada para este JSON; a
-        # segunda pode ser só cabo fora hoje.
-        sub="${esperado%.*}."
-        sub_esc="$(printf '%s' "$sub" | sed 's/\./\\./g')"
-        if printf '%s\n' "$enderecos" | grep -qE "(^| )${sub_esc}[0-9]+/"; then
-            outro="$(printf '%s\n' "$enderecos" | grep -E "(^| )${sub_esc}[0-9]+/" |
-                     awk '{for(i=3;i<=NF;i++) if ($i ~ /^'"$sub_esc"'/) print $1" "$i}' | head -1)"
-            registra REPROVADO "IP do host" \
-                "o JSON espera $esperado, mas esta máquina está na rede como $outro"
-        else
-            registra INCONCLUSIVO "IP do host" \
-                "$esperado não está em nenhuma interface, e não há nada na ${sub}0/24 (cabo fora?)"
+        if [ "$v_config" = APROVADO ]; then
+            if [ -L "$JSON_RUNTIME" ]; then
+                d_config="$d_config (link do --symlink-install)"
+            else
+                d_config="$d_config (cópia real)"
+            fi
         fi
+        registra "$v_config" "config de rede" "$d_config"
+        registra "$v_host" "IP do host" "$d_host"
     fi
 fi
 

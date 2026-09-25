@@ -11066,3 +11066,66 @@ notícia ruim para uma primeira corrida: 9,56 cm corrigidos e chegada limpa.
 pilha continua recusando `robo:=3 sim:=false` de propósito, a fronteira física
 não foi validada, e o primeiro movimento em hardware segue sendo **auditar o
 notebook com o robô desligado** (`docs/ROTEIRO_ETAPA6_PRECONDICAO.md`).
+
+---
+
+## 🔀 2026-09-25 (PC de dev, robô e lidar DESLIGADOS) — A `main` ENTRA NA ETAPA 6, A 058 VEM JUNTO, E A JUNÇÃO QUEBRA O AUDITOR
+
+Sessão só de integração, sem Gazebo e sem hardware. Três frentes de 24-09
+viviam separadas: a etapa 6/7 nesta branch, a prova parada do Mid-360 na
+`main` e a decisão 058 na branch `livox-config-maquina-sensor`.
+
+**1. Merge da `main` (`64c0865`).** Backup antes, em
+`backup/etapa6-pre-merge-main` → `d52b5da`. As branches tinham DIVERGIDO (31
+commits daqui, 2 novos lá), então foi merge de verdade. Único conflito:
+`ESTADO_PROJETO.md`, no cabeçalho e no corpo — resolvido mantendo as duas
+narrativas inteiras. O `DIARIO.md` juntou sozinho; conferido por contagem que
+nada se perdeu (10 197 da base + 566 daqui + 239 de lá = 11 002). Os dados de
+`docs/dados/2026-09-24-robo3-lio/` passaram no `sha256sum -c`. Nenhum código.
+
+**2. Cherry-pick do `279f408` (`6dc13f1`), a decisão 058.** Três conflitos no
+`ESTADO_PROJETO.md`. O texto de lá tinha contexto que já não vale aqui ("a
+branch da etapa 6 não foi tocada", "auditar o NUC"), então não foi aceito
+inteiro: ficou o estado atual da etapa 6 (auditoria do NOTEBOOK) e entraram o
+bloco da 058 e a troca do `cmp` pela conferência da cópia ativa.
+`test_config_livox` 15 ✅ e `robot_base` 127 ✅.
+
+**3. O defeito de composição.** Cada linha estava certa sozinha; juntas, não.
+O `bin/audita-livox` (só existe nesta branch) comparava o JSON de runtime com
+`robot_base/config/MID360_config.json` — exatamente o arquivo que a 058
+removeu. Numa máquina montada como a 058 manda, ele diria **sempre**
+`REPROVADO "sem o versionado …"`. Os 23 testes dele passavam porque o fixture
+escrevia o próprio JSON universal: testavam uma árvore que não existe mais.
+Achado lendo as referências ao arquivo renomeado depois do cherry-pick, não
+por teste.
+
+**4. Decisão 059 e correção.** Decisão escrita antes do código: sem JSON
+universal, "certo" passa a ser "o template materializado com os próprios IPs
+do runtime", com host igual nos quatro campos, casando com exatamente um
+perfil, e sensor válido para a rede desse perfil; a checagem 8 lê o host do
+runtime. As regras são IMPORTADAS do `prepara_config_livox.py`, não
+reescritas. O auditor continua sem alegar nada sobre o sensor.
+
+- Vermelho antes: com o fixture na árvore da 058, a máquina certa dava
+  `[REPROVADO] config de rede sem o versionado` — 21 de 37 vermelhos.
+- A revisão pegou um segundo buraco antes do commit: `host_net_info` como
+  lista ou `lidar_configs[0]` como texto derrubavam o conferidor com
+  `AttributeError`, e o bash chamava isso de INCONCLUSIVO. JSON quebrado
+  passando por "não deu para provar" é o tipo de verde falso que a gente
+  combate; dois testes vermelhos, depois checagem de tipo.
+- Verde depois: `tools/audita_livox` 39 ✅. Suíte da raiz: **zero regressões;
+  77 falhas deliberadas e preexistentes em `tools/valida_etapa7`** (juiz
+  estacionado em `f2f8f3e`); 1434 passaram.
+- Rodado de verdade neste PC (só leitura): 7 APROVADO (`nuc`, `.2/.158`,
+  "sensor não consultado"), 8 INCONCLUSIVO "cabo fora?" — certo, não há
+  interface na rede do lidar aqui.
+- Um teste antigo saiu de propósito: "`.169` no runtime reprova". Sob a 058,
+  `.169` é sensor válido para o `notebook`; offline não dá para saber qual
+  unidade está no cabo.
+
+**Lição de método.** Merge e cherry-pick sem conflito de texto não querem dizer
+que as mudanças funcionam juntas. Depois de trazer uma mudança que renomeia ou
+remove arquivo, procurar quem ainda o referencia **antes** de declarar a
+integração pronta.
+
+🔴 **Não prova hardware.** Nada foi ligado; nada foi enviado ao GitHub ainda.
