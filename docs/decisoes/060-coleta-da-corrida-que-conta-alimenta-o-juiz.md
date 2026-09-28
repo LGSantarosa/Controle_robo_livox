@@ -186,3 +186,109 @@ Nada aqui foi executado. A corrida que conta ainda não existe, e o critério do
 patamar continua valendo **só para a placa simulada herdada do robô 2** — não
 mede a zona morta real do robô 3. O `d52b5da` (trajeto pelo CSV do seguidor)
 segue não executado e não entra em nenhum dos três critérios.
+
+## 6. Adendo de 2026-09-28 — a revisão do `b11f966`
+
+O `b11f966` (wrapper + `corrida.py`) foi enviado em 25-09 **sem revisão**. A
+revisão de 28-09 achou quatro defeitos, dois capazes de **falsa aprovação**,
+e a correção de dois deles abriu uma lacuna cada, também fechada. Tudo
+offline: nenhum ROS, Gazebo ou robô. Cada correção teve teste vermelho antes
+do código e mutação conferida depois.
+
+Esta seção **amplia o "Não toca"** do cabeçalho: o `julga.py` ganhou um item
+(ponto A), e o `resultado.csv` passa a ter **13** itens do julgamento
+(5 de coleta + **8** do juiz), não 12 como no §2.6.
+
+### 6.1 Ponto A — o teto de 60 s simulados é do juiz, em ns inteiros
+
+**Achado.** O juiz só conferia que a janela não estava invertida: uma ação
+`SUCCEEDED` aos 61 s aprovava. O wrapper cortava por um `/clock` lido em
+segundos inteiros **antes** da pose e do envio, e só anotava (`ANOTADO`).
+
+**Correção** (`417dbff`, `5018cb9`, `9c5d64b`, `389e075`, `b6069d5`):
+
+- o montador calcula `duracao_objetivo_ns = terminal_ns − aceite_ns`, dos
+  **mesmos dois carimbos** da janela (o `goal_info.stamp` do UUID e o primeiro
+  terminal); a janela em segundos segue servindo só ao recorte das amostras;
+- o juiz ganhou o item **`7.1 a ação fechou em até 60 s simulados`**, com
+  `TETO_SIMULADO = 60` e comparação **exata** em inteiros: 60 s aprova,
+  **60 s + 1 ns reprova**. Float, bool, texto ou negativo reprovam pelo tipo;
+- o wrapper **não corta mais** por relógio simulado: `relogio()`, `T0_SIM` e o
+  item do `/clock` saíram. Fica só o **watchdog de parede** (6 × 60 = 360 s),
+  que reprova pelo próprio motivo, sem atribuir causa ao `/clock`. Uma trava
+  prende o `TETO_SIMULADO=60` do wrapper ao do juiz.
+
+**Descartadas:**
+
+| alternativa | por que não |
+|---|---|
+| comparar em segundos com folga de 1e-9 | em segundos, 60 s exatos pelo montador dão `60.00000000000001`; a folga para isso aprovaria 60 s + 1 ns, e a fonte já é inteira |
+| o juiz receber só ns (sem janela em s) | a janela em s segue útil ao recorte das amostras; as duas vêm dos mesmos carimbos |
+| corte simulado no wrapper, reprovando | o relógio lido antes do goal cortaria em 60 s do **marco** uma ação de 59 s aceita tarde; e mesmo alinhado, um terminal em 60 s exatos deixa o cliente vivo por um instante e o corte venceria |
+| ler o aceite ao vivo para alinhar o corte | o `send_goal` não imprime o `goal_info.stamp`; assinar o status oculto ao vivo é mais uma peça, com a mesma corrida no fim |
+
+**Custo aceito:** uma ação acima de 60 s agora roda até fechar ou até o
+watchdog (até ~6 min a mais); o juiz reprova do mesmo jeito.
+
+### 6.2 Ponto B — o alvo enviado é o alvo julgado
+
+**Achado.** O `poses.yaml` guardava o alvo completo, mas o wrapper enviava o
+texto `%.4f`: o juiz media a pose final contra um alvo que não foi o enviado
+(até ~7e-5 m).
+
+**Correção** (`cb49406`, `9a4f370`): `corrida.escalar_yaml()` imprime x e y do
+alvo como o **escalar YAML** do float — o mesmo texto que o `yaml.safe_dump`
+escreve no `poses.yaml`, byte a byte, e que o `ros2 action send_goal` relê
+(`yaml.safe_load`, `send_goal.py:119`) como o **mesmo double**.
+
+**Descartada:** `repr`. No YAML 1.1 do PyYAML, `1e-05` (sem ponto) é lido como
+**texto**, e alvo perto de zero é realista (yaw π/2 a partir da origem dá
+x ≈ 1e-16). O quatérnio segue em 6 casas: só vai para o goal, não entra no
+julgamento (que é em xy).
+
+### 6.3 Ponto C — o julgamento falha fechado
+
+**Achado.** O wrapper ignorava o RC do `corrida.py julga` e só reprovava TSV
+vazio; saída parcial, item trocado ou veredito com outro nome escapavam do
+`grep` final.
+
+**Correção** (`58dc1b2`, `5d67c20`): `corrida.confere_julgamento(texto, rc)`,
+pura, e o subcomando `confere`. Aceita só RC `0`/`1`; TSV terminado em quebra,
+três campos por linha; vereditos `APROVADO`/`REPROVADO`; o **conjunto exato**
+dos 13 nomes, sem repetição; e RC 0 se e só se todos aprovam. Passou: o wrapper
+anota `julgamento conferido APROVADO` e as linhas **conferidas**. Não passou
+(ou o próprio `confere` quebrou): **uma** linha conhecida
+`julgamento conferido REPROVADO <motivo>`, e nada do TSV chega ao `anota`.
+
+**Descartada:** contar 13 linhas — deixaria trocar um item por outro.
+
+### 6.4 Ponto D — o manifesto no padrão do `valida-etapa6`, e o escopo conferido
+
+**Achado.** O `SHA256SUMS` assinava o `console.txt`, que o `tee` continuava
+escrevendo depois (o veredito final): o manifesto nascia inválido. Não havia
+`sha256sum -c`, e falha do manifesto não mudava o RC. É o defeito já
+consertado em 24-09 no `bin/valida-etapa6`.
+
+**Correção** (`0f4b6a1`, `cd5c200`, `616fc09`, `80df9f6`):
+
+- escopo declarado em `escopo_do_manifesto.txt`, **sem** `console.txt`, e
+  assinando a si mesmo; construído com `pipefail` (um `find`/`sort` que morre no
+  meio deixaria escopo parcial e um manifesto que fecha contra ele);
+- o escopo é **conferido contra os artefatos de prova** antes de assinar —
+  resultado (txt e csv), `poses.yaml`, `objetivo.log`, julgamentos bruto e
+  conferido, os dois dumps de parâmetros, os dois grafos, **exatamente um**
+  `corrida_*/perfil_nav2.yaml`, `bag/metadata.yaml` e ao menos um
+  `bag/*.mcap` —, registrado no último `anota`;
+- o manifesto é gerado e conferido com `sha256sum -c`; falha em qualquer um
+  força RC 1. Depois dele, só `echo` para o console. Pasta reprovada também é
+  assinada e conferida: a evidência que existe fica preservada.
+
+**Fora do escopo, registrado:** as saídas antecipadas (`exit 1` antes do goal)
+continuam **sem manifesto**, como no `valida-etapa6`.
+
+### 6.5 Estado depois do adendo
+
+`tools/valida_etapa7` **281/0**; suíte da raiz **1670/0**. O
+`bin/valida-etapa7` **continua sem ter rodado**; nada disto prova a corrida. A
+próxima etapa é uma revisão offline única dos commits deste adendo e, sem
+bloqueador capaz de falsa aprovação, o pedido de "pode" para o Gazebo.

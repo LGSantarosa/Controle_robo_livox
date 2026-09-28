@@ -11198,3 +11198,52 @@ sem a revisão do revisor, a pedido do dono no fim do dia.
 🛑 **Parou aqui.** O `bin/valida-etapa7` nunca rodou. Recomeçar: revisar o
 `b11f966`, pedir o "pode" e rodar a corrida no Gazebo (robô desligado). O
 passo 7 continua **ABERTO**.
+
+## 🔍 2026-09-28 (PC de dev, robô, lidar e Gazebo DESLIGADOS) — A REVISÃO DO `b11f966`: QUATRO DEFEITOS, DOIS DE FALSA APROVAÇÃO
+
+O dia começou onde o 25-09 parou: revisar o `b11f966`, enviado sem revisão,
+antes da primeira corrida do `bin/valida-etapa7`. Nada subiu: nenhum ROS
+vivo, Gazebo ou robô. O registro técnico completo está na decisão **060 §6**.
+
+A revisão achou quatro defeitos. Dois deles podiam **aprovar corrida ruim**:
+
+| ponto | defeito | correção |
+|---|---|---|
+| A | `SUCCEEDED` aos 61 s aprovava; o wrapper cortava por um `/clock` lido antes do goal e só anotava | item novo do juiz, `7.1 a ação fechou em até 60 s simulados`, em **ns inteiros** e sem folga; o wrapper não corta mais por relógio, só o watchdog de parede (reprova) |
+| B | o alvo enviado era o `%.4f`, o julgado era o completo | x/y saem como escalar YAML, o mesmo texto do `poses.yaml` |
+| C | RC do `julga` ignorado; saída parcial ou veredito estranho escapavam | `confere_julgamento`: conjunto exato dos 13 nomes, vereditos e RC coerente; senão uma linha conhecida REPROVADO e nada do TSV passa |
+| D | o manifesto assinava o `console.txt` e nascia inválido; sem `sha256sum -c` | padrão do `valida-etapa6`, mais: escopo com `pipefail` e conferido contra os artefatos de prova antes de assinar |
+
+Método: vermelho antes do código, um commit cada; mutação depois de cada
+conserto; o revisor liberava cada passo. Os trechos do wrapper foram
+**executados** em bash com calços (goal como `sleep`, `corrida.py` falso,
+`sha256sum`/`find`/`sort` que falham sob comando), não só lidos.
+
+O que deu errado no caminho, e ficou registrado porque é o que ensina:
+
+- **Eu propus uma folga de 1e-9 s** no teto, porque 60 s exatos pelo montador
+  davam `60.00000000000001`. O revisor mostrou que ela aprovaria **60 s + 1 ns**:
+  a fonte já é inteira, e a tolerância era artificial. Virou ns inteiros, com o
+  caso `60 s + 1 ns` como teste decisivo.
+- **A primeira versão do A transformou o corte do wrapper em REPROVADO** — e o
+  corte era aproximado: lido antes do goal, ele reprovaria uma ação de 59 s
+  aceita tarde. Saiu inteiro; o teto ficou só com o juiz.
+- **Meu vermelho do montador usou o instante errado de aceite** (a linha
+  ACCEPTED, não o `goal_info.stamp`): o "60 s exatos" era 60,001 s.
+- **`repr` quase entrou no B**: `1e-05` é **texto** para o YAML 1.1 que o
+  `send_goal` usa. Achado lendo o `send_goal.py`, antes do código.
+- **Um calço fraco escondeu um teste inútil no D**: o `find` falso imprimia
+  lista curta, e o teste passava pela falta de artefatos, não pelo RC — a
+  mutação "sem `pipefail`" sobreviveu. O calço passou a fazer o trabalho
+  inteiro e só então falhar.
+- Dois erros de literal nos testes (ordem dos itens do juiz; nome do `.mcap`),
+  corrigidos e ditos nos commits.
+
+Números: `tools/valida_etapa7` **186/0 → 281/0**; suíte da raiz
+**1575/0 → 1670/0**. Catorze commits locais (`417dbff` … `80df9f6`, mais o
+da documentação), sem push até a revisão final.
+
+🛑 **Parou aqui.** O `bin/valida-etapa7` **ainda não rodou**. Próximo: uma
+revisão offline única dos commits de hoje; sem bloqueador capaz de falsa
+aprovação, pedir o "pode" e rodar a corrida no Gazebo headless (robô
+DESLIGADO). O passo 7 continua **ABERTO**.

@@ -1,14 +1,15 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Atualizado em **2026-09-25** (PC de dev, robô e lidar desligados). Esta é a
+> Atualizado em **2026-09-28** (PC de dev, robô, lidar e Gazebo desligados). Esta é a
 > cópia da branch **`etapa6-pilha-robo3`**, que desde 25-09 reúne três frentes
 > de 24-09 (merge da `main` e cherry-pick da 058; ver tabela abaixo):
 >
 > - **PC de dev, robô desligado** — a **etapa 5 inteira está na `main`**,
 >   passos 1–6; o **passo 6 da etapa 6 fechou** na branch
 >   `etapa6-pilha-robo3`; o **passo 7 está ABERTO e não fechado** — juiz,
->   montador, extrator e `bin/valida-etapa7` prontos e provados offline, mas
+>   montador, extrator e `bin/valida-etapa7` prontos e provados offline, e
+>   revisados em 28-09 (quatro defeitos corrigidos, decisão 060 §6), mas
 >   o wrapper **nunca rodou** e nenhuma corrida foi julgada pelos três
 >   critérios (recomeçar pelo "PAROU AQUI" da seção do passo 7); só duas
 >   corridas exploratórias (seção abaixo); em aberto, auditar o NOTEBOOK.
@@ -33,7 +34,7 @@
 
 | branch | contém | observação |
 |---|---|---|
-| `etapa6-pilha-robo3` | etapa 6 + passo 7 em aberto (juiz G1–G5, `708570f`…`71dbfd5`) + `main` até `1851ffb` (merge `64c0865`) + 058 (`6dc13f1`) + 059 (`f4aa7d4`) | **a branch de trabalho**; continuar daqui |
+| `etapa6-pilha-robo3` | etapa 6 + passo 7 em aberto (juiz G1–G5, `708570f`…`71dbfd5`) + `main` até `1851ffb` (merge `64c0865`) + 058 (`6dc13f1`) + 059 (`f4aa7d4`) + revisão do `b11f966` (28-09, `417dbff`…`80df9f6`, **local até a revisão final**) | **a branch de trabalho**; continuar daqui |
 | `main` (`1851ffb`) | etapa 5, notebook sincronizado, prova parada do Mid-360 | **não** tem etapa 6, 058 nem 059 |
 | `livox-config-maquina-sensor` (`279f408`) | só a 058 | já incorporada aqui por cherry-pick; não é mais base de nada |
 | `backup/etapa6-pre-merge-main` (`d52b5da`, local) | etapa 6 antes do merge | ponto de volta se a integração precisar ser desfeita |
@@ -117,12 +118,24 @@ atuador físico.
   (`f702116`, que no bag real de `160148` achou as 146 amostras e
   `status=None`), e o wrapper **`bin/valida-etapa7`** + `corrida.py`
   (`b11f966`). `tools/valida_etapa7` **186/0**; suíte da raiz **1575/0**.
-  ⚠️ O `b11f966` foi commitado e enviado **sem a revisão do revisor** (pedido
-  do dono no fim do dia): revisar o diff dele antes de rodar.
-- 🛑 **PAROU AQUI (25-09, fim do dia).** O `bin/valida-etapa7` **nunca rodou**.
-  **Recomeçar amanhã por:** (1) revisar o `b11f966`; (2) pedir o "pode" e
-  rodar `bash bin/valida-etapa7` neste PC (Gazebo headless, robô DESLIGADO,
-  árvore limpa); (3) ler `~/etapa7/<carimbo>/resultado.csv`. Três pontos só a
+  O `b11f966` tinha sido enviado **sem revisão**.
+- ✅ **O `b11f966` foi revisado (28-09) e corrigido, só offline** (decisão
+  **060 §6**; commits `417dbff` … `80df9f6`, **locais, sem push**). Quatro
+  defeitos, dois de falsa aprovação:
+  **A** — o teto de 60 s agora é item do juiz, `7.1 a ação fechou em até 60 s
+  simulados`, em **ns inteiros** (60 s aprova, 60 s + 1 ns reprova); o wrapper
+  **não corta** mais por relógio simulado, só pelo watchdog de parede (360 s,
+  reprova); **B** — o alvo enviado é o texto exato do `poses.yaml` (escalar
+  YAML, não `%.4f` nem `repr`); **C** — o julgamento falha fechado: RC, conjunto
+  exato dos **13** itens (5 de coleta + 8 do juiz) e vereditos conferidos antes
+  do `anota`; **D** — manifesto sem `console.txt`, escopo com `pipefail` e
+  conferido contra os artefatos de prova, `sha256sum -c`, RC 1 em qualquer
+  falha. `tools/valida_etapa7` **281/0**; suíte da raiz **1670/0**.
+- 🛑 **PAROU AQUI (28-09).** O `bin/valida-etapa7` **nunca rodou**.
+  **Recomeçar por:** (1) uma revisão offline única dos commits de 28-09; sem
+  bloqueador capaz de falsa aprovação, (2) pedir o "pode" e rodar
+  `bash bin/valida-etapa7` neste PC (Gazebo headless, robô DESLIGADO, árvore
+  limpa); (3) ler `~/etapa7/<carimbo>/resultado.csv`. Três pontos só a
   corrida mostra, e em todos a falha para antes do goal ou reprova pelo nome:
   se o `ros2 topic info -v` enxerga o status oculto da ação; se o gravador se
   chama `/rosbag2_recorder`; se o `ros2 param dump` sai com `/placa_simulada`
@@ -378,9 +391,10 @@ drivers e overlay; (3) verificar a rede notebook↔Mid-360; (4) só então o
 roteiro de bancada com Nav2; (5) se o chassi superar o robô 2, migrar e
 auditar o NUC.
 
-⬜ **Próximo:** etapa 6 — **fechar o passo 7** na trilha Gazebo: revisar o
-`b11f966` e rodar o `bin/valida-etapa7` (a coleta já está ligada ao juiz e
-provada offline; ver "PAROU AQUI" na seção do passo 7 no topo); e a
+⬜ **Próximo:** etapa 6 — **fechar o passo 7** na trilha Gazebo: revisão
+offline final dos commits de 28-09 e rodar o `bin/valida-etapa7` (coleta
+ligada ao juiz, provada offline e revisada; ver "PAROU AQUI" na seção do
+passo 7 no topo); e a
 auditoria do **NOTEBOOK**
 (hardware, na máquina), agora com o `bin/audita-livox` da decisão 059.
 
