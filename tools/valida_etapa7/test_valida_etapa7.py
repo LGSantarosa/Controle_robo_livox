@@ -104,6 +104,7 @@ def _evidencia_boa():
                           'assinantes': ['/placa_simulada']},
         },
         'janela': {'objetivo_aceito': 10.0, 'resultado': 35.0},
+        'duracao_objetivo_ns': 25_000_000_000,      # os mesmos dois carimbos
         'amostras': [
             {'topico': TOPICO_FINAL, 't': 12.0, 'v': 0.0, 'wz': 0.0},
             {'topico': TOPICO_FINAL, 't': 20.0, 'v': PATAMAR_VIVO, 'wz': 0.0},
@@ -690,58 +691,63 @@ def test_amostra_quebrada_FORA_da_janela_tambem_reprova(julga):
 
 # ─── 7.1 o teto de 60 s simulados (revisão do b11f966, ponto A) ─────────────
 #
-# O teto é parte do contrato do passo 7 e quem o julga é o JUIZ, pela janela
-# estruturada (aceite → terminal do UUID, montada pelo `monta.py`). O relógio do
-# wrapper é só o gatilho de parada: lido em segundos inteiros e antes do goal,
-# ele não mede a ação — e uma ação que feche em `SUCCEEDED` logo depois de 60 s
-# podia vencer a corrida contra o laço e aprovar.
+# O teto é parte do contrato do passo 7 e quem o julga é o JUIZ. A duração vem
+# em NANOSSEGUNDOS INTEIROS (`duracao_objetivo_ns`), calculada pelo montador a
+# partir dos mesmos dois carimbos da janela (aceite e primeiro terminal do
+# UUID). Em segundos, `70,001 − 10,001` dá 60,00000000000001: o limite exato só
+# existe em ns, e uma folga para o float aprovaria 60 s + 1 ns. O relógio do
+# wrapper é só o gatilho de parada, e não entra aqui.
 
-def _com_duracao(duracao, aceito=10.0):
+S = 1_000_000_000
+
+
+def _com_duracao(duracao_ns):
     ev = _evidencia_boa()
-    ev['janela'] = {'objetivo_aceito': aceito, 'resultado': aceito + duracao}
+    ev['duracao_objetivo_ns'] = duracao_ns
     return ev
 
 
-@pytest.mark.parametrize('duracao', (59.9, 60.0))
-def test_acao_que_fecha_ate_60s_aprova(julga, duracao):
-    """O teto é inclusivo: 60,0 s exatos ainda cabem."""
-    ok, detalhe = julga.avalia(_com_duracao(duracao))[DURACAO]
+@pytest.mark.parametrize('duracao_ns', (59_900_000_000, 60 * S))
+def test_acao_que_fecha_ate_60s_aprova(julga, duracao_ns):
+    """O teto é inclusivo: 60 s exatos ainda cabem."""
+    ok, detalhe = julga.avalia(_com_duracao(duracao_ns))[DURACAO]
     assert ok, detalhe
 
 
-def test_acao_que_fecha_em_60_1s_reprova_mesmo_com_succeeded(julga):
-    ev = _com_duracao(60.1)
+@pytest.mark.parametrize('duracao_ns', (60 * S + 1, 60_100_000_000))
+def test_acao_que_passa_de_60s_reprova_mesmo_com_succeeded(julga, duracao_ns):
+    """60 s + 1 ns é o caso decisivo: separa o limite exato de qualquer folga."""
+    ev = _com_duracao(duracao_ns)
     assert ev['resultado_acao'] == 'SUCCEEDED'
     itens = julga.avalia(ev)
     ok, detalhe = itens[DURACAO]
     assert not ok, detalhe
-    assert '60' in detalhe, detalhe
+    assert str(duracao_ns) in detalhe, detalhe
     assert itens[SUCESSO][0], 'o SUCCEEDED continua verdade; quem reprova é o teto'
 
 
-def test_o_teto_vale_com_o_aceite_longe_do_zero(julga):
-    """Tempo simulado de uma pilha que ficou de pé um tempo antes do goal."""
-    assert julga.avalia(_com_duracao(60.0, aceito=1234.5))[DURACAO][0]
-    assert not julga.avalia(_com_duracao(60.1, aceito=1234.5))[DURACAO][0]
+def test_duracao_zero_e_valida(julga):
+    """Aceite e terminal no mesmo carimbo: janela `[t, t]`, válida (G4)."""
+    assert julga.avalia(_com_duracao(0))[DURACAO][0]
 
 
-def test_a_duracao_vem_so_da_janela(julga):
-    """Nenhum outro campo manda: sem janela, o item reprova dizendo o que faltou
-    — não cai num relógio alternativo."""
+def test_sem_duracao_reprova_dizendo_o_que_faltou(julga):
+    """A janela em segundos está lá, mas não substitui a duração: nada de
+    relógio alternativo."""
     ev = _evidencia_boa()
-    del ev['janela']
+    ev.pop('duracao_objetivo_ns', None)
     ok, detalhe = julga.avalia(ev)[DURACAO]
-    assert not ok and 'janela' in detalhe, detalhe
+    assert not ok and 'duracao_objetivo_ns' in detalhe, detalhe
 
 
-@pytest.mark.parametrize('janela', (
-    {'objetivo_aceito': 30.0, 'resultado': 10.0},
-    {'objetivo_aceito': float('nan'), 'resultado': 10.0},
-    {'objetivo_aceito': 10.0, 'resultado': float('inf')}))
-def test_janela_invalida_reprova_a_duracao(julga, janela):
-    ev = _evidencia_boa()
-    ev['janela'] = janela
-    assert not julga.avalia(ev)[DURACAO][0]
+@pytest.mark.parametrize('valor', (
+    -1, 60.0 * S, 59.9, True, False, '60000000000', float('nan')))
+def test_duracao_que_nao_e_ns_inteiro_nao_negativo_reprova(julga, valor):
+    """Float, bool, texto e negativo recusados pelo TIPO — `True` é `int` em
+    Python e `60e9` float passaria na comparação."""
+    ok, detalhe = julga.avalia(_com_duracao(valor))[DURACAO]
+    assert not ok, detalhe
+    assert 'duracao_objetivo_ns' in detalhe, detalhe
 
 
 def test_o_limite_do_juiz_e_60s(julga):

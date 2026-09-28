@@ -495,26 +495,39 @@ def test_falha_de_coleta_vem_separada_do_veredito_do_juiz(monta, avalia):
 # ─── o teto de 60 s pela janela do UUID (revisão do b11f966, ponto A) ────────
 
 def _status_com_terminal(t_terminal_ns):
+    """Aceite = `goal_info.stamp` (10 s, o default de `_st`)."""
     return [_st(10 * S + 1_000_000, ACCEPTED),
             _st(10 * S + 50_000_000, EXECUTING),
             _st(t_terminal_ns, SUCCEEDED)]
 
 
-@pytest.mark.parametrize('terminal_ns, aprova', (
-    (10 * S + 1_000_000 + 59_900_000_000, True),
-    (10 * S + 1_000_000 + 60 * S, True),
-    (10 * S + 1_000_000 + 60_100_000_000, False)))
-def test_a_duracao_julgada_e_aceite_ate_terminal_do_uuid(monta, avalia,
-                                                         terminal_ns, aprova):
-    """A duração nasce do status gravado no bag, correlacionado pelo UUID do
-    `objetivo.log`: do PRIMEIRO aceite ao PRIMEIRO terminal. Nenhum relógio do
-    wrapper entra na conta."""
+@pytest.mark.parametrize('terminal_ns, duracao_ns, aprova', (
+    (10 * S + 59_900_000_000, 59_900_000_000, True),
+    (70 * S, 60 * S, True),
+    (70 * S + 1, 60 * S + 1, False),
+    (10 * S + 60_100_000_000, 60_100_000_000, False)))
+def test_a_duracao_e_terminal_menos_aceite_do_uuid_em_ns(
+        monta, avalia, terminal_ns, duracao_ns, aprova):
+    """A duração nasce dos DOIS carimbos canônicos da janela — o
+    `goal_info.stamp` do UUID do `objetivo.log` e o primeiro terminal dele no
+    status gravado —, subtraídos em ns inteiros. Nenhum relógio do wrapper
+    entra na conta."""
     b = _brutos()
     b['status'] = _status_com_terminal(terminal_ns)
     evidencia, falhas = monta(b)
     assert falhas == [], falhas
+    assert evidencia['duracao_objetivo_ns'] == duracao_ns
+    assert type(evidencia['duracao_objetivo_ns']) is int
     ok, detalhe = avalia(evidencia)[DURACAO]
     assert ok is aprova, detalhe
+
+
+def test_a_duracao_e_a_janela_vem_dos_mesmos_carimbos(monta):
+    b = _brutos()
+    evidencia, _ = monta(b)
+    j = evidencia['janela']
+    assert evidencia['duracao_objetivo_ns'] == 25 * S
+    assert j['resultado'] - j['objetivo_aceito'] == pytest.approx(25.0)
 
 
 def test_terminal_republicado_depois_do_teto_nao_estica_a_duracao(monta, avalia):
@@ -525,4 +538,15 @@ def test_terminal_republicado_depois_do_teto_nao_estica_a_duracao(monta, avalia)
     b['status'] = _status_bom() + [_st(80 * S, SUCCEEDED)]
     evidencia, falhas = monta(b)
     assert falhas == [], falhas
+    assert evidencia['duracao_objetivo_ns'] == 25 * S
     assert avalia(evidencia)[DURACAO][0]
+
+
+def test_falha_de_acao_nao_deixa_duracao(monta, avalia):
+    """Sem janela montada não há duração — o item do juiz reprova dizendo o
+    que faltou, em vez de herdar um número."""
+    b = _brutos()
+    b['objetivo_log'] = _log(uuid=None)
+    evidencia, _ = monta(b)
+    assert 'duracao_objetivo_ns' not in evidencia
+    assert not avalia(evidencia)[DURACAO][0]
