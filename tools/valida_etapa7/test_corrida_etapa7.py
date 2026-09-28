@@ -458,6 +458,124 @@ def test_wrapper_confere_que_quebra_nao_encaminha_a_saida_parcial(tmp_path):
         _roda_julgamento(tmp_path, _tsv(_boas()), 0, quebra=True))
 
 
+# ─── o manifesto (revisão do b11f966, ponto D) ───────────────────────────────
+#
+# A regra do `valida-etapa6` (conserto de 24-09): depois de gerado o
+# `SHA256SUMS`, NENHUM arquivo assinado recebe escrita. O `console.txt` é o log
+# ao vivo, fica explicitamente fora, e é o único que a conferência e o veredito
+# final podem escrever. Falha na geração ou no `sha256sum -c` força RC 1.
+# O trecho final do wrapper (depois da limpeza) é EXECUTADO com uma pasta
+# sintética; um `sha256sum` de calço no PATH delega ao real e falha só quando
+# o teste manda.
+
+SHA_CALCO = """#!/usr/bin/env bash
+if [ "$1" = "-c" ]; then [ -n "$FALHA_CONFERE" ] && exit 1
+else [ -n "$FALHA_GERA" ] && {{ echo "calço: falhou" >&2; exit 1; }}; fi
+exec {real} "$@"
+"""
+
+
+def _trecho_final():
+    return _texto().split('\nlimpa\n', 1)[1]
+
+
+def _roda_final(tmp_path, reprovado=False, gera=True, confere=True):
+    import shutil
+    saida = tmp_path / 'saida'
+    (saida / 'bag').mkdir(parents=True)
+    (saida / 'bag' / 'metadata.yaml').write_text('m: 1\n')
+    (saida / 'poses.yaml').write_text('goal: {x: 1.0, y: 0.0}\n')
+    (saida / 'julgamento.tsv').write_text('a\tAPROVADO\t\n')
+    veredito = 'REPROVADO' if reprovado else 'APROVADO'
+    (saida / 'resultado.txt').write_text(f'item {veredito} x\n')
+    (saida / 'resultado.csv').write_text(f'item,{veredito},x\n')
+    (saida / 'console.txt').write_text('ao vivo\n')
+    calcos = tmp_path / 'calcos'
+    calcos.mkdir()
+    (calcos / 'sha256sum').write_text(
+        SHA_CALCO.format(real=shutil.which('sha256sum')))
+    (calcos / 'sha256sum').chmod(0o755)
+    script = f"""
+set +u
+SAIDA='{saida}'
+RESULTADO="$SAIDA/resultado.txt"
+RESULTADO_CSV="$SAIDA/resultado.csv"
+anota() {{ printf '%s %s %s\\n' "$1" "$2" "${{3:-}}" >> "$RESULTADO"; }}
+exec >> "$SAIDA/console.txt" 2>&1
+{_trecho_final()}
+"""
+    env = dict(os.environ, PATH=f'{calcos}:' + os.environ['PATH'])
+    if not gera:
+        env['FALHA_GERA'] = '1'
+    if not confere:
+        env['FALHA_CONFERE'] = '1'
+    r = subprocess.run(['bash', '-c', script], capture_output=True, text=True,
+                       timeout=60, env=env)
+    return r.returncode, saida
+
+
+def _confere_de_fora(saida):
+    return subprocess.run(['sha256sum', '-c', 'SHA256SUMS', '--quiet'],
+                          cwd=saida, capture_output=True, text=True)
+
+
+def test_manifesto_fecha_contra_a_pasta_depois_do_fim(tmp_path):
+    """Conferido DE FORA, depois de o wrapper sair: o veredito final escrito no
+    console não invalidou nada."""
+    rc, saida = _roda_final(tmp_path)
+    assert rc == 0, (saida / 'console.txt').read_text()
+    r = _confere_de_fora(saida)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert 'APROVADO' in (saida / 'console.txt').read_text().splitlines()[-1]
+
+
+def test_console_fica_fora_e_o_escopo_assina_a_si_mesmo(tmp_path):
+    _, saida = _roda_final(tmp_path)
+    assinados = [l.split(None, 1)[1].strip()
+                 for l in (saida / 'SHA256SUMS').read_text().splitlines()]
+    assert './console.txt' not in assinados
+    assert './SHA256SUMS' not in assinados
+    for exigido in ('./resultado.txt', './resultado.csv', './poses.yaml',
+                    './julgamento.tsv', './bag/metadata.yaml',
+                    './escopo_do_manifesto.txt'):
+        assert exigido in assinados, (exigido, assinados)
+    escopo = (saida / 'escopo_do_manifesto.txt').read_text().splitlines()
+    assert sorted(escopo) == sorted(assinados)
+
+
+def test_reprovado_sai_1_com_manifesto_valido(tmp_path):
+    rc, saida = _roda_final(tmp_path, reprovado=True)
+    assert rc == 1
+    assert _confere_de_fora(saida).returncode == 0
+
+
+def test_falha_na_geracao_do_manifesto_forca_rc_1(tmp_path):
+    rc, saida = _roda_final(tmp_path, gera=False)
+    assert rc == 1, (saida / 'console.txt').read_text()
+    assert 'SHA256SUMS' in (saida / 'console.txt').read_text()
+
+
+def test_falha_na_conferencia_do_manifesto_forca_rc_1(tmp_path):
+    rc, saida = _roda_final(tmp_path, confere=False)
+    assert rc == 1, (saida / 'console.txt').read_text()
+
+
+def _codigo_depois_da_geracao():
+    codigo = _codigo()
+    alvos = [i for i, l in enumerate(codigo) if 'sha256sum > SHA256SUMS' in l]
+    assert len(alvos) == 1, f'esperava UMA geração do manifesto, achei {alvos}'
+    return codigo[alvos[0] + 1:]
+
+
+def test_nada_assinado_e_escrito_depois_da_geracao():
+    """Travas estáticas do `valida-etapa6`: nem `anota`, nem redirecionamento
+    para o resultado, nem outro arquivo da pasta — só o console (stdout)."""
+    for l in _codigo_depois_da_geracao():
+        assert 'anota ' not in l, l
+        assert '"$RESULTADO' not in l, l
+        assert '>> "$SAIDA' not in l and '> "$SAIDA' not in l, l
+
+
 # ─── o wrapper (travas estáticas) ────────────────────────────────────────────
 
 def _texto():
