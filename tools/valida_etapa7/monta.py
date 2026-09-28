@@ -254,6 +254,9 @@ def monta(brutos):
         evidencia['resultado_acao'] = resultado
         evidencia['janela'] = {'objetivo_aceito': _segundos(aceite),
                                'resultado': _segundos(terminal)}
+        # Os MESMOS dois carimbos, em ns inteiros: é nela que o juiz aplica o
+        # teto, sem o arredondamento da conversão para segundos.
+        evidencia['duracao_objetivo_ns'] = terminal - aceite
         _confere_log(brutos['objetivo_log'], resultado)
 
     def tolerancia():

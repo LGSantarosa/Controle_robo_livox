@@ -44,6 +44,14 @@ CONSUMIDOR_NOMINAL = '/hoverboard_base_controller'
 # dependência do último bit do float.
 FOLGA = 1e-3
 
+# O teto do objetivo, em segundos SIMULADOS, do aceite ao primeiro terminal.
+# Comparado em ns INTEIROS e sem folga: a fonte (o status gravado no bag) já é
+# inteira, e qualquer tolerância para o float aprovaria 60 s + 1 ns. O
+# `bin/valida-etapa7` tem o mesmo número como gatilho de parada; um teste trava
+# os dois juntos.
+TETO_SIMULADO = 60
+_NS = 1_000_000_000
+
 SUCESSO = ' 7.1 a ação devolveu SUCCEEDED'
 TOLERANCIA = ' 7.2 pose final dentro do xy_goal_tolerance vivo'
 NASCEU_FORA = ' 7.2 o objetivo não nasceu dentro da tolerância'
@@ -51,6 +59,7 @@ PATAMAR = ' 7.3 comando acima do patamar vivo no consumidor final'
 TOPOLOGIA = ' 7.3 topologia nominal do tópico observado'
 MODELO = ' 7.3 a placa está no modelo medido'
 JANELA = ' 7.3 a amostra está dentro da janela do objetivo'
+DURACAO = f' 7.1 a ação fechou em até {TETO_SIMULADO} s simulados'
 
 CAMPOS_DO_PATAMAR = ('deadband_speed', 'escala_real', 'raio', 'bitola')
 
@@ -207,6 +216,18 @@ def _julga_sucesso(evidencia):
     return r == 'SUCCEEDED', str(r)
 
 
+def _julga_duracao(evidencia):
+    """`duracao_objetivo_ns` ≤ teto, em ns inteiros. O montador a calcula dos
+    mesmos dois carimbos da janela; a janela em segundos serve ao recorte das
+    amostras e NÃO a substitui aqui — em segundos, 60 s exatos viram
+    60,00000000000001."""
+    d = _exige(evidencia, 'duracao_objetivo_ns', 'evidência')
+    if isinstance(d, bool) or not isinstance(d, int) or d < 0:
+        raise _Invalido(f'duracao_objetivo_ns inválida: {d!r} (ns inteiro, '
+                        'não negativo)')
+    return d <= TETO_SIMULADO * _NS, f'{d} ns (teto {TETO_SIMULADO * _NS} ns)'
+
+
 def _julga_tolerancia(evidencia):
     tol = _positivo(_exige(evidencia, 'xy_goal_tolerance', 'evidência'),
                     'xy_goal_tolerance', 'evidência')
@@ -278,6 +299,7 @@ def _julga_patamar(evidencia):
 
 _ITENS = (
     (SUCESSO, _julga_sucesso),
+    (DURACAO, _julga_duracao),
     (TOLERANCIA, _julga_tolerancia),
     (NASCEU_FORA, _julga_nasceu_fora),
     (TOPOLOGIA, _julga_topologia),

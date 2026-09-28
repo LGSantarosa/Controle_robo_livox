@@ -232,25 +232,31 @@ setsid ros2 action send_goal /navigate_to_pose \
 PID_GOAL=$!
 
 # ── esperar a ação pelo relógio simulado, com watchdog de parede ────────────
+# Este laço só DERRUBA o goal; quem julga a duração é o juiz, em ns, pelo
+# status gravado (item "7.1 a ação fechou em até 60 s"). Mas derrubar é
+# REPROVADO por si: um `SUCCEEDED` que apareça depois do corte não salva a
+# corrida. Terminar sozinho não é aprovação — fica ANOTADO, para o juiz.
 T0_PAREDE=$(date +%s)
 TETO_PAREDE=$((TETO_SIMULADO * 6))
-FIM=""
+FIM=""; VEREDITO_FIM=ANOTADO
 while :; do
   if ! kill -0 "$PID_GOAL" 2>/dev/null; then FIM="a ação terminou sozinha"; break; fi
   PAREDE=$(( $(date +%s) - T0_PAREDE ))
   if [ "$PAREDE" -ge "$TETO_PAREDE" ]; then
     FIM="WATCHDOG de parede: ${PAREDE}s sem fechar (relógio simulado travado?)"
+    VEREDITO_FIM=REPROVADO
     kill -INT "$PID_GOAL" 2>/dev/null; break
   fi
   AGORA="$(relogio)"
   if [ -z "$AGORA" ]; then sleep 0.25; continue; fi
   if [ $((AGORA - T0_SIM)) -ge "$TETO_SIMULADO" ]; then
     FIM="teto de ${TETO_SIMULADO}s simulados (parede: ${PAREDE}s)"
+    VEREDITO_FIM=REPROVADO
     kill -INT "$PID_GOAL" 2>/dev/null; break
   fi
   sleep 0.25
 done
-anota "objetivo encerrado" ANOTADO "$FIM"
+anota "objetivo encerrado" "$VEREDITO_FIM" "$FIM"
 
 # O `objetivo.log` só se lê depois de o send_goal SAIR: com o buffer aberto, a
 # linha do UUID ou a final podem não ter descido ainda.
