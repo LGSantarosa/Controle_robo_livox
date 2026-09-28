@@ -1,0 +1,36 @@
+reprodutor collision_monitor — /home/rbe-luis/repro-cm-sigsegv/20260928_153237 — N=1, domínio 53
+
+== tentativa 1/1 ==
+tools/repro_cm_sigsegv/roda.sh: line 64: /proc/211979/cmdline: No such file or directory
+tools/repro_cm_sigsegv/roda.sh: line 64: /proc/211980/cmdline: No such file or directory
+tools/repro_cm_sigsegv/roda.sh: line 64: /proc/211981/cmdline: No such file or directory
+tools/repro_cm_sigsegv/roda.sh: line 64: /proc/211982/cmdline: No such file or directory
+tools/repro_cm_sigsegv/roda.sh: line 64: /proc/211983/cmdline: No such file or directory
+tools/repro_cm_sigsegv/roda.sh: line 64: /proc/211984/cmdline: No such file or directory
+tools/repro_cm_sigsegv/roda.sh: line 64: /proc/211985/cmdline: No such file or directory
+tools/repro_cm_sigsegv/roda.sh: line 64: /proc/211986/cmdline: No such file or directory
+tools/repro_cm_sigsegv/roda.sh: line 64: /proc/211987/cmdline: No such file or directory
+tools/repro_cm_sigsegv/roda.sh: line 64: /proc/211988/cmdline: No such file or directory
+tools/repro_cm_sigsegv/roda.sh: line 64: /proc/211989/cmdline: No such file or directory
+   gdb pid=213204
+   collision_monitor pid=213216
+   auxiliar pid=213350
+   SIGINT → 213216
+   parou_no_sigint=1
+   thread_principal_na_espera_de_tf=0
+   sem_erro_de_tf_antes_do_sigint=1
+   sigsegv=0
+   quadros_iguais=1
+   rdi=0x10
+   classificacao=NAO_VERMELHO
+   log: 12:[INFO] [1790620367.687523685] [collision_monitor]: Running Nav2 LifecycleNode rcl preshutdown (collision_monitor)
+   log: 13:[INFO] [1790620367.687613126] [collision_monitor]: Deactivating
+   log: 14:[INFO] [1790620367.687649956] [collision_monitor]: Cleaning up
+   log: 17:[ERROR] [1790620367.695980463] [getTransform]: Failed to get "livox_frame"->"base_link" frame transform: Lookup would require extrapolation
+   shm fastdds depois: 12
+tools/repro_cm_sigsegv/roda.sh: line 64: /proc/213993/cmdline: No such file or directory
+tools/repro_cm_sigsegv/roda.sh: line 64: /proc/214001/cmdline: No such file or directory
+tools/repro_cm_sigsegv/roda.sh: line 64: /proc/214002/cmdline: No such file or directory
+tools/repro_cm_sigsegv/roda.sh: line 64: /proc/214003/cmdline: No such file or directory
+   🔴 algo vivo com SHM sobrando
+🔴 INTERROMPIDO — /home/rbe-luis/repro-cm-sigsegv/20260928_153237

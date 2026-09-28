@@ -1,0 +1,11 @@
+data: 2026-09-28T15:32:37-03:00
+git: e346af3dd9196357aced534b8483d69560577944 0 alteração(ões)
+ros-jazzy-bondcpp	4.2.0-1noble.20260615.141016
+ros-jazzy-nav2-collision-monitor	1.3.12-1noble.20260615.160103
+ros-jazzy-nav2-util	1.3.12-1noble.20260615.152147
+ros-jazzy-rclcpp	28.1.21-1noble.20260615.133124
+ros-jazzy-tf2-ros	0.36.21-1noble.20260615.145818
+ce098132b7d985da2f98de9c97bc9c387585715bd2c4a4aea8f347ca9a0abdb5  /opt/ros/jazzy/lib/nav2_collision_monitor/collision_monitor
+5e298d0929513a4db80acd3d3d3dfe1a84a5d0ef5012dfb1333f214fbe728388  /opt/ros/jazzy/lib/libcollision_monitor_core.so
+AMENT_PREFIX_PATH=/opt/ros/jazzy
+ROS_DOMAIN_ID=53 ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST

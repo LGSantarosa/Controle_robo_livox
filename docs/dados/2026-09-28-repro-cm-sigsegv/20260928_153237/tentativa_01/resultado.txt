@@ -1,0 +1,7 @@
+parou_no_sigint=1
+thread_principal_na_espera_de_tf=0
+sem_erro_de_tf_antes_do_sigint=1
+sigsegv=0
+quadros_iguais=1
+rdi=0x10
+classificacao=NAO_VERMELHO

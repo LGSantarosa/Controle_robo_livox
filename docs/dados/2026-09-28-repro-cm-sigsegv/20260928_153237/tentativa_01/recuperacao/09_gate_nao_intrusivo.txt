@@ -1,0 +1,12 @@
+gate não intrusivo — 2026-09-28T15:50:41,434802364-03:00 — shm_recupera.py em e75a13b
+== confere (processos, marcas VALIDA_ETAPA4_MARCA/REPRO_CM_MARCA, donos por maps/fd; só /proc) ==
+nada vivo: nenhum processo, marca ou dono
+código: 0
+== fuser por segmento ==
+fastrtps_port20663: []
+fastrtps_port7001: []
+sem.fastrtps_port20663_mutex: []
+sem.fastrtps_port7001_mutex: []
+== descoberta: a tentativa rodou com ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST, domínio 53 (ambiente.txt) ==
+ROS_DOMAIN_ID=53 ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
+== ros2 node list: NÃO executado (deixou de ser gate; é intrusivo) ==

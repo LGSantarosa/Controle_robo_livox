@@ -1,0 +1,5 @@
+comando: env -u REPRO_CM_MARCA ROS_DOMAIN_ID=53 ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST ros2 node list --no-daemon --spin-time 5
+início: 2026-09-28T15:42:45,373845881-03:00
+fim: 2026-09-28T15:42:51,024354980-03:00
+código: 0
+saída: 0 bytes; stderr: 0 bytes

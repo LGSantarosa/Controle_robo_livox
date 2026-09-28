@@ -1,0 +1,10 @@
+comando: python3 tools/subidas_robo3/shm_recupera.py remove /dev/shm /home/rbe-luis/repro-cm-sigsegv/20260928_153237/tentativa_01/shm_antes.tsv /home/rbe-luis/repro-cm-sigsegv/20260928_153237/tentativa_01/shm_depois.tsv  (shm_recupera em e75a13b)
+início: 2026-09-28T15:50:49,538071483-03:00
+removidos (4):
+  fastrtps_port20663
+  fastrtps_port7001
+  sem.fastrtps_port20663_mutex
+  sem.fastrtps_port7001_mutex
+recontagem: 0 segmento Fast DDS
+fim: 2026-09-28T15:50:50,457627016-03:00
+código: 0

@@ -1,0 +1,4 @@
+comando: fastdds shm clean  (/opt/ros/jazzy/bin/fastdds)
+início: 2026-09-28T15:47:33,975986346-03:00
+fim: 2026-09-28T15:47:34,025252316-03:00
+código: 0

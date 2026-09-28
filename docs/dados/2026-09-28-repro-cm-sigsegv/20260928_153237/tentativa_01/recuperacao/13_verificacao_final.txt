@@ -1,0 +1,8 @@
+verificação final — 2026-09-28T15:50:56,505616541-03:00
+segmentos Fast DDS: 0
+entradas não-Fast DDS iguais ao shm_antes.tsv da tentativa: sim
+== confere (processos, marcas, donos; só /proc) ==
+nada vivo: nenhum processo, marca ou dono
+código: 0
+marcas (grep direto no environ): 0
+ros2 node list: não executado (invalidaria o inventário zero)

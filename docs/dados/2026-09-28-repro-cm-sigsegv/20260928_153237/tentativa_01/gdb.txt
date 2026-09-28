@@ -1,0 +1,348 @@
+
+This GDB supports auto-downloading debuginfo from the following URLs:
+  <https://debuginfod.ubuntu.com>
+Enable debuginfod for this session? (y or [n]) [answered N; input not from terminal]
+Debuginfod has been disabled.
+To make this setting permanent, add 'set debuginfod enabled off' to .gdbinit.
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+
+Thread 1 "collision_monit" received signal SIGINT, Interrupt.
+0x00007ffff70ecbdf in __GI___clock_nanosleep (clock_id=clock_id@entry=0, flags=flags@entry=0, req=0x7fffffff8200, rem=0x7fffffff8200) at ../sysdeps/unix/sysv/linux/clock_nanosleep.c:78
+warning: 78	../sysdeps/unix/sysv/linux/clock_nanosleep.c: No such file or directory
+
+=== PARADA 1 (esperada: SIGINT) ===
+Last stopped for thread 1 (Thread 0x7ffff6652900 (LWP 213216)).
+	Using the running image of child process 213216.
+Program stopped at 0x7ffff70ecbdf.
+It stopped with signal SIGINT, Interrupt.
+
+Thread 15 (Thread 0x7fffea7f46c0 (LWP 213290) "collision_monit"):
+#0  0x00007ffff7098e51 in __futex_abstimed_wait_common64 (private=21845, cancel=true, abstime=0x0, op=393, expected=0, futex_word=0x555555a19440) at ./nptl/futex-internal.c:57
+#1  __futex_abstimed_wait_common (cancel=true, private=21845, abstime=0x0, clockid=0, expected=0, futex_word=0x555555a19440) at ./nptl/futex-internal.c:87
+#2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0x555555a19440, expected=expected@entry=0, clockid=clockid@entry=0, abstime=abstime@entry=0x0, private=private@entry=0) at ./nptl/futex-internal.c:139
+#3  0x00007ffff709b8cd in __pthread_cond_wait_common (abstime=0x0, clockid=0, mutex=0x555555a193f0, cond=0x555555a19418) at ./nptl/pthread_cond_wait.c:503
+#4  ___pthread_cond_wait (cond=0x555555a19418, mutex=0x555555a193f0) at ./nptl/pthread_cond_wait.c:627
+#5  0x00007ffff4ea680a in eprosima::fastdds::dds::detail::WaitSetImpl::wait(std::vector<eprosima::fastdds::dds::Condition*, std::allocator<eprosima::fastdds::dds::Condition*> >&, eprosima::fastrtps::Time_t const&) () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#6  0x00007ffff4ea68bc in eprosima::fastdds::dds::WaitSet::wait(std::vector<eprosima::fastdds::dds::Condition*, std::allocator<eprosima::fastdds::dds::Condition*> >&, eprosima::fastrtps::Time_t) const () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#7  0x00007ffff558ca9e in rmw_fastrtps_shared_cpp::__rmw_wait(char const*, rmw_subscriptions_s*, rmw_guard_conditions_s*, rmw_services_s*, rmw_clients_s*, rmw_events_s*, rmw_wait_set_s*, rmw_time_s const*) () from /opt/ros/jazzy/lib/librmw_fastrtps_shared_cpp.so
+#8  0x00007ffff55ec928 in rmw_wait () from /opt/ros/jazzy/lib/librmw_fastrtps_cpp.so
+#9  0x00007ffff735c21c in rcl_wait () from /opt/ros/jazzy/lib/librcl.so
+#10 0x00007ffff7914bb6 in ?? () from /opt/ros/jazzy/lib/librclcpp.so
+#11 0x00007ffff79178dd in rclcpp::Executor::wait_for_work(std::chrono::duration<long, std::ratio<1l, 1000000000l> >) () from /opt/ros/jazzy/lib/librclcpp.so
+#12 0x00007ffff791811b in rclcpp::Executor::get_next_executable(rclcpp::AnyExecutable&, std::chrono::duration<long, std::ratio<1l, 1000000000l> >) () from /opt/ros/jazzy/lib/librclcpp.so
+#13 0x00007ffff7940ad5 in rclcpp::executors::SingleThreadedExecutor::spin() () from /opt/ros/jazzy/lib/librclcpp.so
+#14 0x00007ffff74ecdb4 in ?? () from /lib/x86_64-linux-gnu/libstdc++.so.6
+#15 0x00007ffff709cb84 in start_thread (arg=<optimized out>) at ./nptl/pthread_create.c:447
+
+Thread 14 (Thread 0x7fffeaff56c0 (LWP 213289) "collision_monit"):
+#0  0x00007ffff7098e51 in __futex_abstimed_wait_common64 (private=32767, cancel=true, abstime=0x0, op=393, expected=0, futex_word=0x7fffdc000c00) at ./nptl/futex-internal.c:57
+#1  __futex_abstimed_wait_common (cancel=true, private=32767, abstime=0x0, clockid=0, expected=0, futex_word=0x7fffdc000c00) at ./nptl/futex-internal.c:87
+#2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0x7fffdc000c00, expected=expected@entry=0, clockid=clockid@entry=0, abstime=abstime@entry=0x0, private=private@entry=0) at ./nptl/futex-internal.c:139
+#3  0x00007ffff709b8cd in __pthread_cond_wait_common (abstime=0x0, clockid=0, mutex=0x7fffdc000bb0, cond=0x7fffdc000bd8) at ./nptl/pthread_cond_wait.c:503
+#4  ___pthread_cond_wait (cond=0x7fffdc000bd8, mutex=0x7fffdc000bb0) at ./nptl/pthread_cond_wait.c:627
+#5  0x00007ffff4ea680a in eprosima::fastdds::dds::detail::WaitSetImpl::wait(std::vector<eprosima::fastdds::dds::Condition*, std::allocator<eprosima::fastdds::dds::Condition*> >&, eprosima::fastrtps::Time_t const&) () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#6  0x00007ffff4ea68bc in eprosima::fastdds::dds::WaitSet::wait(std::vector<eprosima::fastdds::dds::Condition*, std::allocator<eprosima::fastdds::dds::Condition*> >&, eprosima::fastrtps::Time_t) const () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#7  0x00007ffff558ca9e in rmw_fastrtps_shared_cpp::__rmw_wait(char const*, rmw_subscriptions_s*, rmw_guard_conditions_s*, rmw_services_s*, rmw_clients_s*, rmw_events_s*, rmw_wait_set_s*, rmw_time_s const*) () from /opt/ros/jazzy/lib/librmw_fastrtps_shared_cpp.so
+#8  0x00007ffff557431b in ?? () from /opt/ros/jazzy/lib/librmw_fastrtps_shared_cpp.so
+#9  0x00007ffff74ecdb4 in ?? () from /lib/x86_64-linux-gnu/libstdc++.so.6
+#10 0x00007ffff709cb84 in start_thread (arg=<optimized out>) at ./nptl/pthread_create.c:447
+#11 0x00007ffff7129ecc in clone3 () at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+
+Thread 13 (Thread 0x7fffeb7f66c0 (LWP 213288) "dds.udp.7000"):
+#0  0x00007ffff712bf64 in __libc_recvfrom (fd=37, buf=0x5555557a7c90, len=65500, flags=0, addr=..., addrlen=0x7fffeb7f4848) at ../sysdeps/unix/sysv/linux/recvfrom.c:27
+#1  0x00007ffff4de8376 in eprosima::fastdds::rtps::UDPChannelResource::Receive(unsigned char*, unsigned int, unsigned int&, eprosima::fastrtps::rtps::Locator_t&) () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#2  0x00007ffff4de876e in eprosima::fastdds::rtps::UDPChannelResource::perform_listen_operation(eprosima::fastrtps::rtps::Locator_t) () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#3  0x00007ffff4deafcd in ?? () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#4  0x00007ffff709cb84 in start_thread (arg=<optimized out>) at ./nptl/pthread_create.c:447
+#5  0x00007ffff7129ecc in clone3 () at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+
+Thread 12 (Thread 0x7fffebff76c0 (LWP 213287) "dds.shm.7000"):
+#0  0x00007ffff7098e51 in __futex_abstimed_wait_common64 (private=<optimized out>, cancel=true, abstime=0x7fffebff5640, op=265, expected=0, futex_word=0x7ffff5487110) at ./nptl/futex-internal.c:57
+#1  __futex_abstimed_wait_common (cancel=true, private=<optimized out>, abstime=0x7fffebff5640, clockid=0, expected=0, futex_word=0x7ffff5487110) at ./nptl/futex-internal.c:87
+#2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0x7ffff5487110, expected=expected@entry=0, clockid=clockid@entry=0, abstime=abstime@entry=0x7fffebff5640, private=<optimized out>) at ./nptl/futex-internal.c:139
+#3  0x00007ffff70a4dd0 in do_futex_wait (sem=sem@entry=0x7ffff5487110, abstime=abstime@entry=0x7fffebff5640, clockid=0) at ./nptl/sem_waitcommon.c:111
+#4  0x00007ffff70a4e73 in __new_sem_wait_slow64 (sem=0x7ffff5487110, abstime=0x7fffebff5640, clockid=0) at ./nptl/sem_waitcommon.c:183
+#5  0x00007ffff4fd28af in ?? () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#6  0x00007ffff4fd312c in ?? () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#7  0x00007ffff4fd16d5 in ?? () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#8  0x00007ffff4fd23dd in void* eprosima::thread::ThreadProxy<eprosima::create_thread<eprosima::fastdds::rtps::SharedMemChannelResource::init_thread(eprosima::fastrtps::rtps::Locator_t const&, eprosima::fastdds::rtps::ThreadSettings const&)::{lambda()#1}, unsigned int>(eprosima::fastdds::rtps::SharedMemChannelResource::init_thread(eprosima::fastrtps::rtps::Locator_t const&, eprosima::fastdds::rtps::ThreadSettings const&)::{lambda()#1}, eprosima::fastdds::rtps::ThreadSettings const&, char const*, unsigned int)::{lambda()#1}>(void*) () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#9  0x00007ffff709cb84 in start_thread (arg=<optimized out>) at ./nptl/pthread_create.c:447
+#10 0x00007ffff7129ecc in clone3 () at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+
+Thread 11 (Thread 0x7fffec7f86c0 (LWP 213286) "dds.asyn.0.0"):
+#0  0x00007ffff7098e51 in __futex_abstimed_wait_common64 (private=32767, cancel=true, abstime=0x0, op=393, expected=0, futex_word=0x555555651edc) at ./nptl/futex-internal.c:57
+#1  __futex_abstimed_wait_common (cancel=true, private=32767, abstime=0x0, clockid=0, expected=0, futex_word=0x555555651edc) at ./nptl/futex-internal.c:87
+#2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0x555555651edc, expected=expected@entry=0, clockid=clockid@entry=0, abstime=abstime@entry=0x0, private=private@entry=0) at ./nptl/futex-internal.c:139
+#3  0x00007ffff709b8cd in __pthread_cond_wait_common (abstime=0x0, clockid=0, mutex=0x55555564fa80, cond=0x555555651eb0) at ./nptl/pthread_cond_wait.c:503
+#4  ___pthread_cond_wait (cond=0x555555651eb0, mutex=0x55555564fa80) at ./nptl/pthread_cond_wait.c:627
+#5  0x00007ffff4cb61b1 in ?? () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#6  0x00007ffff4f0498e in void* eprosima::thread::ThreadProxy<eprosima::create_thread<eprosima::fastdds::rtps::FlowControllerImpl<eprosima::fastdds::rtps::FlowControllerSyncPublishMode, eprosima::fastdds::rtps::FlowControllerFifoSchedule>::initialize_async_thread<eprosima::fastdds::rtps::FlowControllerSyncPublishMode>()::{lambda()#1}, unsigned int, unsigned int>(eprosima::fastdds::rtps::FlowControllerImpl<eprosima::fastdds::rtps::FlowControllerSyncPublishMode, eprosima::fastdds::rtps::FlowControllerFifoSchedule>::initialize_async_thread<eprosima::fastdds::rtps::FlowControllerSyncPublishMode>()::{lambda()#1}, eprosima::fastdds::rtps::ThreadSettings const&, char const*, unsigned int, unsigned int)::{lambda()#1}>(void*) () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#7  0x00007ffff709cb84 in start_thread (arg=<optimized out>) at ./nptl/pthread_create.c:447
+#8  0x00007ffff7129ecc in clone3 () at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+
+Thread 10 (Thread 0x7fffecff96c0 (LWP 213285) "dds.udp.20661"):
+#0  0x00007ffff712bf64 in __libc_recvfrom (fd=33, buf=0x5555556706a0, len=65500, flags=0, addr=..., addrlen=0x7fffecff7848) at ../sysdeps/unix/sysv/linux/recvfrom.c:27
+#1  0x00007ffff4de8376 in eprosima::fastdds::rtps::UDPChannelResource::Receive(unsigned char*, unsigned int, unsigned int&, eprosima::fastrtps::rtps::Locator_t&) () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#2  0x00007ffff4de876e in eprosima::fastdds::rtps::UDPChannelResource::perform_listen_operation(eprosima::fastrtps::rtps::Locator_t) () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#3  0x00007ffff4deafcd in ?? () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#4  0x00007ffff709cb84 in start_thread (arg=<optimized out>) at ./nptl/pthread_create.c:447
+#5  0x00007ffff7129ecc in clone3 () at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+
+Thread 9 (Thread 0x7fffed7fa6c0 (LWP 213284) "dds.shm.20661"):
+#0  0x00007ffff7098e51 in __futex_abstimed_wait_common64 (private=<optimized out>, cancel=true, abstime=0x7fffed7f8640, op=265, expected=0, futex_word=0x7ffff54a5110) at ./nptl/futex-internal.c:57
+#1  __futex_abstimed_wait_common (cancel=true, private=<optimized out>, abstime=0x7fffed7f8640, clockid=0, expected=0, futex_word=0x7ffff54a5110) at ./nptl/futex-internal.c:87
+#2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0x7ffff54a5110, expected=expected@entry=0, clockid=clockid@entry=0, abstime=abstime@entry=0x7fffed7f8640, private=<optimized out>) at ./nptl/futex-internal.c:139
+#3  0x00007ffff70a4dd0 in do_futex_wait (sem=sem@entry=0x7ffff54a5110, abstime=abstime@entry=0x7fffed7f8640, clockid=0) at ./nptl/sem_waitcommon.c:111
+#4  0x00007ffff70a4e73 in __new_sem_wait_slow64 (sem=0x7ffff54a5110, abstime=0x7fffed7f8640, clockid=0) at ./nptl/sem_waitcommon.c:183
+#5  0x00007ffff4fd28af in ?? () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#6  0x00007ffff4fd312c in ?? () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#7  0x00007ffff4fd16d5 in ?? () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#8  0x00007ffff4fd23dd in void* eprosima::thread::ThreadProxy<eprosima::create_thread<eprosima::fastdds::rtps::SharedMemChannelResource::init_thread(eprosima::fastrtps::rtps::Locator_t const&, eprosima::fastdds::rtps::ThreadSettings const&)::{lambda()#1}, unsigned int>(eprosima::fastdds::rtps::SharedMemChannelResource::init_thread(eprosima::fastrtps::rtps::Locator_t const&, eprosima::fastdds::rtps::ThreadSettings const&)::{lambda()#1}, eprosima::fastdds::rtps::ThreadSettings const&, char const*, unsigned int)::{lambda()#1}>(void*) () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#9  0x00007ffff709cb84 in start_thread (arg=<optimized out>) at ./nptl/pthread_create.c:447
+#10 0x00007ffff7129ecc in clone3 () at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+
+Thread 8 (Thread 0x7fffedffb6c0 (LWP 213283) "dds.udp.20660"):
+#0  0x00007ffff712bf64 in __libc_recvfrom (fd=31, buf=0x555555659d60, len=65500, flags=0, addr=..., addrlen=0x7fffedff9848) at ../sysdeps/unix/sysv/linux/recvfrom.c:27
+#1  0x00007ffff4de8376 in eprosima::fastdds::rtps::UDPChannelResource::Receive(unsigned char*, unsigned int, unsigned int&, eprosima::fastrtps::rtps::Locator_t&) () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#2  0x00007ffff4de876e in eprosima::fastdds::rtps::UDPChannelResource::perform_listen_operation(eprosima::fastrtps::rtps::Locator_t) () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#3  0x00007ffff4deafcd in ?? () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#4  0x00007ffff709cb84 in start_thread (arg=<optimized out>) at ./nptl/pthread_create.c:447
+#5  0x00007ffff7129ecc in clone3 () at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+
+Thread 7 (Thread 0x7fffee7fc6c0 (LWP 213282) "dds.ev.0"):
+#0  0x00007ffff7098e51 in __futex_abstimed_wait_common64 (private=1433338112, cancel=true, abstime=0x7fffee7fac10, op=137, expected=0, futex_word=0x55555564a4bc) at ./nptl/futex-internal.c:57
+#1  __futex_abstimed_wait_common (cancel=true, private=1433338112, abstime=0x7fffee7fac10, clockid=0, expected=0, futex_word=0x55555564a4bc) at ./nptl/futex-internal.c:87
+#2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0x55555564a4bc, expected=expected@entry=0, clockid=clockid@entry=1, abstime=abstime@entry=0x7fffee7fac10, private=private@entry=0) at ./nptl/futex-internal.c:139
+#3  0x00007ffff709c1f6 in __pthread_cond_wait_common (abstime=<optimized out>, clockid=<optimized out>, mutex=0x555555647320, cond=0x55555564a490) at ./nptl/pthread_cond_wait.c:503
+#4  ___pthread_cond_clockwait64 (abstime=<optimized out>, clockid=<optimized out>, mutex=0x555555647320, cond=0x55555564a490) at ./nptl/pthread_cond_wait.c:691
+#5  ___pthread_cond_clockwait64 (cond=0x55555564a490, mutex=0x555555647320, clockid=<optimized out>, abstime=<optimized out>) at ./nptl/pthread_cond_wait.c:679
+#6  0x00007ffff4cb5f3c in ?? () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#7  0x00007ffff4cb6edb in eprosima::fastrtps::rtps::ResourceEvent::event_service() () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#8  0x00007ffff4cbbcc8 in ?? () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#9  0x00007ffff709cb84 in start_thread (arg=<optimized out>) at ./nptl/pthread_create.c:447
+#10 0x00007ffff7129ecc in clone3 () at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+
+Thread 6 (Thread 0x7fffeeffd6c0 (LWP 213281) "dds.shm.wdog"):
+#0  0x00007ffff7098e51 in __futex_abstimed_wait_common64 (private=2915, cancel=true, abstime=0x7fffeeffbca0, op=137, expected=0, futex_word=0x555555647cf0) at ./nptl/futex-internal.c:57
+#1  __futex_abstimed_wait_common (cancel=true, private=2915, abstime=0x7fffeeffbca0, clockid=0, expected=0, futex_word=0x555555647cf0) at ./nptl/futex-internal.c:87
+#2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0x555555647cf0, expected=expected@entry=0, clockid=clockid@entry=1, abstime=abstime@entry=0x7fffeeffbca0, private=private@entry=0) at ./nptl/futex-internal.c:139
+#3  0x00007ffff709c1f6 in __pthread_cond_wait_common (abstime=<optimized out>, clockid=<optimized out>, mutex=0x555555647cf8, cond=0x555555647cc8) at ./nptl/pthread_cond_wait.c:503
+#4  ___pthread_cond_clockwait64 (abstime=<optimized out>, clockid=<optimized out>, mutex=0x555555647cf8, cond=0x555555647cc8) at ./nptl/pthread_cond_wait.c:691
+#5  ___pthread_cond_clockwait64 (cond=0x555555647cc8, mutex=0x555555647cf8, clockid=<optimized out>, abstime=<optimized out>) at ./nptl/pthread_cond_wait.c:679
+#6  0x00007ffff4fd227d in void* eprosima::thread::ThreadProxy<eprosima::create_thread<eprosima::fastdds::rtps::SharedMemWatchdog::SharedMemWatchdog()::{lambda()#1}>(eprosima::fastdds::rtps::SharedMemWatchdog::SharedMemWatchdog()::{lambda()#1}, eprosima::fastdds::rtps::ThreadSettings const&, char const*)::{lambda()#1}>(void*) () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#7  0x00007ffff709cb84 in start_thread (arg=<optimized out>) at ./nptl/pthread_create.c:447
+#8  0x00007ffff7129ecc in clone3 () at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+
+Thread 5 (Thread 0x7fffef7fe6c0 (LWP 213280) "collision_monit"):
+#0  0x00007ffff7098e51 in __futex_abstimed_wait_common64 (private=<optimized out>, cancel=true, abstime=0x0, op=393, expected=0, futex_word=0x5555556427a8) at ./nptl/futex-internal.c:57
+#1  __futex_abstimed_wait_common (cancel=true, private=<optimized out>, abstime=0x0, clockid=0, expected=0, futex_word=0x5555556427a8) at ./nptl/futex-internal.c:87
+#2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0x5555556427a8, expected=expected@entry=0, clockid=clockid@entry=0, abstime=abstime@entry=0x0, private=<optimized out>) at ./nptl/futex-internal.c:139
+#3  0x00007ffff70a4fff in do_futex_wait (sem=sem@entry=0x5555556427a8, abstime=0x0, clockid=0) at ./nptl/sem_waitcommon.c:111
+#4  0x00007ffff70a5098 in __new_sem_wait_slow64 (sem=0x5555556427a8, abstime=0x0, clockid=0) at ./nptl/sem_waitcommon.c:183
+#5  0x00007ffff79c6baa in rclcpp::SignalHandler::wait_for_signal() () from /opt/ros/jazzy/lib/librclcpp.so
+#6  0x00007ffff79c76da in rclcpp::SignalHandler::deferred_signal_handler() () from /opt/ros/jazzy/lib/librclcpp.so
+#7  0x00007ffff74ecdb4 in ?? () from /lib/x86_64-linux-gnu/libstdc++.so.6
+#8  0x00007ffff709cb84 in start_thread (arg=<optimized out>) at ./nptl/pthread_create.c:447
+#9  0x00007ffff7129ecc in clone3 () at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+
+Thread 4 (Thread 0x7fffeffff6c0 (LWP 213279) "collision_monit"):
+#0  0x00007ffff7098e51 in __futex_abstimed_wait_common64 (private=-268444896, cancel=true, abstime=0x7fffefffdc90, op=137, expected=0, futex_word=0x5555556422e0) at ./nptl/futex-internal.c:57
+#1  __futex_abstimed_wait_common (cancel=true, private=-268444896, abstime=0x7fffefffdc90, clockid=32767, expected=0, futex_word=0x5555556422e0) at ./nptl/futex-internal.c:87
+#2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0x5555556422e0, expected=expected@entry=0, clockid=clockid@entry=1, abstime=abstime@entry=0x7fffefffdc90, private=private@entry=0) at ./nptl/futex-internal.c:139
+#3  0x00007ffff709c1f6 in __pthread_cond_wait_common (abstime=<optimized out>, clockid=<optimized out>, mutex=0x555555642290, cond=0x5555556422b8) at ./nptl/pthread_cond_wait.c:503
+#4  ___pthread_cond_clockwait64 (abstime=<optimized out>, clockid=<optimized out>, mutex=0x555555642290, cond=0x5555556422b8) at ./nptl/pthread_cond_wait.c:691
+#5  ___pthread_cond_clockwait64 (cond=0x5555556422b8, mutex=0x555555642290, clockid=<optimized out>, abstime=<optimized out>) at ./nptl/pthread_cond_wait.c:679
+#6  0x00007ffff6cad575 in ?? () from /opt/ros/jazzy/lib/librcl_logging_spdlog.so
+#7  0x00007ffff74ecdb4 in ?? () from /lib/x86_64-linux-gnu/libstdc++.so.6
+#8  0x00007ffff709cb84 in start_thread (arg=<optimized out>) at ./nptl/pthread_create.c:447
+#9  0x00007ffff7129ecc in clone3 () at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+
+Thread 3 (Thread 0x7ffff5e4d6c0 (LWP 213264) "collision_m-ust"):
+#0  syscall () at ../sysdeps/unix/sysv/linux/x86_64/syscall.S:38
+#1  0x00007ffff69972fe in ?? () from /lib/x86_64-linux-gnu/liblttng-ust.so.1
+#2  0x00007ffff709cb84 in start_thread (arg=<optimized out>) at ./nptl/pthread_create.c:447
+#3  0x00007ffff7129ecc in clone3 () at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+
+Thread 2 (Thread 0x7ffff664e6c0 (LWP 213263) "collision_m-ust"):
+#0  0x00007ffff712c0cb in __recvmsg_syscall (flags=0, msg=0x7ffff664c490, fd=3) at ../sysdeps/unix/sysv/linux/recvmsg.c:27
+#1  __libc_recvmsg (fd=3, msg=0x7ffff664c490, flags=0) at ../sysdeps/unix/sysv/linux/recvmsg.c:41
+#2  0x00007ffff69c27c6 in ?? () from /lib/x86_64-linux-gnu/liblttng-ust.so.1
+#3  0x00007ffff6997527 in ?? () from /lib/x86_64-linux-gnu/liblttng-ust.so.1
+#4  0x00007ffff709cb84 in start_thread (arg=<optimized out>) at ./nptl/pthread_create.c:447
+#5  0x00007ffff7129ecc in clone3 () at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+
+Thread 1 (Thread 0x7ffff6652900 (LWP 213216) "collision_monit"):
+#0  0x00007ffff70ecbdf in __GI___clock_nanosleep (clock_id=clock_id@entry=0, flags=flags@entry=0, req=0x7fffffff8200, rem=0x7fffffff8200) at ../sysdeps/unix/sysv/linux/clock_nanosleep.c:78
+#1  0x00007ffff70f9b27 in __GI___nanosleep (req=<optimized out>, rem=<optimized out>) at ../sysdeps/unix/sysv/linux/nanosleep.c:25
+#2  0x00007ffff73c076c in tf2_ros::Buffer::canTransform(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::chrono::time_point<std::chrono::_V2::system_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::chrono::time_point<std::chrono::_V2::system_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::chrono::duration<long, std::ratio<1l, 1000000000l> >, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >*) const () from /opt/ros/jazzy/lib/libtf2_ros.so
+#3  0x00007ffff73b8bfb in tf2_ros::Buffer::lookupTransform(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::chrono::time_point<std::chrono::_V2::system_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::chrono::time_point<std::chrono::_V2::system_clock, std::chrono::duration<long, std::ratio<1l, 1000000000l> > > const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::chrono::duration<long, std::ratio<1l, 1000000000l> >) const () from /opt/ros/jazzy/lib/libtf2_ros.so
+#4  0x00007ffff7ae04f6 in nav2_util::getTransform(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, rclcpp::Time const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, rclcpp::Time const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::chrono::duration<long, std::ratio<1l, 1000000000l> > const&, std::shared_ptr<tf2_ros::Buffer>, geometry_msgs::msg::TransformStamped_<std::allocator<void> >&) () from /opt/ros/jazzy/lib/libnav2_util_core.so
+#5  0x00007ffff7ae0765 in nav2_util::getTransform(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, rclcpp::Time const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, rclcpp::Time const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, std::chrono::duration<long, std::ratio<1l, 1000000000l> > const&, std::shared_ptr<tf2_ros::Buffer>, tf2::Transform&) () from /opt/ros/jazzy/lib/libnav2_util_core.so
+#6  0x00007ffff7df8f78 in nav2_collision_monitor::Source::getTransform(rclcpp::Time const&, std_msgs::msg::Header_<std::allocator<void> > const&, tf2::Transform&) const () from /opt/ros/jazzy/lib/libcollision_monitor_core.so
+#7  0x00007ffff7e0b671 in nav2_collision_monitor::PointCloud::getData(rclcpp::Time const&, std::vector<nav2_collision_monitor::Point, std::allocator<nav2_collision_monitor::Point> >&) () from /opt/ros/jazzy/lib/libcollision_monitor_core.so
+#8  0x00007ffff7d8cf1e in nav2_collision_monitor::CollisionMonitor::process(nav2_collision_monitor::Velocity const&, std_msgs::msg::Header_<std::allocator<void> > const&) () from /opt/ros/jazzy/lib/libcollision_monitor_core.so
+#9  0x00007ffff7d80cbb in nav2_collision_monitor::CollisionMonitor::cmdVelInCallbackStamped(std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >) () from /opt/ros/jazzy/lib/libcollision_monitor_core.so
+#10 0x00007ffff7d9ad3b in std::_Function_handler<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >), std::_Bind<void (nav2_collision_monitor::CollisionMonitor::*(nav2_collision_monitor::CollisionMonitor*, std::_Placeholder<1>))(std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >)> >::_M_invoke(std::_Any_data const&, std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >&&) () from /opt/ros/jazzy/lib/libcollision_monitor_core.so
+#11 0x00007ffff7dc4522 in std::__detail::__variant::__gen_vtable_impl<std::__detail::__variant::_Multi_array<std::__detail::__variant::__deduce_visit_result<void> (*)(rclcpp::AnySubscriptionCallback<geometry_msgs::msg::TwistStamped_<std::allocator<void> >, std::allocator<void> >::dispatch<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >(std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >, rclcpp::MessageInfo const&)::{lambda(auto:1&&)#1}&&, std::variant<std::function<void (geometry_msgs::msg::TwistStamped_<std::allocator<void> > const&)>, std::function<void (geometry_msgs::msg::TwistStamped_<std::allocator<void> > const&, rclcpp::MessageInfo const&)>, std::function<void (rclcpp::SerializedMessage const&)>, std::function<void (rclcpp::SerializedMessage const&, rclcpp::MessageInfo const&)>, std::function<void (std::unique_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> >, std::default_delete<geometry_msgs::msg::TwistStamped_<std::allocator<void> > > >)>, std::function<void (std::unique_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> >, std::default_delete<geometry_msgs::msg::TwistStamped_<std::allocator<void> > > >, rclcpp::MessageInfo const&)>, std::function<void (std::unique_ptr<rclcpp::SerializedMessage, std::default_delete<rclcpp::SerializedMessage> >)>, std::function<void (std::unique_ptr<rclcpp::SerializedMessage, std::default_delete<rclcpp::SerializedMessage> >, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > const>)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > const>, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage const>)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage const>, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > const> const&)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > const> const&, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage const> const&)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage const> const&, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage>)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage>, rclcpp::MessageInfo const&)> >&)>, std::integer_sequence<unsigned long, 16ul> >::__visit_invoke(rclcpp::AnySubscriptionCallback<geometry_msgs::msg::TwistStamped_<std::allocator<void> >, std::allocator<void> >::dispatch<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >(std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >, rclcpp::MessageInfo const&)::{lambda(auto:1&&)#1}&&, std::variant<std::function<void (geometry_msgs::msg::TwistStamped_<std::allocator<void> > const&)>, std::function<void (geometry_msgs::msg::TwistStamped_<std::allocator<void> > const&, rclcpp::MessageInfo const&)>, std::function<void (rclcpp::SerializedMessage const&)>, std::function<void (rclcpp::SerializedMessage const&, rclcpp::MessageInfo const&)>, std::function<void (std::unique_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> >, std::default_delete<geometry_msgs::msg::TwistStamped_<std::allocator<void> > > >)>, std::function<void (std::unique_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> >, std::default_delete<geometry_msgs::msg::TwistStamped_<std::allocator<void> > > >, rclcpp::MessageInfo const&)>, std::function<void (std::unique_ptr<rclcpp::SerializedMessage, std::default_delete<rclcpp::SerializedMessage> >)>, std::function<void (std::unique_ptr<rclcpp::SerializedMessage, std::default_delete<rclcpp::SerializedMessage> >, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > const>)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > const>, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage const>)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage const>, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > const> const&)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > const> const&, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage const> const&)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage const> const&, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage>)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage>, rclcpp::MessageInfo const&)> >&) () from /opt/ros/jazzy/lib/libcollision_monitor_core.so
+#12 0x00007ffff7dc7da3 in ?? () from /opt/ros/jazzy/lib/libcollision_monitor_core.so
+#13 0x00007ffff791553b in rclcpp::Executor::execute_subscription(std::shared_ptr<rclcpp::SubscriptionBase>) () from /opt/ros/jazzy/lib/librclcpp.so
+#14 0x00007ffff7915c6a in rclcpp::Executor::execute_any_executable(rclcpp::AnyExecutable&) () from /opt/ros/jazzy/lib/librclcpp.so
+#15 0x00007ffff7940ae4 in rclcpp::executors::SingleThreadedExecutor::spin() () from /opt/ros/jazzy/lib/librclcpp.so
+
+=== CONTINUA: sinal entregue ===
+
+Thread 1 "collision_monit" received signal SIGSEGV, Segmentation fault.
+0x00007ffff79c00d6 in rclcpp::PublisherBase::get_subscription_count() const () from /opt/ros/jazzy/lib/librclcpp.so
+
+=== PARADA 2 (esperada: SIGSEGV) ===
+Last stopped for thread 1 (Thread 0x7ffff6652900 (LWP 213216)).
+	Using the running image of child process 213216.
+Program stopped at 0x7ffff79c00d6.
+It stopped with signal SIGSEGV, Segmentation fault.
+#0  0x00007ffff79c00d6 in rclcpp::PublisherBase::get_subscription_count() const () from /opt/ros/jazzy/lib/librclcpp.so
+#1  0x00007ffff7d8cf9b in nav2_collision_monitor::CollisionMonitor::process(nav2_collision_monitor::Velocity const&, std_msgs::msg::Header_<std::allocator<void> > const&) () from /opt/ros/jazzy/lib/libcollision_monitor_core.so
+#2  0x00007ffff7d80cbb in nav2_collision_monitor::CollisionMonitor::cmdVelInCallbackStamped(std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >) () from /opt/ros/jazzy/lib/libcollision_monitor_core.so
+#3  0x00007ffff7d9ad3b in std::_Function_handler<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >), std::_Bind<void (nav2_collision_monitor::CollisionMonitor::*(nav2_collision_monitor::CollisionMonitor*, std::_Placeholder<1>))(std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >)> >::_M_invoke(std::_Any_data const&, std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >&&) () from /opt/ros/jazzy/lib/libcollision_monitor_core.so
+#4  0x00007ffff7dc4522 in std::__detail::__variant::__gen_vtable_impl<std::__detail::__variant::_Multi_array<std::__detail::__variant::__deduce_visit_result<void> (*)(rclcpp::AnySubscriptionCallback<geometry_msgs::msg::TwistStamped_<std::allocator<void> >, std::allocator<void> >::dispatch<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >(std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >, rclcpp::MessageInfo const&)::{lambda(auto:1&&)#1}&&, std::variant<std::function<void (geometry_msgs::msg::TwistStamped_<std::allocator<void> > const&)>, std::function<void (geometry_msgs::msg::TwistStamped_<std::allocator<void> > const&, rclcpp::MessageInfo const&)>, std::function<void (rclcpp::SerializedMessage const&)>, std::function<void (rclcpp::SerializedMessage const&, rclcpp::MessageInfo const&)>, std::function<void (std::unique_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> >, std::default_delete<geometry_msgs::msg::TwistStamped_<std::allocator<void> > > >)>, std::function<void (std::unique_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> >, std::default_delete<geometry_msgs::msg::TwistStamped_<std::allocator<void> > > >, rclcpp::MessageInfo const&)>, std::function<void (std::unique_ptr<rclcpp::SerializedMessage, std::default_delete<rclcpp::SerializedMessage> >)>, std::function<void (std::unique_ptr<rclcpp::SerializedMessage, std::default_delete<rclcpp::SerializedMessage> >, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > const>)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > const>, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage const>)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage const>, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > const> const&)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > const> const&, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage const> const&)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage const> const&, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage>)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage>, rclcpp::MessageInfo const&)> >&)>, std::integer_sequence<unsigned long, 16ul> >::__visit_invoke(rclcpp::AnySubscriptionCallback<geometry_msgs::msg::TwistStamped_<std::allocator<void> >, std::allocator<void> >::dispatch<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >(std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >, rclcpp::MessageInfo const&)::{lambda(auto:1&&)#1}&&, std::variant<std::function<void (geometry_msgs::msg::TwistStamped_<std::allocator<void> > const&)>, std::function<void (geometry_msgs::msg::TwistStamped_<std::allocator<void> > const&, rclcpp::MessageInfo const&)>, std::function<void (rclcpp::SerializedMessage const&)>, std::function<void (rclcpp::SerializedMessage const&, rclcpp::MessageInfo const&)>, std::function<void (std::unique_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> >, std::default_delete<geometry_msgs::msg::TwistStamped_<std::allocator<void> > > >)>, std::function<void (std::unique_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> >, std::default_delete<geometry_msgs::msg::TwistStamped_<std::allocator<void> > > >, rclcpp::MessageInfo const&)>, std::function<void (std::unique_ptr<rclcpp::SerializedMessage, std::default_delete<rclcpp::SerializedMessage> >)>, std::function<void (std::unique_ptr<rclcpp::SerializedMessage, std::default_delete<rclcpp::SerializedMessage> >, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > const>)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > const>, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage const>)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage const>, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > const> const&)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > const> const&, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage const> const&)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage const> const&, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage>)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage>, rclcpp::MessageInfo const&)> >&) () from /opt/ros/jazzy/lib/libcollision_monitor_core.so
+#5  0x00007ffff7dc7da3 in ?? () from /opt/ros/jazzy/lib/libcollision_monitor_core.so
+#6  0x00007ffff791553b in rclcpp::Executor::execute_subscription(std::shared_ptr<rclcpp::SubscriptionBase>) () from /opt/ros/jazzy/lib/librclcpp.so
+#7  0x00007ffff7915c6a in rclcpp::Executor::execute_any_executable(rclcpp::AnyExecutable&) () from /opt/ros/jazzy/lib/librclcpp.so
+#8  0x00007ffff7940ae4 in rclcpp::executors::SingleThreadedExecutor::spin() () from /opt/ros/jazzy/lib/librclcpp.so
+#9  0x00007ffff791f7a9 in rclcpp::spin(std::shared_ptr<rclcpp::node_interfaces::NodeBaseInterface>) () from /opt/ros/jazzy/lib/librclcpp.so
+#10 0x0000555555556395 in main ()
+rdi            0x10                16
+rip            0x7ffff79c00d6      0x7ffff79c00d6 <rclcpp::PublisherBase::get_subscription_count() const+22>
+
+Thread 14 (Thread 0x7fffeaff56c0 (LWP 213289) "collision_monit"):
+#0  0x00007ffff7098e51 in __futex_abstimed_wait_common64 (private=32767, cancel=true, abstime=0x0, op=393, expected=0, futex_word=0x7fffdc000c04) at ./nptl/futex-internal.c:57
+#1  __futex_abstimed_wait_common (cancel=true, private=32767, abstime=0x0, clockid=0, expected=0, futex_word=0x7fffdc000c04) at ./nptl/futex-internal.c:87
+#2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0x7fffdc000c04, expected=expected@entry=0, clockid=clockid@entry=0, abstime=abstime@entry=0x0, private=private@entry=0) at ./nptl/futex-internal.c:139
+#3  0x00007ffff709b8cd in __pthread_cond_wait_common (abstime=0x0, clockid=0, mutex=0x7fffdc000bb0, cond=0x7fffdc000bd8) at ./nptl/pthread_cond_wait.c:503
+#4  ___pthread_cond_wait (cond=0x7fffdc000bd8, mutex=0x7fffdc000bb0) at ./nptl/pthread_cond_wait.c:627
+#5  0x00007ffff4ea680a in eprosima::fastdds::dds::detail::WaitSetImpl::wait(std::vector<eprosima::fastdds::dds::Condition*, std::allocator<eprosima::fastdds::dds::Condition*> >&, eprosima::fastrtps::Time_t const&) () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#6  0x00007ffff4ea68bc in eprosima::fastdds::dds::WaitSet::wait(std::vector<eprosima::fastdds::dds::Condition*, std::allocator<eprosima::fastdds::dds::Condition*> >&, eprosima::fastrtps::Time_t) const () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#7  0x00007ffff558ca9e in rmw_fastrtps_shared_cpp::__rmw_wait(char const*, rmw_subscriptions_s*, rmw_guard_conditions_s*, rmw_services_s*, rmw_clients_s*, rmw_events_s*, rmw_wait_set_s*, rmw_time_s const*) () from /opt/ros/jazzy/lib/librmw_fastrtps_shared_cpp.so
+
+Thread 13 (Thread 0x7fffeb7f66c0 (LWP 213288) "dds.udp.7000"):
+#0  0x00007ffff712bf64 in __libc_recvfrom (fd=37, buf=0x5555557a7c90, len=65500, flags=0, addr=..., addrlen=0x7fffeb7f4848) at ../sysdeps/unix/sysv/linux/recvfrom.c:27
+#1  0x00007ffff4de8376 in eprosima::fastdds::rtps::UDPChannelResource::Receive(unsigned char*, unsigned int, unsigned int&, eprosima::fastrtps::rtps::Locator_t&) () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#2  0x00007ffff4de876e in eprosima::fastdds::rtps::UDPChannelResource::perform_listen_operation(eprosima::fastrtps::rtps::Locator_t) () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#3  0x00007ffff4deafcd in ?? () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#4  0x00007ffff709cb84 in start_thread (arg=<optimized out>) at ./nptl/pthread_create.c:447
+#5  0x00007ffff7129ecc in clone3 () at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+
+Thread 12 (Thread 0x7fffebff76c0 (LWP 213287) "dds.shm.7000"):
+#0  0x00007ffff7098e51 in __futex_abstimed_wait_common64 (private=<optimized out>, cancel=true, abstime=0x7fffebff5640, op=265, expected=0, futex_word=0x7ffff5487110) at ./nptl/futex-internal.c:57
+#1  __futex_abstimed_wait_common (cancel=true, private=<optimized out>, abstime=0x7fffebff5640, clockid=0, expected=0, futex_word=0x7ffff5487110) at ./nptl/futex-internal.c:87
+#2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0x7ffff5487110, expected=expected@entry=0, clockid=clockid@entry=0, abstime=abstime@entry=0x7fffebff5640, private=<optimized out>) at ./nptl/futex-internal.c:139
+#3  0x00007ffff70a4dd0 in do_futex_wait (sem=sem@entry=0x7ffff5487110, abstime=abstime@entry=0x7fffebff5640, clockid=0) at ./nptl/sem_waitcommon.c:111
+#4  0x00007ffff70a4e73 in __new_sem_wait_slow64 (sem=0x7ffff5487110, abstime=0x7fffebff5640, clockid=0) at ./nptl/sem_waitcommon.c:183
+#5  0x00007ffff4fd28af in ?? () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#6  0x00007ffff4fd312c in ?? () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#7  0x00007ffff4fd16d5 in ?? () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+
+Thread 11 (Thread 0x7fffec7f86c0 (LWP 213286) "dds.asyn.0.0"):
+#0  0x00007ffff7098e51 in __futex_abstimed_wait_common64 (private=32767, cancel=true, abstime=0x0, op=393, expected=0, futex_word=0x555555651edc) at ./nptl/futex-internal.c:57
+#1  __futex_abstimed_wait_common (cancel=true, private=32767, abstime=0x0, clockid=0, expected=0, futex_word=0x555555651edc) at ./nptl/futex-internal.c:87
+#2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0x555555651edc, expected=expected@entry=0, clockid=clockid@entry=0, abstime=abstime@entry=0x0, private=private@entry=0) at ./nptl/futex-internal.c:139
+#3  0x00007ffff709b8cd in __pthread_cond_wait_common (abstime=0x0, clockid=0, mutex=0x55555564fa80, cond=0x555555651eb0) at ./nptl/pthread_cond_wait.c:503
+#4  ___pthread_cond_wait (cond=0x555555651eb0, mutex=0x55555564fa80) at ./nptl/pthread_cond_wait.c:627
+#5  0x00007ffff4cb61b1 in ?? () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#6  0x00007ffff4f0498e in void* eprosima::thread::ThreadProxy<eprosima::create_thread<eprosima::fastdds::rtps::FlowControllerImpl<eprosima::fastdds::rtps::FlowControllerSyncPublishMode, eprosima::fastdds::rtps::FlowControllerFifoSchedule>::initialize_async_thread<eprosima::fastdds::rtps::FlowControllerSyncPublishMode>()::{lambda()#1}, unsigned int, unsigned int>(eprosima::fastdds::rtps::FlowControllerImpl<eprosima::fastdds::rtps::FlowControllerSyncPublishMode, eprosima::fastdds::rtps::FlowControllerFifoSchedule>::initialize_async_thread<eprosima::fastdds::rtps::FlowControllerSyncPublishMode>()::{lambda()#1}, eprosima::fastdds::rtps::ThreadSettings const&, char const*, unsigned int, unsigned int)::{lambda()#1}>(void*) () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#7  0x00007ffff709cb84 in start_thread (arg=<optimized out>) at ./nptl/pthread_create.c:447
+
+Thread 10 (Thread 0x7fffecff96c0 (LWP 213285) "dds.udp.20661"):
+#0  0x00007ffff712bf64 in __libc_recvfrom (fd=33, buf=0x5555556706a0, len=65500, flags=0, addr=..., addrlen=0x7fffecff7848) at ../sysdeps/unix/sysv/linux/recvfrom.c:27
+#1  0x00007ffff4de8376 in eprosima::fastdds::rtps::UDPChannelResource::Receive(unsigned char*, unsigned int, unsigned int&, eprosima::fastrtps::rtps::Locator_t&) () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#2  0x00007ffff4de876e in eprosima::fastdds::rtps::UDPChannelResource::perform_listen_operation(eprosima::fastrtps::rtps::Locator_t) () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#3  0x00007ffff4deafcd in ?? () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#4  0x00007ffff709cb84 in start_thread (arg=<optimized out>) at ./nptl/pthread_create.c:447
+#5  0x00007ffff7129ecc in clone3 () at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+
+Thread 9 (Thread 0x7fffed7fa6c0 (LWP 213284) "dds.shm.20661"):
+#0  0x00007ffff7098e51 in __futex_abstimed_wait_common64 (private=<optimized out>, cancel=true, abstime=0x7fffed7f8640, op=265, expected=0, futex_word=0x7ffff54a5110) at ./nptl/futex-internal.c:57
+#1  __futex_abstimed_wait_common (cancel=true, private=<optimized out>, abstime=0x7fffed7f8640, clockid=0, expected=0, futex_word=0x7ffff54a5110) at ./nptl/futex-internal.c:87
+#2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0x7ffff54a5110, expected=expected@entry=0, clockid=clockid@entry=0, abstime=abstime@entry=0x7fffed7f8640, private=<optimized out>) at ./nptl/futex-internal.c:139
+#3  0x00007ffff70a4dd0 in do_futex_wait (sem=sem@entry=0x7ffff54a5110, abstime=abstime@entry=0x7fffed7f8640, clockid=0) at ./nptl/sem_waitcommon.c:111
+#4  0x00007ffff70a4e73 in __new_sem_wait_slow64 (sem=0x7ffff54a5110, abstime=0x7fffed7f8640, clockid=0) at ./nptl/sem_waitcommon.c:183
+#5  0x00007ffff4fd28af in ?? () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#6  0x00007ffff4fd312c in ?? () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#7  0x00007ffff4fd16d5 in ?? () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+
+Thread 8 (Thread 0x7fffedffb6c0 (LWP 213283) "dds.udp.20660"):
+#0  0x00007ffff712bf64 in __libc_recvfrom (fd=31, buf=0x555555659d60, len=65500, flags=0, addr=..., addrlen=0x7fffedff9848) at ../sysdeps/unix/sysv/linux/recvfrom.c:27
+#1  0x00007ffff4de8376 in eprosima::fastdds::rtps::UDPChannelResource::Receive(unsigned char*, unsigned int, unsigned int&, eprosima::fastrtps::rtps::Locator_t&) () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#2  0x00007ffff4de876e in eprosima::fastdds::rtps::UDPChannelResource::perform_listen_operation(eprosima::fastrtps::rtps::Locator_t) () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#3  0x00007ffff4deafcd in ?? () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#4  0x00007ffff709cb84 in start_thread (arg=<optimized out>) at ./nptl/pthread_create.c:447
+#5  0x00007ffff7129ecc in clone3 () at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+
+Thread 7 (Thread 0x7fffee7fc6c0 (LWP 213282) "dds.ev.0"):
+#0  0x00007ffff7098e51 in __futex_abstimed_wait_common64 (private=1433338112, cancel=true, abstime=0x7fffee7fac10, op=137, expected=0, futex_word=0x55555564a4bc) at ./nptl/futex-internal.c:57
+#1  __futex_abstimed_wait_common (cancel=true, private=1433338112, abstime=0x7fffee7fac10, clockid=0, expected=0, futex_word=0x55555564a4bc) at ./nptl/futex-internal.c:87
+#2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0x55555564a4bc, expected=expected@entry=0, clockid=clockid@entry=1, abstime=abstime@entry=0x7fffee7fac10, private=private@entry=0) at ./nptl/futex-internal.c:139
+#3  0x00007ffff709c1f6 in __pthread_cond_wait_common (abstime=<optimized out>, clockid=<optimized out>, mutex=0x555555647320, cond=0x55555564a490) at ./nptl/pthread_cond_wait.c:503
+#4  ___pthread_cond_clockwait64 (abstime=<optimized out>, clockid=<optimized out>, mutex=0x555555647320, cond=0x55555564a490) at ./nptl/pthread_cond_wait.c:691
+#5  ___pthread_cond_clockwait64 (cond=0x55555564a490, mutex=0x555555647320, clockid=<optimized out>, abstime=<optimized out>) at ./nptl/pthread_cond_wait.c:679
+#6  0x00007ffff4cb5f3c in ?? () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#7  0x00007ffff4cb6edb in eprosima::fastrtps::rtps::ResourceEvent::event_service() () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+
+Thread 6 (Thread 0x7fffeeffd6c0 (LWP 213281) "dds.shm.wdog"):
+#0  0x00007ffff7098e51 in __futex_abstimed_wait_common64 (private=2915, cancel=true, abstime=0x7fffeeffbca0, op=137, expected=0, futex_word=0x555555647cf0) at ./nptl/futex-internal.c:57
+#1  __futex_abstimed_wait_common (cancel=true, private=2915, abstime=0x7fffeeffbca0, clockid=0, expected=0, futex_word=0x555555647cf0) at ./nptl/futex-internal.c:87
+#2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0x555555647cf0, expected=expected@entry=0, clockid=clockid@entry=1, abstime=abstime@entry=0x7fffeeffbca0, private=private@entry=0) at ./nptl/futex-internal.c:139
+#3  0x00007ffff709c1f6 in __pthread_cond_wait_common (abstime=<optimized out>, clockid=<optimized out>, mutex=0x555555647cf8, cond=0x555555647cc8) at ./nptl/pthread_cond_wait.c:503
+#4  ___pthread_cond_clockwait64 (abstime=<optimized out>, clockid=<optimized out>, mutex=0x555555647cf8, cond=0x555555647cc8) at ./nptl/pthread_cond_wait.c:691
+#5  ___pthread_cond_clockwait64 (cond=0x555555647cc8, mutex=0x555555647cf8, clockid=<optimized out>, abstime=<optimized out>) at ./nptl/pthread_cond_wait.c:679
+#6  0x00007ffff4fd227d in void* eprosima::thread::ThreadProxy<eprosima::create_thread<eprosima::fastdds::rtps::SharedMemWatchdog::SharedMemWatchdog()::{lambda()#1}>(eprosima::fastdds::rtps::SharedMemWatchdog::SharedMemWatchdog()::{lambda()#1}, eprosima::fastdds::rtps::ThreadSettings const&, char const*)::{lambda()#1}>(void*) () from /opt/ros/jazzy/lib/libfastrtps.so.2.14
+#7  0x00007ffff709cb84 in start_thread (arg=<optimized out>) at ./nptl/pthread_create.c:447
+
+Thread 5 (Thread 0x7fffef7fe6c0 (LWP 213280) "collision_monit"):
+#0  0x00007ffff7098e51 in __futex_abstimed_wait_common64 (private=<optimized out>, cancel=true, abstime=0x0, op=393, expected=0, futex_word=0x5555556427a8) at ./nptl/futex-internal.c:57
+#1  __futex_abstimed_wait_common (cancel=true, private=<optimized out>, abstime=0x0, clockid=0, expected=0, futex_word=0x5555556427a8) at ./nptl/futex-internal.c:87
+#2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0x5555556427a8, expected=expected@entry=0, clockid=clockid@entry=0, abstime=abstime@entry=0x0, private=<optimized out>) at ./nptl/futex-internal.c:139
+#3  0x00007ffff70a4fff in do_futex_wait (sem=sem@entry=0x5555556427a8, abstime=0x0, clockid=0) at ./nptl/sem_waitcommon.c:111
+#4  0x00007ffff70a5098 in __new_sem_wait_slow64 (sem=0x5555556427a8, abstime=0x0, clockid=0) at ./nptl/sem_waitcommon.c:183
+#5  0x00007ffff79c6baa in rclcpp::SignalHandler::wait_for_signal() () from /opt/ros/jazzy/lib/librclcpp.so
+#6  0x00007ffff79c76da in rclcpp::SignalHandler::deferred_signal_handler() () from /opt/ros/jazzy/lib/librclcpp.so
+#7  0x00007ffff74ecdb4 in ?? () from /lib/x86_64-linux-gnu/libstdc++.so.6
+
+Thread 4 (Thread 0x7fffeffff6c0 (LWP 213279) "collision_monit"):
+#0  0x00007ffff7098e51 in __futex_abstimed_wait_common64 (private=-268444896, cancel=true, abstime=0x7fffefffdc90, op=137, expected=0, futex_word=0x5555556422e0) at ./nptl/futex-internal.c:57
+#1  __futex_abstimed_wait_common (cancel=true, private=-268444896, abstime=0x7fffefffdc90, clockid=32767, expected=0, futex_word=0x5555556422e0) at ./nptl/futex-internal.c:87
+#2  __GI___futex_abstimed_wait_cancelable64 (futex_word=futex_word@entry=0x5555556422e0, expected=expected@entry=0, clockid=clockid@entry=1, abstime=abstime@entry=0x7fffefffdc90, private=private@entry=0) at ./nptl/futex-internal.c:139
+#3  0x00007ffff709c1f6 in __pthread_cond_wait_common (abstime=<optimized out>, clockid=<optimized out>, mutex=0x555555642290, cond=0x5555556422b8) at ./nptl/pthread_cond_wait.c:503
+#4  ___pthread_cond_clockwait64 (abstime=<optimized out>, clockid=<optimized out>, mutex=0x555555642290, cond=0x5555556422b8) at ./nptl/pthread_cond_wait.c:691
+#5  ___pthread_cond_clockwait64 (cond=0x5555556422b8, mutex=0x555555642290, clockid=<optimized out>, abstime=<optimized out>) at ./nptl/pthread_cond_wait.c:679
+#6  0x00007ffff6cad575 in ?? () from /opt/ros/jazzy/lib/librcl_logging_spdlog.so
+#7  0x00007ffff74ecdb4 in ?? () from /lib/x86_64-linux-gnu/libstdc++.so.6
+
+Thread 3 (Thread 0x7ffff5e4d6c0 (LWP 213264) "collision_m-ust"):
+#0  syscall () at ../sysdeps/unix/sysv/linux/x86_64/syscall.S:38
+#1  0x00007ffff69972fe in ?? () from /lib/x86_64-linux-gnu/liblttng-ust.so.1
+#2  0x00007ffff709cb84 in start_thread (arg=<optimized out>) at ./nptl/pthread_create.c:447
+#3  0x00007ffff7129ecc in clone3 () at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+
+Thread 2 (Thread 0x7ffff664e6c0 (LWP 213263) "collision_m-ust"):
+#0  0x00007ffff712c0cb in __recvmsg_syscall (flags=0, msg=0x7ffff664c490, fd=3) at ../sysdeps/unix/sysv/linux/recvmsg.c:27
+#1  __libc_recvmsg (fd=3, msg=0x7ffff664c490, flags=0) at ../sysdeps/unix/sysv/linux/recvmsg.c:41
+#2  0x00007ffff69c27c6 in ?? () from /lib/x86_64-linux-gnu/liblttng-ust.so.1
+#3  0x00007ffff6997527 in ?? () from /lib/x86_64-linux-gnu/liblttng-ust.so.1
+#4  0x00007ffff709cb84 in start_thread (arg=<optimized out>) at ./nptl/pthread_create.c:447
+#5  0x00007ffff7129ecc in clone3 () at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+
+Thread 1 (Thread 0x7ffff6652900 (LWP 213216) "collision_monit"):
+#0  0x00007ffff79c00d6 in rclcpp::PublisherBase::get_subscription_count() const () from /opt/ros/jazzy/lib/librclcpp.so
+#1  0x00007ffff7d8cf9b in nav2_collision_monitor::CollisionMonitor::process(nav2_collision_monitor::Velocity const&, std_msgs::msg::Header_<std::allocator<void> > const&) () from /opt/ros/jazzy/lib/libcollision_monitor_core.so
+#2  0x00007ffff7d80cbb in nav2_collision_monitor::CollisionMonitor::cmdVelInCallbackStamped(std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >) () from /opt/ros/jazzy/lib/libcollision_monitor_core.so
+#3  0x00007ffff7d9ad3b in std::_Function_handler<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >), std::_Bind<void (nav2_collision_monitor::CollisionMonitor::*(nav2_collision_monitor::CollisionMonitor*, std::_Placeholder<1>))(std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >)> >::_M_invoke(std::_Any_data const&, std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >&&) () from /opt/ros/jazzy/lib/libcollision_monitor_core.so
+#4  0x00007ffff7dc4522 in std::__detail::__variant::__gen_vtable_impl<std::__detail::__variant::_Multi_array<std::__detail::__variant::__deduce_visit_result<void> (*)(rclcpp::AnySubscriptionCallback<geometry_msgs::msg::TwistStamped_<std::allocator<void> >, std::allocator<void> >::dispatch<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >(std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >, rclcpp::MessageInfo const&)::{lambda(auto:1&&)#1}&&, std::variant<std::function<void (geometry_msgs::msg::TwistStamped_<std::allocator<void> > const&)>, std::function<void (geometry_msgs::msg::TwistStamped_<std::allocator<void> > const&, rclcpp::MessageInfo const&)>, std::function<void (rclcpp::SerializedMessage const&)>, std::function<void (rclcpp::SerializedMessage const&, rclcpp::MessageInfo const&)>, std::function<void (std::unique_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> >, std::default_delete<geometry_msgs::msg::TwistStamped_<std::allocator<void> > > >)>, std::function<void (std::unique_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> >, std::default_delete<geometry_msgs::msg::TwistStamped_<std::allocator<void> > > >, rclcpp::MessageInfo const&)>, std::function<void (std::unique_ptr<rclcpp::SerializedMessage, std::default_delete<rclcpp::SerializedMessage> >)>, std::function<void (std::unique_ptr<rclcpp::SerializedMessage, std::default_delete<rclcpp::SerializedMessage> >, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > const>)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > const>, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage const>)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage const>, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > const> const&)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > const> const&, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage const> const&)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage const> const&, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage>)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage>, rclcpp::MessageInfo const&)> >&)>, std::integer_sequence<unsigned long, 16ul> >::__visit_invoke(rclcpp::AnySubscriptionCallback<geometry_msgs::msg::TwistStamped_<std::allocator<void> >, std::allocator<void> >::dispatch<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >(std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >, rclcpp::MessageInfo const&)::{lambda(auto:1&&)#1}&&, std::variant<std::function<void (geometry_msgs::msg::TwistStamped_<std::allocator<void> > const&)>, std::function<void (geometry_msgs::msg::TwistStamped_<std::allocator<void> > const&, rclcpp::MessageInfo const&)>, std::function<void (rclcpp::SerializedMessage const&)>, std::function<void (rclcpp::SerializedMessage const&, rclcpp::MessageInfo const&)>, std::function<void (std::unique_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> >, std::default_delete<geometry_msgs::msg::TwistStamped_<std::allocator<void> > > >)>, std::function<void (std::unique_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> >, std::default_delete<geometry_msgs::msg::TwistStamped_<std::allocator<void> > > >, rclcpp::MessageInfo const&)>, std::function<void (std::unique_ptr<rclcpp::SerializedMessage, std::default_delete<rclcpp::SerializedMessage> >)>, std::function<void (std::unique_ptr<rclcpp::SerializedMessage, std::default_delete<rclcpp::SerializedMessage> >, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > const>)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > const>, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage const>)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage const>, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > const> const&)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > const> const&, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage const> const&)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage const> const&, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >)>, std::function<void (std::shared_ptr<geometry_msgs::msg::TwistStamped_<std::allocator<void> > >, rclcpp::MessageInfo const&)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage>)>, std::function<void (std::shared_ptr<rclcpp::SerializedMessage>, rclcpp::MessageInfo const&)> >&) () from /opt/ros/jazzy/lib/libcollision_monitor_core.so
+#5  0x00007ffff7dc7da3 in ?? () from /opt/ros/jazzy/lib/libcollision_monitor_core.so
+#6  0x00007ffff791553b in rclcpp::Executor::execute_subscription(std::shared_ptr<rclcpp::SubscriptionBase>) () from /opt/ros/jazzy/lib/librclcpp.so
+#7  0x00007ffff7915c6a in rclcpp::Executor::execute_any_executable(rclcpp::AnyExecutable&) () from /opt/ros/jazzy/lib/librclcpp.so
+
+Program terminated with signal SIGSEGV, Segmentation fault.
+The program no longer exists.
+
+=== FIM ===

@@ -50,9 +50,15 @@
   `get_subscription_count()` num publisher **já zerado pelo `on_cleanup()`**
   (Nav2 1.3.12). Detalhe e ponto aberto (executor single-threaded):
   decisão **057**, adendo da tarde.
-- **Próximo:** entender, no fonte, como a callback roda depois do cleanup →
-  corrigir (sem instalar a 1.3.13 como primeiro teste) → ensaio → bateria
-  limpa. **Nenhuma bateria antes disso. Hardware BLOQUEADO** (057).
+- **Noite:** corrida confirmada no fonte (preshutdown na thread de sinais ×
+  `process()` na espera de TF) e **reproduzida** fora da pilha
+  (`tools/repro_cm_sigsegv/`, `e346af3`, tentativa 1 = vermelho;
+  `docs/dados/2026-09-28-repro-cm-sigsegv/`). `ros2 node list` deixou de ser
+  gate (limpa SHM); `shm_recupera.py` reconfere por `/proc` (`e75a13b`).
+- **Próximo:** auditar as contagens de SHM da 061 → corrigir o reprodutor e
+  tirar a consulta de nós do `bin/subidas-robo3` → decidir o overlay →
+  correção → reprodutor verde → ensaio → bateria limpa. **Nenhuma bateria
+  antes disso. Hardware BLOQUEADO** (057); a 1.3.13 não corrige.
 - Branch `etapa6-pilha-robo3` com commits locais **sem push** (ordem do dono).
 - Evidência: `docs/dados/2026-09-28-subidas-robo3/`.
 

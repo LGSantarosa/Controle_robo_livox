@@ -274,3 +274,31 @@ reprodutor vermelho.
 domínio isolado, 1.3.12 inalterada, ≤ 3 tentativas), critério vermelho =
 callback provadamente na espera de TF antes do SIGINT + o mesmo SIGSEGV e
 backtrace.
+
+## Adendo (2026-09-28, noite) — VERMELHO DO REPRODUTOR
+
+Reprodutor mínimo (`tools/repro_cm_sigsegv/`), executado no commit
+**`e346af3`**: só o `collision_monitor` 1.3.12 inalterado sob `gdb`, um
+auxiliar que para o TF e publica um `TwistStamped`, domínio 53, localhost.
+Evidência e procedência: `docs/dados/2026-09-28-repro-cm-sigsegv/`
+(`PROCEDENCIA.md`).
+
+- **Tentativa 1 = vermelho válido, classificado manualmente.** O
+  classificador automático disse `NAO_VERMELHO` por três defeitos do
+  instrumento (regex da thread 1, busca do SIGSEGV depois do marcador errado,
+  varredura que contou o próprio script); o `resultado.txt` fica como saiu.
+- **Nenhuma tentativa 2 ou 3.**
+- **Mecanismo confirmado pelo gdb e pela linha do tempo:** no SIGINT, a
+  thread principal está em `tf2_ros::Buffer::canTransform` dentro de
+  `CollisionMonitor::process`; nenhum erro de TF antes do sinal; depois,
+  `preshutdown → Deactivating → Cleaning up`, o erro de TF 8 ms depois, e o
+  SIGSEGV em `get_subscription_count()+22` com `rdi = 0x10`, mesmos
+  deslocamentos do core de 14h11.
+- A recuperação do SHM foi feita **depois**, com `shm_recupera.py` corrigido
+  em **`e75a13b`**; dos 12 arquivos, 6 foram removidos pela consulta
+  intrusiva `ros2 node list`, 2 pelo `fastdds shm clean` e 4 pela remoção
+  controlada.
+
+**Estado:** hardware **continua BLOQUEADO**; o overlay do
+`nav2_collision_monitor` **ainda não foi decidido**; nenhuma correção
+escrita. O mesmo reprodutor, com os três defeitos corrigidos, será o verde.

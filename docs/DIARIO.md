@@ -11367,3 +11367,27 @@ correção.
 
 🔴 **O que NÃO prova:** a taxa do SIGSEGV (1 subida medida na bateria), nem
 que a correção proposta resolve; nada de hardware.
+
+## 🔴 2026-09-28, noite (PC de dev, robô, lidar e Gazebo DESLIGADOS) — O SIGSEGV REPRODUZIDO FORA DA PILHA; A CONSULTA DE NÓS NÃO ERA LEITURA
+
+- **Fonte lido** (versões instaladas, por tag): o preshutdown roda na thread
+  de sinais do rclcpp enquanto o executor segue; a espera de TF do
+  `process()` só sai com `rclcpp::ok()` falso, depois do cleanup. O
+  intervalo de ~100 ms é a espera do `~Bond` com o executor preso. Mutex
+  segurado rejeitado (deadlock). 1.3.13 e `main` têm o mesmo código (057).
+- **Reprodutor** (`tools/repro_cm_sigsegv/`, `e346af3`): só o nó sob gdb,
+  domínio 53. **Tentativa 1 = vermelho**, mesma pilha e `rdi = 0x10`.
+  Fracasso do instrumento: o classificador automático errou em dois
+  critérios e a varredura acusou o próprio script — classificado à mão, a
+  tentativa parou antes da limpeza. Não rodei a 2 nem a 3.
+- **Recuperação do SHM:** a consulta `ros2 node list` removeu 6 arquivos
+  (portas com `_el`). O dono tirou a consulta do gate; o `shm_recupera.py`
+  ganhou reconferência interna só por `/proc` (`e75a13b`, teste antes). Os
+  outros 6: 2 pelo `shm clean`, 4 pela remoção controlada. Zero no fim.
+
+Evidência: `docs/dados/2026-09-28-repro-cm-sigsegv/` (`PROCEDENCIA.md`).
+Nada de push.
+
+🔴 **O que NÃO prova:** que a correção funciona (não há correção), nem a taxa
+do SIGSEGV na pilha; e o reprodutor usa `transform_tolerance` 30 s e não tem
+bond. Hardware continua bloqueado; overlay não decidido.

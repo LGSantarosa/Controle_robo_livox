@@ -194,3 +194,27 @@ SIGSEGV observado só é interrompido com esse custo, que fica registrado.
 **Estado depois de 145005:** a bateria de 20 **não foi feita**. Pelo dono,
 **nenhuma outra bateria** até a correção do SIGSEGV (057, adendo de 28-09
 tarde) passar por ensaio e bateria limpa.
+
+## Adendo (2026-09-28, noite) — `ros2 node list` DEIXA DE SER GATE
+
+Medido na recuperação do reprodutor da 057
+(`docs/dados/2026-09-28-repro-cm-sigsegv/`, `recuperacao/03_*` e `05_*`):
+`ros2 node list --no-daemon` saiu com código 0 e zero nós, mas **removeu 6
+arquivos** do `/dev/shm` — as portas com trava `_el` e seus mutex. O
+participante Fast DDS novo limpa portas zumbis ao iniciar. Não é consulta de
+leitura.
+
+**Decisão do dono:** "nada vivo" passa a ser provado **sem criar
+participante** — nenhum processo ROS/Gazebo/Fast DDS/auxiliar, nenhuma das
+marcas (`VALIDA_ETAPA4_MARCA`, `REPRO_CM_MARCA`), nenhum dono por
+`fuser`/`maps`/`fd`, descoberta limitada a localhost. O `shm_recupera.py`
+reconfere isso por dentro, imediatamente antes do primeiro `unlink`
+(`e75a13b`, subcomando `confere`). `ros2 node list` não roda nem na
+verificação final (invalidaria o inventário zero).
+
+⚠️ **O código da bateria ainda não mudou:** o `algo_vivo`/`varre_residuo` do
+`bin/subidas-robo3` ainda consulta nós, e roda **antes** do `fastdds shm
+clean`. As contagens históricas desta decisão ("o `shm clean` removeu 5",
+"removeu 8") podem incluir arquivos removidos pela consulta. **Não foram
+reatribuídas:** a auditoria pelos inventários existentes é o próximo passo, e
+nenhuma contagem muda sem evidência de qual comando removeu cada arquivo.
