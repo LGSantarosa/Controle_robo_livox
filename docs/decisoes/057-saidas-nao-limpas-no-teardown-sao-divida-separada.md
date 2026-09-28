@@ -216,3 +216,61 @@ publisher". Confirmar no fonte **antes** de escrever a correção.
 impedir que recursos sejam zerados com callback em voo. **Não** instalar a
 1.3.13 como primeiro teste. **Hardware continua bloqueado** até a correção
 passar por ensaio e bateria limpa (061).
+
+## Adendo (2026-09-28, noite) — A CORRIDA CONFIRMADA NO FONTE
+
+Só leitura, fontes das versões **instaladas** (clonadas por tag): Nav2 1.3.12
+(`6be3614`), rclcpp/rclcpp_lifecycle 28.1.21 (`53cf81e`), rcl 9.2.11
+(`22c0b95`), tf2_ros 0.36.21 (`99b1334`), bondcpp 4.2.0 (`8f024dd`).
+
+**Há concorrência real apesar do `SingleThreadedExecutor`**: o preshutdown
+roda na thread do manipulador diferido de sinais, não na do executor.
+
+| thread | passo | onde |
+|---|---|---|
+| executor | `cmdVelInCallbackStamped → process()`; passa `if (!process_active_)` | `collision_monitor_node.cpp:419` |
+| executor | `source->getData → Source::getTransform → Buffer::canTransform`: laço `while (now < prazo && … && rclcpp::ok()) sleep(10 ms)`, `transform_tolerance` 0,5 s | `source.cpp:135`, `buffer.cpp:151-159` |
+| sinais | SIGINT → `Context::shutdown()` → callbacks de preshutdown **antes** do `rcl_shutdown()` | `signal_handler.cpp:157,267`, `context.cpp:358-374` |
+| sinais | `on_rcl_preshutdown → runCleanups → deactivate()`: `process_active_ = false` (`bool` simples) | `lifecycle_node.cpp:105-131` |
+| sinais | `destroyBond → ~Bond`: espera até **100 ms** (relógio estável) a confirmação do par, que chega por assinatura servida pelo executor — ocupado | `bond.cpp` (`waitUntilBroken(100ms)`) |
+| sinais | `cleanup() → on_cleanup()`: `reset()` de assinatura e publishers, `sources_.clear()`, `polygons_.clear()`, `tf_buffer_.reset()` | `collision_monitor_node.cpp:169-185` |
+| sinais | `rcl_shutdown()` → `rclcpp::ok()` falso | `context.cpp:374` |
+| executor | o laço do TF sai, "extrapolation into the future"; `process()` segue e usa `collision_points_marker_pub_` zerado → `this = 0x10` → SIGSEGV | `collision_monitor_node.cpp:451/478` |
+
+O `reset()` da assinatura não cancela a callback em curso: o executor recebe
+o `SubscriptionBase::SharedPtr` por valor (`executor.cpp:543`) e o bind usa
+o `this` cru do nó.
+
+**Assinatura nos logs** (relógio de parede): nas 4 ocorrências,
+`Deactivating → Cleaning up` = **104–108 ms** (o timeout do bond, executor
+preso) e o erro de TF 6–36 ms **depois** do `Cleaning up`; nas 3 saídas
+limpas conferidas (`144822`, `etapa7/114902`, `etapa6/114704`), 10–15 ms e
+nenhum erro de TF. O erro de TF é o que **abre a janela**, não a causa. Não
+confirmado se o relógio simulado estava parado — não é necessário: uma espera
+de até `transform_tolerance` basta, então o mecanismo vale também no
+hardware.
+
+**1.3.13 e `main` (`7b9bcb4`, 21-09-2026) têm o mesmo código** — não há
+correção upstream para portar.
+
+**Rejeitado: mutex segurado durante o `process()`/`getData()`.** A espera do
+TF só termina com `rclcpp::ok()` falso, que só vem depois do preshutdown; se
+o preshutdown esperar o lock → deadlock até o launch escalar para SIGKILL
+(que deixa exatamente os órfãos de SHM).
+
+**Direção (não fechada):** `process()` usa `sources_`, `polygons_`,
+`cmd_vel_out_pub_`, `state_pub_`, `collision_points_marker_pub_` e o TF, e o
+`on_cleanup()` destrói tudo. Provável forma: sob **lock curto**, tirar um
+snapshot com posse compartilhada de **todos** os recursos que a callback usa,
+e o `on_cleanup()` trocar os membros sob o mesmo lock curto. `atomic<bool>` e
+a segunda verificação ajudam, mas sozinhos não eliminam as corridas. Um
+publisher vivo depois do shutdown é inofensivo no fonte
+(`get_subscription_count()` devolve 0 com contexto inválido; o
+`LifecyclePublisher` desativado descarta o `publish`). Exige compilar o
+`nav2_collision_monitor` como overlay — decisão própria, **depois** do
+reprodutor vermelho.
+
+**Próximo:** reprodutor mínimo e determinístico (só o `collision_monitor`,
+domínio isolado, 1.3.12 inalterada, ≤ 3 tentativas), critério vermelho =
+callback provadamente na espera de TF antes do SIGINT + o mesmo SIGSEGV e
+backtrace.
