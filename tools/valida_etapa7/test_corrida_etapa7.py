@@ -258,7 +258,7 @@ def test_os_wrappers_congelados_nao_sao_chamados():
 # roda num bash com `relogio`, `anota` e o PID do goal trocados por calços.
 # Nada de ROS: o "goal" é um `sleep`.
 
-INICIO_ESPERA = '# ── esperar a ação pelo relógio simulado'
+INICIO_ESPERA = '# ── esperar a ação'
 FIM_ESPERA = '# O `objetivo.log` só se lê depois de o send_goal SAIR'
 
 

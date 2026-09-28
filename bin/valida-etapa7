@@ -37,7 +37,7 @@ fi
 R="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
 # Domínio PRÓPRIO: 47 é da etapa 6, 48 do explora.
 DOMINIO=49
-TETO_SIMULADO=60          # segundos de tempo SIMULADO para o objetivo
+TETO_SIMULADO=60          # s simulados; quem julga é o juiz — aqui só deriva o watchdog
 DISTANCIA_DO_OBJETIVO=1.0
 STATUS_ACAO=/navigate_to_pose/_action/status
 TOPICO_FINAL=/hoverboard_base_controller/cmd_vel
@@ -196,16 +196,6 @@ timeout 20 ros2 param dump --timeout 10 /controller_server > "$SAIDA/controller_
 timeout 10 ros2 topic info -v "$TOPICO_FINAL" > "$SAIDA/grafo_antes.txt" 2>&1
 registra_cmd "param dump /placa_simulada e /controller_server; topic info -v $TOPICO_FINAL > grafo_antes.txt"
 
-# ── o relógio SIMULADO, que manda no teto ───────────────────────────────────
-relogio() {   # segundos de tempo simulado, do /clock; vazio se não vier
-  timeout 10 ros2 topic echo --once --field clock.sec /clock 2>/dev/null | head -1
-}
-T0_SIM="$(relogio)"
-if [ -z "$T0_SIM" ]; then
-  anota "relógio simulado (/clock) respondendo" REPROVADO
-  echo "   🔴 sem /clock não dá para aplicar o teto de ${TETO_SIMULADO}s simulados"; exit 1
-fi
-
 # ── a pose VIVA e o objetivo, gravados NORMALIZADOS em poses.yaml ───────────
 echo "== lendo a pose viva para calcular o objetivo =="
 if ! timeout 15 ros2 topic echo --once --field pose.pose /Odometry \
@@ -231,11 +221,14 @@ setsid ros2 action send_goal /navigate_to_pose \
   > "$SAIDA/objetivo.log" 2>&1 < /dev/null &
 PID_GOAL=$!
 
-# ── esperar a ação pelo relógio simulado, com watchdog de parede ────────────
-# Este laço só DERRUBA o goal; quem julga a duração é o juiz, em ns, pelo
-# status gravado (item "7.1 a ação fechou em até 60 s"). Mas derrubar é
-# REPROVADO por si: um `SUCCEEDED` que apareça depois do corte não salva a
-# corrida. Terminar sozinho não é aprovação — fica ANOTADO, para o juiz.
+# ── esperar a ação, só com o watchdog de parede ────────────────────────────
+# O teto de 60 s SIMULADOS não é aplicado aqui: quem o julga é o juiz, em
+# ns, do aceite ao primeiro terminal gravados no bag (item "7.1 a ação fechou
+# em até 60 s"). Um relógio colhido pelo wrapper não é autoridade: lido antes do
+# goal, ele corta uma ação de 59 s aceita tarde; e um terminal em 60 s exatos
+# ainda deixa o cliente vivo por um instante. Aqui fica só o watchdog de
+# PAREDE, proteção operacional contra goal que não fecha — e derrubar por ele é
+# REPROVADO pelo próprio motivo. Terminar sozinho fica ANOTADO, para o juiz.
 T0_PAREDE=$(date +%s)
 TETO_PAREDE=$((TETO_SIMULADO * 6))
 FIM=""; VEREDITO_FIM=ANOTADO
@@ -243,14 +236,7 @@ while :; do
   if ! kill -0 "$PID_GOAL" 2>/dev/null; then FIM="a ação terminou sozinha"; break; fi
   PAREDE=$(( $(date +%s) - T0_PAREDE ))
   if [ "$PAREDE" -ge "$TETO_PAREDE" ]; then
-    FIM="WATCHDOG de parede: ${PAREDE}s sem fechar (relógio simulado travado?)"
-    VEREDITO_FIM=REPROVADO
-    kill -INT "$PID_GOAL" 2>/dev/null; break
-  fi
-  AGORA="$(relogio)"
-  if [ -z "$AGORA" ]; then sleep 0.25; continue; fi
-  if [ $((AGORA - T0_SIM)) -ge "$TETO_SIMULADO" ]; then
-    FIM="teto de ${TETO_SIMULADO}s simulados (parede: ${PAREDE}s)"
+    FIM="WATCHDOG de parede: ${PAREDE}s sem o goal fechar"
     VEREDITO_FIM=REPROVADO
     kill -INT "$PID_GOAL" 2>/dev/null; break
   fi
