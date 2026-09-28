@@ -297,17 +297,39 @@ fi
 
 limpa
 
+# ── o escopo do manifesto, declarado ANTES de assinar ──────────────────────
+# A regra do `valida-etapa6` (conserto de 24-09): o manifesto é a ÚLTIMA
+# escrita em arquivo assinado. Depois dele, só o `console.txt` — o log AO VIVO,
+# que não pode assinar a si mesmo enquanto é escrito; o conteúdo dele que
+# importa está no `resultado.txt`, assinado. O escopo lista a si mesmo:
+# declaração fora do manifesto é declaração que se troca depois.
+ESCOPO="$SAIDA/escopo_do_manifesto.txt"
+( cd "$SAIDA" && find . -type f ! -name SHA256SUMS ! -name console.txt \
+    ! -name "$(basename "$ESCOPO")" -print | sort ) > "$ESCOPO"
+echo "./$(basename "$ESCOPO")" >> "$ESCOPO"
+
 echo
 echo "== resultado ($RESULTADO_CSV) =="
 sed 's/^/   /' "$RESULTADO"
 REPROVOU=0
 grep -qE " (REPROVADO|RECUPERADO)" "$RESULTADO" && REPROVOU=1
 
-# O manifesto é a ÚLTIMA escrita.
-( cd "$SAIDA" && find . -type f ! -name SHA256SUMS -print0 | sort -z \
-    | xargs -0 sha256sum > SHA256SUMS )
+# ── o manifesto, e ele é a ÚLTIMA ESCRITA assinada ──────────────────────────
+# Daqui para baixo só `echo` para o console (há teste travando). Falha ao gerar
+# ou ao conferir o próprio manifesto força RC 1: "tem SHA256SUMS" não é "o
+# SHA256SUMS fecha".
+MANIFESTO=0
+if ! ( cd "$SAIDA" && xargs -a "$(basename "$ESCOPO")" -d '\n' sha256sum > SHA256SUMS ); then
+  echo "   🔴 falhou ao gerar o SHA256SUMS"
+  MANIFESTO=1
+elif ( cd "$SAIDA" && sha256sum -c SHA256SUMS --quiet ); then
+  echo "   🟢 SHA256SUMS confere com a pasta ($(wc -l < "$SAIDA/SHA256SUMS") arquivos; console.txt fora)"
+else
+  echo "   🔴 SHA256SUMS NÃO confere com a própria pasta"
+  MANIFESTO=1
+fi
 
-if [ "$REPROVOU" -ne 0 ]; then
+if [ "$REPROVOU" -ne 0 ] || [ "$MANIFESTO" -ne 0 ]; then
   echo "   🔴 REPROVADO — NÃO mexa em nada; a pasta é a prova: $SAIDA"
   exit 1
 fi
