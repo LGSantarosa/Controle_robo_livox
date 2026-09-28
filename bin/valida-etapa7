@@ -280,12 +280,20 @@ fi
 # ── o julgamento: brutos -> le_bag -> monta -> julga ───────────────────────
 echo "== julgando (corrida.py julga) =="
 python3 "$V7/corrida.py" julga "$SAIDA" > "$SAIDA/julgamento.tsv" 2> "$SAIDA/julgamento.err"
-if [ ! -s "$SAIDA/julgamento.tsv" ]; then
-  anota "julgamento executado" REPROVADO "(julgamento.err)"
+RC_JULGA=$?
+# Falha FECHADA: só linha conferida chega ao `anota`. TSV parcial, item trocado
+# ou repetido, veredito com outro nome, RC incoerente — ou o próprio `confere`
+# quebrando — viram UMA linha conhecida REPROVADO, e o TSV não passa adiante.
+if python3 "$V7/corrida.py" confere "$SAIDA/julgamento.tsv" "$RC_JULGA" \
+     > "$SAIDA/julgamento_conferido.tsv" 2> "$SAIDA/julgamento_conferido.err"; then
+  anota "julgamento conferido" APROVADO "13 itens, RC $RC_JULGA"
+  while IFS=$'\t' read -r item veredito detalhe; do
+    anota "$item" "$veredito" "$detalhe"
+  done < "$SAIDA/julgamento_conferido.tsv"
+else
+  anota "julgamento conferido" REPROVADO \
+    "$(tr '\t\n' '  ' < "$SAIDA/julgamento_conferido.err" | cut -c1-300) (julgamento.tsv, julgamento.err)"
 fi
-while IFS=$'\t' read -r item veredito detalhe; do
-  anota "$item" "$veredito" "$detalhe"
-done < "$SAIDA/julgamento.tsv"
 
 limpa
 

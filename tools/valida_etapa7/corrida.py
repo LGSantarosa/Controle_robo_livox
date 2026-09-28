@@ -6,6 +6,7 @@
     corrida.py pose_final <pose_final_bruta.yaml> <poses.yaml>
     corrida.py assina <topic_info.txt>
     corrida.py julga <pasta>
+    corrida.py confere <julgamento.tsv> <rc do julga>
 
 `objetivo` e `pose_final` gravam o artefato NORMALIZADO `poses.yaml` (goal,
 pose inicial e final em `{x, y}`), que fica na pasta para auditoria e é o que o
@@ -13,6 +14,9 @@ montador recebe. `assina` diz se o gravador já é assinante do tópico — goal
 mandado antes disso perderia o começo da janela. `julga` junta os brutos da
 pasta, extrai o bag, monta e julga, e imprime um item por linha
 (`item<TAB>veredito<TAB>detalhe`); sai com 0 só se TODOS aprovarem.
+`confere` é a porta entre o `julga` e o `anota` do wrapper: reimprime as linhas
+só se o TSV e o RC forem exatamente o esperado; senão sai com 1 e diz o motivo
+no stderr, e nenhuma linha do TSV passa adiante.
 """
 import glob
 import math
@@ -165,6 +169,71 @@ def vereditos(evidencia, falhas, erro_bag, avalia):
     return linhas
 
 
+# Os 13 itens, na ordem do `vereditos`: 5 de coleta e os do juiz.
+ITENS_ESPERADOS = tuple(item for _, item in ITENS_DE_COLETA) + tuple(
+    nome.strip() for nome, _ in julga._ITENS)
+VEREDITOS = ('APROVADO', 'REPROVADO')
+
+
+class JulgamentoInvalido(Exception):
+    """O TSV ou o RC do `julga` não são o que o contrato diz. Vira UMA linha
+    conhecida REPROVADO no wrapper — nunca linhas não conferidas."""
+
+
+def confere_julgamento(texto, rc):
+    """Devolve `[(item, veredito, detalhe)]` se o TSV e o RC fecharem; senão
+    levanta `JulgamentoInvalido` com o motivo. `rc` é o TEXTO que o bash passa.
+
+    Fecha com: RC `0` ou `1`; toda linha terminada em quebra e com três campos;
+    veredito só `APROVADO`/`REPROVADO`; os nomes formando EXATAMENTE o conjunto
+    de `ITENS_ESPERADOS`, cada um uma vez; RC 0 se e só se todos aprovam.
+    """
+    if rc not in ('0', '1'):
+        raise JulgamentoInvalido(f'RC do julga {rc!r}, esperado 0 ou 1')
+    if not texto:
+        raise JulgamentoInvalido('julgamento vazio')
+    if not texto.endswith('\n'):
+        raise JulgamentoInvalido('julgamento sem quebra de linha final '
+                                 '(saída cortada?)')
+    linhas = []
+    for n, linha in enumerate(texto[:-1].split('\n'), 1):
+        campos = linha.split('\t')
+        if len(campos) != 3:
+            raise JulgamentoInvalido(f'linha {n} com {len(campos)} campo(s), '
+                                     'esperados 3')
+        if campos[1] not in VEREDITOS:
+            raise JulgamentoInvalido(f'linha {n}: veredito {campos[1]!r} fora '
+                                     f'de {VEREDITOS}')
+        linhas.append(tuple(campos))
+    itens = [item for item, _, _ in linhas]
+    repetidos = sorted({i for i in itens if itens.count(i) > 1})
+    faltando = [i for i in ITENS_ESPERADOS if i not in itens]
+    estranhos = [i for i in itens if i not in ITENS_ESPERADOS]
+    if repetidos or faltando or estranhos:
+        raise JulgamentoInvalido(
+            f'itens fora do contrato: repetidos {repetidos}, faltando '
+            f'{faltando}, desconhecidos {estranhos}')
+    todos = all(v == 'APROVADO' for _, v, _ in linhas)
+    if (rc == '0') != todos:
+        raise JulgamentoInvalido(
+            f'RC {rc} incoerente com os vereditos '
+            f'({"todos aprovados" if todos else "há reprovação"})')
+    return linhas
+
+
+def _cmd_confere(caminho, rc):
+    texto = _le_texto(caminho)
+    try:
+        if texto is None:
+            raise JulgamentoInvalido(f'{caminho} ilegível')
+        linhas = confere_julgamento(texto, rc)
+    except JulgamentoInvalido as e:
+        print(e, file=sys.stderr)
+        return 1
+    sys.stdout.write(''.join(f'{i}\t{v}\t{d}\n' for i, v, d in linhas))
+    return 0
+
+
 def _limpo(texto):
     return ' '.join(str(texto).split())
 
@@ -190,6 +259,8 @@ def main(argv):
         return 0 if gravador_assina(_le_texto(argv[1])) else 1
     if len(argv) == 2 and argv[0] == 'julga':
         return _cmd_julga(argv[1])
+    if len(argv) == 3 and argv[0] == 'confere':
+        return _cmd_confere(argv[1], argv[2])
     print(__doc__, file=sys.stderr)
     return 2
 

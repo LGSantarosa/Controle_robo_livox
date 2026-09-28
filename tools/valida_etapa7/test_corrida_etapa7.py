@@ -237,10 +237,10 @@ TREZE_ITENS = (
     '7.1 a ação fechou em até 60 s simulados',
     '7.2 pose final dentro do xy_goal_tolerance vivo',
     '7.2 o objetivo não nasceu dentro da tolerância',
-    '7.3 comando acima do patamar vivo no consumidor final',
     '7.3 topologia nominal do tópico observado',
     '7.3 a placa está no modelo medido',
     '7.3 a amostra está dentro da janela do objetivo',
+    '7.3 comando acima do patamar vivo no consumidor final',
 )
 
 
