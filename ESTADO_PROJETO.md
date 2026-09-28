@@ -41,6 +41,27 @@
 
 ---
 
+## 🟢 28-09, noite — PERCURSO MANUAL DO ROBÔ 3 NO GAZEBO CONCLUÍDO
+
+Pilha do robô 3 com Gazebo e RViz, domínio 50; robô e lidar físicos
+desligados. O dono enviou um objetivo pelo RViz e o robô atravessou a pista:
+`SUCCEEDED` em ~57,1 s, 13,524 m percorridos e erro de 0,245 m no instante do
+sucesso (tolerância 0,25 m; 0,105 m depois de assentar).
+
+Na segunda porta, o que pareceu comportamento "burrinho" foi localizado: a
+entrada curvada no vão de 0,80 m acionou `STOP:PolygonStop` por **5,282 s**.
+O seguidor pedia avanço, o monitor zerou a saída, e o escape reto de 0,21 m do
+`path_follower` destravou a passagem. Análise, CSVs, logs, perfis e hashes em
+`docs/dados/2026-09-28-robo3-gazebo-manual/`; MCAP bruto fora do Git, conforme
+`.gitignore`.
+
+⚠️ O `launch.log` não contém o teardown porque o `tee` recebeu `Ctrl-C`.
+Depois havia zero processo, marca e SHM, mas esta sessão não resolve nem mede
+o SIGSEGV intermitente da 057. Hardware continua bloqueado; nenhum patch de
+produção foi feito.
+
+---
+
 ## 🔴 28-09, fim da tarde — SIGSEGV DO `collision_monitor`: MECANISMO ACHADO, CORREÇÃO PENDENTE
 
 - Bateria de 20 subidas da **061** (`20260928_145005`) **INCOMPLETA por
@@ -59,7 +80,8 @@
   tirar a consulta de nós do `bin/subidas-robo3` → decidir o overlay →
   correção → reprodutor verde → ensaio → bateria limpa. **Nenhuma bateria
   antes disso. Hardware BLOQUEADO** (057); a 1.3.13 não corrige.
-- Branch `etapa6-pilha-robo3` com commits locais **sem push** (ordem do dono).
+- Branch `etapa6-pilha-robo3` publicada no remoto depois desta sessão, por
+  ordem do dono.
 - Evidência: `docs/dados/2026-09-28-subidas-robo3/`.
 
 ---

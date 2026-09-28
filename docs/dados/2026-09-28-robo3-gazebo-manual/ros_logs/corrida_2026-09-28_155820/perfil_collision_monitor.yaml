@@ -1,0 +1,42 @@
+collision_monitor:
+  ros__parameters:
+    PolygonApproach:
+      action_type: approach
+      enabled: true
+      min_points: 2
+      points: '[[0.1125, 0.22], [0.1125, -0.22], [-0.3213, -0.22], [-0.3213, 0.22]]'
+      polygon_pub_topic: polygon_approach
+      simulation_time_step: 0.05
+      time_before_collision: 0.75
+      type: polygon
+      visualize: true
+    PolygonStop:
+      action_type: stop
+      enabled: true
+      min_points: 2
+      points: '[[0.2155, 0.24], [0.2155, -0.24], [-0.3413, -0.24], [-0.3413, 0.24]]'
+      polygon_pub_topic: polygon_stop
+      type: polygon
+      visualize: true
+    base_frame_id: base_link
+    base_shift_correction: true
+    cmd_vel_in_topic: auto_vel_raw
+    cmd_vel_out_topic: auto_vel
+    enable_stamped_cmd_vel: true
+    livox:
+      enabled: true
+      max_height: 0.5
+      min_height: 0.1
+      topic: /livox/pontos
+      type: pointcloud
+    observation_sources:
+    - livox
+    odom_frame_id: odom
+    polygons:
+    - PolygonApproach
+    - PolygonStop
+    source_timeout: 1.0
+    state_topic: collision_monitor_state
+    stop_pub_timeout: 2.0
+    transform_tolerance: 0.5
+    use_sim_time: false

@@ -1,0 +1,27 @@
+
+Files:             bag_movimento_0.mcap
+Bag size:          23.1 MiB
+Storage id:        mcap
+ROS Distro:        jazzy
+Duration:          188.922640537s
+Start:             Sep 28 2026 15:58:52.223441949 (1790621932.223441949)
+End:               Sep 28 2026 16:02:01.146082486 (1790622121.146082486)
+Messages:          206893
+Topic information: Topic: /Odometry | Type: nav_msgs/msg/Odometry | Count: 8645 | Serialization Format: cdr
+                   Topic: /auto_vel | Type: geometry_msgs/msg/TwistStamped | Count: 1019 | Serialization Format: cdr
+                   Topic: /auto_vel_raw | Type: geometry_msgs/msg/TwistStamped | Count: 3507 | Serialization Format: cdr
+                   Topic: /clock | Type: rosgraph_msgs/msg/Clock | Count: 172963 | Serialization Format: cdr
+                   Topic: /cmd_vel_bruto | Type: geometry_msgs/msg/TwistStamped | Count: 1027 | Serialization Format: cdr
+                   Topic: /collision_monitor_state | Type: nav2_msgs/msg/CollisionMonitorState | Count: 4 | Serialization Format: cdr
+                   Topic: /compensador_rumo/cmd_vel | Type: geometry_msgs/msg/TwistStamped | Count: 1027 | Serialization Format: cdr
+                   Topic: /controller_manager/activity | Type: controller_manager_msgs/msg/ControllerManagerActivity | Count: 1 | Serialization Format: cdr
+                   Topic: /diagnostics | Type: diagnostic_msgs/msg/DiagnosticArray | Count: 709 | Serialization Format: cdr
+                   Topic: /dynamic_joint_states | Type: control_msgs/msg/DynamicJointState | Count: 1731 | Serialization Format: cdr
+                   Topic: /hoverboard_base_controller/cmd_vel | Type: geometry_msgs/msg/TwistStamped | Count: 1027 | Serialization Format: cdr
+                   Topic: /hoverboard_base_controller/odom | Type: nav_msgs/msg/Odometry | Count: 1730 | Serialization Format: cdr
+                   Topic: /joint_states | Type: sensor_msgs/msg/JointState | Count: 1731 | Serialization Format: cdr
+                   Topic: /scan | Type: sensor_msgs/msg/LaserScan | Count: 1390 | Serialization Format: cdr
+                   Topic: /tf | Type: tf2_msgs/msg/TFMessage | Count: 10380 | Serialization Format: cdr
+                   Topic: /tf_static | Type: tf2_msgs/msg/TFMessage | Count: 2 | Serialization Format: cdr
+Service:           0
+Service information:

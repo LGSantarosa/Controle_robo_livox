@@ -11391,3 +11391,34 @@ Nada de push.
 🔴 **O que NÃO prova:** que a correção funciona (não há correção), nem a taxa
 do SIGSEGV na pilha; e o reprodutor usa `transform_tolerance` 30 s e não tem
 bond. Hardware continua bloqueado; overlay não decidido.
+
+## 🟢 2026-09-28, noite (PC de dev, GAZEBO + RVIZ, robô e lidar DESLIGADOS) — O ROBÔ 3 FAZ O PERCURSO; A SEGUNDA PORTA ACIONA O STOP
+
+O dono interrompeu a sequência documental da 061 para ver o robô andar. Antes
+da sessão, `bash bin/subidas-robo3 1` (`20260928_155545`) deu uma subida
+nominal: Nav2/TF em 29,2 s, controladores ativos, 64 mensagens de
+`/joint_states`, `collision_monitor` limpo e zero resíduo.
+
+Depois subiu a pilha com Gazebo e RViz no domínio 50, e o dono enviou pelo
+RViz o objetivo `(10,5034; 6,6586)`, yaw `1,48406 rad`. O robô partiu de
+`(2,000; 5,000)`, percorreu 13,524 m e o Nav2 declarou `SUCCEEDED` em ~57,1 s.
+Chegou a 0,245 m no instante do sucesso e assentou a 0,105 m do alvo.
+
+A observação do dono — "só na entrada da 2 porta ele foi meio burrinho" —
+aparece nos dados. No aperto de 0,80 m, a entrada veio curvada: o
+`collision_monitor` entrou em `STOP:PolygonStop` às 2030,506 e só liberou
+5,282 s depois. O seguidor continuava pedindo 0,50 m/s; o reflexo zerou
+`/auto_vel`. O `path_follower` detectou o emperramento, fez escape reto de
+0,21 m e o robô corrigiu e passou. Portanto foi uma parada de proteção e uma
+recuperação lenta, não falta de rota do planner. A primeira porta também teve
+um escape de 0,21 m, sem `STOP` do monitor.
+
+Evidência e análise: `docs/dados/2026-09-28-robo3-gazebo-manual/`. O bag MCAP
+bruto (23,1 MiB, hash registrado) fica em
+`~/sessao-manual-robo3/20260928_160300/`, fora do Git por convenção.
+
+O bag fechou, mas informou uma mensagem perdida no transporte. O `tee` do
+launch terminou no `Ctrl-C` e não gravou o teardown; zero processo, marca e
+SHM foram conferidos depois, mas a sessão não conta como prova positiva nem
+negativa do SIGSEGV da 057. Nenhum patch de produção foi feito. O bloqueio de
+hardware continua.

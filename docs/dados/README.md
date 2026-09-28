@@ -81,3 +81,12 @@ do efeito medido (0,110 m).
 
 O bag `.mcap` (9,7 MB) **não é versionado** (ver `.gitignore`): a convenção
 desta pasta é CSV + txt, que se lê sem ROS e cabe no clone.
+
+## Robô 3 no percurso manual do Gazebo — 2026-09-28
+
+`2026-09-28-robo3-gazebo-manual/` guarda a sessão dirigida pelo dono via RViz:
+objetivo `SUCCEEDED` em ~57,1 s, 13,524 m percorridos e chegada dentro da
+tolerância. A hesitação vista na segunda porta foi um `STOP` válido do
+`collision_monitor` por 5,282 s durante uma entrada curvada no vão de 0,80 m,
+seguido do escape do `path_follower`. Entram no Git os CSVs, logs, perfis,
+inventário e hashes; o MCAP de 23,1 MiB permanece fora, conforme a convenção.

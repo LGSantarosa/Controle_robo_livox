@@ -1,0 +1,9 @@
+[INFO] [1790621954.069272375] [rviz2]: Stereo is NOT SUPPORTED
+[INFO] [1790621954.069396852] [rviz2]: OpenGl version: 4.6 (GLSL 4.6)
+[INFO] [1790621954.176001825] [rviz2]: Stereo is NOT SUPPORTED
+[INFO] [1790621957.786700601] [rviz2]: Trying to create a map of size 240 x 160 using 1 swatches
+[ERROR] [1790621957.821557526] [rviz2]: rviz/glsl120/indexed_8bit_image.vert
+rviz/glsl120/indexed_8bit_image.frag
+ GLSL link result : 
+active samplers with a different type refer to the same texture image unit
+[INFO] [1790621993.248409611] [rviz2]: Setting goal pose: Frame:map, Position(10.5034, 6.6586, 0), Orientation(0, 0, 0.675785, 0.737098) = Angle: 1.48406
