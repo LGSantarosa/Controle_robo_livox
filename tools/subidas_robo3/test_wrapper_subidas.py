@@ -36,7 +36,18 @@ COPIAS = ('bin/subidas-robo3', 'tools/valida_etapa6/lib.sh',
 ROS2 = textwrap.dedent(r'''
     #!/usr/bin/env bash
     D="$CALCO_DIR"
-    echo "CALCO $*" >> "$D/chamadas.txt"
+    echo "CALCO $* | AMENT=$AMENT_PREFIX_PATH" >> "$D/chamadas.txt"
+    # Como o `ros2` real (achado de 28-09, 14h02): sem o ambiente do ROS
+    # carregado ele quebra (PackageNotFoundError: ros2cli). Aqui, "carregado"
+    # é o prefixo sujo que o teste injetou TER SAÍDO (reexecução limpa) E o
+    # /opt/ros/jazzy TER ENTRADO (`source`).
+    case ":$AMENT_PREFIX_PATH:" in
+      *prefixo_sujo*|*"::"*) echo "calço: ambiente do ROS não carregado" >&2; exit 1 ;;
+    esac
+    case ":$AMENT_PREFIX_PATH:" in
+      *:/opt/ros/jazzy:*) ;;
+      *) echo "calço: ambiente do ROS não carregado" >&2; exit 1 ;;
+    esac
     n="$(cat "$D/launches" 2>/dev/null || echo 0)"
     tipo="$(awk -v n="$n" '$1==n{print $2}' "$D/cenario" 2>/dev/null)"
     case "$1 $2" in
@@ -107,7 +118,8 @@ def _gz_real():
     return achados
 
 
-def _bateria(tmp_path, cenario, n, shm_sujo=False):
+def _bateria(tmp_path, cenario, n, shm_sujo=False, extra_env=None,
+             exige_calco=True):
     if not os.path.exists(WRAPPER):
         pytest.fail(f'{WRAPPER} ainda não existe — decisão 061, passo 2.')
     repo = tmp_path / 'repo'
@@ -136,13 +148,20 @@ def _bateria(tmp_path, cenario, n, shm_sujo=False):
         (shm / 'fastrtps_port7018').write_text('')
     env = dict(os.environ, SUBIDAS_CALCOS=str(calcos), CALCO_DIR=str(calcos),
                SUBIDAS_RAIZ_SAIDA=str(saidas), SUBIDAS_DOMINIO='91',
-               SUBIDAS_SHM=str(shm))
+               SUBIDAS_SHM=str(shm),
+               # Sujo DE PROPÓSITO: a reexecução limpa tem de tirá-lo, e o
+               # `source` tem de pôr o /opt/ros/jazzy — o calço confere os dois.
+               AMENT_PREFIX_PATH='/nao/existe/prefixo_sujo')
     env.pop('VALIDA_ETAPA4_MARCA', None)
+    env.pop('SUBIDAS_AMBIENTE_LIMPO', None)
+    env.update(extra_env or {})
     r = subprocess.run(['bash', str(repo / 'bin' / 'subidas-robo3'), str(n)],
                        capture_output=True, text=True, timeout=300, env=env)
     pastas = sorted(saidas.iterdir()) if saidas.exists() else []
     assert len(pastas) == 1, (r.stdout[-3000:], r.stderr[-2000:])
     pasta = pastas[0]
+    if not exige_calco:
+        return r, pasta, calcos
     chamadas = (calcos / 'chamadas.txt').read_text()
     assert 'CALCO launch robot_motion' in chamadas, 'o calço não foi usado'
     assert not _gz_real(), 'subiu Gazebo de verdade'
@@ -225,4 +244,26 @@ def test_segmento_dds_orfao_impede_a_primeira_subida(tmp_path):
         _bateria(repo_e_calcos, {}, 2, shm_sujo=True)
     pasta = next((tmp_path / 'saidas').iterdir())
     assert 'fastrtps_port7018' in (pasta / 'residuo_inicial.txt').read_text()
+    assert not (pasta / 'subida_01').exists()
+
+
+def test_a_ordem_limpa_source_e_so_entao_ros2(tmp_path):
+    """A reexecução REAL do wrapper, de ponta a ponta: o prefixo sujo some, o
+    `source /opt/ros/jazzy/setup.bash` entra, e só então a PRIMEIRA chamada
+    ao `ros2` — que é a varredura de resíduo inicial. Falhou assim em 28-09
+    (14h02): a varredura vinha antes do `source`."""
+    r, pasta, linhas, launches = _bateria(tmp_path, {}, 1)
+    assert r.returncode == 0, r.stdout[-3000:]
+    primeira = (tmp_path / 'calcos' / 'chamadas.txt').read_text().splitlines()[0]
+    assert primeira.startswith('CALCO node list'), primeira
+    assert '/opt/ros/jazzy' in primeira and 'prefixo_sujo' not in primeira
+
+
+def test_source_que_falha_para_antes_de_qualquer_ros2(tmp_path):
+    ruim = tmp_path / 'setup_ruim.bash'
+    ruim.write_text('return 1\n')
+    r, pasta, calcos = _bateria(tmp_path, {}, 1, exige_calco=False,
+                                extra_env={'SUBIDAS_ROS_SETUP': str(ruim)})
+    assert r.returncode == 1
+    assert not (calcos / 'chamadas.txt').exists(), 'chamou ros2 sem o ambiente'
     assert not (pasta / 'subida_01').exists()
