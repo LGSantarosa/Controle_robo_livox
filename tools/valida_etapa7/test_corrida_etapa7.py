@@ -10,6 +10,8 @@ texto do script e conferem a ordem e as flags que a decisão 060 exige.
 import importlib.util
 import math
 import os
+import re
+import subprocess
 
 import pytest
 import yaml
@@ -127,10 +129,10 @@ def _julga_pasta(corrida, pasta, le):
     return corrida.vereditos(evidencia, falhas, erro_bag, corrida.julga.avalia)
 
 
-def test_pasta_boa_aprova_os_cinco_de_coleta_e_os_sete_do_juiz(
+def test_pasta_boa_aprova_os_cinco_de_coleta_e_os_oito_do_juiz(
         corrida, fixtures, tmp_path):
     linhas = _julga_pasta(corrida, tmp_path, _pasta_boa(tmp_path, fixtures))
-    assert len(linhas) == 5 + 7, linhas
+    assert len(linhas) == 5 + 8, linhas
     assert all(v == 'APROVADO' for _, v, _ in linhas), linhas
 
 
@@ -248,3 +250,72 @@ def test_os_wrappers_congelados_nao_sao_chamados():
     texto = _texto()
     assert 'bin/valida-etapa6' not in texto.replace('`bin/valida-etapa6`', '')
     assert 'explora-objetivo-robo3 ' not in texto
+
+
+# ─── o teto no wrapper (revisão do b11f966, ponto A) ─────────────────────────
+#
+# O laço de espera é EXECUTADO, não só lido: o trecho entre os dois marcadores
+# roda num bash com `relogio`, `anota` e o PID do goal trocados por calços.
+# Nada de ROS: o "goal" é um `sleep`.
+
+INICIO_ESPERA = '# ── esperar a ação pelo relógio simulado'
+FIM_ESPERA = '# O `objetivo.log` só se lê depois de o send_goal SAIR'
+
+
+def _trecho_de_espera():
+    texto = _texto()
+    assert INICIO_ESPERA in texto and FIM_ESPERA in texto
+    return texto.split(INICIO_ESPERA, 1)[1].split(FIM_ESPERA, 1)[0]
+
+
+def _roda_espera(tmp_path, relogio, teto, goal='sleep 30'):
+    anotado = tmp_path / 'anotado.txt'
+    script = f"""
+set +u
+anota() {{ printf '%s|%s|%s\n' "$1" "$2" "${{3:-}}" >> '{anotado}'; }}
+relogio() {{ {relogio}; }}
+TETO_SIMULADO={teto}
+T0_SIM=100
+{goal} &
+PID_GOAL=$!
+sleep 0.2
+# {_trecho_de_espera()}
+kill -TERM "$PID_GOAL" 2>/dev/null
+wait "$PID_GOAL" 2>/dev/null
+exit 0
+"""
+    r = subprocess.run(['bash', '-c', script], capture_output=True, text=True,
+                       timeout=60)
+    assert r.returncode == 0, r.stderr
+    return [l.split('|') for l in anotado.read_text().splitlines()]
+
+
+def test_o_teto_simulado_do_wrapper_reprova(tmp_path):
+    """O relógio já passou do teto: o laço derruba o goal e isso é REPROVADO,
+    mesmo que o `objetivo.log` depois diga SUCCEEDED."""
+    linhas = _roda_espera(tmp_path, 'echo 161', 60)
+    assert [l[1] for l in linhas] == ['REPROVADO'], linhas
+    assert 'teto' in linhas[0][2], linhas
+
+
+def test_o_watchdog_de_parede_do_wrapper_reprova(tmp_path):
+    """Relógio simulado mudo: quem para é o watchdog (6 × teto de parede; com
+    teto 1, seis segundos), e também é REPROVADO."""
+    linhas = _roda_espera(tmp_path, 'echo', 1)
+    assert [l[1] for l in linhas] == ['REPROVADO'], linhas
+    assert 'WATCHDOG' in linhas[0][2], linhas
+
+
+def test_a_acao_que_termina_sozinha_nao_e_reprovada_pelo_wrapper(tmp_path):
+    """Terminar antes do teto não é aprovação da corrida — isso é do juiz —,
+    mas o wrapper não pode inventar reprovação."""
+    linhas = _roda_espera(tmp_path, 'echo 100', 60, goal='true')
+    assert linhas and all(l[1] != 'REPROVADO' for l in linhas), linhas
+
+
+def test_teto_do_wrapper_e_do_juiz_sao_o_mesmo_60(corrida):
+    """Os dois números vivem em arquivos diferentes; divergirem em silêncio
+    faria o wrapper parar numa hora e o juiz julgar noutra."""
+    achado = re.findall(r'^TETO_SIMULADO=(\d+)\b', _texto(), re.M)
+    assert achado == ['60'], achado
+    assert corrida.julga.TETO_SIMULADO == 60

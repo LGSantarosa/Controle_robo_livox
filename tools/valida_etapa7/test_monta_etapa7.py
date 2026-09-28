@@ -56,8 +56,9 @@ PATAMAR = ' 7.3 comando acima do patamar vivo no consumidor final'
 TOPOLOGIA = ' 7.3 topologia nominal do tópico observado'
 MODELO = ' 7.3 a placa está no modelo medido'
 JANELA = ' 7.3 a amostra está dentro da janela do objetivo'
-SETE_ITENS = (SUCESSO, TOLERANCIA, NASCEU_FORA, PATAMAR, TOPOLOGIA, MODELO,
-              JANELA)
+DURACAO = ' 7.1 a ação fechou em até 60 s simulados'
+ITENS_DO_JUIZ = (SUCESSO, DURACAO, TOLERANCIA, NASCEU_FORA, PATAMAR,
+                 TOPOLOGIA, MODELO, JANELA)
 
 # Fontes das falhas de coleta.
 ACAO = 'acao'
@@ -209,11 +210,11 @@ def _t_final(evidencia):
 
 # ─── caminho feliz ───────────────────────────────────────────────────────────
 
-def test_evidencia_completa_sem_falha_aprova_os_sete(monta, avalia):
+def test_evidencia_completa_sem_falha_aprova_os_oito(monta, avalia):
     evidencia, falhas = monta(_brutos())
     assert falhas == [], falhas
     itens = avalia(evidencia)
-    for item in SETE_ITENS:
+    for item in ITENS_DO_JUIZ:
         assert itens[item][0], (item, itens[item])
 
 
@@ -480,12 +481,48 @@ def test_dump_da_placa_ilegivel_deixa_so_a_placa_ausente(monta, avalia):
 
 def test_falha_de_coleta_vem_separada_do_veredito_do_juiz(monta, avalia):
     """A falha de coleta é devolvida pelo montador, não escondida dentro do
-    veredito do juiz: o `avalia` só conhece os seus sete itens."""
+    veredito do juiz: o `avalia` só conhece os seus oito itens."""
     b = _brutos()
     b['objetivo_log'] = _log(uuid=None)
     evidencia, falhas = monta(b)
     assert falhas and all(isinstance(f, tuple) and len(f) == 2
                           for f in falhas), falhas
     itens = avalia(evidencia)
-    assert set(itens) == set(SETE_ITENS)
+    assert set(itens) == set(ITENS_DO_JUIZ)
     assert not itens[SUCESSO][0]
+
+
+# ─── o teto de 60 s pela janela do UUID (revisão do b11f966, ponto A) ────────
+
+def _status_com_terminal(t_terminal_ns):
+    return [_st(10 * S + 1_000_000, ACCEPTED),
+            _st(10 * S + 50_000_000, EXECUTING),
+            _st(t_terminal_ns, SUCCEEDED)]
+
+
+@pytest.mark.parametrize('terminal_ns, aprova', (
+    (10 * S + 1_000_000 + 59_900_000_000, True),
+    (10 * S + 1_000_000 + 60 * S, True),
+    (10 * S + 1_000_000 + 60_100_000_000, False)))
+def test_a_duracao_julgada_e_aceite_ate_terminal_do_uuid(monta, avalia,
+                                                         terminal_ns, aprova):
+    """A duração nasce do status gravado no bag, correlacionado pelo UUID do
+    `objetivo.log`: do PRIMEIRO aceite ao PRIMEIRO terminal. Nenhum relógio do
+    wrapper entra na conta."""
+    b = _brutos()
+    b['status'] = _status_com_terminal(terminal_ns)
+    evidencia, falhas = monta(b)
+    assert falhas == [], falhas
+    ok, detalhe = avalia(evidencia)[DURACAO]
+    assert ok is aprova, detalhe
+
+
+def test_terminal_republicado_depois_do_teto_nao_estica_a_duracao(monta, avalia):
+    """O servidor republica o terminal por um tempo; só a primeira ocorrência
+    fecha a janela, então a republicação aos 80 s não reprova uma ação que
+    fechou aos 35 s."""
+    b = _brutos()
+    b['status'] = _status_bom() + [_st(80 * S, SUCCEEDED)]
+    evidencia, falhas = monta(b)
+    assert falhas == [], falhas
+    assert avalia(evidencia)[DURACAO][0]

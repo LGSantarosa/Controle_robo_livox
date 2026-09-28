@@ -51,6 +51,7 @@ PATAMAR = ' 7.3 comando acima do patamar vivo no consumidor final'
 TOPOLOGIA = ' 7.3 topologia nominal do tópico observado'
 MODELO = ' 7.3 a placa está no modelo medido'
 JANELA = ' 7.3 a amostra está dentro da janela do objetivo'
+DURACAO = ' 7.1 a ação fechou em até 60 s simulados'
 
 
 @pytest.fixture(scope='module')
@@ -685,3 +686,63 @@ def test_amostra_quebrada_FORA_da_janela_tambem_reprova(julga):
         ok, detalhe = itens[item]
         assert not ok, detalhe
         assert _detalhe_nomeia(detalhe, 'amostra 2', 'faltou v'), detalhe
+
+
+# ─── 7.1 o teto de 60 s simulados (revisão do b11f966, ponto A) ─────────────
+#
+# O teto é parte do contrato do passo 7 e quem o julga é o JUIZ, pela janela
+# estruturada (aceite → terminal do UUID, montada pelo `monta.py`). O relógio do
+# wrapper é só o gatilho de parada: lido em segundos inteiros e antes do goal,
+# ele não mede a ação — e uma ação que feche em `SUCCEEDED` logo depois de 60 s
+# podia vencer a corrida contra o laço e aprovar.
+
+def _com_duracao(duracao, aceito=10.0):
+    ev = _evidencia_boa()
+    ev['janela'] = {'objetivo_aceito': aceito, 'resultado': aceito + duracao}
+    return ev
+
+
+@pytest.mark.parametrize('duracao', (59.9, 60.0))
+def test_acao_que_fecha_ate_60s_aprova(julga, duracao):
+    """O teto é inclusivo: 60,0 s exatos ainda cabem."""
+    ok, detalhe = julga.avalia(_com_duracao(duracao))[DURACAO]
+    assert ok, detalhe
+
+
+def test_acao_que_fecha_em_60_1s_reprova_mesmo_com_succeeded(julga):
+    ev = _com_duracao(60.1)
+    assert ev['resultado_acao'] == 'SUCCEEDED'
+    itens = julga.avalia(ev)
+    ok, detalhe = itens[DURACAO]
+    assert not ok, detalhe
+    assert '60' in detalhe, detalhe
+    assert itens[SUCESSO][0], 'o SUCCEEDED continua verdade; quem reprova é o teto'
+
+
+def test_o_teto_vale_com_o_aceite_longe_do_zero(julga):
+    """Tempo simulado de uma pilha que ficou de pé um tempo antes do goal."""
+    assert julga.avalia(_com_duracao(60.0, aceito=1234.5))[DURACAO][0]
+    assert not julga.avalia(_com_duracao(60.1, aceito=1234.5))[DURACAO][0]
+
+
+def test_a_duracao_vem_so_da_janela(julga):
+    """Nenhum outro campo manda: sem janela, o item reprova dizendo o que faltou
+    — não cai num relógio alternativo."""
+    ev = _evidencia_boa()
+    del ev['janela']
+    ok, detalhe = julga.avalia(ev)[DURACAO]
+    assert not ok and 'janela' in detalhe, detalhe
+
+
+@pytest.mark.parametrize('janela', (
+    {'objetivo_aceito': 30.0, 'resultado': 10.0},
+    {'objetivo_aceito': float('nan'), 'resultado': 10.0},
+    {'objetivo_aceito': 10.0, 'resultado': float('inf')}))
+def test_janela_invalida_reprova_a_duracao(julga, janela):
+    ev = _evidencia_boa()
+    ev['janela'] = janela
+    assert not julga.avalia(ev)[DURACAO][0]
+
+
+def test_o_limite_do_juiz_e_60s(julga):
+    assert julga.TETO_SIMULADO == 60
