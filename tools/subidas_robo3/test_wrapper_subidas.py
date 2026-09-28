@@ -78,8 +78,15 @@ ROS2 = textwrap.dedent(r'''
         if tipo in mortos:
             print("[ERROR] [%s]: process has died [pid 9, exit code -11, cmd 'x']"
                   % mortos[tipo], flush=True)
+        mortos["sigsegv_com_el"] = "collision_monitor-15"
+        if tipo == "sigsegv_com_el":
+            print("[ERROR] [collision_monitor-15]: process has died [pid 9, exit code -11, cmd 'x']", flush=True)
+        orfaos = {"sigsegv_com_el": ("fastrtps_port7001", "fastrtps_port7001_el",
+                                     "sem.fastrtps_port7001_mutex"),
+                  "shm_teimoso": ("fastrtps_port7001", "sem.fastrtps_port7001_mutex",
+                                  "fastrtps_abc123")}
         if tipo in mortos or tipo == "residuo":
-            for n in ("fastrtps_port7001", "sem.fastrtps_port7001_mutex"):
+            for n in orfaos.get(tipo, ("fastrtps_port7001", "sem.fastrtps_port7001_mutex")):
                 open(os.path.join(shm, n), "w").close()
         if tipo == "shm_com_dono":
             alvo = os.path.join(shm, "fastrtps_port7009")
@@ -132,10 +139,11 @@ FASTDDS = textwrap.dedent(r'''
     [ "$1 $2" = "shm clean" ] || exit 97
     n="$(cat "$CALCO_DIR/launches")"
     tipo="$(awk -v n="$n" '$1==n{print $2}' "$CALCO_DIR/cenario")"
-    for f in "$SUBIDAS_SHM"/*; do
-      [ -e "$f" ] || continue
-      [ "$tipo" = shm_teimoso ] && [ "$(basename "$f")" = fastrtps_port7001 ] && continue
-      rm -f "$f"
+    # Como o real (medido em 28-09, 14h28): só remove o que tem a trava _el.
+    for el in "$SUBIDAS_SHM"/*_el; do
+      [ -e "$el" ] || continue
+      base="${el%_el}"; porta="$(basename "$base")"
+      rm -f "$el" "$base" "$SUBIDAS_SHM/sem.${porta}_mutex"
     done
     echo "shm.clean:"; echo "1 zombie segments cleaned"
 ''').lstrip()
@@ -327,13 +335,18 @@ def test_sigsegv_do_collision_monitor_no_teardown_e_limpeza_recuperada(tmp_path)
     assert [l['sigsegv_teardown'] for l in linhas] == ['0', '1', '0']
     assert [l['limpeza_recuperada'] for l in linhas] == ['0', '1', '0']
     assert linhas[1]['shm_orfaos'] == '2' and linhas[0]['shm_orfaos'] == '0'
+    # sem _el, o fastdds não remove: quem recupera é a remoção manual controlada
+    assert [l['limpeza_manual_recuperada'] for l in linhas] == ['0', '1', '0']
+    assert [l['teardown_anomalo'] for l in linhas] == ['0', '1', '0']
+    rem = (pasta / 'subida_02' / 'shm_remocao_manual.txt').read_text()
+    assert 'fastrtps_port7001' in rem and 'sem.fastrtps_port7001_mutex' in rem
     assert _chamadas(tmp_path).count('CALCO fastdds shm clean') == 1
     inv = (pasta / 'subida_02' / 'shm_inventario.txt').read_text()
     assert 'fastrtps_port7001' in inv and 'fuser' in inv
     assert 'collision_monitor-15' in inv and 'exit code -11' in inv
     assert not list((tmp_path / 'shm').iterdir())
     v = (pasta / 'veredito.txt').read_text()
-    assert '1 limpeza(s) recuperada(s)' in v
+    assert '1 limpeza(s) recuperada(s)' in v and '1 com remoção manual' in v
     assert _manifesto_de_fora(pasta).returncode == 0
 
 
@@ -393,3 +406,12 @@ def test_segmento_com_dono_nao_e_limpo(tmp_path):
                 os.kill(int(dono.read_text()), 9)
             except ProcessLookupError:
                 pass
+
+
+def test_fastdds_sozinho_basta_quando_ha_el(tmp_path):
+    r, pasta, linhas, launches = _bateria(tmp_path, {1: 'sigsegv_com_el'}, 2)
+    assert launches == 2
+    assert linhas[0]['limpeza_recuperada'] == '1'
+    assert linhas[0]['limpeza_manual_recuperada'] == '0'
+    assert linhas[0]['teardown_anomalo'] == '1'
+    assert not (pasta / 'subida_01' / 'shm_remocao_manual.txt').exists()

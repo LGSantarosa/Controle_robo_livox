@@ -312,3 +312,26 @@ def test_veredito_nao_chama_de_nominal_a_execucao_com_teardown_recuperado(mede):
 def test_veredito_sem_recuperacao_diz_teardown_limpo(mede):
     _, texto = mede.veredito(_linhas(20), 20, interrompida=False)
     assert 'nenhuma limpeza recuperada' in texto
+
+
+def test_teardown_anomalo_e_limpeza_manual_sao_colunas(mede):
+    l = mede.linha(1, _medidas(shm_orfaos=29, limpeza_recuperada=1,
+                               limpeza_manual_recuperada=1),
+                   LOG_NOMINAL + _morte('collision_monitor-15', -11), LISTA,
+                   '1\n---\n' * 40, '')
+    assert l['teardown_anomalo'] == 1 and l['limpeza_manual_recuperada'] == 1
+    assert l['subida_nominal'] == 1
+
+
+def test_teardown_limpo_nao_e_anomalo(mede):
+    l = mede.linha(1, _medidas(), LOG_NOMINAL, LISTA, '1\n---\n' * 40, '')
+    assert l['teardown_anomalo'] == 0 and l['limpeza_manual_recuperada'] == 0
+
+
+def test_veredito_conta_as_remocoes_manuais(mede):
+    linhas = _linhas(20, recuperadas={4, 11})
+    linhas[3]['limpeza_manual_recuperada'] = 1
+    linhas[3]['teardown_anomalo'] = linhas[10]['teardown_anomalo'] = 1
+    _, texto = mede.veredito(linhas, 20, interrompida=False)
+    assert '2 limpeza(s) recuperada(s)' in texto and '1 com remoção manual' in texto
+    assert '2 teardown(s) anômalo(s)' in texto
