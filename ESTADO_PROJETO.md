@@ -9,8 +9,10 @@
 >   passos 1–6; o **passo 6 da etapa 6 fechou** na branch
 >   `etapa6-pilha-robo3`; o **passo 7 FECHOU em 28-09** pela corrida
 >   canônica `20260928_114902` (decisão 060 §6.6), depois da revisão do
->   `b11f966` (quatro defeitos corrigidos, §6.1–6.5); próximo, o **passo 8**;
->   em aberto, auditar o NOTEBOOK.
+>   `b11f966` (quatro defeitos corrigidos, §6.1–6.5); o **passo 8 fechou em
+>   28-09** (gate do robô 2, `docs/dados/2026-09-28-etapa6-passo8/`), a
+>   decisão **056 está APLICADA** e a **etapa 6 está FECHADA na branch** —
+>   o merge na `main` é passo separado, do dono; em aberto, auditar o NOTEBOOK.
 > - **Lab** — Mid-360, FAST-LIO, `/scan` e TF do robô 3 provados com
 >   placa/motores desligados. O lidar foi encerrado limpo e **desligado
 >   novamente pelo dono**; nenhum objetivo foi enviado e o robô não se moveu.
@@ -32,10 +34,32 @@
 
 | branch | contém | observação |
 |---|---|---|
-| `etapa6-pilha-robo3` | etapa 6 com o passo 7 FECHADO (juiz G1–G5, `708570f`…`71dbfd5`) + `main` até `1851ffb` (merge `64c0865`) + 058 (`6dc13f1`) + 059 (`f4aa7d4`) + revisão do `b11f966` (28-09, `417dbff`…`80df9f6`) + fechamento do passo 7 (28-09) | **a branch de trabalho**; continuar daqui |
+| `etapa6-pilha-robo3` | **etapa 6 FECHADA** (passos 6–8; juiz G1–G5, `708570f`…`71dbfd5`) + `main` até `1851ffb` (merge `64c0865`) + 058 (`6dc13f1`) + 059 (`f4aa7d4`) + revisão do `b11f966` (28-09, `417dbff`…`80df9f6`) + fechamento dos passos 7 e 8 (28-09) | **a branch de trabalho**; merge na `main` pendente (decisão do dono) |
 | `main` (`1851ffb`) | etapa 5, notebook sincronizado, prova parada do Mid-360 | **não** tem etapa 6, 058 nem 059 |
 | `livox-config-maquina-sensor` (`279f408`) | só a 058 | já incorporada aqui por cherry-pick; não é mais base de nada |
 | `backup/etapa6-pre-merge-main` (`d52b5da`, local) | etapa 6 antes do merge | ponto de volta se a integração precisar ser desfeita |
+
+---
+
+## ✅ 28-09 — PASSO 8 E ETAPA 6 FECHADOS (branch `etapa6-pilha-robo3`, NÃO na `main`)
+
+Gate de não regressão do robô 2 (`PLANO_ETAPA6_ROBO3.md` §6), evidência em
+**`docs/dados/2026-09-28-etapa6-passo8/`**:
+
+| item | resultado |
+|---|---|
+| (a) diff contra `1f49981` | ✅ **passou com exceções aprovadas pelo dono**, oito, nominais: seis da 058 (`README.md` da raiz, `robot_base/config/MID360_config.template.json`, `robot_base/config/README.md`, `robot_base/config/livox_host_profiles.json`, `robot_base/test/test_config_livox.py`, `setup_livox.sh`), o docstring do `robot_base/launch/base.launch.py` e a coleta de testes do `pytest.ini`. Qualquer outro caminho reprova |
+| (b) suíte, piso 1262 | ✅ **1670/0** no estado final (com `718ac0f` e a documentação) |
+| (c) nós do robô 2, byte a byte | ✅ `1f49981` = `f2bb02c`, `sim:=true` 23 itens e `sim:=false` 13; instrumento `tools/gate_robo2/lista_nos.py` (`718ac0f`), com mutações |
+| (d) robô 2 no Gazebo | ✅ `~/validacao_etapa4/20260928_130910_robo2-gazebo` (ESTA MÁQUINA): RC 0, parâmetros = v2 sem permissão, 1ª entrada no raio em 28,4 s (ref. 29,55 s); manifesto **externo**, feito depois da corrida, versionado na pasta de dados |
+
+⚠️ Os arquivos da 058 mudam a **preparação do Livox real**: o (c) e o (d)
+cobrem só a pilha **simulada** do robô 2 e **não** os provam.
+
+✅ **Decisão 056 APLICADA** (§6 dela). **Etapa 6 FECHADA na branch.**
+🟡 Dívidas abertas: 057 (teardown) e a ativação intermitente do
+`joint_state_broadcaster` (060 §6.6).
+⬜ **Merge na `main`**: passo separado, por decisão do dono.
 
 ---
 
@@ -67,7 +91,7 @@ de saída é o que zera atuador. Fecha quando os seis registrarem
 `finished cleanly`, não houver erro depois do início do encerramento, e as
 contagens forem **0 / 0 / 0**.
 
-🟡 **A decisão 056 continua PROPOSTA** — passa a "aplicada" só no passo 8.
+✅ **A decisão 056 está APLICADA desde 28-09** (passo 8; ver o bloco do topo).
 
 ✅ **Passo 7: FECHADO em 28-09** — corrida canônica **`20260928_114902`**
 (`~/etapa7/`, ESTA MÁQUINA), código **`81bf0dc`**, decisão **060 §6.6**:
@@ -152,9 +176,10 @@ atuador físico.
 - ✅ **A corrida que conta rodou (28-09, tarde)** — ver o bloco "Passo 7:
   FECHADO" acima. Os três pontos que só a corrida mostrava passaram (status
   oculto, `/rosbag2_recorder`, `param dump`).
-- 🛑 **PAROU AQUI (28-09, passo 7 fechado).** Próximo: o **passo 8** do
-  `docs/PLANO_ETAPA6_ROBO3.md` §7 — decisão 056 → aplicada e o gate de não
-  regressão do robô 2 (§6).
+- ✅ **Passo 8 fechado em 28-09** — ver o bloco "PASSO 8 E ETAPA 6
+  FECHADOS" no topo.
+- 🛑 **PAROU AQUI (28-09, etapa 6 fechada na branch).** Próximo: a decisão do
+  dono sobre o merge da `etapa6-pilha-robo3` na `main`.
 - 🟡 **Duas corridas exploratórias** com `bin/explora-objetivo-robo3`
   (`f86c742`), Gazebo com janela, em `~/etapa7-explora/` (ESTA MÁQUINA). A
   `20260924_154659` não mandou objetivo (defeito do wrapper, `--spin-time`); a
@@ -406,8 +431,8 @@ drivers e overlay; (3) verificar a rede notebook↔Mid-360; (4) só então o
 roteiro de bancada com Nav2; (5) se o chassi superar o robô 2, migrar e
 auditar o NUC.
 
-⬜ **Próximo:** etapa 6 — o **passo 8** na trilha Gazebo (decisão 056 →
-aplicada, gate do §6; o passo 7 fechou em 28-09); e a
+⬜ **Próximo:** a **etapa 6 fechou na branch em 28-09** (passos 6–8, 056
+aplicada) — falta o merge na `main`, decisão do dono; e a
 auditoria do **NOTEBOOK**
 (hardware, na máquina), agora com o `bin/audita-livox` da decisão 059.
 

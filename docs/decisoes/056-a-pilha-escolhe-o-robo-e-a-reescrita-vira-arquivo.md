@@ -1,9 +1,9 @@
 # 056 — A pilha escolhe o robô, e a reescrita do perfil vira arquivo
 
 **Data**: 2026-09-23 (PC de dev, robô desligado)
-**Status**: 🟡 **PROPOSTA — desenho APROVADO pelo dono em 23-09**, com as seis
-correções obrigatórias já incorporadas (`PLANO_ETAPA6_ROBO3.md` §9). Passa a
-"aplicada" só depois da implementação e das provas do plano §4–§7.
+**Status**: ✅ **APLICADA em 2026-09-28** (etapa 6 fechada na branch
+`etapa6-pilha-robo3`; ver §6). Desenho aprovado pelo dono em 23-09, com as seis
+correções obrigatórias incorporadas (`PLANO_ETAPA6_ROBO3.md` §9).
 **Toca (proposto)**: `ros2_packages/robot_motion/launch/pilha.launch.py`,
 `robot_motion/perfil.py`, `robot_motion/config/twist_mux_pilha_robo3.yaml`
 (**novo**), `robot_motion/config/perfil_robo3.yaml`.
@@ -156,3 +156,21 @@ o atuador físico; 🔴 comparação entre os chassis; 🔴 a MEGA e o `frente:=
 - Decisões 052 (geometria canônica), 053 (perfil), 054 (fronteira do contrato).
 - `ros2_packages/robot_motion/robot_motion/perfil.py` (`aplica_reescritas`),
   `launch/pilha.launch.py` (`_recusa_robo`, `_passou`, a guarda das reescritas).
+
+## 6. Aplicada (2026-09-28) — as provas do plano §4–§7
+
+| passo | prova | evidência |
+|---|---|---|
+| 6 | a pilha sobe o robô 3 no Gazebo headless, oito itens | corrida `~/etapa6/20260924_132510` (PC de dev), código `8515a25` |
+| 7 | objetivo de 1 m, três critérios, com o §4.1 medido | corrida canônica `~/etapa7/20260928_114902`, código `81bf0dc`; decisão 060 §6.6 |
+| 8 | gate de não regressão do robô 2 (plano §6), itens (a)–(d) | `docs/dados/2026-09-28-etapa6-passo8/` |
+
+O (a) passou **com oito exceções aprovadas nominalmente pelo dono**, todas
+fora do que esta decisão toca: seis da decisão 058, o docstring do
+`robot_base/launch/base.launch.py` e a coleta de testes do `pytest.ini`. O
+"Não toca" acima vale para a 056; os arquivos da 058 entraram por ela, mudam a
+preparação do Livox real e **não** são provados pelo (c) nem pelo (d).
+
+Dívidas que ficam abertas, fora desta decisão: os encerramentos não limpos do
+teardown (decisão 057) e a ativação intermitente do `joint_state_broadcaster`
+na subida (decisão 060 §6.6).

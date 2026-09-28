@@ -1,0 +1,23 @@
+Gate do passo 8, item (c) — robô 2, as duas combinações (sim true/false),
+lista de nós e parâmetros de 1f49981 contra f2bb02c, byte a byte.
+
+Cada commit num worktree próprio com o PRÓPRIO colcon build de robot_base,
+robot_motion e robot_nav; dependências (hoverboard_driver etc., inalteradas
+desde 1f49981: git diff vazio) do install/ principal como underlay.
+Ferramenta: lista_nos.py (cópia), código não commitado no momento da medição.
+
+Resultado:
+  sim=true : 23 itens, cmp IGUAL
+  sim=false: 13 itens, cmp IGUAL
+
+Normalização (tudo o que depende de onde/quando): prefixos do AMENT_PREFIX_PATH,
+raiz do repositório e carimbos AAAA-MM-DD_HHMMSS. Antes dela, as únicas
+diferenças eram: caminho do worktree (mundo, mapa, 2x dentro do URDF: 6
+caracteres = 2 x len('wt_1f49981')-len('wt_head')) e o carimbo da pasta do bag.
+
+Mutações no worktree de f2bb02c (descartável), sim=true:
+  M0 controle sem mutação ........................ IGUAL
+  M1 xy_goal_tolerance 0.25->0.2501 no share ....... DIFERENTE
+  M2 parâmetro literal a mais no freeze_capture .... DIFERENTE
+  M3 remapeamento do twist_mux ..................... DIFERENTE
+  M0 depois de restaurar ........................... IGUAL

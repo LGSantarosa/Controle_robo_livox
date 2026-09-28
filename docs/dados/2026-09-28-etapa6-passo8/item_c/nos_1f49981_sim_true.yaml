@@ -1,0 +1,304 @@
+- cmd:
+  - ruby <prefixo>/opt/gz_tools_vendor/bin/gz sim
+  - '<raiz>/worlds/pista_obstaculos.sdf -r '
+  - --force-version
+  - '8'
+  tipo: ExecuteProcess
+- argumentos: []
+  executavel: robot_state_publisher
+  namespace: null
+  nome: null
+  pacote: robot_state_publisher
+  parametros:
+  - robot_description:
+      sha256: df3fcb3e12868d5f58c49abc1af39e71213cd37cb43a53823e18925ada9a0e2e
+      texto_longo: 10893
+    use_sim_time: true
+  remapeamentos: []
+  tipo: Node
+- argumentos: []
+  executavel: placa_simulada
+  namespace: null
+  nome: placa_simulada
+  pacote: robot_base
+  parametros:
+  - bitola: 0.27
+    modelo: medido
+    raio: 0.08
+    rendimento_giro: 0.93
+    use_sim_time: true
+  remapeamentos: []
+  tipo: Node
+- argumentos:
+  - /clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock
+  - /Odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry
+  - /tf_odom@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V
+  - /livox/lidar/points@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked
+  executavel: parameter_bridge
+  namespace: null
+  nome: null
+  pacote: ros_gz_bridge
+  parametros:
+  - use_sim_time: true
+  remapeamentos:
+  - - /tf_odom
+    - /tf
+  - - /livox/lidar/points
+    - /livox/pontos
+  tipo: Node
+- argumentos:
+  - -topic
+  - robot_description
+  - -name
+  - robo2
+  - -z
+  - '0.05'
+  - -x
+  - '2.0'
+  - -y
+  - '5.0'
+  - -Y
+  - '0.0'
+  executavel: create
+  namespace: null
+  nome: null
+  pacote: ros_gz_sim
+  parametros: []
+  remapeamentos: []
+  tipo: Node
+- argumentos:
+  - joint_state_broadcaster
+  - --controller-manager
+  - /controller_manager
+  executavel: spawner
+  namespace: null
+  nome: null
+  pacote: controller_manager
+  parametros: []
+  remapeamentos: []
+  tipo: Node
+- argumentos:
+  - hoverboard_base_controller
+  - --controller-manager
+  - /controller_manager
+  executavel: spawner
+  namespace: null
+  nome: null
+  pacote: controller_manager
+  parametros: []
+  remapeamentos: []
+  tipo: Node
+- argumentos: []
+  executavel: pointcloud_to_laserscan_node
+  namespace: null
+  nome: scan_2d
+  pacote: pointcloud_to_laserscan
+  parametros:
+  - arquivo: <prefixo>/share/robot_base/config/scan_2d.yaml
+    sha256: 8a046efbd1479fdd4fd6f2bc0c27ca3b756a9f8e07d4ebd542944160ef796ef6
+  - use_sim_time: true
+  remapeamentos:
+  - - cloud_in
+    - /livox/pontos
+  - - scan
+    - /scan
+  tipo: Node
+- argumentos: []
+  executavel: map_server
+  namespace: null
+  nome: map_server
+  pacote: nav2_map_server
+  parametros:
+  - arquivo: <prefixo>/share/robot_motion/config/nav2.yaml
+    sha256: 94ca55b880840b01d3b13383f9e3adcc743c10d88fd4d1c6b461602d5592e544
+  - use_sim_time: true
+    yaml_filename:
+      arquivo: <raiz>/maps/pista_obstaculos.yaml
+      sha256: 0c2564e15a49f12cc767550d45374d027821061e6b7d5c68bdbe19c21926890d
+  remapeamentos: []
+  tipo: Node
+- argumentos: []
+  executavel: planner_server
+  namespace: null
+  nome: planner_server
+  pacote: nav2_planner
+  parametros:
+  - arquivo: <prefixo>/share/robot_motion/config/nav2.yaml
+    sha256: 94ca55b880840b01d3b13383f9e3adcc743c10d88fd4d1c6b461602d5592e544
+  - use_sim_time: true
+  remapeamentos: []
+  tipo: Node
+- argumentos: []
+  executavel: smoother_server
+  namespace: null
+  nome: smoother_server
+  pacote: nav2_smoother
+  parametros:
+  - arquivo: <prefixo>/share/robot_motion/config/nav2.yaml
+    sha256: 94ca55b880840b01d3b13383f9e3adcc743c10d88fd4d1c6b461602d5592e544
+  - use_sim_time: true
+  remapeamentos: []
+  tipo: Node
+- argumentos: []
+  executavel: controller_server
+  namespace: null
+  nome: controller_server
+  pacote: nav2_controller
+  parametros:
+  - arquivo: <prefixo>/share/robot_motion/config/nav2.yaml
+    sha256: 94ca55b880840b01d3b13383f9e3adcc743c10d88fd4d1c6b461602d5592e544
+  - use_sim_time: true
+  remapeamentos:
+  - - /cmd_vel
+    - /nav2_cmd_vel_ignorado
+  tipo: Node
+- argumentos: []
+  executavel: bt_navigator
+  namespace: null
+  nome: bt_navigator
+  pacote: nav2_bt_navigator
+  parametros:
+  - arquivo: <prefixo>/share/robot_motion/config/nav2.yaml
+    sha256: 94ca55b880840b01d3b13383f9e3adcc743c10d88fd4d1c6b461602d5592e544
+  - default_nav_to_pose_bt_xml:
+      arquivo: <prefixo>/share/robot_motion/behavior_trees/replanejamento_com_suavizacao.xml
+      sha256: 69b82c6ead9597ce2f52bbd32598c109239ff36e4bbafc3c5a16b2b200fffd10
+  - use_sim_time: true
+  remapeamentos: []
+  tipo: Node
+- argumentos: []
+  executavel: lifecycle_manager
+  namespace: null
+  nome: lifecycle_manager_pilha
+  pacote: nav2_lifecycle_manager
+  parametros:
+  - autostart: true
+    node_names:
+    - map_server
+    - planner_server
+    - smoother_server
+    - controller_server
+    - bt_navigator
+    - collision_monitor
+    use_sim_time: true
+  remapeamentos: []
+  tipo: Node
+- argumentos:
+  - --frame-id
+  - map
+  - --child-frame-id
+  - odom
+  executavel: static_transform_publisher
+  namespace: null
+  nome: tf_map_odom
+  pacote: tf2_ros
+  parametros:
+  - use_sim_time: true
+  remapeamentos: []
+  tipo: Node
+- argumentos: []
+  executavel: heading_controller
+  namespace: null
+  nome: heading_controller
+  pacote: robot_motion
+  parametros:
+  - arquivo: <prefixo>/share/robot_motion/config/movimentacao_sim.yaml
+    sha256: 76b1e445b7c3c8541a626e16b26b4281d390d10030627d30b6346ca1fa4dce1f
+  - use_sim_time: true
+  remapeamentos:
+  - - /hoverboard_base_controller/cmd_vel
+    - /auto_vel_raw
+  tipo: Node
+- argumentos: []
+  executavel: collision_monitor
+  namespace: null
+  nome: collision_monitor
+  pacote: nav2_collision_monitor
+  parametros:
+  - arquivo: <prefixo>/share/robot_motion/config/collision_monitor.yaml
+    sha256: dc6ae13ac9d9e6a95333eff1c3ba8bea885407739ba9a60f904473db1e300b23
+  - use_sim_time: true
+  remapeamentos: []
+  tipo: Node
+- argumentos: []
+  executavel: twist_mux
+  namespace: null
+  nome: twist_mux
+  pacote: twist_mux
+  parametros:
+  - arquivo: <prefixo>/share/robot_motion/config/twist_mux.yaml
+    sha256: 8189c076edcae73f5c27d057e27c6f40675471cb490953e0c943ae0f8c15f8b9
+  - use_sim_time: true
+  remapeamentos:
+  - - /cmd_vel_out
+    - /compensador_rumo/cmd_vel
+  tipo: Node
+- argumentos: []
+  executavel: compensador_rumo
+  namespace: null
+  nome: compensador_rumo
+  pacote: robot_motion
+  parametros:
+  - segura_rumo: false
+    use_sim_time: true
+  - curv_frente: -0.817
+    curv_medido_em: HERDADO
+    curv_re: -0.098
+  - ganho_wz: 0.45
+  remapeamentos:
+  - - /hoverboard_base_controller/cmd_vel
+    - /cmd_vel_bruto
+  tipo: Node
+- argumentos: []
+  executavel: path_follower
+  namespace: null
+  nome: path_follower
+  pacote: robot_motion
+  parametros:
+  - lookahead_piso: 0.3
+  - k_lat: 0.0
+  - log_dir: /home/rbe-luis/logs_robo2
+  - desvio_taxa_deg_s: 15.0
+  - re_habilitada: true
+  - re_max_seguidas: 2
+  - re_exige_objetivo: true
+  - passagem_estreita_habilitada: false
+  - use_sim_time: true
+  remapeamentos:
+  - - /path_follower/rumo_alvo
+    - /heading_controller/rumo_alvo
+  - - /path_follower/velocidade_alvo
+    - /heading_controller/velocidade_alvo
+  tipo: Node
+- argumentos: []
+  executavel: freeze_capture
+  namespace: null
+  nome: freeze_capture
+  pacote: robot_nav
+  parametros:
+  - out_dir: /home/rbe-luis/logs_robo2
+    stamped: true
+    use_sim_time: true
+  remapeamentos: []
+  tipo: Node
+- argumentos:
+  - -d
+  - <prefixo>/share/robot_motion/rviz/pilha.rviz
+  executavel: rviz2
+  namespace: null
+  nome: rviz2
+  pacote: rviz2
+  parametros:
+  - use_sim_time: true
+  remapeamentos: []
+  tipo: Node
+- cmd:
+  - ros2
+  - bag
+  - record
+  - -o
+  - /home/rbe-luis/logs_robo2/corrida_<carimbo>
+  - --all-topics
+  - --storage-preset-profile
+  - fastwrite
+  tipo: ExecuteProcess

@@ -11286,3 +11286,54 @@ não mede a zona morta real do robô 3, e é simulador.
 
 **Passo 7 FECHADO.** Próximo pelo plano: o passo 8 (decisão 056 → aplicada,
 gate de não regressão do robô 2, §6 do `PLANO_ETAPA6_ROBO3.md`).
+
+## 🏁 2026-09-28, tarde (PC de dev, GAZEBO HEADLESS, robô e lidar DESLIGADOS) — PASSO 8: O GATE DO ROBÔ 2 PASSA, A 056 VIRA APLICADA, A ETAPA 6 FECHA NA BRANCH
+
+O passo 8 do `PLANO_ETAPA6_ROBO3.md` é o gate de não regressão do robô 2 (§6),
+quatro itens. Evidência versionada em `docs/dados/2026-09-28-etapa6-passo8/`
+(README com os números copiados dos relatórios).
+
+- **(a) diff contra `1f49981`** — **não passou como estava escrito**: oito
+  arquivos fora da lista permitida, seis deles em `robot_base/`. Pela cláusula
+  do gate ("se um arquivo do robô 2 precisar mudar, o passo para e volta ao
+  dono"), parei e levei a lista com a origem de cada um. Decisão do dono:
+  manter a referência `1f49981` (trocá-la esconderia o histórico que o gate
+  audita) e aprovar **nominalmente** as oito exceções — os seis da decisão 058
+  (`README.md` da raiz, `MID360_config.template.json`, `config/README.md`,
+  `livox_host_profiles.json`, `test_config_livox.py`, `setup_livox.sh`), o
+  docstring do `robot_base/launch/base.launch.py` e a coleta de testes do
+  `pytest.ini`. Qualquer outro caminho continua reprovando. Os da 058 mudam a
+  preparação do Livox real e **não** são provados pelo (c) nem pelo (d).
+- **(b) suíte**: **1670/0** no estado final (com `718ac0f` e esta documentação), piso 1262.
+- **(c) árvore de nós do robô 2 igual byte a byte** entre `1f49981` e
+  `f2bb02c`, `sim:=true` (23 itens) e `sim:=false` (13). Instrumento novo,
+  `tools/gate_robo2/lista_nos.py` (`718ac0f`): percorre a launch sem executar
+  nada, expande includes/timers/handlers, avalia condições. Dois cuidados que
+  decidiram a validade: **cada commit contra o próprio build** (dois worktrees
+  com `colcon build` próprio — avaliar a launch antiga contra o `install/` de
+  hoje daria "igual" por construção), e **mutação antes de confiar no igual**:
+  controle igual; `xy_goal_tolerance` no `share/`, parâmetro a mais na launch e
+  remapeamento do `twist_mux` dão diferente. A primeira comparação deu
+  diferente por três coisas do instrumento, não da pilha (aviso da launch no
+  stdout, caminho do worktree — inclusive 2× dentro do URDF, 6 caracteres —, e
+  carimbo da pasta do bag); normalizadas só essas, igual.
+- **(d) corrida do robô 2 no Gazebo**, `bin/valida-etapa4 robo2-gazebo 6.24
+  3.51`, domínio 41: RC 0, parâmetros iguais à baseline v2 sem permissão,
+  chegada. Conferido além do wrapper, contra a corrida que fechou a etapa 4: o
+  "em 120.0 s" do relatório é o teto do instrumento nas duas; a primeira
+  entrada no raio de 0,25 m, lida do CSV, foi **28,4 s** (referência 29,55 s);
+  antes do encerramento, zero morte e um único `ERROR` (o shader do RViz);
+  depois, os cinco `exit code 1` da 057, iguais na referência. Subida nominal.
+  O `bin/valida-etapa4` não assina a pasta: o manifesto dela foi feito
+  **depois**, por mim, e está versionado fora dela
+  (`docs/dados/2026-09-28-etapa6-passo8/item_d_…SHA256SUMS`).
+
+Limpeza total conferida antes de cada Gazebo, como o dono pediu.
+
+**Decisão 056 → APLICADA** (§6 dela, com as provas dos passos 6, 7 e 8).
+**Etapa 6 FECHADA na branch `etapa6-pilha-robo3`.** O merge na `main` é passo
+separado, do dono. Dívidas que continuam abertas: 057 (teardown) e a ativação
+intermitente do `joint_state_broadcaster` (060 §6.6).
+
+🔴 **O que NÃO prova:** hardware, desempenho, a zona morta de qualquer robô, e
+a preparação do Livox real que a 058 mudou.
