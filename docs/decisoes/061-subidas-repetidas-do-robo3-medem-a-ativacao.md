@@ -77,9 +77,39 @@ O `launch.log` bruto e a série do amostrador ficam na subpasta.
   `/dev/shm` ou nó no domínio 50. A bateria sai com RC 1 e fica
   **INCOMPLETA** — continuar subiria a próxima sobre sujeira.
 
+### 2.3.1 O teardown — regra do dono, 2026-09-28 (14h)
+
+A bateria de 14h10 parou depois da subida 1 (nominal) com 34 segmentos Fast
+DDS órfãos em `/dev/shm`. A única diferença para o ensaio limpo foi o
+`collision_monitor` morrer com **SIGSEGV (-11) no teardown** (dívida 057). A
+causa provável — um participante Fast DDS morto por segmentação não libera os
+segmentos que abriu, inclusive as portas dos outros — é **hipótese**. A dívida
+057 deixa de ser cosmética: o SIGSEGV impede a próxima subida limpa.
+
+Regra, depois da limpeza de processos de cada subida:
+
+- **Tolerado e registrado**: SIGSEGV do `collision_monitor` **iniciado depois**
+  do primeiro `signal_handler(SIGINT`. A bateria continua.
+- **Interrompe na hora**: SIGSEGV antes do teardown; sinal em qualquer outro
+  processo; outro sinal no `collision_monitor`; limpeza de processos reprovada
+  (processo, marca ou nó vivo).
+- **Segmento órfão**: inventário **antes** de qualquer limpeza (segmentos com
+  horário, `fuser` de cada um, os processos mortos no `launch.log`); só então,
+  e **somente** se não houver processo, nó ou marca viva e **todos** os
+  segmentos estiverem sem dono, `fastdds shm clean` — nunca remoção manual. A
+  seguir, recontagem: sobrou segmento, interrompe.
+- Segmento removido assim é **limpeza recuperada**, não limpeza nominal: o CSV
+  separa `subida_nominal` (a subida), `sigsegv_teardown`, `sinais_fora_da_regra`,
+  `shm_orfaos` e `limpeza_recuperada`, e o veredito escreve o teardown à parte.
+
+A bateria que segue esta regra **mede a taxa do SIGSEGV** do teardown; ela
+**não** libera, por si, o teste no hardware.
+
 ### 2.4 O veredito da bateria
 
-- **ESTÁVEL** somente com **N/N** nominais e todas as limpezas fechando.
+- **ESTÁVEL** somente com **N/N** subidas nominais e nenhuma interrupção. O
+  rótulo é **da subida**; o teardown (SIGSEGV tolerados, limpezas recuperadas)
+  vem escrito no mesmo veredito, e limpeza recuperada nunca conta como nominal.
 - Com 20/20, a leitura honesta é de limite: o limite superior unilateral de
   95% para a taxa de falha fica em ~**13,9%** (1 − 0,05^(1/20)). Se a taxa
   real fosse 1/8, a chance de ver ao menos uma falha em 20 seria 93,1%.
@@ -121,3 +151,4 @@ Nada de hardware, nada de navegação, e nada sobre o robô 2.
 | pasta (`~/subidas-robo3/`) | o que foi | conta como subida? |
 |---|---|---|
 | `20260928_140215` | **falha do instrumento, N=0**: a varredura de resíduo inicial rodava **antes** do `source /opt/ros/jazzy/setup.bash`; sem o ambiente (apagado pela reexecução limpa), o `ros2 node list` quebrou (`PackageNotFoundError: ros2cli`) e a varredura, que trata consulta com erro como "não prova vazio", acusou resíduo e recusou subir. Nada foi lançado. O teste offline não pegou porque o calço do `ros2` não precisava do ambiente. Corrigido com vermelho antes (`35aaf86`): o calço passou a exigir o ambiente, o teste percorre a reexecução real com prefixo sujo injetado, e o `source` tem o código conferido | **não** |
+| `20260928_141047` | **INCOMPLETA**: subida 1 **nominal**; no teardown, SIGSEGV do `collision_monitor` e 34 segmentos Fast DDS órfãos; a varredura antes da subida 2 interrompeu. Dois defeitos do instrumento apareceram nela: a limpeza do `trap` escreveu na `subida_02` (que não subiu) **depois** do manifesto, que por isso não fecha; e o escopo exigia `subida_02/launch.log`. Corrigidos com vermelho (`bee4e5a`). A pasta fica **intocada**, manifesto incluído | 1 subida medida; **não** é bateria válida |

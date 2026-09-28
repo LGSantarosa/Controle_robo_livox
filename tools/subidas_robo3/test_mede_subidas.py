@@ -211,9 +211,12 @@ def test_a_limpeza_fica_em_coluna_propria_e_nao_muda_a_subida(mede):
 
 # ─── o veredito da bateria ───────────────────────────────────────────────────
 
-def _linhas(n, falhas=()):
+def _linhas(n, falhas=(), recuperadas=()):
     return [{'subida': i, 'subida_nominal': 0 if i in falhas else 1,
-             'limpeza_ok': 1} for i in range(1, n + 1)]
+             'limpeza_ok': 1, 'sigsegv_teardown': 1 if i in recuperadas else 0,
+             'shm_orfaos': 34 if i in recuperadas else 0,
+             'limpeza_recuperada': 1 if i in recuperadas else 0}
+            for i in range(1, n + 1)]
 
 
 def test_vinte_de_vinte_e_estavel_com_o_limite_escrito(mede):

@@ -101,6 +101,42 @@ if ! source "$ROS_SETUP"; then
 fi
 calcos
 
+# ── segmentos Fast DDS: contar, inventariar, conferir dono ───────────────────
+conta_shm() { ls "$SHM" 2>/dev/null | grep -ciE 'fastrtps|fast_datasharing'; }
+shm_sem_dono() {   # 0 se NENHUM segmento tem processo segurando
+  local f
+  for f in "$SHM"/*; do
+    [ -e "$f" ] || continue
+    case "$(basename "$f")" in *fastrtps*|*fast_datasharing*) ;; *) continue ;; esac
+    [ -n "$(fuser "$f" 2>/dev/null)" ] && return 1
+  done
+  return 0
+}
+inventaria_shm() {   # inventaria_shm <arquivo> <launch.log> — ANTES de limpar
+  local f
+  { echo "inventário: $(date --iso-8601=seconds), antes de qualquer fastdds shm clean"
+    echo "== segmentos (ls -la --time-style=full-iso) =="
+    ls -la --time-style=full-iso "$SHM" | grep -iE 'fastrtps|fast_datasharing'
+    echo "== fuser, um por arquivo (vazio = ninguém segura) =="
+    for f in "$SHM"/*; do
+      case "$(basename "$f")" in *fastrtps*|*fast_datasharing*) ;; *) continue ;; esac
+      echo "$f: $(fuser "$f" 2>&1)"
+    done
+    echo "== processos mortos no launch.log (depois do SIGINT e antes) =="
+    grep -E 'process has died' "$2" || echo "(nenhum)"; } > "$1"
+}
+algo_vivo() {   # algo_vivo <arquivo> — 0 se há processo ROS/Gazebo, marca ou nó
+  local pre marcas nos rc
+  pre="$(env -u VALIDA_ETAPA4_MARCA ps -eo pid,user,args \
+    | grep -E '(^|[ /])(ros2|gz|rviz2|_ros2_daemon)( |$)|/opt/ros/[a-z]+/lib/|/install/[a-z_]+/lib/|ros2cli\.daemon' \
+    | grep -vE 'grep -E|subidas-robo3|valida-etapa[4567]|explora-objetivo')"
+  marcas="$(env -u VALIDA_ETAPA4_MARCA grep -lsa 'VALIDA_ETAPA4_MARCA=' /proc/[0-9]*/environ 2>/dev/null)"
+  nos="$(env -u VALIDA_ETAPA4_MARCA ROS_DOMAIN_ID="$DOMINIO" ros2 node list --no-daemon --spin-time 5 2>&1)"; rc=$?
+  { echo "processos:"; echo "${pre:-   (nenhum)}"; echo "marcas:"; echo "${marcas:-   (nenhuma)}"
+    echo "domínio $DOMINIO (rc $rc):"; echo "${nos:-   (nenhum nó)}"; } > "$1"
+  [ -n "$pre" ] || [ -n "$marcas" ] || [ "$rc" -ne 0 ] || [ -n "$nos" ]
+}
+
 INTERROMPIDA=0
 if ! varre_residuo "$BASE/residuo_inicial.txt"; then
   echo "   🔴 já há resíduo ROS/Gazebo neste PC — não subo nada:"; sed 's/^/      /' "$BASE/residuo_inicial.txt"
@@ -111,6 +147,7 @@ export VALIDA_ETAPA4_MARCA="$BASE"
 FINALIZADO=0
 finaliza() {
   [ "$FINALIZADO" -eq 1 ] && return
+  limpa          # idempotente: só age se uma subida ficou pela metade
   FINALIZADO=1
   local rc_v falta="" d
   [ -s "$CSV" ] || python3 "$M" cabecalho > "$CSV"
@@ -127,9 +164,11 @@ finaliza() {
   for d in git.txt subidas.csv veredito.txt; do
     grep -qx "./$d" "$E" || falta="$falta $d"
   done
-  for d in "$BASE"/subida_*/; do
-    [ -d "$d" ] || continue
-    grep -qx "./$(basename "$d")/launch.log" "$E" || falta="$falta $(basename "$d")/launch.log"
+  # `launch.log` só de quem SUBIU — cada linha do CSV. Subida barrada pela
+  # varredura não tem launch (defeito de 14h12: o escopo o exigia).
+  for d in $(tail -n +2 "$CSV" | cut -d, -f1); do
+    d="subida_$(printf %02d "$d")"
+    grep -qx "./$d/launch.log" "$E" || falta="$falta $d/launch.log"
   done
   local manifesto=0
   if ! ( cd "$BASE" && xargs -a "$(basename "$E")" -d '\n' sha256sum > SHA256SUMS ); then
@@ -155,6 +194,7 @@ if ! roda "$BASE/build.log" colcon build --symlink-install \
   echo "   🔴 build falhou — nenhuma subida"; INTERROMPIDA=1; exit 1
 fi
 source install/setup.bash; calcos
+LIMPO=1        # o build rodou em primeiro plano e terminou: nada pendente
 python3 "$M" cabecalho > "$CSV"
 
 # ── uma subida ──────────────────────────────────────────────────────────────
@@ -174,13 +214,16 @@ amostra_cpu() {   # epoch load1 psi_some_avg10 psi_some_total_us, a cada 1 s
 subida() {
   local i="$1" S T0 pronto=0 t_pronto="" lok
   S="$BASE/subida_$(printf %02d "$i")"; mkdir -p "$S"
-  SAIDA="$S"; GRUPOS="$S/grupos_wrapper.txt"; : > "$GRUPOS"
-  RESULTADO="$S/resultado.txt"; : > "$RESULTADO"; LIMPO=0
   echo; echo "== subida $i/$N =="
+  # Barrada pela varredura, a subida não sobe NADA: nenhuma limpeza pendente
+  # nela (o LIMPO só volta a 0 depois daqui). Antes, o `trap` limpava esta
+  # subida vazia DEPOIS do manifesto — defeito de 14h12.
   if ! varre_residuo "$S/residuo_antes.txt"; then
     echo "   🔴 resíduo antes da subida $i — a bateria para"; sed 's/^/      /' "$S/residuo_antes.txt"
     INTERROMPIDA=1; return 1
   fi
+  SAIDA="$S"; GRUPOS="$S/grupos_wrapper.txt"; : > "$GRUPOS"
+  RESULTADO="$S/resultado.txt"; : > "$RESULTADO"; LIMPO=0
   # O amostrador é do wrapper, não da pilha: roda SEM marca, para o `sleep` dele
   # não aparecer como sobra na limpeza da subida.
   ( unset VALIDA_ETAPA4_MARCA; amostra_cpu ) > "$S/amostras.txt" 2>/dev/null &
@@ -220,12 +263,35 @@ subida() {
   kill "$AMOSTRADOR" 2>/dev/null; wait "$AMOSTRADOR" 2>/dev/null
   limpa
   if grep -qE '^limpeza: nada marcado, domínios vazios +APROVADO' "$RESULTADO"; then lok=1; else lok=0; fi
-  printf 'nav2_tf_pronto=%s\nt_nav2_tf_s=%s\njs_janela_s=%s\nlimpeza_ok=%s\n' \
-    "$pronto" "$t_pronto" "$JANELA_JS" "$lok" > "$S/medidas.env"
+  # ── o teardown pela regra de 28-09 (decisão 061 §2.3) ──────────────────
+  local fora segv orfaos recup=0 motivo=""
+  read -r fora segv < <(python3 "$M" sinais "$S/launch.log")
+  orfaos="$(conta_shm)"
+  [ "$orfaos" -gt 0 ] && inventaria_shm "$S/shm_inventario.txt" "$S/launch.log"
+  if [ "$lok" -ne 1 ]; then
+    motivo="limpeza reprovada (processo, marca ou nó vivo)"
+  elif [ "${fora:-1}" -ne 0 ]; then
+    motivo="sinal fora da regra (SIGSEGV antes do teardown, ou sinal em outro processo)"
+  elif [ "$orfaos" -gt 0 ]; then
+    if algo_vivo "$S/vivo_antes_do_shm_clean.txt" || ! shm_sem_dono; then
+      motivo="segmento com dono ou algo vivo — o fastdds shm clean não roda"
+    else
+      echo "   🟠 $orfaos segmento(s) órfão(s) depois do teardown — fastdds shm clean"
+      fastdds shm clean > "$S/shm_clean.txt" 2>&1
+      if [ "$(conta_shm)" -gt 0 ]; then
+        motivo="sobrou segmento depois do fastdds shm clean"
+        ls -la --time-style=full-iso "$SHM" >> "$S/shm_clean.txt"
+      else
+        recup=1
+      fi
+    fi
+  fi
+  printf 'nav2_tf_pronto=%s\nt_nav2_tf_s=%s\njs_janela_s=%s\nlimpeza_ok=%s\nshm_orfaos=%s\nlimpeza_recuperada=%s\n' \
+    "$pronto" "$t_pronto" "$JANELA_JS" "$lok" "$orfaos" "$recup" > "$S/medidas.env"
   python3 "$M" linha "$S" "$i" >> "$CSV"
   echo "   $(tail -1 "$CSV")"
-  if [ "$lok" -ne 1 ]; then
-    echo "   🔴 limpeza da subida $i reprovada — a bateria para"; INTERROMPIDA=1; return 1
+  if [ -n "$motivo" ]; then
+    echo "   🔴 subida $i: $motivo — a bateria para"; INTERROMPIDA=1; return 1
   fi
 }
 

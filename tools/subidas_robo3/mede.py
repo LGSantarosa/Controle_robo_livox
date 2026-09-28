@@ -4,6 +4,7 @@
     mede.py cabecalho
     mede.py linha <subida_NN/> <n>          uma linha do subidas.csv
     mede.py veredito <subidas.csv> <N> <interrompida 0|1>
+    mede.py sinais <launch.log>             "<fora_da_regra> <sigsegv_teardown>"
 
 `linha` lê, da subpasta da subida: `launch.log` (bruto), `controladores.txt`
 (uma chamada `ros2 control list_controllers`), `joint_states.txt` (uma janela
@@ -23,31 +24,50 @@ JSB = 'joint_state_broadcaster'
 BASE = 'hoverboard_base_controller'
 ESTADOS = ('active', 'inactive', 'unconfigured', 'finalized')
 
+# A regra de 28-09 para sinais: só o SIGSEGV do collision_monitor INICIADO no
+# teardown (dívida 057) é tolerado — registrado, e a limpeza pode ser
+# recuperada. Qualquer outro sinal, ou SIGSEGV antes do teardown, interrompe.
+TOLERADO = ('collision_monitor', -11)
+
 COLUNAS = (
-    'subida', 'subida_ok',
+    'subida', 'subida_nominal',
     'nav2_tf_pronto', 't_nav2_tf_s',
     'jsb_estado', 'base_estado', 'controladores_ok',
     'joint_states_msgs', 'joint_states_janela_s',
     'switch_timeout', 'falha_ativar', 'died_antes_do_fim',
     't_ativacao_jsb_s', 't_ativacao_base_s',
+    'sigsegv_teardown', 'sinais_fora_da_regra',
     'load1_max', 'psi_cpu_some_avg10_max', 'psi_cpu_some_us', 'amostras',
-    'limpeza_ok',
+    'limpeza_ok', 'shm_orfaos', 'limpeza_recuperada',
 )
 
 _ANSI = re.compile(r'\x1b\[[0-9;]*m')
+_MORTE = re.compile(r'\[([A-Za-z0-9_]+)-\d+\]: process has died \[pid \d+, '
+                    r'exit code (-?\d+)')
 _CARIMBO = re.compile(r'^\[[^\]]+\] \[[A-Z]+\] \[(\d+(?:\.\d+)?)\]')
 
 
 # ── o launch.log ────────────────────────────────────────────────────────────
 
-def _ate_o_encerramento(texto):
-    """Só o que veio ANTES do primeiro `signal_handler(SIGINT`: o teardown
-    (decisão 057) não é subida."""
+def _divide(texto):
+    """(subida, teardown): o corte é o primeiro `signal_handler(SIGINT`."""
     linhas = texto.splitlines()
     for i, l in enumerate(linhas):
         if 'signal_handler(SIGINT' in l:
-            return linhas[:i]
-    return linhas
+            return linhas[:i], linhas[i:]
+    return linhas, []
+
+
+def _ate_o_encerramento(texto):
+    """Só o que veio ANTES do primeiro `signal_handler(SIGINT`: o teardown
+    (decisão 057) não é subida."""
+    return _divide(texto)[0]
+
+
+def _sinais(linhas):
+    """(nome, código) de quem morreu por SINAL (código negativo)."""
+    return [(m.group(1), int(m.group(2))) for l in linhas
+            for m in [_MORTE.search(l)] if m and int(m.group(2)) < 0]
 
 
 def _carimbo(linha):
@@ -72,8 +92,12 @@ def _ativacao(linhas, controlador):
 
 
 def analisa_log(texto):
-    linhas = _ate_o_encerramento(texto)
+    linhas, teardown = _divide(texto)
+    antes, depois = _sinais(linhas), _sinais(teardown)
+    tolerados = [s for s in depois if s == TOLERADO]
     return {
+        'sigsegv_teardown': len(tolerados),
+        'sinais_fora_da_regra': len(antes) + len(depois) - len(tolerados),
         'switch_timeout': sum('Switch controller timed out' in l for l in linhas),
         'falha_ativar': sum('Failed to activate controller' in l for l in linhas),
         'died_antes_do_fim': sum('process has died' in l for l in linhas),
@@ -139,38 +163,55 @@ def linha(n, medidas, log, lista, echo, amostras):
     ok = int(nav2 == 1 and controladores_ok == 1 and msgs > 0
              and a['switch_timeout'] == 0)
     saida = {
-        'subida': n, 'subida_ok': ok,
+        'subida': n, 'subida_nominal': ok,
         'nav2_tf_pronto': nav2, 't_nav2_tf_s': medidas.get('t_nav2_tf_s', ''),
         'jsb_estado': jsb, 'base_estado': base,
         'controladores_ok': controladores_ok,
         'joint_states_msgs': msgs,
         'joint_states_janela_s': medidas.get('js_janela_s', ''),
         'limpeza_ok': int(medidas.get('limpeza_ok', 0) or 0),
+        'shm_orfaos': int(medidas.get('shm_orfaos', 0) or 0),
+        'limpeza_recuperada': int(medidas.get('limpeza_recuperada', 0) or 0),
     }
     saida.update(a)
     saida.update(resume_amostras(amostras))
     return {k: ('' if saida[k] is None else saida[k]) for k in COLUNAS}
 
 
+def _int(l, k):
+    try:
+        return int(l.get(k, 0) or 0)
+    except ValueError:
+        return 0
+
+
 def veredito(linhas, pedidas, interrompida):
+    """O rótulo é da SUBIDA (a pergunta da bateria); o teardown vem escrito à
+    parte, e limpeza recuperada nunca é chamada de limpeza nominal."""
     feitas = len(linhas)
-    boas = sum(int(l['subida_ok']) == 1 for l in linhas)
-    falhas = [str(l['subida']) for l in linhas if int(l['subida_ok']) != 1]
-    limpezas_ruins = [str(l['subida']) for l in linhas
-                      if int(l['limpeza_ok']) != 1]
+    boas = sum(_int(l, 'subida_nominal') == 1 for l in linhas)
+    falhas = [str(l['subida']) for l in linhas if _int(l, 'subida_nominal') != 1]
+    ruins = [str(l['subida']) for l in linhas if _int(l, 'limpeza_ok') != 1]
+    recup = [str(l['subida']) for l in linhas if _int(l, 'limpeza_recuperada') == 1]
+    segv = [str(l['subida']) for l in linhas if _int(l, 'sigsegv_teardown') > 0]
+    teardown = (f'teardown: {len(segv)} SIGSEGV do collision_monitor '
+                f'(subidas {", ".join(segv) or "nenhuma"}); '
+                + (f'{len(recup)} limpeza(s) recuperada(s) por fastdds shm clean '
+                   f'(subidas {", ".join(recup)})' if recup
+                   else 'nenhuma limpeza recuperada'))
     if interrompida or feitas < pedidas:
         return 'INCOMPLETA', (f'INCOMPLETA: {feitas} de {pedidas} subidas '
                               f'feitas; nominais {boas}/{feitas}; limpeza '
-                              f'reprovada em {limpezas_ruins or "nenhuma"}')
-    if falhas or limpezas_ruins:
-        return 'INSTÁVEL', (f'INSTÁVEL: {boas}/{pedidas} nominais; falharam '
-                            f'as subidas {", ".join(falhas) or "nenhuma"}; '
-                            f'limpeza reprovada em {limpezas_ruins or "nenhuma"}')
+                              f'reprovada em {ruins or "nenhuma"}; {teardown}')
+    if falhas or ruins:
+        return 'INSTÁVEL', (f'INSTÁVEL: {boas}/{pedidas} subidas nominais; '
+                            f'falharam as subidas {", ".join(falhas) or "nenhuma"}; '
+                            f'limpeza reprovada em {ruins or "nenhuma"}; {teardown}')
     limite = f'{(1 - 0.05 ** (1 / pedidas)) * 100:.1f}'.replace('.', ',')
-    return 'ESTÁVEL', (f'ESTÁVEL: {boas}/{pedidas} nominais, todas as '
-                       f'limpezas fechando. Isto NÃO é taxa zero: com 0 falhas '
-                       f'em {pedidas}, o limite superior unilateral de 95% da '
-                       f'taxa de falha é {limite}%')
+    return 'ESTÁVEL', (f'ESTÁVEL (subida): {boas}/{pedidas} subidas nominais. '
+                       f'Isto NÃO é taxa zero: com 0 falhas em {pedidas}, o '
+                       f'limite superior unilateral de 95% da taxa de falha é '
+                       f'{limite}%. {teardown[0].upper() + teardown[1:]}.')
 
 
 # ── CLI ─────────────────────────────────────────────────────────────────────
@@ -204,6 +245,10 @@ def main(argv):
                   _le(os.path.join(p, 'joint_states.txt')),
                   _le(os.path.join(p, 'amostras.txt')))
         print(','.join(str(l[k]) for k in COLUNAS))
+        return 0
+    if len(argv) == 2 and argv[0] == 'sinais':
+        a = analisa_log(_le(argv[1]))
+        print(a['sinais_fora_da_regra'], a['sigsegv_teardown'])
         return 0
     if len(argv) == 4 and argv[0] == 'veredito':
         with open(argv[1]) as f:

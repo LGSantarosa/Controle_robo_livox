@@ -81,6 +81,17 @@ ROS2 = textwrap.dedent(r'''
         if tipo in mortos or tipo == "residuo":
             for n in ("fastrtps_port7001", "sem.fastrtps_port7001_mutex"):
                 open(os.path.join(shm, n), "w").close()
+        if tipo == "shm_com_dono":
+            alvo = os.path.join(shm, "fastrtps_port7009")
+            open(alvo, "w").close()
+            # Um dono SEM marca (a limpeza da subida não o vê): segura o
+            # arquivo aberto; o teste o derruba no fim.
+            import subprocess
+            env = dict(os.environ); env.pop("VALIDA_ETAPA4_MARCA", None)
+            p = subprocess.Popen(["python3", "-c",
+                "import sys,time; f=open(sys.argv[1]); time.sleep(60)", alvo],
+                env=env, start_new_session=True)
+            open(os.path.join(sys.argv[1], "dono_pid"), "w").write(str(p.pid))
         open(os.path.join(sys.argv[1], "encerrado_" + sys.argv[2]), "w").close()
         sys.exit(0)
     signal.signal(signal.SIGINT, fim)
@@ -329,6 +340,11 @@ def test_sigsegv_do_collision_monitor_no_teardown_e_limpeza_recuperada(tmp_path)
 def test_segmento_que_o_fastdds_nao_remove_interrompe(tmp_path):
     r, pasta, linhas, launches = _bateria(tmp_path, {1: 'shm_teimoso'}, 3)
     assert r.returncode == 1 and launches == 1
+    # A parada é NA subida 1, pela recontagem — não na varredura da 2 — e a
+    # linha não pode dizer "recuperada" de uma limpeza que não recuperou.
+    assert linhas[0]['limpeza_recuperada'] == '0', linhas[0]
+    assert not (pasta / 'subida_02').exists()
+    assert 'sobrou segmento depois do fastdds shm clean' in r.stdout
     assert (pasta / 'veredito.txt').read_text().startswith('INCOMPLETA')
     assert _manifesto_de_fora(pasta).returncode == 0
 
@@ -361,3 +377,19 @@ def test_residuo_antes_da_subida_nao_escreve_depois_do_manifesto(tmp_path):
     assert m.returncode == 0, m.stdout + m.stderr
     assert 'escopo sem os artefatos' not in r.stdout
     assert (pasta / 'veredito.txt').read_text().startswith('INCOMPLETA')
+
+
+def test_segmento_com_dono_nao_e_limpo(tmp_path):
+    """Só se roda `fastdds shm clean` com TODOS os segmentos sem dono."""
+    try:
+        r, pasta, linhas, launches = _bateria(tmp_path, {1: 'shm_com_dono'}, 3)
+        assert r.returncode == 1 and launches == 1
+        assert 'CALCO fastdds' not in _chamadas(tmp_path)
+        assert 'fastrtps_port7009' in (pasta / 'subida_01' / 'shm_inventario.txt').read_text()
+    finally:
+        dono = tmp_path / 'calcos' / 'dono_pid'
+        if dono.exists():
+            try:
+                os.kill(int(dono.read_text()), 9)
+            except ProcessLookupError:
+                pass
