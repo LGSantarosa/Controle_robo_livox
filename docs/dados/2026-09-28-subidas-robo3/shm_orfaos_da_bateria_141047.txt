@@ -1,0 +1,138 @@
+registro: 2026-09-28T14:28:38-03:00 · PC de dev · órfãos deixados pela subida 1 da bateria ~/subidas-robo3/20260928_141047
+
+== segmentos (ls -la --time-style=full-iso) ==
+-rw-r--r--  1 rbe-luis rbe-luis 549408 2026-09-28 14:11:04.834920581 -0300 fastrtps_8daeb86a2eaebf00
+-rw-rw-r--  1 rbe-luis rbe-luis      0 2026-09-28 14:11:04.834270304 -0300 fastrtps_8daeb86a2eaebf00_el
+-rw-r--r--  1 rbe-luis rbe-luis  52400 2026-09-28 14:11:04.730028430 -0300 fastrtps_port19913
+-rw-r--r--  1 rbe-luis rbe-luis  52400 2026-09-28 14:11:04.819915545 -0300 fastrtps_port19921
+-rw-r--r--  1 rbe-luis rbe-luis  52400 2026-09-28 14:11:04.826823592 -0300 fastrtps_port19925
+-rw-r--r--  1 rbe-luis rbe-luis  52400 2026-09-28 14:11:04.832592275 -0300 fastrtps_port19929
+-rw-r--r--  1 rbe-luis rbe-luis  52400 2026-09-28 14:11:04.837090720 -0300 fastrtps_port19931
+-rw-rw-r--  1 rbe-luis rbe-luis      0 2026-09-28 14:11:04.837090720 -0300 fastrtps_port19931_el
+-rw-r--r--  1 rbe-luis rbe-luis  52400 2026-09-28 14:11:04.845644209 -0300 fastrtps_port19933
+-rw-r--r--  1 rbe-luis rbe-luis  52400 2026-09-28 14:11:05.404602198 -0300 fastrtps_port19943
+-rw-r--r--  1 rbe-luis rbe-luis  52400 2026-09-28 14:11:07.218778914 -0300 fastrtps_port19951
+-rw-r--r--  1 rbe-luis rbe-luis  52400 2026-09-28 14:11:04.734013814 -0300 fastrtps_port7001
+-rw-r--r--  1 rbe-luis rbe-luis  52400 2026-09-28 14:11:43.357114351 -0300 fastrtps_port7003
+-rw-r--r--  1 rbe-luis rbe-luis  52400 2026-09-28 14:11:04.837203768 -0300 fastrtps_port7005
+-rw-r--r--  1 rbe-luis rbe-luis  52400 2026-09-28 14:11:04.846618812 -0300 fastrtps_port7008
+-rw-r--r--  1 rbe-luis rbe-luis  52400 2026-09-28 14:11:04.866272464 -0300 fastrtps_port7010
+-rw-r--r--  1 rbe-luis rbe-luis  52400 2026-09-28 14:11:04.889603678 -0300 fastrtps_port7013
+-rw-r--r--  1 rbe-luis rbe-luis  52400 2026-09-28 14:11:05.414485084 -0300 fastrtps_port7016
+-rw-r--r--  1 rbe-luis rbe-luis  52400 2026-09-28 14:11:07.234927109 -0300 fastrtps_port7020
+-rw-r--r--  1 rbe-luis rbe-luis     32 2026-09-28 14:11:04.729335595 -0300 sem.fastrtps_port19913_mutex
+-rw-r--r--  1 rbe-luis rbe-luis     32 2026-09-28 14:11:04.819604721 -0300 sem.fastrtps_port19921_mutex
+-rw-r--r--  1 rbe-luis rbe-luis     32 2026-09-28 14:11:04.825919148 -0300 sem.fastrtps_port19925_mutex
+-rw-r--r--  1 rbe-luis rbe-luis     32 2026-09-28 14:11:04.830985527 -0300 sem.fastrtps_port19929_mutex
+-rw-r--r--  1 rbe-luis rbe-luis     32 2026-09-28 14:11:04.836214984 -0300 sem.fastrtps_port19931_mutex
+-rw-r--r--  1 rbe-luis rbe-luis     32 2026-09-28 14:11:04.841918816 -0300 sem.fastrtps_port19933_mutex
+-rw-r--r--  1 rbe-luis rbe-luis     32 2026-09-28 14:11:05.403907169 -0300 sem.fastrtps_port19943_mutex
+-rw-r--r--  1 rbe-luis rbe-luis     32 2026-09-28 14:11:07.217869642 -0300 sem.fastrtps_port19951_mutex
+-rw-r--r--  1 rbe-luis rbe-luis     32 2026-09-28 14:11:04.733814645 -0300 sem.fastrtps_port7001_mutex
+-rw-r--r--  1 rbe-luis rbe-luis     32 2026-09-28 14:11:04.836579970 -0300 sem.fastrtps_port7005_mutex
+-rw-r--r--  1 rbe-luis rbe-luis     32 2026-09-28 14:11:04.846255551 -0300 sem.fastrtps_port7008_mutex
+-rw-r--r--  1 rbe-luis rbe-luis     32 2026-09-28 14:11:04.865941123 -0300 sem.fastrtps_port7010_mutex
+-rw-r--r--  1 rbe-luis rbe-luis     32 2026-09-28 14:11:04.888538190 -0300 sem.fastrtps_port7013_mutex
+-rw-r--r--  1 rbe-luis rbe-luis     32 2026-09-28 14:11:05.414299109 -0300 sem.fastrtps_port7016_mutex
+-rw-r--r--  1 rbe-luis rbe-luis     32 2026-09-28 14:11:07.234757448 -0300 sem.fastrtps_port7020_mutex
+total: 34
+
+== fuser, um por arquivo ==
+/dev/shm/fastrtps_8daeb86a2eaebf00: (nenhum processo)
+/dev/shm/fastrtps_8daeb86a2eaebf00_el: (nenhum processo)
+/dev/shm/fastrtps_port19913: (nenhum processo)
+/dev/shm/fastrtps_port19921: (nenhum processo)
+/dev/shm/fastrtps_port19925: (nenhum processo)
+/dev/shm/fastrtps_port19929: (nenhum processo)
+/dev/shm/fastrtps_port19931: (nenhum processo)
+/dev/shm/fastrtps_port19931_el: (nenhum processo)
+/dev/shm/fastrtps_port19933: (nenhum processo)
+/dev/shm/fastrtps_port19943: (nenhum processo)
+/dev/shm/fastrtps_port19951: (nenhum processo)
+/dev/shm/fastrtps_port7001: (nenhum processo)
+/dev/shm/fastrtps_port7003: (nenhum processo)
+/dev/shm/fastrtps_port7005: (nenhum processo)
+/dev/shm/fastrtps_port7008: (nenhum processo)
+/dev/shm/fastrtps_port7010: (nenhum processo)
+/dev/shm/fastrtps_port7013: (nenhum processo)
+/dev/shm/fastrtps_port7016: (nenhum processo)
+/dev/shm/fastrtps_port7020: (nenhum processo)
+/dev/shm/sem.fastrtps_port19913_mutex: (nenhum processo)
+/dev/shm/sem.fastrtps_port19921_mutex: (nenhum processo)
+/dev/shm/sem.fastrtps_port19925_mutex: (nenhum processo)
+/dev/shm/sem.fastrtps_port19929_mutex: (nenhum processo)
+/dev/shm/sem.fastrtps_port19931_mutex: (nenhum processo)
+/dev/shm/sem.fastrtps_port19933_mutex: (nenhum processo)
+/dev/shm/sem.fastrtps_port19943_mutex: (nenhum processo)
+/dev/shm/sem.fastrtps_port19951_mutex: (nenhum processo)
+/dev/shm/sem.fastrtps_port7001_mutex: (nenhum processo)
+/dev/shm/sem.fastrtps_port7005_mutex: (nenhum processo)
+/dev/shm/sem.fastrtps_port7008_mutex: (nenhum processo)
+/dev/shm/sem.fastrtps_port7010_mutex: (nenhum processo)
+/dev/shm/sem.fastrtps_port7013_mutex: (nenhum processo)
+/dev/shm/sem.fastrtps_port7016_mutex: (nenhum processo)
+/dev/shm/sem.fastrtps_port7020_mutex: (nenhum processo)
+
+== processos mortos no launch.log da subida 1 ==
+[ERROR] [heading_controller-14]: process has died [pid 1231983, exit code 1, 
+[ERROR] [compensador_rumo-17]: process has died [pid 1231986, exit code 1, 
+[ERROR] [placa_simulada-3]: process has died [pid 1231971, exit code 1, 
+[ERROR] [path_follower-18]: process has died [pid 1231987, exit code 1, 
+[ERROR] [freeze_capture-19]: process has died [pid 1231990, exit code 1, 
+[ERROR] [collision_monitor-15]: process has died [pid 1231984, exit code -11, 
+
+== vivo agora ==
+processos ROS/Gazebo:
+   (nenhum)
+marcas: 0
+domínio 50: 0 nó(s), rc=0
+
+== 2026-09-28T14:28:58-03:00: fastdds shm clean (única ação), rc=0 ==
+shm.clean:
+0 ports in use
+0 segments in use
+1 zombie ports cleaned
+1 zombie segments cleaned
+removidos: 5
+removidos que não eram os órfãos: 0
+órfãos que ficaram: 29
+segmentos Fast DDS depois: 29
+
+removidos (5, todos com trava _el):
+   fastrtps_8daeb86a2eaebf00
+   fastrtps_8daeb86a2eaebf00_el
+   fastrtps_port19931
+   fastrtps_port19931_el
+   sem.fastrtps_port19931_mutex
+ficaram (29, NENHUM com trava _el, todos sem dono):
+   fastrtps_port19913
+   fastrtps_port19921
+   fastrtps_port19925
+   fastrtps_port19929
+   fastrtps_port19933
+   fastrtps_port19943
+   fastrtps_port19951
+   fastrtps_port7001
+   fastrtps_port7003
+   fastrtps_port7005
+   fastrtps_port7008
+   fastrtps_port7010
+   fastrtps_port7013
+   fastrtps_port7016
+   fastrtps_port7020
+   sem.fastrtps_port19913_mutex
+   sem.fastrtps_port19921_mutex
+   sem.fastrtps_port19925_mutex
+   sem.fastrtps_port19929_mutex
+   sem.fastrtps_port19933_mutex
+   sem.fastrtps_port19943_mutex
+   sem.fastrtps_port19951_mutex
+   sem.fastrtps_port7001_mutex
+   sem.fastrtps_port7005_mutex
+   sem.fastrtps_port7008_mutex
+   sem.fastrtps_port7010_mutex
+   sem.fastrtps_port7013_mutex
+   sem.fastrtps_port7016_mutex
+   sem.fastrtps_port7020_mutex
+
+PAROU AQUI pela regra (sobrou segmento → interrompe). Nenhuma remoção manual.
