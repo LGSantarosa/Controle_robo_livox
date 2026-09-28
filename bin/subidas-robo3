@@ -19,8 +19,8 @@
 #
 # Teste offline: tools/subidas_robo3/test_wrapper_subidas.py, com os comandos
 # calçados por SUBIDAS_CALCOS (re-prefixado no PATH depois de CADA `source`),
-# SUBIDAS_RAIZ_SAIDA, SUBIDAS_DOMINIO e SUBIDAS_SHM. Fora do teste, nenhum deles
-# existe.
+# SUBIDAS_RAIZ_SAIDA, SUBIDAS_DOMINIO, SUBIDAS_SHM e SUBIDAS_ROS_SETUP. Fora do
+# teste, nenhum deles existe.
 #
 # ⚠️ Não prova a causa de nada; mede em que condições a subida falha ou o
 # limite da taxa. NUNCA mata por nome.
@@ -90,6 +90,17 @@ varre_residuo() {   # varre_residuo <arquivo> — 0 se limpo
   return $sujo
 }
 
+# ── o ambiente do ROS ANTES da primeira chamada `ros2` ──────────────────────
+# A reexecução do topo apagou AMENT_PREFIX_PATH e PYTHONPATH; sem o `source`, o
+# `ros2` quebra (PackageNotFoundError) e a varredura acusaria resíduo que não
+# existe — foi o que parou o ensaio de 28-09, 14h02 (pasta 20260928_140215,
+# falha do instrumento, N=0). O código do `source` é conferido.
+ROS_SETUP="${SUBIDAS_ROS_SETUP:-/opt/ros/jazzy/setup.bash}"
+if ! source "$ROS_SETUP"; then
+  echo "   🔴 o source de $ROS_SETUP falhou — nenhuma chamada ao ros2"; exit 1
+fi
+calcos
+
 INTERROMPIDA=0
 if ! varre_residuo "$BASE/residuo_inicial.txt"; then
   echo "   🔴 já há resíduo ROS/Gazebo neste PC — não subo nada:"; sed 's/^/      /' "$BASE/residuo_inicial.txt"
@@ -138,7 +149,6 @@ instala_limpeza
 trap 'limpa; finaliza' EXIT
 
 cd "$R" || exit 1
-source /opt/ros/jazzy/setup.bash; calcos
 echo "== compilando robot_base robot_motion robot_nav, UMA vez (build.log) =="
 if ! roda "$BASE/build.log" colcon build --symlink-install \
      --packages-select robot_base robot_motion robot_nav; then

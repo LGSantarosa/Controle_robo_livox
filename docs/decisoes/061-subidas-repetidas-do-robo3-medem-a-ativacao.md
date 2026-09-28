@@ -115,3 +115,9 @@ A pasta leva o manifesto no padrão da etapa 7: escopo declarado, sem
 A **causa**. Se a falha aparecer, o CSV mostra em que condições (carga,
 pressão, tempo de ativação); se não aparecer, mostra um limite para a taxa.
 Nada de hardware, nada de navegação, e nada sobre o robô 2.
+
+## 6. Registro das execuções
+
+| pasta (`~/subidas-robo3/`) | o que foi | conta como subida? |
+|---|---|---|
+| `20260928_140215` | **falha do instrumento, N=0**: a varredura de resíduo inicial rodava **antes** do `source /opt/ros/jazzy/setup.bash`; sem o ambiente (apagado pela reexecução limpa), o `ros2 node list` quebrou (`PackageNotFoundError: ros2cli`) e a varredura, que trata consulta com erro como "não prova vazio", acusou resíduo e recusou subir. Nada foi lançado. O teste offline não pegou porque o calço do `ros2` não precisava do ambiente. Corrigido com vermelho antes (`35aaf86`): o calço passou a exigir o ambiente, o teste percorre a reexecução real com prefixo sujo injetado, e o `source` tem o código conferido | **não** |
