@@ -54,6 +54,7 @@ ROS2 = textwrap.dedent(r'''
       "launch robot_motion")
         n=$((n + 1)); echo "$n" > "$D/launches"
         tipo="$(awk -v n="$n" '$1==n{print $2}' "$D/cenario")"
+        [ "$tipo" = sigsegv_antes ] && echo "[ERROR] [collision_monitor-15]: process has died [pid 9, exit code -11, cmd 'x']"
         echo "[gazebo-1] [INFO] [1790000001.000000000] [controller_manager]: Activating controllers: [ joint_state_broadcaster ]"
         if [ "$tipo" = falha_jsb ]; then
           echo "[gazebo-1] [ERROR] [1790000006.000000000] [controller_manager]: Switch controller timed out after 5 seconds!"
@@ -70,13 +71,23 @@ ROS2 = textwrap.dedent(r'''
     import os, signal, sys, time
     def fim(*_):
         print("[x-1] [INFO] [1790000100.0] [rclcpp]: signal_handler(SIGINT/SIGTERM)", flush=True)
+        tipo, shm = sys.argv[3], os.environ["SUBIDAS_SHM"]
+        mortos = {"sigsegv_teardown": "collision_monitor-15",
+                  "shm_teimoso": "collision_monitor-15",
+                  "sigsegv_outro": "heading_controller-14"}
+        if tipo in mortos:
+            print("[ERROR] [%s]: process has died [pid 9, exit code -11, cmd 'x']"
+                  % mortos[tipo], flush=True)
+        if tipo in mortos or tipo == "residuo":
+            for n in ("fastrtps_port7001", "sem.fastrtps_port7001_mutex"):
+                open(os.path.join(shm, n), "w").close()
         open(os.path.join(sys.argv[1], "encerrado_" + sys.argv[2]), "w").close()
         sys.exit(0)
     signal.signal(signal.SIGINT, fim)
     signal.signal(signal.SIGTERM, fim)
     while True:
         time.sleep(0.1)
-    ' "$D" "$n" ;;
+    ' "$D" "$n" "${tipo:-ok}" ;;
       "lifecycle get") echo "active [3]" ;;
       "action list") echo "/navigate_to_pose" ;;
       "run tf2_ros") echo "- Translation: [0.000, 0.000, 0.000]" ;;
@@ -95,7 +106,27 @@ ROS2 = textwrap.dedent(r'''
 COLCON = textwrap.dedent('''
     #!/usr/bin/env bash
     echo "CALCO colcon $*" >> "$CALCO_DIR/chamadas.txt"
+    # Cenário "0 residuo_no_build": o resíduo aparece ENTRE a varredura inicial
+    # e a da subida 1 — o caminho do defeito de 14h12 (limpeza do `trap` numa
+    # subida que não subiu, escrevendo depois do manifesto).
+    grep -qx '0 residuo_no_build' "$CALCO_DIR/cenario" && touch "$SUBIDAS_SHM/fastrtps_build"
     echo "Summary: 3 packages finished"
+''').lstrip()
+
+# O `fastdds shm clean` falso: remove os órfãos do /dev/shm DE TESTE, salvo no
+# cenário shm_teimoso, em que um fica.
+FASTDDS = textwrap.dedent(r'''
+    #!/usr/bin/env bash
+    echo "CALCO fastdds $*" >> "$CALCO_DIR/chamadas.txt"
+    [ "$1 $2" = "shm clean" ] || exit 97
+    n="$(cat "$CALCO_DIR/launches")"
+    tipo="$(awk -v n="$n" '$1==n{print $2}' "$CALCO_DIR/cenario")"
+    for f in "$SUBIDAS_SHM"/*; do
+      [ -e "$f" ] || continue
+      [ "$tipo" = shm_teimoso ] && [ "$(basename "$f")" = fastrtps_port7001 ] && continue
+      rm -f "$f"
+    done
+    echo "shm.clean:"; echo "1 zombie segments cleaned"
 ''').lstrip()
 
 
@@ -139,8 +170,9 @@ def _bateria(tmp_path, cenario, n, shm_sujo=False, extra_env=None,
     calcos.mkdir()
     _executavel(calcos / 'ros2', ROS2)
     _executavel(calcos / 'colcon', COLCON)
+    _executavel(calcos / 'fastdds', FASTDDS)
     (calcos / 'cenario').write_text(
-        ''.join(f'{i} {cenario.get(i, "ok")}\n' for i in range(1, n + 1)))
+        ''.join(f'{i} {cenario.get(i, "ok")}\n' for i in range(0, n + 1)))
     saidas = tmp_path / 'saidas'
     shm = tmp_path / 'shm'          # nunca o /dev/shm real: o teste é hermético
     shm.mkdir()
@@ -164,6 +196,8 @@ def _bateria(tmp_path, cenario, n, shm_sujo=False, extra_env=None,
         return r, pasta, calcos
     chamadas = (calcos / 'chamadas.txt').read_text()
     assert 'CALCO launch robot_motion' in chamadas, 'o calço não foi usado'
+    if not cenario and not shm_sujo:
+        assert not list(shm.iterdir()), 'sobrou segmento no shm de teste'
     assert not _gz_real(), 'subiu Gazebo de verdade'
     linhas = list(csv.DictReader(open(pasta / 'subidas.csv')))
     launches = int((calcos / 'launches').read_text())
@@ -179,7 +213,7 @@ def test_tres_subidas_nominais_sao_estaveis_e_o_manifesto_fecha(tmp_path):
     r, pasta, linhas, launches = _bateria(tmp_path, {}, 3)
     assert r.returncode == 0, r.stdout[-3000:]
     assert launches == 3 and len(linhas) == 3
-    assert [l['subida_ok'] for l in linhas] == ['1', '1', '1']
+    assert [l['subida_nominal'] for l in linhas] == ['1', '1', '1']
     assert [l['limpeza_ok'] for l in linhas] == ['1', '1', '1']
     assert (pasta / 'veredito.txt').read_text().startswith('ESTÁVEL')
     m = _manifesto_de_fora(pasta)
@@ -194,7 +228,7 @@ def test_falha_de_subida_e_registrada_e_a_bateria_continua(tmp_path):
     r, pasta, linhas, launches = _bateria(tmp_path, {2: 'falha_jsb'}, 3)
     assert r.returncode == 1
     assert launches == 3 and len(linhas) == 3, 'a bateria tinha de continuar'
-    assert [l['subida_ok'] for l in linhas] == ['1', '0', '1']
+    assert [l['subida_nominal'] for l in linhas] == ['1', '0', '1']
     assert linhas[1]['switch_timeout'] == '1'
     assert linhas[1]['jsb_estado'] == 'inactive'
     assert linhas[1]['joint_states_msgs'] == '0'
@@ -267,3 +301,63 @@ def test_source_que_falha_para_antes_de_qualquer_ros2(tmp_path):
     assert r.returncode == 1
     assert not (calcos / 'chamadas.txt').exists(), 'chamou ros2 sem o ambiente'
     assert not (pasta / 'subida_01').exists()
+
+
+# ─── o teardown com SIGSEGV e a limpeza recuperada (regra de 28-09, 14h) ──────
+
+def _chamadas(tmp_path):
+    return (tmp_path / 'calcos' / 'chamadas.txt').read_text()
+
+
+def test_sigsegv_do_collision_monitor_no_teardown_e_limpeza_recuperada(tmp_path):
+    r, pasta, linhas, launches = _bateria(tmp_path, {2: 'sigsegv_teardown'}, 3)
+    assert launches == 3 and len(linhas) == 3, 'a bateria tinha de continuar'
+    assert [l['subida_nominal'] for l in linhas] == ['1', '1', '1']
+    assert [l['sigsegv_teardown'] for l in linhas] == ['0', '1', '0']
+    assert [l['limpeza_recuperada'] for l in linhas] == ['0', '1', '0']
+    assert linhas[1]['shm_orfaos'] == '2' and linhas[0]['shm_orfaos'] == '0'
+    assert _chamadas(tmp_path).count('CALCO fastdds shm clean') == 1
+    inv = (pasta / 'subida_02' / 'shm_inventario.txt').read_text()
+    assert 'fastrtps_port7001' in inv and 'fuser' in inv
+    assert 'collision_monitor-15' in inv and 'exit code -11' in inv
+    assert not list((tmp_path / 'shm').iterdir())
+    v = (pasta / 'veredito.txt').read_text()
+    assert '1 limpeza(s) recuperada(s)' in v
+    assert _manifesto_de_fora(pasta).returncode == 0
+
+
+def test_segmento_que_o_fastdds_nao_remove_interrompe(tmp_path):
+    r, pasta, linhas, launches = _bateria(tmp_path, {1: 'shm_teimoso'}, 3)
+    assert r.returncode == 1 and launches == 1
+    assert (pasta / 'veredito.txt').read_text().startswith('INCOMPLETA')
+    assert _manifesto_de_fora(pasta).returncode == 0
+
+
+@pytest.mark.parametrize('tipo', ('sigsegv_outro', 'sigsegv_antes'))
+def test_sinal_fora_da_regra_interrompe_sem_limpar_shm(tmp_path, tipo):
+    r, pasta, linhas, launches = _bateria(tmp_path, {1: tipo}, 3)
+    assert r.returncode == 1 and launches == 1
+    assert 'CALCO fastdds' not in _chamadas(tmp_path)
+    assert (pasta / 'veredito.txt').read_text().startswith('INCOMPLETA')
+
+
+def test_residuo_vivo_com_shm_nao_chama_o_fastdds(tmp_path):
+    """Nó vivo no domínio E segmento órfão: nada de `fastdds shm clean` —
+    ele só roda com nada vivo."""
+    r, pasta, linhas, launches = _bateria(tmp_path, {1: 'residuo'}, 3)
+    assert r.returncode == 1 and launches == 1
+    assert 'CALCO fastdds' not in _chamadas(tmp_path)
+
+
+def test_residuo_antes_da_subida_nao_escreve_depois_do_manifesto(tmp_path):
+    """O defeito de 14h12: barrada ANTES de subir, a subida ganhava uma limpeza
+    do `trap` que escrevia depois do SHA256SUMS; e o escopo exigia o
+    `launch.log` de uma subida que não subiu."""
+    r, pasta, calcos = _bateria(tmp_path, {0: 'residuo_no_build'}, 2,
+                                exige_calco=False)
+    assert r.returncode == 1
+    assert 'CALCO launch' not in (calcos / 'chamadas.txt').read_text()
+    m = _manifesto_de_fora(pasta)
+    assert m.returncode == 0, m.stdout + m.stderr
+    assert 'escopo sem os artefatos' not in r.stdout
+    assert (pasta / 'veredito.txt').read_text().startswith('INCOMPLETA')

@@ -180,7 +180,7 @@ def _medidas(**sobre):
 def test_subida_nominal(mede):
     l = mede.linha(3, _medidas(), LOG_NOMINAL, LISTA, '1\n---\n' * 40,
                    '1790.0 1.0 0.0 0\n')
-    assert l['subida'] == 3 and l['subida_ok'] == 1
+    assert l['subida'] == 3 and l['subida_nominal'] == 1
     assert l['controladores_ok'] == 1 and l['joint_states_msgs'] == 40
     assert set(mede.COLUNAS) == set(l)
 
@@ -198,7 +198,7 @@ def test_o_que_nao_e_nominal(mede, caso, argumentos):
              echo='1\n---\n' * 40)
     a.update(argumentos)
     l = mede.linha(1, a['medidas'], a['log'], a['lista'], a['echo'], '')
-    assert l['subida_ok'] == 0, caso
+    assert l['subida_nominal'] == 0, caso
 
 
 def test_a_limpeza_fica_em_coluna_propria_e_nao_muda_a_subida(mede):
@@ -206,13 +206,13 @@ def test_a_limpeza_fica_em_coluna_propria_e_nao_muda_a_subida(mede):
     a bateria (é do wrapper), mas não reescreve o que a subida foi."""
     l = mede.linha(1, _medidas(limpeza_ok=0), LOG_NOMINAL, LISTA,
                    '1\n---\n' * 40, '')
-    assert l['subida_ok'] == 1 and l['limpeza_ok'] == 0
+    assert l['subida_nominal'] == 1 and l['limpeza_ok'] == 0
 
 
 # ─── o veredito da bateria ───────────────────────────────────────────────────
 
 def _linhas(n, falhas=()):
-    return [{'subida': i, 'subida_ok': 0 if i in falhas else 1,
+    return [{'subida': i, 'subida_nominal': 0 if i in falhas else 1,
              'limpeza_ok': 1} for i in range(1, n + 1)]
 
 
@@ -242,3 +242,70 @@ def test_limpeza_reprovada_nunca_e_estavel(mede):
     linhas[-1]['limpeza_ok'] = 0
     v, _ = mede.veredito(linhas, 20, interrompida=False)
     assert v != 'ESTÁVEL'
+
+
+# ─── sinais: o que o teardown pode ter e o que interrompe (regra de 28-09) ──
+#
+# Tolerado e REGISTRADO: SIGSEGV (-11) do `collision_monitor` iniciado DEPOIS
+# do primeiro `signal_handler(SIGINT` (dívida 057). Interrompe: SIGSEGV antes do
+# teardown, sinal em qualquer outro processo, ou outro sinal no collision_monitor.
+# `exit code 1` (os cinco da 057) não é sinal.
+
+FIM = "[robot_state_publisher-2] [INFO] [1790607012.3] [rclcpp]: signal_handler(SIGINT/SIGTERM)\n"
+
+
+def _morte(no, codigo):
+    return (f"[ERROR] [{no}]: process has died [pid 7, exit code {codigo}, "
+            f"cmd 'x']\n")
+
+
+def test_sigsegv_do_collision_monitor_no_teardown_e_registrado(mede):
+    a = mede.analisa_log(FIM + _morte('collision_monitor-15', -11)
+                         + _morte('placa_simulada-3', 1))
+    assert a['sigsegv_teardown'] == 1 and a['sinais_fora_da_regra'] == 0
+
+
+def test_os_cinco_exit_code_1_nao_sao_sinal(mede):
+    log = FIM + ''.join(_morte(n, 1) for n in (
+        'heading_controller-14', 'compensador_rumo-17', 'placa_simulada-3',
+        'path_follower-18', 'freeze_capture-19'))
+    a = mede.analisa_log(log)
+    assert a['sigsegv_teardown'] == 0 and a['sinais_fora_da_regra'] == 0
+
+
+def test_sigsegv_antes_do_teardown_interrompe(mede):
+    a = mede.analisa_log(_morte('collision_monitor-15', -11) + FIM)
+    assert a['sinais_fora_da_regra'] == 1 and a['sigsegv_teardown'] == 0
+
+
+def test_sinal_em_outro_processo_no_teardown_interrompe(mede):
+    a = mede.analisa_log(FIM + _morte('heading_controller-14', -11))
+    assert a['sinais_fora_da_regra'] == 1
+
+
+def test_outro_sinal_no_collision_monitor_interrompe(mede):
+    a = mede.analisa_log(FIM + _morte('collision_monitor-15', -6))
+    assert a['sinais_fora_da_regra'] == 1 and a['sigsegv_teardown'] == 0
+
+
+def test_limpeza_recuperada_e_coluna_propria_e_nao_mexe_na_subida(mede):
+    """A subida pode ser nominal com o teardown falhando; as colunas separam."""
+    l = mede.linha(1, _medidas(shm_orfaos=34, limpeza_recuperada=1),
+                   LOG_NOMINAL + _morte('collision_monitor-15', -11), LISTA,
+                   '1\n---\n' * 40, '')
+    assert l['subida_nominal'] == 1 and l['sigsegv_teardown'] == 1
+    assert l['shm_orfaos'] == 34 and l['limpeza_recuperada'] == 1
+
+
+def test_veredito_nao_chama_de_nominal_a_execucao_com_teardown_recuperado(mede):
+    v, texto = mede.veredito(_linhas(20, recuperadas={4, 11}), 20,
+                             interrompida=False)
+    assert v == 'ESTÁVEL'
+    assert 'todas as limpezas fechando' not in texto
+    assert '2 limpeza(s) recuperada(s)' in texto
+    assert '2 SIGSEGV' in texto and '4' in texto and '11' in texto
+
+
+def test_veredito_sem_recuperacao_diz_teardown_limpo(mede):
+    _, texto = mede.veredito(_linhas(20), 20, interrompida=False)
+    assert 'nenhuma limpeza recuperada' in texto
