@@ -290,20 +290,31 @@ exit 0
     return [l.split('|') for l in anotado.read_text().splitlines()]
 
 
-def test_o_teto_simulado_do_wrapper_reprova(tmp_path):
-    """O relógio já passou do teto: o laço derruba o goal e isso é REPROVADO,
-    mesmo que o `objetivo.log` depois diga SUCCEEDED."""
-    linhas = _roda_espera(tmp_path, 'echo 161', 60)
-    assert [l[1] for l in linhas] == ['REPROVADO'], linhas
-    assert 'teto' in linhas[0][2], linhas
+def test_goal_vivo_depois_do_relogio_passar_de_60s_nao_reprova(tmp_path):
+    """O relógio lido pelo wrapper já passou 61 s do seu marco, mas o goal ainda
+    está vivo (aceite atrasado em relação ao marco, ou cliente ainda saindo
+    depois de um terminal em 60 s exatos). A duração canônica pode caber no
+    teto — só o juiz, pelo bag, sabe. O wrapper espera e não reprova."""
+    linhas = _roda_espera(tmp_path, 'echo 161', 60, goal='sleep 1')
+    assert linhas and all(l[1] != 'REPROVADO' for l in linhas), linhas
+
+
+def test_o_wrapper_nao_tem_corte_por_relogio_simulado():
+    """O teto de 60 s simulados é só do juiz. Um relógio colhido pelo wrapper
+    antes do goal não é autoridade sobre a duração da ação."""
+    codigo = '\n'.join(_codigo())
+    assert 'relogio' not in codigo
+    assert 'T0_SIM' not in codigo
+    assert '(/clock) respondendo' not in _texto()
 
 
 def test_o_watchdog_de_parede_do_wrapper_reprova(tmp_path):
-    """Relógio simulado mudo: quem para é o watchdog (6 × teto de parede; com
-    teto 1, seis segundos), e também é REPROVADO."""
+    """Goal que não fecha: quem para é o watchdog (6 × teto de parede; com
+    teto 1, seis segundos), e é REPROVADO pelo próprio motivo."""
     linhas = _roda_espera(tmp_path, 'echo', 1)
     assert [l[1] for l in linhas] == ['REPROVADO'], linhas
     assert 'WATCHDOG' in linhas[0][2], linhas
+    assert 'relógio' not in linhas[0][2], 'o watchdog não infere nada do /clock'
 
 
 def test_a_acao_que_termina_sozinha_nao_e_reprovada_pelo_wrapper(tmp_path):
