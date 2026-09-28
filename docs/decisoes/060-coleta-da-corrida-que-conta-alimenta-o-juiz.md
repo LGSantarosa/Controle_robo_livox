@@ -1,7 +1,7 @@
 # 060 — A coleta da corrida que conta alimenta o juiz
 
 **Data**: 2026-09-25 (PC de dev; robô, lidar e Gazebo desligados)
-**Status**: proposta; escrita antes dos testes vermelhos e do código
+**Status**: aplicada — a corrida que conta rodou e fechou o passo 7 em 2026-09-28 (§6.6); escrita antes dos testes vermelhos e do código
 **Toca**: um wrapper novo `bin/valida-etapa7`, um montador puro e um extrator
 de bag em `tools/valida_etapa7/`, e os testes deles
 **Não toca**: `tools/valida_etapa7/julga.py` (contrato fechado, 124/0),
@@ -292,3 +292,55 @@ continuam **sem manifesto**, como no `valida-etapa6`.
 `bin/valida-etapa7` **continua sem ter rodado**; nada disto prova a corrida. A
 próxima etapa é uma revisão offline única dos commits deste adendo e, sem
 bloqueador capaz de falsa aprovação, o pedido de "pode" para o Gazebo.
+
+### 6.6 A corrida que conta (2026-09-28, tarde) — passo 7 FECHADO
+
+Código em **`81bf0dc`**, árvore limpa (`git.txt` da pasta). Gazebo headless
+neste PC, domínio 49; robô e lidar **desligados**. Antes de cada corrida e
+depois da última: nenhum processo ROS/Gazebo, nenhuma marca `VALIDA_ETAPA*`,
+nenhum segmento DDS em `/dev/shm`, domínio 49 sem nós. As pastas ficam em
+`~/etapa7/` (ESTA MÁQUINA; não vêm pelo git).
+
+| corrida | resultado | papel |
+|---|---|---|
+| `20260928_114420` | REPROVADO no **build**, nada subiu | falha **pré-execução**: `build/robot_base/config/MID360_config.json` era um symlink de `--symlink-install` para o arquivo que a 058 renomeou para `MID360_config.template.json`; o `glob('config/*')` do `setup.py` pegou o link pendurado. Resto de build desta máquina, não defeito do código |
+| `20260928_114620` | **APROVADO nos 13 itens, mas NÃO canônica** | na subida, `Switch controller timed out after 5 seconds!` e o spawner do `joint_state_broadcaster` morreu com código 1: `/joint_states` com **0** mensagens. Não toca os três critérios (odometria e `odom→base_link` vêm do `diff_drive`), mas a pilha não subiu nominal. Primeira vez em 8 corridas |
+| **`20260928_114902`** | **APROVADO nos 13 itens — CANÔNICA** | subida nominal, `/joint_states` com **257** mensagens (`bag/metadata.yaml:559`, arquivo assinado) |
+
+Entre a primeira e a segunda, só o symlink pendurado foi apagado (era o único:
+`find build -xtype l`). Nenhum código mudou entre as três.
+
+**A canônica, `20260928_114902`:**
+
+- `SUCCEEDED` em **3 342 000 000 ns** simulados (teto 60 000 000 000 ns);
+- pose final a **0,0906 m** do alvo, tolerância viva **0,2500 m**; partida a
+  1,0000 m (o objetivo não nasceu dentro);
+- **65** amostras do tópico final na janela; maior comando efetivo
+  **0,4268 m/s**, acima do patamar vivo **0,3069 m/s**, em
+  `/hoverboard_base_controller/cmd_vel`, publicado por `/placa_simulada` no
+  modelo `medido`;
+- alvo enviado e gravado idênticos (`3.000000000000001`, `5.0`);
+- escopo com os artefatos de prova, **41** arquivos; `SHA256SUMS` conferido
+  pelo wrapper e de novo **de fora**, depois do fim;
+- os três pontos que só a corrida mostrava passaram: status oculto visto pelo
+  `topic info -v`, gravador `/rosbag2_recorder`, `param dump` com
+  `/placa_simulada` no topo;
+- `launch.log`: os **cinco `exit code 1` conhecidos da 057**
+  (`compensador_rumo`, `heading_controller`, `placa_simulada`,
+  `path_follower`, `freeze_capture`), **só no teardown**; nenhum erro antes
+  dele. O `collision_monitor` não caiu com SIGSEGV nesta nem na `114620`.
+
+**Dívida nova, separada — ao lado da 057, não dentro dela:** a ativação do
+`joint_state_broadcaster` pode estourar o timeout de 5 s do
+`controller_manager` na subida (1 em 8). Decisão do dono: **não** vira
+verificação no wrapper agora — `/joint_states` não pertence aos três critérios,
+e a corrida seguinte, nominal, tirou a ambiguidade do fechamento. Fica
+registrada para quando a subida for gate.
+
+**Alerta para outras máquinas:** notebook e NUC com `build/` anterior à 058
+batem no mesmo symlink pendurado no primeiro build. Conferir com
+`find build -xtype l` e apagar o link (é artefato de build, fora do git).
+
+🔴 **O que isto NÃO prova:** o patamar é o da **placa simulada herdada do robô
+2**; nada aqui mede a zona morta real do robô 3, e é simulador (sem derrapada,
+sem atuador físico).

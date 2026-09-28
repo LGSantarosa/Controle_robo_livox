@@ -11247,3 +11247,42 @@ da documentação), sem push até a revisão final.
 revisão offline única dos commits de hoje; sem bloqueador capaz de falsa
 aprovação, pedir o "pode" e rodar a corrida no Gazebo headless (robô
 DESLIGADO). O passo 7 continua **ABERTO**.
+
+## ✅ 2026-09-28, tarde (PC de dev, GAZEBO HEADLESS, robô e lidar DESLIGADOS) — O PASSO 7 FECHA: TRÊS CORRIDAS, UMA CANÔNICA
+
+A revisão offline final dos 14 commits não achou bloqueador capaz de falsa
+aprovação, e o dono deu o "pode". Código em `81bf0dc`, árvore limpa. O dono
+saiu para almoçar e liberou as corridas com uma regra: **limpar TUDO de uma
+corrida antes da outra**. Antes de cada uma e depois da última, zero processo
+ROS/Gazebo, zero marca, zero segmento DDS, domínio 49 sem nós.
+
+| corrida | o que houve |
+|---|---|
+| `114420` | parou no **build**. A 058 renomeou `MID360_config.json` para `.template.json`, mas o `build/` deste PC ainda tinha o symlink de `--symlink-install` para o nome antigo, pendurado; o `glob('config/*')` do `setup.py` o pegou. Primeiro build aqui desde a 058 — a suíte não roda `colcon build`, então nada acusou antes. Apagado só o link (o único pendurado), com o ok do dono |
+| `114620` | **APROVADA nos 13 itens, mas não canônica**: o `joint_state_broadcaster` estourou o timeout de 5 s na ativação, o spawner morreu, `/joint_states` ficou com 0 mensagens. Não mexe nos três critérios, mas a pilha não subiu nominal — e o wrapper não vê isso |
+| **`114902`** | **CANÔNICA**: 13/13, subida nominal (`/joint_states` 257 mensagens) |
+
+A canônica: `SUCCEEDED` em **3,342 s simulados**; final a **0,0906 m** do alvo
+(tolerância viva 0,25 m; partida a 1,0 m); **65** amostras na janela, maior
+comando efetivo **0,4268 m/s** acima do patamar vivo **0,3069 m/s** no
+consumidor final; manifesto de 41 arquivos conferido também de fora. No
+teardown, só os cinco `exit code 1` conhecidos da 057; nada antes dele.
+
+Decisões do dono no fechamento:
+
+- a falha do broadcaster é **dívida separada de inicialização**, ao lado da
+  057 e não dentro dela; **sem** verificação nova no wrapper por ora;
+- a `114620` fica registrada como aprovada mas não canônica.
+
+Um número corrigido na documentação: o revisor citou 256 mensagens em
+`/joint_states`; o `metadata.yaml` assinado da `114902` diz **257** (linha
+559), e é esse que vale.
+
+⚠️ **Para notebook e NUC:** com `build/` anterior à 058, o primeiro build
+bate no mesmo link pendurado. `find build -xtype l` mostra; apagar o link.
+
+🔴 **O que NÃO prova:** o patamar é o da placa simulada herdada do robô 2;
+não mede a zona morta real do robô 3, e é simulador.
+
+**Passo 7 FECHADO.** Próximo pelo plano: o passo 8 (decisão 056 → aplicada,
+gate de não regressão do robô 2, §6 do `PLANO_ETAPA6_ROBO3.md`).

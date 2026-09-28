@@ -7,12 +7,10 @@
 >
 > - **PC de dev, robô desligado** — a **etapa 5 inteira está na `main`**,
 >   passos 1–6; o **passo 6 da etapa 6 fechou** na branch
->   `etapa6-pilha-robo3`; o **passo 7 está ABERTO e não fechado** — juiz,
->   montador, extrator e `bin/valida-etapa7` prontos e provados offline, e
->   revisados em 28-09 (quatro defeitos corrigidos, decisão 060 §6), mas
->   o wrapper **nunca rodou** e nenhuma corrida foi julgada pelos três
->   critérios (recomeçar pelo "PAROU AQUI" da seção do passo 7); só duas
->   corridas exploratórias (seção abaixo); em aberto, auditar o NOTEBOOK.
+>   `etapa6-pilha-robo3`; o **passo 7 FECHOU em 28-09** pela corrida
+>   canônica `20260928_114902` (decisão 060 §6.6), depois da revisão do
+>   `b11f966` (quatro defeitos corrigidos, §6.1–6.5); próximo, o **passo 8**;
+>   em aberto, auditar o NOTEBOOK.
 > - **Lab** — Mid-360, FAST-LIO, `/scan` e TF do robô 3 provados com
 >   placa/motores desligados. O lidar foi encerrado limpo e **desligado
 >   novamente pelo dono**; nenhum objetivo foi enviado e o robô não se moveu.
@@ -34,7 +32,7 @@
 
 | branch | contém | observação |
 |---|---|---|
-| `etapa6-pilha-robo3` | etapa 6 + passo 7 em aberto (juiz G1–G5, `708570f`…`71dbfd5`) + `main` até `1851ffb` (merge `64c0865`) + 058 (`6dc13f1`) + 059 (`f4aa7d4`) + revisão do `b11f966` (28-09, `417dbff`…`80df9f6`, **local até a revisão final**) | **a branch de trabalho**; continuar daqui |
+| `etapa6-pilha-robo3` | etapa 6 com o passo 7 FECHADO (juiz G1–G5, `708570f`…`71dbfd5`) + `main` até `1851ffb` (merge `64c0865`) + 058 (`6dc13f1`) + 059 (`f4aa7d4`) + revisão do `b11f966` (28-09, `417dbff`…`80df9f6`) + fechamento do passo 7 (28-09) | **a branch de trabalho**; continuar daqui |
 | `main` (`1851ffb`) | etapa 5, notebook sincronizado, prova parada do Mid-360 | **não** tem etapa 6, 058 nem 059 |
 | `livox-config-maquina-sensor` (`279f408`) | só a 058 | já incorporada aqui por cherry-pick; não é mais base de nada |
 | `backup/etapa6-pre-merge-main` (`d52b5da`, local) | etapa 6 antes do merge | ponto de volta se a integração precisar ser desfeita |
@@ -71,7 +69,27 @@ contagens forem **0 / 0 / 0**.
 
 🟡 **A decisão 056 continua PROPOSTA** — passa a "aplicada" só no passo 8.
 
-🟡 **Passo 7: ABERTO, não fechado.** O contrato da corrida que fecha o passo 7
+✅ **Passo 7: FECHADO em 28-09** — corrida canônica **`20260928_114902`**
+(`~/etapa7/`, ESTA MÁQUINA), código **`81bf0dc`**, decisão **060 §6.6**:
+`SUCCEEDED` em **3,342 s simulados**; final a **0,0906 m** do alvo (tolerância
+viva 0,25 m); maior comando efetivo **0,4268 m/s** acima do patamar vivo
+**0,3069 m/s** no consumidor final; 13/13 itens; manifesto de 41 arquivos
+conferido também de fora; subida nominal (`/joint_states` 257 mensagens); no
+teardown, só os cinco `exit code 1` da 057. Das outras duas corridas do dia, a
+`114420` parou no build (symlink pendurado da 058, ver alerta abaixo) e a
+`114620` **aprovou mas não é canônica** (broadcaster não ativou).
+
+🟡 **Dívida NOVA, separada da 057 — inicialização:** a ativação do
+`joint_state_broadcaster` pode estourar o timeout de 5 s do
+`controller_manager` (1 em 8 corridas; `/joint_states` fica vazio). Não entra
+nos três critérios; por decisão do dono, **sem** verificação no wrapper por
+ora.
+
+⚠️ **Alerta para notebook e NUC:** `build/` anterior à 058 guarda
+`build/robot_base/config/MID360_config.json` como symlink pendurado e o
+primeiro build falha. Conferir com `find build -xtype l` e apagar o link.
+
+O contrato que a corrida cumpriu (histórico): o que fecha o passo 7
 é: **objetivo Nav2 de 1 m à frente**, **teto de 60 s simulados**, e **três
 critérios simultâneos** — `SUCCEEDED`; pose final dentro do `xy_goal_tolerance` vivo; e
 **um comando acima do patamar vivo chegando ao controlador final**.
@@ -98,7 +116,7 @@ na decisão **056 §4.1**:
 2**; **não mede a zona morta real do robô 3**. Passar nele não diz nada sobre o
 atuador físico.
 
-**Onde o passo 7 parou (25-09):**
+**Como o passo 7 chegou ao fechamento (25-09 → 28-09):**
 
 - ✅ **Testes vermelhos primeiro, sem Gazebo**, como combinado: `24030e9`
   (29 casos) e `50f6a93`/`ea636f7` (conserto de um caso XY e entrada no
@@ -131,15 +149,12 @@ atuador físico.
   do `anota`; **D** — manifesto sem `console.txt`, escopo com `pipefail` e
   conferido contra os artefatos de prova, `sha256sum -c`, RC 1 em qualquer
   falha. `tools/valida_etapa7` **281/0**; suíte da raiz **1670/0**.
-- 🛑 **PAROU AQUI (28-09).** O `bin/valida-etapa7` **nunca rodou**.
-  **Recomeçar por:** (1) uma revisão offline única dos commits de 28-09; sem
-  bloqueador capaz de falsa aprovação, (2) pedir o "pode" e rodar
-  `bash bin/valida-etapa7` neste PC (Gazebo headless, robô DESLIGADO, árvore
-  limpa); (3) ler `~/etapa7/<carimbo>/resultado.csv`. Três pontos só a
-  corrida mostra, e em todos a falha para antes do goal ou reprova pelo nome:
-  se o `ros2 topic info -v` enxerga o status oculto da ação; se o gravador se
-  chama `/rosbag2_recorder`; se o `ros2 param dump` sai com `/placa_simulada`
-  no topo.
+- ✅ **A corrida que conta rodou (28-09, tarde)** — ver o bloco "Passo 7:
+  FECHADO" acima. Os três pontos que só a corrida mostrava passaram (status
+  oculto, `/rosbag2_recorder`, `param dump`).
+- 🛑 **PAROU AQUI (28-09, passo 7 fechado).** Próximo: o **passo 8** do
+  `docs/PLANO_ETAPA6_ROBO3.md` §7 — decisão 056 → aplicada e o gate de não
+  regressão do robô 2 (§6).
 - 🟡 **Duas corridas exploratórias** com `bin/explora-objetivo-robo3`
   (`f86c742`), Gazebo com janela, em `~/etapa7-explora/` (ESTA MÁQUINA). A
   `20260924_154659` não mandou objetivo (defeito do wrapper, `--spin-time`); a
@@ -391,10 +406,8 @@ drivers e overlay; (3) verificar a rede notebook↔Mid-360; (4) só então o
 roteiro de bancada com Nav2; (5) se o chassi superar o robô 2, migrar e
 auditar o NUC.
 
-⬜ **Próximo:** etapa 6 — **fechar o passo 7** na trilha Gazebo: revisão
-offline final dos commits de 28-09 e rodar o `bin/valida-etapa7` (coleta
-ligada ao juiz, provada offline e revisada; ver "PAROU AQUI" na seção do
-passo 7 no topo); e a
+⬜ **Próximo:** etapa 6 — o **passo 8** na trilha Gazebo (decisão 056 →
+aplicada, gate do §6; o passo 7 fechou em 28-09); e a
 auditoria do **NOTEBOOK**
 (hardware, na máquina), agora com o `bin/audita-livox` da decisão 059.
 
