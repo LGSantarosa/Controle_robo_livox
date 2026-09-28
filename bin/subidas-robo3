@@ -1,0 +1,225 @@
+#!/usr/bin/env bash
+# Subidas repetidas do robô 3 no Gazebo headless — decisão 061.
+#
+#   bash bin/subidas-robo3 [N]        N subidas (padrão 20), uma por vez, cada uma limpa
+#
+# Cada subida: varredura de resíduo ANTES (processo ROS/Gazebo, qualquer marca,
+# segmento DDS em /dev/shm, nó no domínio) → a pilha com os argumentos da
+# corrida do passo 7 → a espera do valida-etapa7 (Nav2 active + TF) → UMA
+# leitura dos controladores e UMA janela de /joint_states → a limpeza da etapa 6
+# como está → uma linha no subidas.csv. Amostrador de carga e pressão de CPU
+# durante a janela inteira.
+#
+#   · falha de subida: registrada, e a bateria CONTINUA se a limpeza fechar;
+#   · resíduo (limpeza reprovada ou varredura suja): a bateria PARA, INCOMPLETA.
+#
+# Veredito em veredito.txt: ESTÁVEL só com N/N; RC 0 só nele e com o manifesto
+# fechando. Pasta: ~/subidas-robo3/<carimbo>/ (subida_NN/ por subida).
+#
+# Teste offline: tools/subidas_robo3/test_wrapper_subidas.py, com os comandos
+# calçados por SUBIDAS_CALCOS (re-prefixado no PATH depois de CADA `source`),
+# SUBIDAS_RAIZ_SAIDA, SUBIDAS_DOMINIO e SUBIDAS_SHM. Fora do teste, nenhum deles
+# existe.
+#
+# ⚠️ Não prova a causa de nada; mede em que condições a subida falha ou o
+# limite da taxa. NUNCA mata por nome.
+set +u
+
+if [ -z "$SUBIDAS_AMBIENTE_LIMPO" ]; then
+  exec env -u AMENT_PREFIX_PATH -u CMAKE_PREFIX_PATH -u COLCON_PREFIX_PATH \
+           -u PYTHONPATH -u LD_LIBRARY_PATH -u ROS_DISTRO -u VALIDA_ETAPA4_MARCA \
+           SUBIDAS_AMBIENTE_LIMPO=1 bash "$0" "$@"
+fi
+
+N="${1:-20}"
+[[ "$N" =~ ^[1-9][0-9]?$ ]] || { echo "uso: bash bin/subidas-robo3 [N: 1..99]"; exit 2; }
+
+R="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+DOMINIO="${SUBIDAS_DOMINIO:-50}"     # 47 etapa 6 · 48 explora · 49 etapa 7
+PRAZO_PRONTO=300                      # s de parede até Nav2 active + TF
+JANELA_JS=8                           # s de parede da janela de /joint_states
+SHM="${SUBIDAS_SHM:-/dev/shm}"          # onde o Fast DDS deixa os segmentos
+calcos() { [ -n "$SUBIDAS_CALCOS" ] && export PATH="$SUBIDAS_CALCOS:$PATH"; }
+calcos
+
+CARIMBO="$(date +%Y%m%d_%H%M%S)"
+BASE="${SUBIDAS_RAIZ_SAIDA:-$HOME/subidas-robo3}/$CARIMBO"
+[ -e "$BASE" ] && { echo "🔴 $BASE já existe — não reaproveito pasta"; exit 1; }
+mkdir -p "$BASE" || exit 1
+exec > >(tee -a "$BASE/console.txt") 2>&1
+
+V="$R/tools/valida_etapa6"
+M="$R/tools/subidas_robo3/mede.py"
+CSV="$BASE/subidas.csv"
+export ROS_DOMAIN_ID="$DOMINIO"
+export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
+DOMINIOS_USADOS="$DOMINIO"
+# O que a lib da etapa 6 espera; apontado para a subida corrente a cada volta.
+SAIDA="$BASE"; GRUPOS="$BASE/grupos_base.txt"; : > "$GRUPOS"
+RESULTADO="$BASE/resultado_base.txt"; : > "$RESULTADO"
+source "$V/lib.sh"
+
+echo "== subidas do robô 3 · $N × headless · $CARIMBO =="
+echo "   pasta: $BASE · ROS_DOMAIN_ID=$DOMINIO"
+{ echo "commit: $(git -C "$R" rev-parse HEAD)"; git -C "$R" log -1 --format='%h %ad %s' --date=iso
+  echo "branch: $(git -C "$R" rev-parse --abbrev-ref HEAD)"
+  echo "status --porcelain (vazio = limpo):"; git -C "$R" status --porcelain; } > "$BASE/git.txt"
+if [ -n "$(git -C "$R" status --porcelain)" ]; then
+  echo "   🔴 árvore com mudança não commitada:"; git -C "$R" status --porcelain | sed 's/^/      /'
+  exit 1
+fi
+
+# ── resíduo: processo ROS/Gazebo, QUALQUER marca, DDS em /dev/shm, nó no domínio ──
+# Sem a marca no ambiente dos comandos: a marca da subida corrente está
+# exportada, e o próprio `grep` a herdaria e se acusaria.
+varre_residuo() {   # varre_residuo <arquivo> — 0 se limpo
+  local f="$1" sujo=0 pre marcas shm nos rc
+  pre="$(env -u VALIDA_ETAPA4_MARCA ps -eo pid,user,args \
+    | grep -E '(^|[ /])(ros2|gz|rviz2|_ros2_daemon)( |$)|/opt/ros/[a-z]+/lib/|/install/[a-z_]+/lib/|ros2cli\.daemon' \
+    | grep -vE 'grep -E|subidas-robo3|valida-etapa[4567]|explora-objetivo')"
+  marcas="$(env -u VALIDA_ETAPA4_MARCA grep -lsa 'VALIDA_ETAPA4_MARCA=' /proc/[0-9]*/environ 2>/dev/null)"
+  shm="$(ls "$SHM" 2>/dev/null | grep -iE 'fastrtps|fast_datasharing')"
+  nos="$(env -u VALIDA_ETAPA4_MARCA ROS_DOMAIN_ID="$DOMINIO" ros2 node list --no-daemon --spin-time 5 2>&1)"; rc=$?
+  { echo "processos ROS/Gazebo:"; echo "${pre:-   (nenhum)}"
+    echo "processos com marca:"; echo "${marcas:-   (nenhum)}"
+    echo "segmentos DDS em $SHM:"; echo "${shm:-   (nenhum)}"
+    echo "domínio $DOMINIO (rc $rc):"; echo "${nos:-   (nenhum nó)}"; } > "$f"
+  [ -n "$pre" ] && sujo=1; [ -n "$marcas" ] && sujo=1; [ -n "$shm" ] && sujo=1
+  [ "$rc" -ne 0 ] && sujo=1; [ -n "$nos" ] && sujo=1
+  return $sujo
+}
+
+INTERROMPIDA=0
+if ! varre_residuo "$BASE/residuo_inicial.txt"; then
+  echo "   🔴 já há resíduo ROS/Gazebo neste PC — não subo nada:"; sed 's/^/      /' "$BASE/residuo_inicial.txt"
+  exit 1
+fi
+
+export VALIDA_ETAPA4_MARCA="$BASE"
+FINALIZADO=0
+finaliza() {
+  [ "$FINALIZADO" -eq 1 ] && return
+  FINALIZADO=1
+  local rc_v falta="" d
+  [ -s "$CSV" ] || python3 "$M" cabecalho > "$CSV"
+  python3 "$M" veredito "$CSV" "$N" "$INTERROMPIDA" > "$BASE/veredito.txt"; rc_v=$?
+  echo; echo "== veredito =="; sed 's/^/   /' "$BASE/veredito.txt"
+  # O manifesto no padrão da etapa 7: escopo declarado (pipefail), sem o
+  # console, conferido contra os artefatos, gerado e conferido; falha → RC 1.
+  local E="$BASE/escopo_do_manifesto.txt"
+  if ! ( set -o pipefail; cd "$BASE" && find . -type f ! -name SHA256SUMS \
+           ! -name console.txt ! -name "$(basename "$E")" -print | sort ) > "$E"; then
+    falta=" (a construção do escopo falhou)"
+  fi
+  echo "./$(basename "$E")" >> "$E"
+  for d in git.txt subidas.csv veredito.txt; do
+    grep -qx "./$d" "$E" || falta="$falta $d"
+  done
+  for d in "$BASE"/subida_*/; do
+    [ -d "$d" ] || continue
+    grep -qx "./$(basename "$d")/launch.log" "$E" || falta="$falta $(basename "$d")/launch.log"
+  done
+  local manifesto=0
+  if ! ( cd "$BASE" && xargs -a "$(basename "$E")" -d '\n' sha256sum > SHA256SUMS ); then
+    echo "   🔴 falhou ao gerar o SHA256SUMS"; manifesto=1
+  elif ( cd "$BASE" && sha256sum -c SHA256SUMS --quiet ); then
+    echo "   🟢 SHA256SUMS confere ($(wc -l < "$BASE/SHA256SUMS") arquivos; console.txt fora)"
+  else
+    echo "   🔴 SHA256SUMS NÃO confere com a pasta"; manifesto=1
+  fi
+  [ -n "$falta" ] && echo "   🔴 escopo sem os artefatos:$falta"
+  if [ "$rc_v" -ne 0 ] || [ "$manifesto" -ne 0 ] || [ -n "$falta" ]; then
+    echo "   🔴 $(head -c 12 "$BASE/veredito.txt") — pasta: $BASE"; exit 1
+  fi
+  echo "   🟢 ESTÁVEL — pasta: $BASE"; exit 0
+}
+instala_limpeza
+trap 'limpa; finaliza' EXIT
+
+cd "$R" || exit 1
+source /opt/ros/jazzy/setup.bash; calcos
+echo "== compilando robot_base robot_motion robot_nav, UMA vez (build.log) =="
+if ! roda "$BASE/build.log" colcon build --symlink-install \
+     --packages-select robot_base robot_motion robot_nav; then
+  echo "   🔴 build falhou — nenhuma subida"; INTERROMPIDA=1; exit 1
+fi
+source install/setup.bash; calcos
+python3 "$M" cabecalho > "$CSV"
+
+# ── uma subida ──────────────────────────────────────────────────────────────
+NOS_ATIVOS="/bt_navigator /planner_server /controller_server"
+esta_ativo() { [ "${1%% *}" = active ]; }
+
+amostra_cpu() {   # epoch load1 psi_some_avg10 psi_some_total_us, a cada 1 s
+  local l1 psi
+  while :; do
+    read -r l1 _ < /proc/loadavg
+    psi="$(awk '/^some/{split($2,a,"=");split($5,b,"=");print a[2], b[2]}' /proc/pressure/cpu 2>/dev/null)"
+    echo "$(date +%s.%N) $l1 ${psi:-nan 0}"
+    sleep 1
+  done
+}
+
+subida() {
+  local i="$1" S T0 pronto=0 t_pronto="" lok
+  S="$BASE/subida_$(printf %02d "$i")"; mkdir -p "$S"
+  SAIDA="$S"; GRUPOS="$S/grupos_wrapper.txt"; : > "$GRUPOS"
+  RESULTADO="$S/resultado.txt"; : > "$RESULTADO"; LIMPO=0
+  echo; echo "== subida $i/$N =="
+  if ! varre_residuo "$S/residuo_antes.txt"; then
+    echo "   🔴 resíduo antes da subida $i — a bateria para"; sed 's/^/      /' "$S/residuo_antes.txt"
+    INTERROMPIDA=1; return 1
+  fi
+  # O amostrador é do wrapper, não da pilha: roda SEM marca, para o `sleep` dele
+  # não aparecer como sobra na limpeza da subida.
+  ( unset VALIDA_ETAPA4_MARCA; amostra_cpu ) > "$S/amostras.txt" 2>/dev/null &
+  local AMOSTRADOR=$!
+  export VALIDA_ETAPA4_MARCA="$S"
+  export GZ_PARTITION="subidas_robo3_${CARIMBO}_$i"
+  T0=$(date +%s.%N)
+  if sobe_grupo "pilha_robo3" "$S/launch.log" \
+       ros2 launch robot_motion pilha.launch.py \
+         robo:=3 sim:=true gui:=false rviz:=false localizacao:=fixa bag:=false \
+         log_dir:="$S"; then
+    # A espera do valida-etapa7, igual: é nela que a falha apareceu.
+    local T0_ESPERA; T0_ESPERA=$(date +%s)
+    while [ $(( $(date +%s) - T0_ESPERA )) -lt "$PRAZO_PRONTO" ]; do
+      local todos=1 no estado
+      for no in $NOS_ATIVOS; do
+        estado="$(timeout 10 ros2 lifecycle get "$no" 2>/dev/null | head -1)"
+        esta_ativo "$estado" || todos=0
+      done
+      if [ "$todos" -eq 1 ] \
+         && timeout 5 ros2 action list 2>>"$S/action_list.err" | grep -qx '/navigate_to_pose'; then
+        timeout 5 ros2 run tf2_ros tf2_echo map base_link > "$S/tf_inicial.txt" 2>&1
+        if grep -q 'Translation' "$S/tf_inicial.txt"; then
+          pronto=1; t_pronto="$(python3 -c "import time;print(round(time.time()-$T0,1))")"; break
+        fi
+      fi
+      sleep 1
+    done
+    # Uma leitura de cada, DEPOIS de pronto (ou do prazo), com timeout.
+    timeout 15 ros2 control list_controllers > "$S/controladores.txt" 2>&1
+    timeout -s INT "$JANELA_JS" ros2 topic echo /joint_states --field header.stamp.sec \
+      > "$S/joint_states.txt" 2>&1
+  fi
+  kill "$AMOSTRADOR" 2>/dev/null; wait "$AMOSTRADOR" 2>/dev/null
+  limpa
+  if grep -qE '^limpeza: nada marcado, domínios vazios +APROVADO' "$RESULTADO"; then lok=1; else lok=0; fi
+  printf 'nav2_tf_pronto=%s\nt_nav2_tf_s=%s\njs_janela_s=%s\nlimpeza_ok=%s\n' \
+    "$pronto" "$t_pronto" "$JANELA_JS" "$lok" > "$S/medidas.env"
+  python3 "$M" linha "$S" "$i" >> "$CSV"
+  echo "   $(tail -1 "$CSV")"
+  if [ "$lok" -ne 1 ]; then
+    echo "   🔴 limpeza da subida $i reprovada — a bateria para"; INTERROMPIDA=1; return 1
+  fi
+}
+
+for i in $(seq 1 "$N"); do
+  subida "$i" || break
+done
+if [ "$INTERROMPIDA" -eq 0 ] && ! varre_residuo "$BASE/residuo_final.txt"; then
+  echo "   🔴 resíduo depois da última subida"; INTERROMPIDA=1
+fi
+export VALIDA_ETAPA4_MARCA="$BASE"
+finaliza

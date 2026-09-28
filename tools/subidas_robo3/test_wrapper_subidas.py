@@ -43,7 +43,6 @@ ROS2 = textwrap.dedent(r'''
       "launch robot_motion")
         n=$((n + 1)); echo "$n" > "$D/launches"
         tipo="$(awk -v n="$n" '$1==n{print $2}' "$D/cenario")"
-        trap 'echo "[x-1] [INFO] [1790000100.0] [rclcpp]: signal_handler(SIGINT/SIGTERM)"; touch "$D/encerrado_$n"; exit 0' INT TERM
         echo "[gazebo-1] [INFO] [1790000001.000000000] [controller_manager]: Activating controllers: [ joint_state_broadcaster ]"
         if [ "$tipo" = falha_jsb ]; then
           echo "[gazebo-1] [ERROR] [1790000006.000000000] [controller_manager]: Switch controller timed out after 5 seconds!"
@@ -53,7 +52,20 @@ ROS2 = textwrap.dedent(r'''
         fi
         echo "[gazebo-1] [INFO] [1790000002.000000000] [controller_manager]: Activating controllers: [ hoverboard_base_controller ]"
         echo "[spawner-21] [INFO] [1790000002.200000000] [spawner_hoverboard_base_controller]: Configured and activated hoverboard_base_controller"
-        while :; do sleep 0.1; done ;;
+        # Python, não `trap`: processo lançado com `&` por shell não interativo
+        # nasce com SIGINT IGNORADO, e o bash não reinstala sinal ignorado. A
+        # `ros2 launch` real instala o próprio tratador; o calço também.
+        exec python3 -c '
+    import os, signal, sys, time
+    def fim(*_):
+        print("[x-1] [INFO] [1790000100.0] [rclcpp]: signal_handler(SIGINT/SIGTERM)", flush=True)
+        open(os.path.join(sys.argv[1], "encerrado_" + sys.argv[2]), "w").close()
+        sys.exit(0)
+    signal.signal(signal.SIGINT, fim)
+    signal.signal(signal.SIGTERM, fim)
+    while True:
+        time.sleep(0.1)
+    ' "$D" "$n" ;;
       "lifecycle get") echo "active [3]" ;;
       "action list") echo "/navigate_to_pose" ;;
       "run tf2_ros") echo "- Translation: [0.000, 0.000, 0.000]" ;;
@@ -95,7 +107,7 @@ def _gz_real():
     return achados
 
 
-def _bateria(tmp_path, cenario, n):
+def _bateria(tmp_path, cenario, n, shm_sujo=False):
     if not os.path.exists(WRAPPER):
         pytest.fail(f'{WRAPPER} ainda não existe — decisão 061, passo 2.')
     repo = tmp_path / 'repo'
@@ -118,8 +130,13 @@ def _bateria(tmp_path, cenario, n):
     (calcos / 'cenario').write_text(
         ''.join(f'{i} {cenario.get(i, "ok")}\n' for i in range(1, n + 1)))
     saidas = tmp_path / 'saidas'
+    shm = tmp_path / 'shm'          # nunca o /dev/shm real: o teste é hermético
+    shm.mkdir()
+    if shm_sujo:
+        (shm / 'fastrtps_port7018').write_text('')
     env = dict(os.environ, SUBIDAS_CALCOS=str(calcos), CALCO_DIR=str(calcos),
-               SUBIDAS_RAIZ_SAIDA=str(saidas), SUBIDAS_DOMINIO='91')
+               SUBIDAS_RAIZ_SAIDA=str(saidas), SUBIDAS_DOMINIO='91',
+               SUBIDAS_SHM=str(shm))
     env.pop('VALIDA_ETAPA4_MARCA', None)
     r = subprocess.run(['bash', str(repo / 'bin' / 'subidas-robo3'), str(n)],
                        capture_output=True, text=True, timeout=300, env=env)
@@ -187,3 +204,16 @@ def test_dominio_e_os_argumentos_da_corrida_do_passo_7():
     for arg in ('robo:=3', 'sim:=true', 'gui:=false', 'rviz:=false',
                 'localizacao:=fixa', 'bag:=false'):
         assert arg in texto, arg
+
+
+def test_segmento_dds_orfao_impede_a_primeira_subida(tmp_path):
+    """Fast DDS morto por KILL deixa segmento em /dev/shm (achado de 28-09: o
+    `ros2 bag record` do robô 2 no `valida-etapa4`). É resíduo: nada sobe."""
+    if not os.path.exists(WRAPPER):
+        pytest.fail('wrapper ainda não existe')
+    repo_e_calcos = tmp_path
+    with pytest.raises(AssertionError, match='o calço não foi usado'):
+        _bateria(repo_e_calcos, {}, 2, shm_sujo=True)
+    pasta = next((tmp_path / 'saidas').iterdir())
+    assert 'fastrtps_port7018' in (pasta / 'residuo_inicial.txt').read_text()
+    assert not (pasta / 'subida_01').exists()
