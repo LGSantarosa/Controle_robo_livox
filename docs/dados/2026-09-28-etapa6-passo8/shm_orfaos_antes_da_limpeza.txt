@@ -1,0 +1,47 @@
+registro: 2026-09-28T14:01:45-03:00 · PC de dev · antes do 'fastdds shm clean'
+
+== ls -la --time-style=full-iso /dev/shm (Fast DDS) ==
+-rw-r--r--  1 rbe-luis rbe-luis 549408 2026-09-28 13:09:19.732959683 -0300 fastrtps_07577d7cd964f916
+-rw-rw-r--  1 rbe-luis rbe-luis      0 2026-09-28 13:09:19.732476799 -0300 fastrtps_07577d7cd964f916_el
+-rw-r--r--  1 rbe-luis rbe-luis  52400 2026-09-28 13:09:19.734340484 -0300 fastrtps_port17697
+-rw-rw-r--  1 rbe-luis rbe-luis      0 2026-09-28 13:09:19.734340484 -0300 fastrtps_port17697_el
+-rw-r--r--  1 rbe-luis rbe-luis  52400 2026-09-28 13:09:19.745988449 -0300 fastrtps_port7018
+-rw-rw-r--  1 rbe-luis rbe-luis      0 2026-09-28 13:09:19.745988449 -0300 fastrtps_port7018_el
+-rw-r--r--  1 rbe-luis rbe-luis     32 2026-09-28 13:09:19.732959683 -0300 sem.fastrtps_port17697_mutex
+-rw-r--r--  1 rbe-luis rbe-luis     32 2026-09-28 13:09:19.745727678 -0300 sem.fastrtps_port7018_mutex
+
+== fuser, um por arquivo (vazio = ninguém segura) ==
+/dev/shm/fastrtps_07577d7cd964f916: (nenhum processo)
+/dev/shm/fastrtps_07577d7cd964f916_el: (nenhum processo)
+/dev/shm/fastrtps_port17697: (nenhum processo)
+/dev/shm/fastrtps_port17697_el: (nenhum processo)
+/dev/shm/fastrtps_port7018: (nenhum processo)
+/dev/shm/fastrtps_port7018_el: (nenhum processo)
+/dev/shm/sem.fastrtps_port17697_mutex: (nenhum processo)
+/dev/shm/sem.fastrtps_port7018_mutex: (nenhum processo)
+
+== processos ROS / Gazebo / Fast DDS (a única linha abaixo é o próprio grep da consulta — ugrep neste PC) ==
+1180182 Mon Sep 28 14:01:45 2026 ugrep -G --ignore-files --hidden -I --exclude-dir=.git --exclude-dir=.svn --exclude-dir=.hg --exclude-dir=.bzr --exclude-dir=.jj --exclude-dir=.sl -E (^|[ /])(ros2|gz|rviz2|_ros2_daemon|fastdds)( |$)|/opt/ros/[a-z]+/lib/|/install/[a-z_]+/lib/|ros2cli\.daemon|gz sim|ruby
+
+== processos com VALIDA_ETAPA4_MARCA ==
+(nenhum)
+
+== 2026-09-28T14:02:12-03:00: fastdds shm clean (única ação; nenhuma remoção manual) ==
+shm.clean:
+0 ports in use
+0 segments in use
+2 zombie ports cleaned
+1 zombie segments cleaned
+
+removidos (ls antes × depois):
+   fastrtps_07577d7cd964f916
+   fastrtps_07577d7cd964f916_el
+   fastrtps_port17697
+   fastrtps_port17697_el
+   fastrtps_port7018
+   fastrtps_port7018_el
+   sem.fastrtps_port17697_mutex
+   sem.fastrtps_port7018_mutex
+removidos que não eram os órfãos acima: (nenhum)
+órfãos que ficaram: (nenhum)
+/dev/shm depois: só lttng-ust-wait-8 e lttng-ust-wait-8-1000 (não são do DDS)

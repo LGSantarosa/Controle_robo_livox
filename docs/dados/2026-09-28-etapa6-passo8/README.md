@@ -71,3 +71,25 @@ não está no manifesto nem é versionado.
 
 🔴 **O que isto NÃO prova:** hardware, desempenho medido ou a zona morta de
 nenhum robô; e nada da preparação do Livox real (decisão 058).
+
+## Adendo (2026-09-28, 14h) — a limpeza do item (d) NÃO foi total
+
+O `limpeza.txt` do (d) registra "processos marcados depois: 0" e "domínio 41:
+nenhum nó", e isso continua verdade. Mas **sobraram oito segmentos Fast DDS em
+`/dev/shm`**, criados às 13:09:19 durante a corrida `20260928_130910` e sem
+nenhum processo os segurando. Achados só às 13:46, pela varredura de resíduo
+do instrumento da decisão 061 — eu não tinha conferido o `/dev/shm` depois do
+(d), e a limpeza do `bin/valida-etapa4` não olha para ele.
+
+Causa, no próprio `limpeza.txt`: "KILL: 2 membro(s) não saíram com INT em 20
+s" — o líder da launch e o `ros2-21`, que é o `ros2 bag record` do robô 2 (bag
+ligado por padrão na pilha dele). Este Jazzy não responde SIGINT no gravador
+(medido na etapa 6), o wrapper congelado só manda INT e depois KILL, e processo
+Fast DDS morto por KILL não apaga os próprios segmentos. A referência de 22-09
+tem o mesmo KILL no `ros2-21`.
+
+**Não invalida as medições funcionais do (d)** — parâmetros contra a v2,
+chegada, subida —, mas corrige a afirmação: a limpeza daquele wrapper deixa
+resíduo SHM do gravador, e isso é limitação dele. Registro dos oito, com
+horário e `fuser` vazio, e da remoção por `fastdds shm clean` (só ela, que
+removeu exatamente os oito): `shm_orfaos_antes_da_limpeza.txt`.
