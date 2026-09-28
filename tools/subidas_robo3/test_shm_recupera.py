@@ -188,3 +188,147 @@ def test_cli(tmp_path, shm_recupera):
     r = subprocess.run([sys.executable, MOD, 'remove', str(shm), str(a),
                         str(d2)], capture_output=True, text=True)
     assert r.returncode == 1
+
+
+# ── Reconferência interna de "nada vivo" (dono, 28-09 noite) ──────────────
+# O remove() reconfere, imediatamente antes do primeiro unlink e SEM ROS nem
+# participante DDS: processos ROS/Gazebo/Fast DDS/auxiliar, as duas marcas
+# (VALIDA_ETAPA4_MARCA e REPRO_CM_MARCA) e donos por mapeamento ou fd. O
+# /proc falso é só parâmetro de função; a CLI sempre lê o /proc real.
+
+EU = 5000
+
+
+def _proc(tmp_path, processos=(), eu=EU, ancestrais=(4000, 1)):
+    """processos: (pid, cmdline, environ:dict, maps:list[str], fds:list[str], ppid)."""
+    raiz = tmp_path / 'proc'
+    raiz.mkdir(exist_ok=True)
+    cadeia = [(eu, ancestrais[0])] + list(zip(ancestrais, list(ancestrais[1:]) + [0]))
+    for pid, ppid in cadeia:
+        _proc_um(raiz, pid, 'bash wrapper', {'VALIDA_ETAPA4_MARCA': '/x',
+                                             'REPRO_CM_MARCA': '/y'}, [], [], ppid)
+    for pid, cmd, env, maps, fds, ppid in processos:
+        _proc_um(raiz, pid, cmd, env, maps, fds, ppid)
+    return raiz
+
+
+def _proc_um(raiz, pid, cmd, env, maps, fds, ppid):
+    d = raiz / str(pid)
+    d.mkdir()
+    (d / 'cmdline').write_bytes(cmd.replace(' ', '\0').encode() + b'\0')
+    (d / 'environ').write_bytes(b''.join(f'{k}={v}\0'.encode() for k, v in env.items()))
+    (d / 'stat').write_text(f'{pid} (x) S {ppid} 0 0 0')
+    (d / 'maps').write_text(''.join(f'7f00-7f01 rw-s 0 00:1a 9 {m}\n' for m in maps))
+    (d / 'fd').mkdir()
+    for i, alvo in enumerate(fds):
+        (d / 'fd' / str(i + 3)).symlink_to(alvo)
+
+
+def _remove_proc(m, shm, a, d, raiz):
+    return m.remove(str(shm), str(a), str(d), proc_root=str(raiz), eu=EU)
+
+
+def test_proc_limpo_remove(tmp_path, shm_recupera):
+    shm, a, d = _prepara(tmp_path, shm_recupera, PAR)
+    raiz = _proc(tmp_path, [(6001, 'bash -c ls', {}, [], [], 1)])
+    ok, relato = _remove_proc(shm_recupera, shm, a, d, raiz)
+    assert ok, relato
+    assert list(shm.iterdir()) == []
+
+
+@pytest.mark.parametrize('cmd', (
+    '/opt/ros/jazzy/lib/nav2_collision_monitor/collision_monitor --ros-args',
+    'gdb -batch -x g.cmd /opt/ros/jazzy/lib/nav2_collision_monitor/collision_monitor',
+    'python3 /r/tools/repro_cm_sigsegv/auxiliar.py',
+    '/usr/bin/python3 /opt/ros/jazzy/bin/ros2 node list',
+    'python3 -c from ros2cli.daemon.daemonize import main',
+    'fastdds shm clean',
+    'gz sim -s -r mundo.sdf',
+    '/r/install/robot_base/lib/robot_base/placa_simulada --ros-args'))
+def test_processo_vivo_interrompe_e_nada_sai(tmp_path, shm_recupera, cmd):
+    shm, a, d = _prepara(tmp_path, shm_recupera, PAR)
+    raiz = _proc(tmp_path, [(6001, cmd, {}, [], [], 1)])
+    ok, relato = _remove_proc(shm_recupera, shm, a, d, raiz)
+    assert not ok and 'processo vivo' in relato and '6001' in relato, relato
+    assert len(list(shm.iterdir())) == 2
+
+
+@pytest.mark.parametrize('marca', ('VALIDA_ETAPA4_MARCA', 'REPRO_CM_MARCA'))
+def test_marca_viva_fora_da_cadeia_interrompe(tmp_path, shm_recupera, marca):
+    shm, a, d = _prepara(tmp_path, shm_recupera, PAR)
+    raiz = _proc(tmp_path, [(6001, 'sleep 30', {marca: '/base'}, [], [], 1)])
+    ok, relato = _remove_proc(shm_recupera, shm, a, d, raiz)
+    assert not ok and 'marca viva' in relato and marca in relato, relato
+    assert len(list(shm.iterdir())) == 2
+
+
+def test_marca_na_propria_cadeia_de_ancestrais_nao_conta(tmp_path, shm_recupera):
+    """O wrapper que chama carrega a marca: ele e os ancestrais não são resíduo."""
+    shm, a, d = _prepara(tmp_path, shm_recupera, PAR)
+    raiz = _proc(tmp_path)
+    ok, relato = _remove_proc(shm_recupera, shm, a, d, raiz)
+    assert ok, relato
+
+
+def test_segmento_mapeado_interrompe(tmp_path, shm_recupera):
+    shm, a, d = _prepara(tmp_path, shm_recupera, PAR)
+    raiz = _proc(tmp_path, [(6001, 'sleep 30', {},
+                             [str(shm / 'fastrtps_port7001')], [], 1)])
+    ok, relato = _remove_proc(shm_recupera, shm, a, d, raiz)
+    assert not ok and 'dono' in relato and '6001' in relato, relato
+    assert len(list(shm.iterdir())) == 2
+
+
+def test_segmento_com_fd_aberto_interrompe(tmp_path, shm_recupera):
+    shm, a, d = _prepara(tmp_path, shm_recupera, PAR)
+    raiz = _proc(tmp_path, [(6001, 'sleep 30', {}, [],
+                             [str(shm / 'sem.fastrtps_port7001_mutex')], 1)])
+    ok, relato = _remove_proc(shm_recupera, shm, a, d, raiz)
+    assert not ok and 'dono' in relato and '6001' in relato, relato
+    assert len(list(shm.iterdir())) == 2
+
+
+def test_dono_de_segmento_fast_dds_fora_dos_alvos_tambem_interrompe(tmp_path, shm_recupera):
+    """Alguém segurando QUALQUER segmento Fast DDS do diretório = algo vivo."""
+    shm, a, d = _prepara(tmp_path, shm_recupera, PAR)
+    raiz = _proc(tmp_path, [(6001, 'sleep 30', {},
+                             [str(tmp_path / 'shm' / 'fastrtps_port9999')], [], 1)])
+    ok, relato = _remove_proc(shm_recupera, shm, a, d, raiz)
+    assert not ok and 'dono' in relato, relato
+
+
+def test_processo_que_some_durante_a_leitura_e_ignorado(tmp_path, shm_recupera):
+    shm, a, d = _prepara(tmp_path, shm_recupera, PAR)
+    raiz = _proc(tmp_path)
+    (raiz / '6001').mkdir()          # diretório sem cmdline: sumiu no meio
+    ok, relato = _remove_proc(shm_recupera, shm, a, d, raiz)
+    assert ok, relato
+
+
+def test_confere_so_relata_e_nao_remove(tmp_path, shm_recupera):
+    shm, a, d = _prepara(tmp_path, shm_recupera, PAR)
+    raiz = _proc(tmp_path, [(6001, 'fastdds shm clean', {}, [], [], 1)])
+    problemas = shm_recupera.confere_nada_vivo(str(shm), proc_root=str(raiz), eu=EU)
+    assert problemas and '6001' in problemas[0]
+    (tmp_path / 'limpo').mkdir()
+    raiz_limpa = _proc(tmp_path / 'limpo')
+    assert shm_recupera.confere_nada_vivo(str(shm), proc_root=str(raiz_limpa), eu=EU) == []
+    assert len(list(shm.iterdir())) == 2
+
+
+def test_confere_cli_le_o_proc_real(tmp_path, shm_recupera):
+    shm, a, d = _prepara(tmp_path, shm_recupera, PAR)
+    r = subprocess.run([sys.executable, MOD, 'confere', str(shm)],
+                       capture_output=True, text=True)
+    assert r.returncode in (0, 1), r.stdout + r.stderr
+    assert ('nada vivo' in r.stdout) == (r.returncode == 0), r.stdout
+    assert len(list(shm.iterdir())) == 2
+
+
+def test_nao_chama_ros_nem_cria_participante(shm_recupera):
+    """Nenhum participante DDS: nada de rclpy, e o ÚNICO subprocesso é o fuser."""
+    import re
+    texto = open(MOD).read()
+    assert 'rclpy' not in texto
+    chamadas = re.findall(r'subprocess\.\w+\(\s*([^,)]*)', texto)
+    assert chamadas and all(c.startswith("['fuser'") for c in chamadas), chamadas
