@@ -106,7 +106,7 @@ def test_com_el_irmao_nao_e_removido(tmp_path, shm_recupera):
     shm, a, d = _prepara(tmp_path, shm_recupera,
                          PAR + ('fastrtps_port7001_el',))
     ok, relato = _remove(shm_recupera, shm, a, d)
-    assert not ok and '_el' in relato
+    assert not ok and 'tem o _el irmão' in relato, relato
     assert len(list(shm.iterdir())) == 3
 
 
@@ -128,7 +128,7 @@ def test_symlink_nunca_e_seguido_nem_removido(tmp_path, shm_recupera):
     (shm / 'fastrtps_port7001').symlink_to(alvo)
     d = _inventario(shm_recupera, shm, tmp_path / 'depois2.tsv')
     ok, relato = _remove(shm_recupera, shm, a, d)
-    assert not ok and 'symlink' in relato
+    assert not ok and 'symlink — nunca seguido' in relato, relato
     assert alvo.read_text() == 'não pode sumir'
     assert (shm / 'fastrtps_port7001').is_symlink()
 

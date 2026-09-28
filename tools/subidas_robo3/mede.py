@@ -38,7 +38,8 @@ COLUNAS = (
     't_ativacao_jsb_s', 't_ativacao_base_s',
     'sigsegv_teardown', 'sinais_fora_da_regra',
     'load1_max', 'psi_cpu_some_avg10_max', 'psi_cpu_some_us', 'amostras',
-    'limpeza_ok', 'shm_orfaos', 'limpeza_recuperada',
+    'limpeza_ok', 'shm_orfaos', 'teardown_anomalo', 'limpeza_recuperada',
+    'limpeza_manual_recuperada',
 )
 
 _ANSI = re.compile(r'\x1b\[[0-9;]*m')
@@ -172,8 +173,14 @@ def linha(n, medidas, log, lista, echo, amostras):
         'limpeza_ok': int(medidas.get('limpeza_ok', 0) or 0),
         'shm_orfaos': int(medidas.get('shm_orfaos', 0) or 0),
         'limpeza_recuperada': int(medidas.get('limpeza_recuperada', 0) or 0),
+        'limpeza_manual_recuperada': int(
+            medidas.get('limpeza_manual_recuperada', 0) or 0),
     }
     saida.update(a)
+    # Teardown anômalo: SIGSEGV tolerado ou segmento órfão — nunca "nominal",
+    # mesmo quando a limpeza foi recuperada.
+    saida['teardown_anomalo'] = int(saida['sigsegv_teardown'] > 0
+                                    or saida['shm_orfaos'] > 0)
     saida.update(resume_amostras(amostras))
     return {k: ('' if saida[k] is None else saida[k]) for k in COLUNAS}
 
@@ -194,11 +201,15 @@ def veredito(linhas, pedidas, interrompida):
     ruins = [str(l['subida']) for l in linhas if _int(l, 'limpeza_ok') != 1]
     recup = [str(l['subida']) for l in linhas if _int(l, 'limpeza_recuperada') == 1]
     segv = [str(l['subida']) for l in linhas if _int(l, 'sigsegv_teardown') > 0]
-    teardown = (f'teardown: {len(segv)} SIGSEGV do collision_monitor '
-                f'(subidas {", ".join(segv) or "nenhuma"}); '
-                + (f'{len(recup)} limpeza(s) recuperada(s) por fastdds shm clean '
-                   f'(subidas {", ".join(recup)})' if recup
-                   else 'nenhuma limpeza recuperada'))
+    manual = [str(l['subida']) for l in linhas
+              if _int(l, 'limpeza_manual_recuperada') == 1]
+    anom = [str(l['subida']) for l in linhas if _int(l, 'teardown_anomalo') == 1]
+    teardown = (f'teardown: {len(anom)} teardown(s) anômalo(s) (subidas '
+                f'{", ".join(anom) or "nenhuma"}); {len(segv)} SIGSEGV do '
+                f'collision_monitor (subidas {", ".join(segv) or "nenhuma"}); '
+                + (f'{len(recup)} limpeza(s) recuperada(s), {len(manual)} com '
+                   f'remoção manual controlada (subidas {", ".join(recup)})'
+                   if recup else 'nenhuma limpeza recuperada'))
     if interrompida or feitas < pedidas:
         return 'INCOMPLETA', (f'INCOMPLETA: {feitas} de {pedidas} subidas '
                               f'feitas; nominais {boas}/{feitas}; limpeza '

@@ -29,7 +29,8 @@ RAIZ = os.path.dirname(os.path.dirname(AQUI))
 WRAPPER = os.path.join(RAIZ, 'bin', 'subidas-robo3')
 
 COPIAS = ('bin/subidas-robo3', 'tools/valida_etapa6/lib.sh',
-          'tools/valida_etapa6/processos.py', 'tools/subidas_robo3/mede.py')
+          'tools/valida_etapa6/processos.py', 'tools/subidas_robo3/mede.py',
+          'tools/subidas_robo3/shm_recupera.py')
 
 # O `ros2` falso. Cenário por subida em $CALCO_DIR/cenario (linha "N tipo",
 # tipo ok | falha_jsb | residuo); a subida corrente é o contador de launches.
@@ -73,6 +74,7 @@ ROS2 = textwrap.dedent(r'''
         print("[x-1] [INFO] [1790000100.0] [rclcpp]: signal_handler(SIGINT/SIGTERM)", flush=True)
         tipo, shm = sys.argv[3], os.environ["SUBIDAS_SHM"]
         mortos = {"sigsegv_teardown": "collision_monitor-15",
+                  "vivo_no_clean": "collision_monitor-15",
                   "shm_teimoso": "collision_monitor-15",
                   "sigsegv_outro": "heading_controller-14"}
         if tipo in mortos:
@@ -145,6 +147,11 @@ FASTDDS = textwrap.dedent(r'''
       base="${el%_el}"; porta="$(basename "$base")"
       rm -f "$el" "$base" "$SUBIDAS_SHM/sem.${porta}_mutex"
     done
+    # Cenário vivo_no_clean: algo com cara de ROS fica vivo DEPOIS do clean.
+    if [ "$tipo" = vivo_no_clean ]; then
+      setsid bash -c 'exec -a ros2 sleep 60' < /dev/null > /dev/null 2>&1 &
+      echo $! > "$CALCO_DIR/vivo_pid"
+    fi
     echo "shm.clean:"; echo "1 zombie segments cleaned"
 ''').lstrip()
 
@@ -357,7 +364,13 @@ def test_segmento_que_o_fastdds_nao_remove_interrompe(tmp_path):
     # linha não pode dizer "recuperada" de uma limpeza que não recuperou.
     assert linhas[0]['limpeza_recuperada'] == '0', linhas[0]
     assert not (pasta / 'subida_02').exists()
-    assert 'sobrou segmento depois do fastdds shm clean' in r.stdout
+    assert 'a remoção manual controlada recusou' in r.stdout
+    rel = (pasta / 'subida_01' / 'shm_remocao_manual.txt').read_text()
+    assert 'fastrtps_abc123' in rel and 'nada removido' in rel
+    # um fora do padrão e NENHUM sai — nem os dois que seriam válidos
+    restos = sorted(p.name for p in (tmp_path / 'shm').iterdir())
+    assert restos == ['fastrtps_abc123', 'fastrtps_port7001',
+                      'sem.fastrtps_port7001_mutex'], restos
     assert (pasta / 'veredito.txt').read_text().startswith('INCOMPLETA')
     assert _manifesto_de_fora(pasta).returncode == 0
 
@@ -415,3 +428,20 @@ def test_fastdds_sozinho_basta_quando_ha_el(tmp_path):
     assert linhas[0]['limpeza_manual_recuperada'] == '0'
     assert linhas[0]['teardown_anomalo'] == '1'
     assert not (pasta / 'subida_01' / 'shm_remocao_manual.txt').exists()
+
+
+def test_algo_vivo_antes_da_remocao_manual_interrompe(tmp_path):
+    """O "nada vivo" é RECONFERIDO imediatamente antes da remoção manual."""
+    try:
+        r, pasta, linhas, launches = _bateria(tmp_path, {1: 'vivo_no_clean'}, 2)
+        assert r.returncode == 1 and launches == 1
+        assert 'algo vivo antes da remoção manual' in r.stdout
+        assert not (pasta / 'subida_01' / 'shm_remocao_manual.txt').exists()
+        assert (tmp_path / 'shm' / 'fastrtps_port7001').exists()
+    finally:
+        vivo = tmp_path / 'calcos' / 'vivo_pid'
+        if vivo.exists():
+            try:
+                os.kill(int(vivo.read_text()), 9)
+            except ProcessLookupError:
+                pass

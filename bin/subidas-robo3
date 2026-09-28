@@ -51,6 +51,7 @@ exec > >(tee -a "$BASE/console.txt") 2>&1
 
 V="$R/tools/valida_etapa6"
 M="$R/tools/subidas_robo3/mede.py"
+RS="$R/tools/subidas_robo3/shm_recupera.py"
 CSV="$BASE/subidas.csv"
 export ROS_DOMAIN_ID="$DOMINIO"
 export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
@@ -224,6 +225,8 @@ subida() {
   fi
   SAIDA="$S"; GRUPOS="$S/grupos_wrapper.txt"; : > "$GRUPOS"
   RESULTADO="$S/resultado.txt"; : > "$RESULTADO"; LIMPO=0
+  # O inventário ANTES: a remoção manual só alcança o que apareceu depois dele.
+  python3 "$RS" inventaria "$SHM" "$S/shm_antes.tsv"
   # O amostrador é do wrapper, não da pilha: roda SEM marca, para o `sleep` dele
   # não aparecer como sobra na limpeza da subida.
   ( unset VALIDA_ETAPA4_MARCA; amostra_cpu ) > "$S/amostras.txt" 2>/dev/null &
@@ -264,10 +267,13 @@ subida() {
   limpa
   if grep -qE '^limpeza: nada marcado, domínios vazios +APROVADO' "$RESULTADO"; then lok=1; else lok=0; fi
   # ── o teardown pela regra de 28-09 (decisão 061 §2.3) ──────────────────
-  local fora segv orfaos recup=0 motivo=""
+  local fora segv orfaos recup=0 manual=0 motivo=""
   read -r fora segv < <(python3 "$M" sinais "$S/launch.log")
   orfaos="$(conta_shm)"
-  [ "$orfaos" -gt 0 ] && inventaria_shm "$S/shm_inventario.txt" "$S/launch.log"
+  if [ "$orfaos" -gt 0 ]; then
+    inventaria_shm "$S/shm_inventario.txt" "$S/launch.log"
+    python3 "$RS" inventaria "$SHM" "$S/shm_depois.tsv"
+  fi
   if [ "$lok" -ne 1 ]; then
     motivo="limpeza reprovada (processo, marca ou nó vivo)"
   elif [ "${fora:-1}" -ne 0 ]; then
@@ -278,16 +284,26 @@ subida() {
     else
       echo "   🟠 $orfaos segmento(s) órfão(s) depois do teardown — fastdds shm clean"
       fastdds shm clean > "$S/shm_clean.txt" 2>&1
-      if [ "$(conta_shm)" -gt 0 ]; then
-        motivo="sobrou segmento depois do fastdds shm clean"
-        ls -la --time-style=full-iso "$SHM" >> "$S/shm_clean.txt"
-      else
+      if [ "$(conta_shm)" -eq 0 ]; then
         recup=1
+      else
+        # Os sem `_el`, que a ferramenta não reconhece (decisão 061 §2.3.2):
+        # remoção manual controlada, com o "nada vivo" RECONFERIDO agora.
+        ls -la --time-style=full-iso "$SHM" >> "$S/shm_clean.txt"
+        if algo_vivo "$S/vivo_antes_da_remocao_manual.txt"; then
+          motivo="algo vivo antes da remoção manual"
+        elif python3 "$RS" remove "$SHM" "$S/shm_antes.tsv" "$S/shm_depois.tsv" \
+               > "$S/shm_remocao_manual.txt" 2>&1 && [ "$(conta_shm)" -eq 0 ]; then
+          recup=1; manual=1
+          echo "   🟠 remoção manual controlada: $(grep -c '^  ' "$S/shm_remocao_manual.txt") arquivo(s)"
+        else
+          motivo="a remoção manual controlada recusou ou sobrou segmento (shm_remocao_manual.txt)"
+        fi
       fi
     fi
   fi
-  printf 'nav2_tf_pronto=%s\nt_nav2_tf_s=%s\njs_janela_s=%s\nlimpeza_ok=%s\nshm_orfaos=%s\nlimpeza_recuperada=%s\n' \
-    "$pronto" "$t_pronto" "$JANELA_JS" "$lok" "$orfaos" "$recup" > "$S/medidas.env"
+  printf 'nav2_tf_pronto=%s\nt_nav2_tf_s=%s\njs_janela_s=%s\nlimpeza_ok=%s\nshm_orfaos=%s\nlimpeza_recuperada=%s\nlimpeza_manual_recuperada=%s\n' \
+    "$pronto" "$t_pronto" "$JANELA_JS" "$lok" "$orfaos" "$recup" "$manual" > "$S/medidas.env"
   python3 "$M" linha "$S" "$i" >> "$CSV"
   echo "   $(tail -1 "$CSV")"
   if [ -n "$motivo" ]; then

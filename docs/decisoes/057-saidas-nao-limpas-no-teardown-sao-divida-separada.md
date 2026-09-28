@@ -151,3 +151,15 @@ promove, não a antecipa e não depende dela.
   fronteira de pacotes que esta decisão respeita.
 - `tools/valida_etapa6/test_valida_etapa6.py` — as travas de ordem
   (snapshot → `limpa` → exame final → manifesto) e dos três números.
+
+
+## Adendo (2026-09-28) — BLOQUEADORA PARA HARDWARE
+
+O SIGSEGV intermitente do `collision_monitor` no teardown deixou de ser
+cosmético: na bateria de subidas da decisão 061 (`~/subidas-robo3/20260928_141047`)
+ele deixou **34 segmentos Fast DDS órfãos** em `/dev/shm`, 29 deles fora do
+alcance do `fastdds shm clean` (sem a trava `_el`), o que impede a próxima
+subida limpa. Por decisão do dono, esta dívida passa a **bloqueadora para o
+hardware** até o SIGSEGV ser entendido. Em simulação, a recuperação é a
+remoção manual controlada da decisão 061 §2.3.2, registrada como teardown
+anômalo.

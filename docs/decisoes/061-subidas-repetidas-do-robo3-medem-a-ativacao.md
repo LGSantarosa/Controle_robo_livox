@@ -105,6 +105,37 @@ Regra, depois da limpeza de processos de cada subida:
 A bateria que segue esta regra **mede a taxa do SIGSEGV** do teardown; ela
 **não** libera, por si, o teste no hardware.
 
+### 2.3.2 A remoção manual controlada — regra do dono, 2026-09-28 (14h30)
+
+Medido às 14h28: o `fastdds shm clean` só reconhece como zumbi o segmento que
+ainda tem a trava `_el`. Dos 34 órfãos da bateria `141047` removeu **5** (os com
+`_el`); **29** ficaram — 15 portas `fastrtps_port<N>` e 14
+`sem.fastrtps_port<N>_mutex`, sem `_el` e sem dono. Hipótese (não medida): os
+donos saíram limpos e apagaram as próprias travas, mas o `collision_monitor`
+morto por SIGSEGV deixou as portas deles referenciadas.
+
+Autorizada **só como recuperação controlada da bateria em simulação**
+(`tools/subidas_robo3/shm_recupera.py`), depois do `fastdds shm clean`:
+
+- candidatos = diferença entre o inventário **antes** (tirado no início da
+  subida) e o **depois** (depois da limpeza de processos, antes do `fastdds`);
+- só `fastrtps_port<N>` e `sem.fastrtps_port<N>_mutex`, **sem** o `_el` irmão,
+  arquivo regular (nunca symlink — `lstat`, nunca seguido), do usuário atual,
+  direto no diretório de SHM;
+- tamanho e mtime iguais aos do inventário; `fuser` vazio; e o "nada vivo"
+  (ROS, Gazebo, Fast DDS, marca, nó) **reconferido** imediatamente antes;
+- **tudo** validado antes de remover **qualquer** um: um arquivo inválido,
+  inesperado ou que mudou, e **nenhum** sai; remoção por nome, um a um, a
+  partir da lista — nunca com padrão expandido;
+- recontagem: sobrou, interrompe.
+
+Cada ocorrência fica `teardown_anomalo = 1` e `limpeza_manual_recuperada = 1` —
+nunca execução inteiramente nominal. A opção de desligar o transporte SHM do
+Fast DDS na simulação fica **descartada**: mudaria o sistema sob teste.
+
+A decisão **057** passa a **bloqueadora para hardware** até o SIGSEGV do
+`collision_monitor` ser entendido.
+
 ### 2.4 O veredito da bateria
 
 - **ESTÁVEL** somente com **N/N** subidas nominais e nenhuma interrupção. O
