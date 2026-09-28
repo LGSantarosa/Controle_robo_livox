@@ -78,14 +78,23 @@ def _grava_poses(caminho, poses):
     os.replace(tmp, caminho)
 
 
+def escalar_yaml(valor):
+    """O float como escalar YAML — o MESMO texto que o `yaml.safe_dump` escreve
+    no `poses.yaml`, e que o `ros2 action send_goal` relê com `yaml.safe_load`
+    como o mesmo double. `repr` não serve: `1e-05` é texto no YAML 1.1."""
+    return yaml.safe_dump(float(valor)).splitlines()[0]
+
+
 def _cmd_objetivo(bruta, distancia, poses_yaml):
     pose = um_documento(open(bruta).read())
     alvo, yaw = objetivo(pose, float(distancia))
     p, o = pose['position'], pose['orientation']
     _grava_poses(poses_yaml, {'goal': alvo,
                               'pose_inicial': {'x': p['x'], 'y': p['y']}})
-    print('%.4f %.4f %.4f %.4f %.6f %.6f %.6f %.6f %.4f'
-          % (p['x'], p['y'], alvo['x'], alvo['y'],
+    # O alvo sai com o texto EXATO do `poses.yaml`: é ele que vai no goal, e é
+    # contra ele que o juiz mede a pose final. O resto é só para o console.
+    print('%.4f %.4f %s %s %.6f %.6f %.6f %.6f %.4f'
+          % (p['x'], p['y'], escalar_yaml(alvo['x']), escalar_yaml(alvo['y']),
              o['x'], o['y'], o['z'], o['w'], yaw))
 
 
