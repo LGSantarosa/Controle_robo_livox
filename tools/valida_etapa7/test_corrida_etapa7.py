@@ -86,6 +86,54 @@ def test_poses_normalizadas_gravadas_para_auditoria(corrida, tmp_path, capsys):
     assert float(distancia) == pytest.approx(0.08)
 
 
+# ─── o alvo enviado É o alvo gravado (revisão do b11f966, ponto B) ───────────
+#
+# O wrapper manda no `send_goal` o texto que o `corrida.py objetivo` imprime, e
+# o juiz compara a pose final com o `goal` do `poses.yaml`. Com `%.4f` os dois
+# diferiam em até ~7e-5 m. E `repr` puro não serve: o `ros2 action send_goal`
+# lê o objetivo com `yaml.safe_load` (YAML 1.1), que lê `1e-05` como TEXTO.
+# O texto impresso tem de ser o escalar YAML do float, o mesmo que o
+# `poses.yaml` contém.
+
+def _objetivo_impresso(corrida, tmp_path, capsys, pose):
+    bruta = tmp_path / 'pose_inicial_bruta.yaml'
+    bruta.write_text(yaml.safe_dump(pose) + '---\n')
+    poses = tmp_path / 'poses.yaml'
+    capsys.readouterr()
+    assert corrida.main(['objetivo', str(bruta), '1.0', str(poses)]) == 0
+    campos = capsys.readouterr().out.split()
+    return campos[2], campos[3], poses.read_text()
+
+
+@pytest.mark.parametrize('pose', (
+    _pose(0.3, x=2.123456789, y=5.987654321),      # alvo com 16 dígitos
+    _pose(math.pi / 2, x=0.0, y=0.0),              # alvo x = 6.1e-17
+    _pose(-2.0, x=-1.5, y=0.25)))
+def test_o_alvo_impresso_e_o_texto_gravado_no_poses_yaml(
+        corrida, tmp_path, capsys, pose):
+    meta_x, meta_y, gravado = _objetivo_impresso(corrida, tmp_path, capsys, pose)
+    goal = yaml.safe_load(gravado)['goal']
+    # o mesmo TEXTO, byte a byte, nas duas pontas
+    assert f'x: {meta_x}\n' in gravado, (meta_x, gravado)
+    assert f'y: {meta_y}\n' in gravado, (meta_y, gravado)
+    # e o ROS relê o mesmo double que o juiz vai usar
+    enviado = yaml.safe_load('{x: %s, y: %s}' % (meta_x, meta_y))
+    assert type(enviado['x']) is float and type(enviado['y']) is float
+    assert enviado['x'] == goal['x'] and enviado['y'] == goal['y']
+    esperado, _ = corrida.objetivo(pose, 1.0)
+    assert goal == esperado
+
+
+@pytest.mark.parametrize('valor', (1e-05, 6.123233995736766e-17, 3.0,
+                                   -0.1, 1e16, 2.123456789012345))
+def test_o_texto_do_alvo_e_float_para_o_yaml_do_ros(corrida, valor):
+    """`repr(1e-05)` é `1e-05`, que o YAML 1.1 lê como texto; o escalar tem de
+    voltar float e idêntico."""
+    texto = corrida.escalar_yaml(valor)
+    lido = yaml.safe_load('{x: %s}' % texto)['x']
+    assert type(lido) is float and lido == valor, (texto, lido)
+
+
 # ─── o gravador assina? ──────────────────────────────────────────────────────
 
 def test_gravador_assinante_e_reconhecido(corrida, fixtures):
