@@ -84,9 +84,19 @@ def analisa_log(texto):
 
 # ── list_controllers, echo e amostrador ─────────────────────────────────────
 
+_ESTADO_DO_SERVICO = re.compile(r"ControllerState\(name='([^']*)', state='([^']*)'")
+
+
 def controladores(texto):
-    saida = {}
-    for l in _ANSI.sub('', texto).splitlines():
+    """Dois formatos: a resposta do serviço
+    `/controller_manager/list_controllers` (a representação da mensagem, que é
+    o que este PC tem — sem `ros2 control`) e a tabela do `ros2 control
+    list_controllers`, onde ele existir."""
+    texto = _ANSI.sub('', texto)
+    saida = {n: e for n, e in _ESTADO_DO_SERVICO.findall(texto) if e in ESTADOS}
+    if saida:
+        return saida
+    for l in texto.splitlines():
         campos = l.split()
         if len(campos) >= 3 and campos[-1] in ESTADOS and '/' in campos[1]:
             saida[campos[0]] = campos[-1]

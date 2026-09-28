@@ -57,7 +57,7 @@ estar pronta, com `timeout`:
 | coluna do CSV | fonte |
 |---|---|
 | `nav2_tf_pronto`, `t_nav2_tf_s` | a espera do `valida-etapa7`, prazo de 300 s de parede |
-| `jsb_estado`, `base_estado`, `controladores_ok` | **uma** chamada `ros2 control list_controllers` (timeout 15 s) |
+| `jsb_estado`, `base_estado`, `controladores_ok` | **uma** chamada ao serviço `/controller_manager/list_controllers` (timeout 15 s) — o `ros2 control` (`ros2controlcli`) **não está instalado** neste PC (conferido em 28-09); instalar seria mudar o sistema |
 | `joint_states_msgs`, `joint_states_janela_s` | **uma** janela de `ros2 topic echo /joint_states` (timeout) |
 | `switch_timeout`, `falha_ativar`, `died_antes_do_fim` | contagem no `launch.log` bruto, antes do primeiro `signal_handler(SIGINT` |
 | `t_ativacao_jsb_s` | no `launch.log`: `Activating controllers: [ joint_state_broadcaster ]` → `Configured and activated joint_state_broadcaster`; vazio se não ativou |

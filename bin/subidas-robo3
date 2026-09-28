@@ -6,7 +6,8 @@
 # Cada subida: varredura de resíduo ANTES (processo ROS/Gazebo, qualquer marca,
 # segmento DDS em /dev/shm, nó no domínio) → a pilha com os argumentos da
 # corrida do passo 7 → a espera do valida-etapa7 (Nav2 active + TF) → UMA
-# leitura dos controladores e UMA janela de /joint_states → a limpeza da etapa 6
+# leitura dos controladores (serviço do controller_manager) e UMA janela de
+# /joint_states → a limpeza da etapa 6
 # como está → uma linha no subidas.csv. Amostrador de carga e pressão de CPU
 # durante a janela inteira.
 #
@@ -199,7 +200,10 @@ subida() {
       sleep 1
     done
     # Uma leitura de cada, DEPOIS de pronto (ou do prazo), com timeout.
-    timeout 15 ros2 control list_controllers > "$S/controladores.txt" 2>&1
+    # `ros2 control` (ros2controlcli) não existe neste PC: o serviço do
+    # controller_manager, que dá a mesma lista.
+    timeout 15 ros2 service call /controller_manager/list_controllers controller_manager_msgs/srv/ListControllers \
+      > "$S/controladores.txt" 2>&1
     timeout -s INT "$JANELA_JS" ros2 topic echo /joint_states --field header.stamp.sec \
       > "$S/joint_states.txt" 2>&1
   fi
