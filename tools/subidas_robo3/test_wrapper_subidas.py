@@ -69,10 +69,10 @@ ROS2 = textwrap.dedent(r'''
       "lifecycle get") echo "active [3]" ;;
       "action list") echo "/navigate_to_pose" ;;
       "run tf2_ros") echo "- Translation: [0.000, 0.000, 0.000]" ;;
-      "control list_controllers")
+      "service call")
         if [ "$tipo" = falha_jsb ]; then e=inactive; else e=active; fi
-        echo "joint_state_broadcaster     joint_state_broadcaster/JointStateBroadcaster  $e"
-        echo "hoverboard_base_controller  diff_drive_controller/DiffDriveController      active" ;;
+        echo "response:"
+        echo "controller_manager_msgs.srv.ListControllers_Response(controller=[controller_manager_msgs.msg.ControllerState(name='joint_state_broadcaster', state='$e', type='x/Y'), controller_manager_msgs.msg.ControllerState(name='hoverboard_base_controller', state='active', type='x/Y')])" ;;
       "topic echo")
         [ "$tipo" = falha_jsb ] || for i in $(seq 1 30); do echo 1; echo ---; done ;;
       "node list")
@@ -196,6 +196,15 @@ def test_o_wrapper_nunca_usa_pkill_nem_apaga_evidencia():
     texto = open(WRAPPER).read() if os.path.exists(WRAPPER) else ''
     assert texto, 'wrapper ainda não existe'
     assert 'pkill' not in texto and 'rm -rf' not in texto
+
+
+def test_os_controladores_sao_lidos_pelo_servico_e_nao_pelo_ros2_control():
+    """`ros2 control` não existe neste PC; usá-lo faria TODA subida sair não
+    nominal pela ferramenta, não pela pilha."""
+    texto = open(WRAPPER).read() if os.path.exists(WRAPPER) else ''
+    assert 'ros2 control ' not in texto
+    assert ('ros2 service call /controller_manager/list_controllers '
+            'controller_manager_msgs/srv/ListControllers') in texto
 
 
 def test_dominio_e_os_argumentos_da_corrida_do_passo_7():

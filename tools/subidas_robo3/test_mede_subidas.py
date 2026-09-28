@@ -114,6 +114,34 @@ def test_lixo_na_saida_nao_vira_controlador(mede):
     assert mede.controladores('Could not contact service\n\n') == {}
 
 
+# O `ros2 control` (ros2controlcli) NÃO está instalado neste PC (28-09): a
+# leitura é pelo serviço do controller_manager, cuja resposta sai como a
+# representação da mensagem.
+SERVICO = (
+    "requester: making request: controller_manager_msgs.srv.ListControllers_Request()\n\n"
+    "response:\n"
+    "controller_manager_msgs.srv.ListControllers_Response(controller=["
+    "controller_manager_msgs.msg.ControllerState(name='joint_state_broadcaster', "
+    "state='active', type='joint_state_broadcaster/JointStateBroadcaster', "
+    "is_async=False, update_rate=10, claimed_interfaces=[], "
+    "required_command_interfaces=[], required_state_interfaces=['a/position']), "
+    "controller_manager_msgs.msg.ControllerState(name='hoverboard_base_controller', "
+    "state='inactive', type='diff_drive_controller/DiffDriveController', "
+    "is_async=False, update_rate=10, claimed_interfaces=[])])\n")
+
+
+def test_resposta_do_servico_list_controllers(mede):
+    assert mede.controladores(SERVICO) == {
+        'joint_state_broadcaster': 'active',
+        'hoverboard_base_controller': 'inactive'}
+
+
+def test_servico_sem_resposta_nao_vira_controlador(mede):
+    texto = ("requester: making request: controller_manager_msgs.srv."
+             "ListControllers_Request()\n")
+    assert mede.controladores(texto) == {}
+
+
 # ─── /joint_states e o amostrador ────────────────────────────────────────────
 
 def test_conta_mensagens_do_echo(mede):
