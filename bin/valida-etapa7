@@ -304,9 +304,32 @@ limpa
 # importa está no `resultado.txt`, assinado. O escopo lista a si mesmo:
 # declaração fora do manifesto é declaração que se troca depois.
 ESCOPO="$SAIDA/escopo_do_manifesto.txt"
-( cd "$SAIDA" && find . -type f ! -name SHA256SUMS ! -name console.txt \
-    ! -name "$(basename "$ESCOPO")" -print | sort ) > "$ESCOPO"
+FALTA_NO_ESCOPO=""
+# `pipefail`: `find` ou `sort` que morrem no meio deixam um escopo PARCIAL, e um
+# manifesto que fecha contra ele.
+if ! ( set -o pipefail; cd "$SAIDA" && find . -type f ! -name SHA256SUMS \
+         ! -name console.txt ! -name "$(basename "$ESCOPO")" -print | sort ) > "$ESCOPO"; then
+  FALTA_NO_ESCOPO=" (a construção do escopo falhou)"
+fi
 echo "./$(basename "$ESCOPO")" >> "$ESCOPO"
+# O manifesto só confirma o que o escopo listou; quem garante que a PROVA está
+# nele é esta conferência. É a última chamada a `anota` (há teste travando).
+for exigido in resultado.txt resultado.csv poses.yaml objetivo.log \
+               julgamento.tsv julgamento_conferido.tsv placa_simulada.yaml \
+               controller_server.yaml grafo_antes.txt grafo_depois.txt \
+               bag/metadata.yaml; do
+  grep -qx "./$exigido" "$ESCOPO" || FALTA_NO_ESCOPO="$FALTA_NO_ESCOPO $exigido"
+done
+N_PERFIL="$(grep -c '^\./corrida_[^/]*/perfil_nav2\.yaml$' "$ESCOPO" || true)"
+[ "$N_PERFIL" = 1 ] || FALTA_NO_ESCOPO="$FALTA_NO_ESCOPO perfil_nav2.yaml (achei $N_PERFIL)"
+grep -q '^\./bag/[^/]*\.mcap$' "$ESCOPO" || FALTA_NO_ESCOPO="$FALTA_NO_ESCOPO bag/*.mcap"
+if [ -z "$FALTA_NO_ESCOPO" ]; then
+  anota "escopo a assinar inclui os artefatos de prova" APROVADO \
+    "$(wc -l < "$ESCOPO") arquivos"
+else
+  anota "escopo a assinar inclui os artefatos de prova" REPROVADO \
+    "(falta:$FALTA_NO_ESCOPO)"
+fi
 
 echo
 echo "== resultado ($RESULTADO_CSV) =="

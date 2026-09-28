@@ -488,17 +488,20 @@ OBRIGATORIOS = (
     'corrida_2026-09-28_120000/perfil_nav2.yaml', 'bag/metadata.yaml',
     'bag/bag_0.mcap')
 
+# O calço faz o trabalho INTEIRO e só então sai com 1 (o `find` que imprime
+# tudo e reclama de um diretório, por exemplo): a lista sai completa, e só o RC
+# da construção pode pegar a falha.
 CALCO_FALHA = """#!/usr/bin/env bash
-if [ -n "$FALHA_{nome}" ]; then {parcial}; exit 1; fi
-exec {real} "$@"
+{real} "$@"; rc=$?
+[ -n "$FALHA_{nome}" ] && exit 1
+exit $rc
 """
 
 
-def _calco(calcos, nome, parcial):
+def _calco(calcos, nome):
     import shutil
     c = calcos / nome
-    c.write_text(CALCO_FALHA.format(nome=nome.upper(), parcial=parcial,
-                                    real=shutil.which(nome)))
+    c.write_text(CALCO_FALHA.format(nome=nome.upper(), real=shutil.which(nome)))
     c.chmod(0o755)
 
 
@@ -524,8 +527,8 @@ def _roda_final(tmp_path, reprovado=False, gera=True, confere=True,
     (calcos / 'sha256sum').write_text(
         SHA_CALCO.format(real=shutil.which('sha256sum')))
     (calcos / 'sha256sum').chmod(0o755)
-    _calco(calcos, 'find', 'echo ./resultado.txt')
-    _calco(calcos, 'sort', 'head -1')
+    _calco(calcos, 'find')
+    _calco(calcos, 'sort')
     script = f"""
 set +u
 SAIDA='{saida}'
@@ -617,7 +620,9 @@ def test_artefato_de_prova_ausente_sai_1_e_ainda_assina(tmp_path, ausente):
     rc, saida = _roda_final(tmp_path, falta=(ausente,))
     assert rc == 1, (saida / 'console.txt').read_text()
     linha = _linha_do_escopo(saida)
-    assert ' REPROVADO' in linha and ausente.split('/')[-1] in linha, linha
+    # o mcap é exigido por padrão (`bag/*.mcap`), não pelo nome do arquivo
+    nome = '.mcap' if ausente.endswith('.mcap') else ausente.split('/')[-1]
+    assert ' REPROVADO' in linha and nome in linha, linha
     assert _confere_de_fora(saida).returncode == 0
 
 
@@ -641,7 +646,8 @@ def test_construcao_do_escopo_que_falha_sai_1(tmp_path, comando):
     manifesto que fecha contra ele. O RC da construção tem de contar."""
     rc, saida = _roda_final(tmp_path, falha=(comando,))
     assert rc == 1, (saida / 'console.txt').read_text()
-    assert ' REPROVADO' in _linha_do_escopo(saida)
+    linha = _linha_do_escopo(saida)
+    assert ' REPROVADO' in linha and 'construção do escopo' in linha, linha
 
 
 def _codigo_depois_da_geracao():
