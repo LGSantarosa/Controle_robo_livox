@@ -1,0 +1,6 @@
+ambiente: reexecução limpa como o bin/subidas-robo3 (-u AMENT_PREFIX_PATH CMAKE_PREFIX_PATH COLCON_PREFIX_PATH PYTHONPATH LD_LIBRARY_PATH ROS_DISTRO VALIDA_ETAPA4_MARCA), source /opt/ros/jazzy/setup.bash, source install/setup.bash, ROS_DOMAIN_ID=50, ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
+comando: env -u VALIDA_ETAPA4_MARCA ROS_DOMAIN_ID=50 ros2 node list --no-daemon --spin-time 5
+início: 2026-09-28T14:41:48,615276703-03:00
+fim: 2026-09-28T14:41:54,306307804-03:00
+código: 0
+saída: 0 bytes (3_saida.txt)
