@@ -1,0 +1,50 @@
+# Perfil do reprodutor do SIGSEGV do collision_monitor (decisão 057, adendo
+# de 28-09 noite). Base: o perfil real da corrida (perfil_collision_monitor.yaml
+# gerado pela pilha do robô 3). Diferenças, todas deliberadas:
+#   · tópicos em /repro/* (domínio isolado de qualquer forma);
+#   · autostart_node: true e bond_heartbeat_period: 0.0 — sem lifecycle
+#     manager, então sem bond (a espera de 100 ms do ~Bond não existe aqui);
+#   · transform_tolerance: 30.0 (real: 0.5) — o prazo do canTransform corre no
+#     relógio de parede e a parada do gdb no SIGINT comeria uma janela de
+#     0,5 s. Muda o TAMANHO da janela, não o caminho do código.
+collision_monitor:
+  ros__parameters:
+    use_sim_time: false
+    autostart_node: true
+    bond_heartbeat_period: 0.0
+    base_frame_id: base_link
+    odom_frame_id: odom
+    base_shift_correction: true
+    transform_tolerance: 30.0
+    source_timeout: 1.0
+    stop_pub_timeout: 2.0
+    enable_stamped_cmd_vel: true
+    cmd_vel_in_topic: /repro/cmd_vel_in
+    cmd_vel_out_topic: /repro/cmd_vel_out
+    state_topic: /repro/collision_monitor_state
+    observation_sources: [livox]
+    livox:
+      type: pointcloud
+      topic: /repro/pontos
+      enabled: true
+      min_height: 0.1
+      max_height: 0.5
+    polygons: [PolygonApproach, PolygonStop]
+    PolygonApproach:
+      type: polygon
+      action_type: approach
+      enabled: true
+      min_points: 2
+      points: '[[0.1125, 0.22], [0.1125, -0.22], [-0.3213, -0.22], [-0.3213, 0.22]]'
+      polygon_pub_topic: /repro/polygon_approach
+      simulation_time_step: 0.05
+      time_before_collision: 0.75
+      visualize: true
+    PolygonStop:
+      type: polygon
+      action_type: stop
+      enabled: true
+      min_points: 2
+      points: '[[0.2155, 0.24], [0.2155, -0.24], [-0.3413, -0.24], [-0.3413, 0.24]]'
+      polygon_pub_topic: /repro/polygon_stop
+      visualize: true
