@@ -217,6 +217,247 @@ def test_dois_materializados_nao_escolhe_um(corrida, fixtures, tmp_path):
     assert linhas['coleta: tolerância viva (× materializado)'] == 'REPROVADO'
 
 
+# ─── o julgamento falha FECHADO (revisão do b11f966, ponto C) ────────────────
+#
+# O wrapper ignorava o RC do `corrida.py julga` e só reprovava TSV vazio: saída
+# parcial, item trocado ou veredito com outro nome escapavam do `grep` final.
+# Agora o TSV passa por `confere_julgamento(texto, rc)` antes de qualquer linha
+# chegar ao `anota`. Aceita só: RC `0`/`1`; três campos por linha; veredito
+# `APROVADO`/`REPROVADO`; os nomes formando EXATAMENTE o conjunto dos 13, sem
+# repetição (contar linhas deixaria trocar um item por outro); e RC 0 se e só
+# se todos aprovam.
+
+TREZE_ITENS = (
+    'coleta: bag legível',
+    'coleta: ação e janela (status × objetivo.log)',
+    'coleta: tolerância viva (× materializado)',
+    'coleta: parâmetros da placa',
+    'coleta: grafo antes = depois',
+    '7.1 a ação devolveu SUCCEEDED',
+    '7.1 a ação fechou em até 60 s simulados',
+    '7.2 pose final dentro do xy_goal_tolerance vivo',
+    '7.2 o objetivo não nasceu dentro da tolerância',
+    '7.3 comando acima do patamar vivo no consumidor final',
+    '7.3 topologia nominal do tópico observado',
+    '7.3 a placa está no modelo medido',
+    '7.3 a amostra está dentro da janela do objetivo',
+)
+
+
+def _tsv(linhas):
+    return ''.join(f'{i}\t{v}\t{d}\n' for i, v, d in linhas)
+
+
+def _boas(veredito='APROVADO'):
+    return [(item, veredito, 'ok') for item in TREZE_ITENS]
+
+
+def test_os_itens_esperados_sao_os_treze(corrida):
+    """A lista sai do código (coleta + juiz), mas fica cravada aqui: renomear
+    um item no juiz sem passar por este teste não pode mudar o que se aceita."""
+    assert tuple(corrida.ITENS_ESPERADOS) == TREZE_ITENS
+
+
+def test_a_pasta_boa_julgada_passa_na_conferencia(corrida, fixtures, tmp_path):
+    linhas = _julga_pasta(corrida, tmp_path, _pasta_boa(tmp_path, fixtures))
+    texto = _tsv((corrida._limpo(i), v, corrida._limpo(d)) for i, v, d in linhas)
+    assert [l[0] for l in corrida.confere_julgamento(texto, '0')] == list(
+        TREZE_ITENS)
+
+
+def test_rc_1_com_uma_reprovacao_passa(corrida):
+    linhas = _boas()
+    linhas[6] = (linhas[6][0], 'REPROVADO', '60000000001 ns')
+    conferidas = corrida.confere_julgamento(_tsv(linhas), '1')
+    assert conferidas == linhas
+
+
+def test_detalhe_vazio_e_valido(corrida):
+    linhas = [(i, 'APROVADO', '') for i in TREZE_ITENS]
+    assert corrida.confere_julgamento(_tsv(linhas), '0') == linhas
+
+
+def _recusa(corrida, texto, rc, *trechos):
+    with pytest.raises(corrida.JulgamentoInvalido) as e:
+        corrida.confere_julgamento(texto, rc)
+    for t in trechos:
+        assert t in str(e.value), (t, str(e.value))
+
+
+def test_rc_0_com_reprovacao_e_incoerente(corrida):
+    linhas = _boas()
+    linhas[0] = (linhas[0][0], 'REPROVADO', 'x')
+    _recusa(corrida, _tsv(linhas), '0', 'RC')
+
+
+def test_rc_1_com_tudo_aprovado_e_incoerente(corrida):
+    _recusa(corrida, _tsv(_boas()), '1', 'RC')
+
+
+@pytest.mark.parametrize('rc', ('2', '-1', '', 'abc', '00', ' 0', '0.0'))
+def test_rc_fora_de_0_ou_1_recusa(corrida, rc):
+    _recusa(corrida, _tsv(_boas()), rc, 'RC')
+
+
+def test_tsv_vazio_recusa(corrida):
+    _recusa(corrida, '', '1')
+
+
+def test_item_faltando_recusa_dizendo_qual(corrida):
+    linhas = _boas()[:-1]
+    _recusa(corrida, _tsv(linhas), '0', TREZE_ITENS[-1])
+
+
+def test_item_repetido_no_lugar_de_outro_recusa(corrida):
+    """13 linhas, contagem certa, conjunto errado."""
+    linhas = _boas()
+    linhas[1] = linhas[0]
+    _recusa(corrida, _tsv(linhas), '0', TREZE_ITENS[0], TREZE_ITENS[1])
+
+
+def test_item_desconhecido_no_lugar_de_outro_recusa(corrida):
+    linhas = _boas()
+    linhas[3] = ('coleta: parametros da placa', 'APROVADO', 'ok')
+    _recusa(corrida, _tsv(linhas), '0', 'coleta: parametros da placa')
+
+
+def test_item_a_mais_recusa(corrida):
+    linhas = _boas() + [('7.4 extra', 'APROVADO', '')]
+    _recusa(corrida, _tsv(linhas), '0', '7.4 extra')
+
+
+@pytest.mark.parametrize('veredito', ('ERRO', 'aprovado', 'ANOTADO',
+                                      'RECUPERADO', '', 'APROVADO '))
+def test_veredito_fora_dos_dois_recusa(corrida, veredito):
+    linhas = _boas()
+    linhas[5] = (linhas[5][0], veredito, 'x')
+    _recusa(corrida, _tsv(linhas), '1', 'veredito')
+
+
+@pytest.mark.parametrize('quebrada', (
+    '7.1 a ação devolveu SUCCEEDED\tAPROVADO',
+    '7.1 a ação devolveu SUCCEEDED\tAPROVADO\tok\tsobra',
+    '',
+    '7.1 a ação devolveu SUCCEEDED APROVADO ok'))
+def test_linha_sem_exatamente_tres_campos_recusa(corrida, quebrada):
+    texto = _tsv(_boas()).splitlines()
+    texto[5] = quebrada
+    _recusa(corrida, '\n'.join(texto) + '\n', '0', 'linha 6')
+
+
+def test_ultima_linha_sem_quebra_final_recusa(corrida):
+    """Saída cortada no meio da última escrita não é saída completa."""
+    _recusa(corrida, _tsv(_boas())[:-1], '0')
+
+
+def test_cli_confere_devolve_as_linhas_ou_o_motivo(corrida, tmp_path, capsys):
+    tsv = tmp_path / 'julgamento.tsv'
+    tsv.write_text(_tsv(_boas()))
+    capsys.readouterr()
+    assert corrida.main(['confere', str(tsv), '0']) == 0
+    assert capsys.readouterr().out == _tsv(_boas())
+    assert corrida.main(['confere', str(tsv), '1']) == 1
+    saida = capsys.readouterr()
+    assert saida.out == '' and 'RC' in saida.err
+    assert corrida.main(['confere', str(tmp_path / 'nao_existe.tsv'), '0']) == 1
+    assert capsys.readouterr().out == ''
+
+
+# ─── o trecho do julgamento no wrapper, EXECUTADO ────────────────────────────
+#
+# Roda o trecho real do wrapper com um `corrida.py` falso na frente: o `julga`
+# devolve o TSV e o RC que o teste quer; o `confere` é o de verdade (ou quebra,
+# de propósito). Nada de ROS.
+
+INICIO_JULGAMENTO = '# ── o julgamento: brutos -> le_bag -> monta -> julga'
+FIM_JULGAMENTO = '\nlimpa\n'
+
+CORRIDA_FALSA = """
+import importlib.util, os, sys
+if sys.argv[1] == 'julga':
+    sys.stdout.write(open(os.environ['FALSO_TSV']).read())
+    sys.exit(int(os.environ['FALSO_RC']))
+if os.environ.get('FALSO_CONFERE_QUEBRA'):
+    sys.stdout.write('7.1 a ação devolveu SUCCEEDED\\tAPROVADO\\tparcial\\n')
+    sys.exit(2)
+spec = importlib.util.spec_from_file_location('corrida_real', {real!r})
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+sys.exit(m.main(sys.argv[1:]))
+"""
+
+
+def _trecho_de_julgamento():
+    texto = _texto()
+    assert INICIO_JULGAMENTO in texto
+    trecho = texto.split(INICIO_JULGAMENTO, 1)[1]
+    assert FIM_JULGAMENTO in trecho
+    return trecho.split(FIM_JULGAMENTO, 1)[0]
+
+
+def _roda_julgamento(tmp_path, tsv, rc, quebra=False):
+    v7 = tmp_path / 'v7'
+    v7.mkdir()
+    (v7 / 'corrida.py').write_text(
+        CORRIDA_FALSA.format(real=os.path.join(AQUI, 'corrida.py')))
+    (tmp_path / 'falso.tsv').write_text(tsv)
+    saida = tmp_path / 'saida'
+    saida.mkdir()
+    anotado = tmp_path / 'anotado.txt'
+    anotado.write_text('')
+    script = f"""
+set +u
+anota() {{ printf '%s|%s|%s\\n' "$1" "$2" "${{3:-}}" >> '{anotado}'; }}
+SAIDA='{saida}'
+V7='{v7}'
+# {_trecho_de_julgamento()}
+exit 0
+"""
+    env = dict(os.environ, FALSO_TSV=str(tmp_path / 'falso.tsv'),
+               FALSO_RC=str(rc))
+    if quebra:
+        env['FALSO_CONFERE_QUEBRA'] = '1'
+    r = subprocess.run(['bash', '-c', script], capture_output=True, text=True,
+                       timeout=60, env=env)
+    assert r.returncode == 0, r.stderr
+    return [l.split('|') for l in anotado.read_text().splitlines()]
+
+
+def test_wrapper_julgamento_valido_anota_as_treze_e_a_conferencia(tmp_path):
+    linhas = _roda_julgamento(tmp_path, _tsv(_boas()), 0)
+    assert [l[0] for l in linhas] == ['julgamento conferido'] + list(TREZE_ITENS)
+    assert all(l[1] == 'APROVADO' for l in linhas), linhas
+
+
+def _so_a_linha_conhecida(linhas):
+    assert len(linhas) == 1, linhas
+    assert linhas[0][:2] == ['julgamento conferido', 'REPROVADO'], linhas
+    assert linhas[0][2], 'o motivo tem de vir no detalhe'
+
+
+def test_wrapper_tsv_parcial_vira_so_a_linha_conhecida(tmp_path):
+    _so_a_linha_conhecida(_roda_julgamento(tmp_path, _tsv(_boas()[:12]), 0))
+
+
+def test_wrapper_veredito_estranho_vira_so_a_linha_conhecida(tmp_path):
+    linhas = _boas()
+    linhas[2] = (linhas[2][0], 'ERRO', 'x')
+    _so_a_linha_conhecida(_roda_julgamento(tmp_path, _tsv(linhas), 1))
+
+
+def test_wrapper_rc_incoerente_vira_so_a_linha_conhecida(tmp_path):
+    _so_a_linha_conhecida(_roda_julgamento(tmp_path, _tsv(_boas()), 1))
+
+
+def test_wrapper_julga_que_estoura_vira_so_a_linha_conhecida(tmp_path):
+    _so_a_linha_conhecida(_roda_julgamento(tmp_path, '', 1))
+
+
+def test_wrapper_confere_que_quebra_nao_encaminha_a_saida_parcial(tmp_path):
+    _so_a_linha_conhecida(
+        _roda_julgamento(tmp_path, _tsv(_boas()), 0, quebra=True))
+
+
 # ─── o wrapper (travas estáticas) ────────────────────────────────────────────
 
 def _texto():
