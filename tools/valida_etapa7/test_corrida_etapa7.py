@@ -479,22 +479,53 @@ def _trecho_final():
     return _texto().split('\nlimpa\n', 1)[1]
 
 
-def _roda_final(tmp_path, reprovado=False, gera=True, confere=True):
+# Os artefatos de PROVA: o manifesto só confirma o que o escopo listou, então o
+# escopo tem de ser conferido contra esta lista antes de assinar.
+OBRIGATORIOS = (
+    'resultado.txt', 'resultado.csv', 'poses.yaml', 'objetivo.log',
+    'julgamento.tsv', 'julgamento_conferido.tsv', 'placa_simulada.yaml',
+    'controller_server.yaml', 'grafo_antes.txt', 'grafo_depois.txt',
+    'corrida_2026-09-28_120000/perfil_nav2.yaml', 'bag/metadata.yaml',
+    'bag/bag_0.mcap')
+
+CALCO_FALHA = """#!/usr/bin/env bash
+if [ -n "$FALHA_{nome}" ]; then {parcial}; exit 1; fi
+exec {real} "$@"
+"""
+
+
+def _calco(calcos, nome, parcial):
+    import shutil
+    c = calcos / nome
+    c.write_text(CALCO_FALHA.format(nome=nome.upper(), parcial=parcial,
+                                    real=shutil.which(nome)))
+    c.chmod(0o755)
+
+
+def _roda_final(tmp_path, reprovado=False, gera=True, confere=True,
+                falta=(), extra=(), falha=()):
     import shutil
     saida = tmp_path / 'saida'
-    (saida / 'bag').mkdir(parents=True)
-    (saida / 'bag' / 'metadata.yaml').write_text('m: 1\n')
-    (saida / 'poses.yaml').write_text('goal: {x: 1.0, y: 0.0}\n')
-    (saida / 'julgamento.tsv').write_text('a\tAPROVADO\t\n')
+    saida.mkdir()
     veredito = 'REPROVADO' if reprovado else 'APROVADO'
-    (saida / 'resultado.txt').write_text(f'item {veredito} x\n')
-    (saida / 'resultado.csv').write_text(f'item,{veredito},x\n')
+    for rel in OBRIGATORIOS + tuple(extra):
+        if rel in falta:
+            continue
+        f = saida / rel
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(f'{rel}\n')
+    for rel, texto in (('resultado.txt', f'item {veredito} x\n'),
+                       ('resultado.csv', f'item,{veredito},x\n')):
+        if rel not in falta:
+            (saida / rel).write_text(texto)
     (saida / 'console.txt').write_text('ao vivo\n')
     calcos = tmp_path / 'calcos'
     calcos.mkdir()
     (calcos / 'sha256sum').write_text(
         SHA_CALCO.format(real=shutil.which('sha256sum')))
     (calcos / 'sha256sum').chmod(0o755)
+    _calco(calcos, 'find', 'echo ./resultado.txt')
+    _calco(calcos, 'sort', 'head -1')
     script = f"""
 set +u
 SAIDA='{saida}'
@@ -509,6 +540,8 @@ exec >> "$SAIDA/console.txt" 2>&1
         env['FALHA_GERA'] = '1'
     if not confere:
         env['FALHA_CONFERE'] = '1'
+    for nome in falha:
+        env[f'FALHA_{nome.upper()}'] = '1'
     r = subprocess.run(['bash', '-c', script], capture_output=True, text=True,
                        timeout=60, env=env)
     return r.returncode, saida
@@ -558,6 +591,57 @@ def test_falha_na_geracao_do_manifesto_forca_rc_1(tmp_path):
 def test_falha_na_conferencia_do_manifesto_forca_rc_1(tmp_path):
     rc, saida = _roda_final(tmp_path, confere=False)
     assert rc == 1, (saida / 'console.txt').read_text()
+
+
+ITEM_ESCOPO = 'escopo a assinar inclui os artefatos de prova'
+
+
+def _linha_do_escopo(saida):
+    linhas = [l for l in (saida / 'resultado.txt').read_text().splitlines()
+              if l.startswith(ITEM_ESCOPO)]
+    assert len(linhas) == 1, (saida / 'resultado.txt').read_text()
+    return linhas[0]
+
+
+def test_escopo_completo_e_anotado_aprovado(tmp_path):
+    rc, saida = _roda_final(tmp_path)
+    assert rc == 0
+    assert ' APROVADO' in _linha_do_escopo(saida)
+
+
+@pytest.mark.parametrize('ausente', OBRIGATORIOS)
+def test_artefato_de_prova_ausente_sai_1_e_ainda_assina(tmp_path, ausente):
+    """Manifesto internamente válido não basta: sem a prova, a corrida não
+    aprova. E a pasta reprovada é assinada e conferida assim mesmo — a
+    evidência que existe fica preservada."""
+    rc, saida = _roda_final(tmp_path, falta=(ausente,))
+    assert rc == 1, (saida / 'console.txt').read_text()
+    linha = _linha_do_escopo(saida)
+    assert ' REPROVADO' in linha and ausente.split('/')[-1] in linha, linha
+    assert _confere_de_fora(saida).returncode == 0
+
+
+def test_dois_perfis_materializados_nao_escolhe_um(tmp_path):
+    rc, saida = _roda_final(
+        tmp_path, extra=('corrida_2026-09-28_130000/perfil_nav2.yaml',))
+    assert rc == 1
+    assert ' REPROVADO' in _linha_do_escopo(saida)
+
+
+def test_bag_sem_mcap_sai_1(tmp_path):
+    rc, saida = _roda_final(tmp_path, falta=('bag/bag_0.mcap',),
+                            extra=('bag/bag_0.db3',))
+    assert rc == 1
+    assert 'mcap' in _linha_do_escopo(saida)
+
+
+@pytest.mark.parametrize('comando', ('find', 'sort'))
+def test_construcao_do_escopo_que_falha_sai_1(tmp_path, comando):
+    """`find` ou `sort` que morrem no meio deixam um escopo PARCIAL — e um
+    manifesto que fecha contra ele. O RC da construção tem de contar."""
+    rc, saida = _roda_final(tmp_path, falha=(comando,))
+    assert rc == 1, (saida / 'console.txt').read_text()
+    assert ' REPROVADO' in _linha_do_escopo(saida)
 
 
 def _codigo_depois_da_geracao():
