@@ -1,0 +1,1 @@
+14:50:22.559 [dominio 50] setsid ros2 launch robot_motion pilha.launch.py robo:=3 sim:=true gui:=false rviz:=false localizacao:=fixa bag:=false log_dir:=/home/rbe-luis/subidas-robo3/20260928_145005/subida_01 > launch.log

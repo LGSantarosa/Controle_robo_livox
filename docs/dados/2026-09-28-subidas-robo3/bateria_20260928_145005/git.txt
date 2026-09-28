@@ -1,0 +1,4 @@
+commit: e55c8f01cfcaa0933956ae51175ac0b06c401d9f
+e55c8f0 2026-09-28 14:42:20 -0300 subidas: dados brutos do experimento ros2 node list, interrompido pelo dono antes dos inventarios posteriores
+branch: etapa6-pilha-robo3
+status --porcelain (vazio = limpo):

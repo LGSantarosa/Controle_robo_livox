@@ -1,0 +1,27 @@
+grupos do wrapper (PGID STARTTIME PAPEL):
+   34201 44074 pilha_robo3
+pilha_robo3 pgid=34201 (nosso) pid=34201: sinalizado
+pilha_robo3 pgid=34201 (nosso) pid=34295: sinalizado
+pilha_robo3 pgid=34201 (nosso) pid=34296: sinalizado
+pilha_robo3 pgid=34201 (nosso) pid=34297: sinalizado
+pilha_robo3 pgid=34201 (nosso) pid=34298: sinalizado
+pilha_robo3 pgid=34201 (nosso) pid=34299: sinalizado
+pilha_robo3 pgid=34201 (nosso) pid=34301: sinalizado
+pilha_robo3 pgid=34201 (nosso) pid=34302: sinalizado
+pilha_robo3 pgid=34201 (nosso) pid=34303: sinalizado
+pilha_robo3 pgid=34201 (nosso) pid=34304: sinalizado
+pilha_robo3 pgid=34201 (nosso) pid=34305: sinalizado
+pilha_robo3 pgid=34201 (nosso) pid=34306: sinalizado
+pilha_robo3 pgid=34201 (nosso) pid=34307: sinalizado
+pilha_robo3 pgid=34201 (nosso) pid=34308: sinalizado
+pilha_robo3 pgid=34201 (nosso) pid=34309: sinalizado
+pilha_robo3 pgid=34201 (nosso) pid=34310: sinalizado
+pilha_robo3 pgid=34201 (nosso) pid=34311: sinalizado
+pilha_robo3 pgid=34201 (nosso) pid=34312: sinalizado
+pilha_robo3 pgid=34201 (nosso) pid=34313: sinalizado
+pilha_robo3 pgid=34201 (nosso) pid=34316: sinalizado
+sobras com a marca desta rodada:
+   34270 pgid=34209 /usr/bin/python3 -c from ros2cli.daemon.daemonize import main; main() --name ros2-daemon --ros-domain-id 50 --rmw-implementation rmw_fastrtps_cpp
+marcado pid=34270 pgid=34209 /usr/bin/python3 -c from ros2cli.daemon.daemonize import main; main() --name ros2-daemon --ros-domain-id 50 --rmw-implem: sinalizado
+processos marcados depois: 0
+domínio 50: nenhum nó (consulta com código 0)

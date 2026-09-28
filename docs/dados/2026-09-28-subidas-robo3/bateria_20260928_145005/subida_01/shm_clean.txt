@@ -1,0 +1,38 @@
+shm.clean:
+0 ports in use
+0 segments in use
+2 zombie ports cleaned
+1 zombie segments cleaned
+total 792
+drwxrwxrwt  2 root     root       640 2026-09-28 14:51:18.977076391 -0300 .
+drwxr-xr-x 21 root     root      5100 2026-09-28 14:44:50.430712540 -0300 ..
+-rw-r--r--  1 rbe-luis rbe-luis 52400 2026-09-28 14:50:23.320556481 -0300 fastrtps_port19913
+-rw-r--r--  1 rbe-luis rbe-luis 52400 2026-09-28 14:50:23.464997586 -0300 fastrtps_port19919
+-rw-r--r--  1 rbe-luis rbe-luis 52400 2026-09-28 14:50:23.470245412 -0300 fastrtps_port19921
+-rw-r--r--  1 rbe-luis rbe-luis 52400 2026-09-28 14:50:23.478512422 -0300 fastrtps_port19929
+-rw-r--r--  1 rbe-luis rbe-luis 52400 2026-09-28 14:50:23.488868818 -0300 fastrtps_port19935
+-rw-r--r--  1 rbe-luis rbe-luis 52400 2026-09-28 14:50:24.034821735 -0300 fastrtps_port19941
+-rw-r--r--  1 rbe-luis rbe-luis 52400 2026-09-28 14:50:25.860933058 -0300 fastrtps_port19951
+-rw-r--r--  1 rbe-luis rbe-luis 52400 2026-09-28 14:50:23.324665794 -0300 fastrtps_port7001
+-rw-r--r--  1 rbe-luis rbe-luis 52400 2026-09-28 14:50:23.481531235 -0300 fastrtps_port7004
+-rw-r--r--  1 rbe-luis rbe-luis 52400 2026-09-28 14:50:23.491986858 -0300 fastrtps_port7005
+-rw-r--r--  1 rbe-luis rbe-luis 52400 2026-09-28 14:50:23.521557759 -0300 fastrtps_port7011
+-rw-r--r--  1 rbe-luis rbe-luis 52400 2026-09-28 14:50:23.524394761 -0300 fastrtps_port7012
+-rw-r--r--  1 rbe-luis rbe-luis 52400 2026-09-28 14:50:24.045088588 -0300 fastrtps_port7015
+-rw-r--r--  1 rbe-luis rbe-luis 52400 2026-09-28 14:50:25.876159056 -0300 fastrtps_port7020
+-rw-rw-r--  1 root     root      4096 2026-09-28 14:44:42.726711980 -0300 lttng-ust-wait-8
+-rw-r-----  1 rbe-luis rbe-luis  4096 2026-09-28 14:48:23.238980843 -0300 lttng-ust-wait-8-1000
+-rw-r--r--  1 rbe-luis rbe-luis    32 2026-09-28 14:50:23.320122443 -0300 sem.fastrtps_port19913_mutex
+-rw-r--r--  1 rbe-luis rbe-luis    32 2026-09-28 14:50:23.464468835 -0300 sem.fastrtps_port19919_mutex
+-rw-r--r--  1 rbe-luis rbe-luis    32 2026-09-28 14:50:23.469472370 -0300 sem.fastrtps_port19921_mutex
+-rw-r--r--  1 rbe-luis rbe-luis    32 2026-09-28 14:50:23.478135084 -0300 sem.fastrtps_port19929_mutex
+-rw-r--r--  1 rbe-luis rbe-luis    32 2026-09-28 14:50:23.488423802 -0300 sem.fastrtps_port19935_mutex
+-rw-r--r--  1 rbe-luis rbe-luis    32 2026-09-28 14:50:24.033726785 -0300 sem.fastrtps_port19941_mutex
+-rw-r--r--  1 rbe-luis rbe-luis    32 2026-09-28 14:50:25.859871454 -0300 sem.fastrtps_port19951_mutex
+-rw-r--r--  1 rbe-luis rbe-luis    32 2026-09-28 14:50:23.324464036 -0300 sem.fastrtps_port7001_mutex
+-rw-r--r--  1 rbe-luis rbe-luis    32 2026-09-28 14:50:23.480820678 -0300 sem.fastrtps_port7004_mutex
+-rw-r--r--  1 rbe-luis rbe-luis    32 2026-09-28 14:50:23.491621231 -0300 sem.fastrtps_port7005_mutex
+-rw-r--r--  1 rbe-luis rbe-luis    32 2026-09-28 14:50:23.521362173 -0300 sem.fastrtps_port7011_mutex
+-rw-r--r--  1 rbe-luis rbe-luis    32 2026-09-28 14:50:23.524226016 -0300 sem.fastrtps_port7012_mutex
+-rw-r--r--  1 rbe-luis rbe-luis    32 2026-09-28 14:50:24.044810367 -0300 sem.fastrtps_port7015_mutex
+-rw-r--r--  1 rbe-luis rbe-luis    32 2026-09-28 14:50:25.875986754 -0300 sem.fastrtps_port7020_mutex

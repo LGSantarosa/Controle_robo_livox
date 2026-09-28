@@ -1,0 +1,17 @@
+# launch.log preservados em que o collision_monitor aparece, e se ele saiu com -11
+# (contagem diagnóstica, NÃO taxa experimental: execuções de instrumentos e condições diferentes)
+# comando: grep -c 'collision_monitor.*exit code -11' <launch.log>, sobre ~/subidas-robo3 ~/etapa6 ~/etapa7 ~/validacao_etapa4
+0 etapa6/20260924_104529/launch.log
+0 etapa6/20260924_111431/launch.log
+1 etapa6/20260924_113332/launch.log
+0 etapa6/20260924_114704/launch.log
+1 etapa6/20260924_132510/launch.log
+0 etapa7/20260928_114620/launch.log
+0 etapa7/20260928_114902/launch.log
+0 subidas-robo3/20260928_140914/subida_01/launch.log
+1 subidas-robo3/20260928_141047/subida_01/launch.log
+0 subidas-robo3/20260928_144822/subida_01/launch.log
+1 subidas-robo3/20260928_145005/subida_01/launch.log
+0 subidas-robo3/20260928_145005/subida_02/launch.log
+0 validacao_etapa4/20260922_125907_robo2-gazebo/launch.log
+0 validacao_etapa4/20260928_130910_robo2-gazebo/launch.log

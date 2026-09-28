@@ -1,0 +1,1 @@
+14:50:11.668 [dominio 50] colcon build --symlink-install --packages-select robot_base robot_motion robot_nav > build.log

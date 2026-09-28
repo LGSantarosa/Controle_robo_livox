@@ -1,0 +1,101 @@
+# Campos do relatório Apport, exceto CoreDump (150 MB, fica só no .crash preservado)
+# origem: /var/crash/_opt_ros_jazzy_lib_nav2_collision_monitor_collision_monitor.1000.crash
+# cópia fiel: ~/subidas-robo3/apport/ (sha256 em SHA256SUMS_dos_crash_originais.txt)
+# extraído com: apport-unpack <crash> <dir>
+== ProblemType
+Crash
+== Date
+Mon Sep 28 14:11:43 2026
+== Package
+ros-jazzy-nav2-collision-monitor 1.3.12-1noble.20260615.160103 [origin: unknown]
+== ExecutablePath
+/opt/ros/jazzy/lib/nav2_collision_monitor/collision_monitor
+== ExecutableTimestamp
+1781539263
+== ProcCmdline
+/opt/ros/jazzy/lib/nav2_collision_monitor/collision_monitor --ros-args -r __node:=collision_monitor --params-file /home/rbe-luis/subidas-robo3/20260928_141047/subida_01/corrida_2026-09-28_141104/perfil_collision_monitor.yaml --params-file /tmp/launch_params_m8o2pi3l
+== ProcCwd
+/home/rbe-luis/Workspace/Controle_robo_livox
+== ProcEnviron
+LANG=en_US.UTF-8
+LD_LIBRARY_PATH=<set>
+PATH=(custom, user)
+SHELL=/bin/bash
+TERM=xterm-256color
+XDG_RUNTIME_DIR=<set>
+== Signal
+11
+== SignalName
+SIGSEGV
+== SourcePackage
+ros-jazzy-nav2-collision-monitor
+== DistroRelease
+Ubuntu 24.04
+== Uname
+Linux 7.0.0-34-generic x86_64
+== Architecture
+amd64
+== CrashCounter
+1
+== ProcStatus
+Name:	collision_monit
+Umask:	0002
+State:	S (sleeping)
+Tgid:	1231984
+Ngid:	0
+Pid:	1231984
+PPid:	1231868
+TracerPid:	0
+Uid:	1000	1000	1000	1000
+Gid:	1000	1000	1000	1000
+FDSize:	64
+Groups:	4 20 24 27 30 46 100 114 1000 
+NStgid:	1231984
+NSpid:	1231984
+NSpgid:	1231868
+NSsid:	1231868
+Kthread:	0
+VmPeak:	  981944 kB
+VmSize:	  912760 kB
+VmLck:	       0 kB
+VmPin:	       0 kB
+VmHWM:	   54036 kB
+VmRSS:	   52004 kB
+RssAnon:	   16248 kB
+RssFile:	   32376 kB
+RssShmem:	    3380 kB
+VmData:	  139128 kB
+VmStk:	     140 kB
+VmExe:	       4 kB
+VmLib:	   24612 kB
+VmPTE:	     300 kB
+VmSwap:	       0 kB
+HugetlbPages:	       0 kB
+CoreDumping:	1
+THP_enabled:	1
+untag_mask:	0xffffffffffffffff
+Threads:	14
+SigQ:	0/56372
+SigPnd:	0000000000000000
+ShdPnd:	0000000000000000
+SigBlk:	0000000000000000
+SigIgn:	0000000000000004
+SigCgt:	0000000100004002
+CapInh:	0000000000000000
+CapPrm:	0000000000000000
+CapEff:	0000000000000000
+CapBnd:	000001ffffffffff
+CapAmb:	0000000000000000
+NoNewPrivs:	0
+Seccomp:	0
+Seccomp_filters:	0
+Speculation_Store_Bypass:	thread vulnerable
+SpeculationIndirectBranch:	conditional enabled
+Cpus_allowed:	ffff
+Cpus_allowed_list:	0-15
+Mems_allowed:	00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000000,00000001
+Mems_allowed_list:	0
+voluntary_ctxt_switches:	4953
+nonvoluntary_ctxt_switches:	1059
+x86_Thread_features:	
+x86_Thread_features_locked:

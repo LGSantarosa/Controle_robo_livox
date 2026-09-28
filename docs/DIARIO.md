@@ -11337,3 +11337,33 @@ intermitente do `joint_state_broadcaster` (060 §6.6).
 
 🔴 **O que NÃO prova:** hardware, desempenho, a zona morta de qualquer robô, e
 a preparação do Livox real que a 058 mudou.
+
+## 🔴 2026-09-28, fim da tarde (PC de dev, GAZEBO HEADLESS, robô e lidar DESLIGADOS) — SUBIDAS DA 061: O SIGSEGV VOLTA E O BACKTRACE APONTA O PUBLISHER DESMONTADO
+
+Retomada depois de **queda de luz** (o PC religou; `/dev/shm` zerado, mesmo
+efeito do reinício planejado). Conferido antes: nenhum processo ROS/Gazebo,
+0 `fastrtps*`, 0 marca, árvore limpa em `e55c8f0`.
+
+- **Ensaio `144822`** (`bash bin/subidas-robo3 1`): nominal em 38,2 s,
+  teardown limpo, ESTÁVEL 1/1. Resíduo depois: zero.
+- **Bateria `145005`** (`… 20`): subida 1 nominal em 23,6 s e **SIGSEGV do
+  `collision_monitor` no teardown**, 36 órfãos recuperados pela 061 §2.3.2.
+  Parada pela regra do dono. Como a subida 2 já estava lançada, SIGINT no
+  grupo do script: a limpeza dela aprovou, mas o `tee` morreu junto (console
+  cortado, sem veredito) e o amostrador ficou órfão — encerrado por PID.
+  **Fracasso do jeito de parar**, registrado na 061 §6. Conta só a subida 1.
+- **Backtrace** do crash das 14h11 (Apport, bateria `141047`), tirado com
+  `gdb` do CoreDump: `cmdVelInCallbackStamped → process →
+  PublisherBase::get_subscription_count()` com `this = 0x10`. O dono leu o
+  fonte do Nav2 1.3.12: `on_cleanup()` zera `collision_points_marker_pub_`.
+  Causa imediata = publisher desmontado; o erro de TF anda junto mas não está
+  no caminho. Ponto aberto: o executor é single-threaded — explicar como a
+  callback roda depois do cleanup antes de escolher a correção (057, adendo).
+
+Evidência: `docs/dados/2026-09-28-subidas-robo3/` (`bateria_20260928_145005/`
+com NOTA e SHA256SUMS, `apport_collision_monitor_141047/`,
+`sigsegv_nos_launch_logs.txt`). Nada de push. Nenhuma outra bateria até a
+correção.
+
+🔴 **O que NÃO prova:** a taxa do SIGSEGV (1 subida medida na bateria), nem
+que a correção proposta resolve; nada de hardware.

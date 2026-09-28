@@ -1,0 +1,2 @@
+subida,subida_nominal,nav2_tf_pronto,t_nav2_tf_s,jsb_estado,base_estado,controladores_ok,joint_states_msgs,joint_states_janela_s,switch_timeout,falha_ativar,died_antes_do_fim,t_ativacao_jsb_s,t_ativacao_base_s,sigsegv_teardown,sinais_fora_da_regra,load1_max,psi_cpu_some_avg10_max,psi_cpu_some_us,amostras,limpeza_ok,shm_orfaos,teardown_anomalo,limpeza_recuperada,limpeza_manual_recuperada
+1,1,1,23.6,active,active,1,59,8,0,0,0,1.683683,0.197213,1,0,10.94,13.22,4265016,34,1,36,1,1,1

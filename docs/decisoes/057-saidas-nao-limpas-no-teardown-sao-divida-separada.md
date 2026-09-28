@@ -163,3 +163,56 @@ subida limpa. Por decisão do dono, esta dívida passa a **bloqueadora para o
 hardware** até o SIGSEGV ser entendido. Em simulação, a recuperação é a
 remoção manual controlada da decisão 061 §2.3.2, registrada como teardown
 anômalo.
+
+## Adendo (2026-09-28, tarde) — O MECANISMO IMEDIATO DO SIGSEGV
+
+**Reapareceu** na bateria `20260928_145005` (061 §6), subida 1, depois de um
+ensaio limpo às 14h48 — com `/dev/shm` zerado no início das duas. Não é
+resíduo de corrida anterior.
+
+**Backtrace** (`docs/dados/2026-09-28-subidas-robo3/apport_collision_monitor_141047/`):
+o Apport guardou o crash das **14h11** — o da bateria `141047`, **não** o da
+`145005` (com o relatório anterior ainda em `/var/crash`, o Apport não gera
+outro para o mesmo executável). Cópia fiel e sha256 em `~/subidas-robo3/apport/`;
+no repositório, os campos sem o CoreDump e o backtrace tirado com `gdb` do
+CoreDump:
+
+```
+#0 rclcpp::PublisherBase::get_subscription_count() const      rdi (this) = 0x10
+#1 nav2_collision_monitor::CollisionMonitor::process(...)
+#2 nav2_collision_monitor::CollisionMonitor::cmdVelInCallbackStamped(...)
+#6 rclcpp::Executor::execute_subscription(...)
+#8 rclcpp::executors::SingleThreadedExecutor::spin()
+```
+
+`this = 0x10` é o ponteiro de um publisher **já zerado** acrescido do
+deslocamento da base — `process()` usou um publisher desmontado. Leitura do
+dono sobre o fonte oficial do Nav2 **1.3.12** (versão instalada:
+`ros-jazzy-nav2-collision-monitor 1.3.12-1noble.20260615`):
+`on_cleanup()` zera `collision_points_marker_pub_`, e `process()` o acessa
+sem verificar. Fonte:
+<https://github.com/ros-navigation/navigation2/blob/1.3.12/nav2_collision_monitor/src/collision_monitor_node.cpp>.
+**Causa imediata: publisher desmontado no teardown, não o erro de TF.**
+
+**Contagem diagnóstica** (`sigsegv_nos_launch_logs.txt`, não é taxa): dos 14
+`launch.log` preservados em que o `collision_monitor` aparece, 4 têm `-11`
+(o dono contou 12 com 4; a diferença de 2 não foi reconciliada). Pelo dono,
+as quatro ocorrências têm também o erro de TF e as saídas limpas não — o que
+é correlação; o backtrace não passa pelo TF.
+
+**Os cinco `exit code 1`** (`rclpy` no shutdown) aparecem também nas subidas
+**sem** SIGSEGV, inclusive no ensaio `144822` — são a falha já conhecida
+deste registro, não consequência do crash.
+
+**Ponto em aberto para a correção:** o executor é **single-threaded** (frame
+#8). Se `on_cleanup()` e a callback correm no mesmo thread, não há duas
+execuções simultâneas; o que precisa ser explicado é como uma callback de
+`cmd_vel_in` executa **depois** do `on_cleanup()` (assinatura ainda viva, ou
+mensagem já retirada pelo executor). Isso decide se a correção é exclusão
+mútua ou "não usar recurso zerado / desfazer a assinatura antes do
+publisher". Confirmar no fonte **antes** de escrever a correção.
+
+**Alvo da correção (dono):** sincronizar `process()` com `on_cleanup()` ou
+impedir que recursos sejam zerados com callback em voo. **Não** instalar a
+1.3.13 como primeiro teste. **Hardware continua bloqueado** até a correção
+passar por ensaio e bateria limpa (061).

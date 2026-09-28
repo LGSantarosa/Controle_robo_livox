@@ -1,0 +1,8 @@
+processos ROS/Gazebo:
+   (nenhum)
+processos com marca:
+   (nenhum)
+segmentos DDS em /dev/shm:
+   (nenhum)
+domínio 50 (rc 0):
+   (nenhum nó)

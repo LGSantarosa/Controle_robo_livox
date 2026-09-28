@@ -1,0 +1,1 @@
+28000 pgid=27993 /usr/bin/python3 -c from ros2cli.daemon.daemonize import main; main() --name ros2-daemon --ros-domain-id 50 --rmw-implementation rmw_fastrtps_cpp

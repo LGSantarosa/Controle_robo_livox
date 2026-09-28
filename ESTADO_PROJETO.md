@@ -41,6 +41,23 @@
 
 ---
 
+## 🔴 28-09, fim da tarde — SIGSEGV DO `collision_monitor`: MECANISMO ACHADO, CORREÇÃO PENDENTE
+
+- Bateria de 20 subidas da **061** (`20260928_145005`) **INCOMPLETA por
+  interrupção manual**: a subida 1 foi nominal e deu **SIGSEGV no teardown**;
+  parada pela regra. Ensaio `144822` antes dela: limpo.
+- Backtrace (Apport de 14h11 + `gdb`): `process()` chama
+  `get_subscription_count()` num publisher **já zerado pelo `on_cleanup()`**
+  (Nav2 1.3.12). Detalhe e ponto aberto (executor single-threaded):
+  decisão **057**, adendo da tarde.
+- **Próximo:** entender, no fonte, como a callback roda depois do cleanup →
+  corrigir (sem instalar a 1.3.13 como primeiro teste) → ensaio → bateria
+  limpa. **Nenhuma bateria antes disso. Hardware BLOQUEADO** (057).
+- Branch `etapa6-pilha-robo3` com commits locais **sem push** (ordem do dono).
+- Evidência: `docs/dados/2026-09-28-subidas-robo3/`.
+
+---
+
 ## ✅ 28-09 — PASSO 8 E ETAPA 6 FECHADOS (branch `etapa6-pilha-robo3`, NÃO na `main`)
 
 Gate de não regressão do robô 2 (`PLANO_ETAPA6_ROBO3.md` §6), evidência em

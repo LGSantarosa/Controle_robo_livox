@@ -1,0 +1,839 @@
+59cb44d9f000-59cb44da1000 r--p 00000000 08:12 18482744                   /opt/ros/jazzy/lib/nav2_collision_monitor/collision_monitor
+59cb44da1000-59cb44da2000 r-xp 00002000 08:12 18482744                   /opt/ros/jazzy/lib/nav2_collision_monitor/collision_monitor
+59cb44da2000-59cb44da3000 r--p 00003000 08:12 18482744                   /opt/ros/jazzy/lib/nav2_collision_monitor/collision_monitor
+59cb44da3000-59cb44da4000 r--p 00003000 08:12 18482744                   /opt/ros/jazzy/lib/nav2_collision_monitor/collision_monitor
+59cb44da4000-59cb44da5000 rw-p 00004000 08:12 18482744                   /opt/ros/jazzy/lib/nav2_collision_monitor/collision_monitor
+59cb5dd5d000-59cb5e454000 rw-p 00000000 00:00 0                          [heap]
+7f4a74000000-7f4a74021000 rw-p 00000000 00:00 0 
+7f4a74021000-7f4a78000000 ---p 00000000 00:00 0 
+7f4a7c000000-7f4a7c021000 rw-p 00000000 00:00 0 
+7f4a7c021000-7f4a80000000 ---p 00000000 00:00 0 
+7f4a80000000-7f4a80021000 rw-p 00000000 00:00 0 
+7f4a80021000-7f4a84000000 ---p 00000000 00:00 0 
+7f4a84000000-7f4a84021000 rw-p 00000000 00:00 0 
+7f4a84021000-7f4a88000000 ---p 00000000 00:00 0 
+7f4a88000000-7f4a88021000 rw-p 00000000 00:00 0 
+7f4a88021000-7f4a8c000000 ---p 00000000 00:00 0 
+7f4a8c000000-7f4a8c021000 rw-p 00000000 00:00 0 
+7f4a8c021000-7f4a90000000 ---p 00000000 00:00 0 
+7f4a90000000-7f4a90021000 rw-p 00000000 00:00 0 
+7f4a90021000-7f4a94000000 ---p 00000000 00:00 0 
+7f4a94000000-7f4a94021000 rw-p 00000000 00:00 0 
+7f4a94021000-7f4a98000000 ---p 00000000 00:00 0 
+7f4a98000000-7f4a98403000 rw-p 00000000 00:00 0 
+7f4a98403000-7f4a9c000000 ---p 00000000 00:00 0 
+7f4a9dfb6000-7f4a9e03d000 rw-s 00000000 00:1d 53218                      /dev/shm/fastrtps_a4f4d1725f8df126 (deleted)
+7f4a9e057000-7f4a9e0de000 rw-s 00000000 00:1d 53544                      /dev/shm/fastrtps_0b33283ee37550f3 (deleted)
+7f4a9e0de000-7f4a9e0eb000 rw-s 00000000 00:1d 53548                      /dev/shm/fastrtps_port19951
+7f4a9e0eb000-7f4a9e0f8000 rw-s 00000000 00:1d 53593                      /dev/shm/fastrtps_port7020
+7f4a9e22d000-7f4a9e2b4000 rw-s 00000000 00:1d 53103                      /dev/shm/fastrtps_c1bd8a7c54962250 (deleted)
+7f4a9e2b4000-7f4a9e2c0000 r--p 00000000 08:12 18358709                   /opt/ros/jazzy/lib/libvisualization_msgs__rosidl_typesupport_introspection_cpp.so
+7f4a9e2c0000-7f4a9e2ce000 r-xp 0000c000 08:12 18358709                   /opt/ros/jazzy/lib/libvisualization_msgs__rosidl_typesupport_introspection_cpp.so
+7f4a9e2ce000-7f4a9e2d2000 r--p 0001a000 08:12 18358709                   /opt/ros/jazzy/lib/libvisualization_msgs__rosidl_typesupport_introspection_cpp.so
+7f4a9e2d2000-7f4a9e2d3000 r--p 0001d000 08:12 18358709                   /opt/ros/jazzy/lib/libvisualization_msgs__rosidl_typesupport_introspection_cpp.so
+7f4a9e2d3000-7f4a9e2d6000 rw-p 0001e000 08:12 18358709                   /opt/ros/jazzy/lib/libvisualization_msgs__rosidl_typesupport_introspection_cpp.so
+7f4a9e2d6000-7f4a9e2e3000 r--p 00000000 08:12 18358707                   /opt/ros/jazzy/lib/libvisualization_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4a9e2e3000-7f4a9e2f3000 r-xp 0000d000 08:12 18358707                   /opt/ros/jazzy/lib/libvisualization_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4a9e2f3000-7f4a9e2f7000 r--p 0001d000 08:12 18358707                   /opt/ros/jazzy/lib/libvisualization_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4a9e2f7000-7f4a9e2f8000 r--p 00020000 08:12 18358707                   /opt/ros/jazzy/lib/libvisualization_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4a9e2f8000-7f4a9e2f9000 rw-p 00021000 08:12 18358707                   /opt/ros/jazzy/lib/libvisualization_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4a9e2f9000-7f4a9e30a000 r--p 00000000 08:12 18368001                   /opt/ros/jazzy/lib/libgeographic_msgs__rosidl_typesupport_introspection_cpp.so
+7f4a9e30a000-7f4a9e317000 r-xp 00011000 08:12 18368001                   /opt/ros/jazzy/lib/libgeographic_msgs__rosidl_typesupport_introspection_cpp.so
+7f4a9e317000-7f4a9e31c000 r--p 0001e000 08:12 18368001                   /opt/ros/jazzy/lib/libgeographic_msgs__rosidl_typesupport_introspection_cpp.so
+7f4a9e31c000-7f4a9e31d000 r--p 00022000 08:12 18368001                   /opt/ros/jazzy/lib/libgeographic_msgs__rosidl_typesupport_introspection_cpp.so
+7f4a9e31d000-7f4a9e320000 rw-p 00023000 08:12 18368001                   /opt/ros/jazzy/lib/libgeographic_msgs__rosidl_typesupport_introspection_cpp.so
+7f4a9e320000-7f4a9e32c000 r--p 00000000 08:12 18357262                   /opt/ros/jazzy/lib/libnav_msgs__rosidl_typesupport_introspection_cpp.so
+7f4a9e32c000-7f4a9e335000 r-xp 0000c000 08:12 18357262                   /opt/ros/jazzy/lib/libnav_msgs__rosidl_typesupport_introspection_cpp.so
+7f4a9e335000-7f4a9e338000 r--p 00015000 08:12 18357262                   /opt/ros/jazzy/lib/libnav_msgs__rosidl_typesupport_introspection_cpp.so
+7f4a9e338000-7f4a9e339000 r--p 00018000 08:12 18357262                   /opt/ros/jazzy/lib/libnav_msgs__rosidl_typesupport_introspection_cpp.so
+7f4a9e339000-7f4a9e33b000 rw-p 00019000 08:12 18357262                   /opt/ros/jazzy/lib/libnav_msgs__rosidl_typesupport_introspection_cpp.so
+7f4a9e33b000-7f4a9e3b7000 r--p 00000000 08:12 18364947                   /opt/ros/jazzy/lib/libnav2_msgs__rosidl_typesupport_introspection_cpp.so
+7f4a9e3b7000-7f4a9e3fc000 r-xp 0007c000 08:12 18364947                   /opt/ros/jazzy/lib/libnav2_msgs__rosidl_typesupport_introspection_cpp.so
+7f4a9e3fc000-7f4a9e415000 r--p 000c1000 08:12 18364947                   /opt/ros/jazzy/lib/libnav2_msgs__rosidl_typesupport_introspection_cpp.so
+7f4a9e415000-7f4a9e41b000 r--p 000da000 08:12 18364947                   /opt/ros/jazzy/lib/libnav2_msgs__rosidl_typesupport_introspection_cpp.so
+7f4a9e41b000-7f4a9e431000 rw-p 000e0000 08:12 18364947                   /opt/ros/jazzy/lib/libnav2_msgs__rosidl_typesupport_introspection_cpp.so
+7f4a9e431000-7f4a9e443000 r--p 00000000 08:12 18367999                   /opt/ros/jazzy/lib/libgeographic_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4a9e443000-7f4a9e459000 r-xp 00012000 08:12 18367999                   /opt/ros/jazzy/lib/libgeographic_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4a9e459000-7f4a9e45f000 r--p 00028000 08:12 18367999                   /opt/ros/jazzy/lib/libgeographic_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4a9e45f000-7f4a9e460000 r--p 0002d000 08:12 18367999                   /opt/ros/jazzy/lib/libgeographic_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4a9e460000-7f4a9e462000 rw-p 0002e000 08:12 18367999                   /opt/ros/jazzy/lib/libgeographic_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4a9e462000-7f4a9e472000 r--p 00000000 08:12 18357257                   /opt/ros/jazzy/lib/libnav_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4a9e472000-7f4a9e483000 r-xp 00010000 08:12 18357257                   /opt/ros/jazzy/lib/libnav_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4a9e483000-7f4a9e488000 r--p 00021000 08:12 18357257                   /opt/ros/jazzy/lib/libnav_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4a9e488000-7f4a9e489000 r--p 00025000 08:12 18357257                   /opt/ros/jazzy/lib/libnav_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4a9e489000-7f4a9e48b000 rw-p 00026000 08:12 18357257                   /opt/ros/jazzy/lib/libnav_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4a9e48b000-7f4a9e51d000 r--p 00000000 08:12 18364944                   /opt/ros/jazzy/lib/libnav2_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4a9e51d000-7f4a9e5b0000 r-xp 00092000 08:12 18364944                   /opt/ros/jazzy/lib/libnav2_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4a9e5b0000-7f4a9e5dd000 r--p 00125000 08:12 18364944                   /opt/ros/jazzy/lib/libnav2_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4a9e5dd000-7f4a9e5de000 r--p 00152000 08:12 18364944                   /opt/ros/jazzy/lib/libnav2_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4a9e5de000-7f4a9e5eb000 rw-p 00153000 08:12 18364944                   /opt/ros/jazzy/lib/libnav2_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4a9e5eb000-7f4a9e5ff000 r--p 00000000 08:12 18357897                   /opt/ros/jazzy/lib/libsensor_msgs__rosidl_typesupport_introspection_cpp.so
+7f4a9e5ff000-7f4a9e608000 r-xp 00014000 08:12 18357897                   /opt/ros/jazzy/lib/libsensor_msgs__rosidl_typesupport_introspection_cpp.so
+7f4a9e608000-7f4a9e60d000 r--p 0001d000 08:12 18357897                   /opt/ros/jazzy/lib/libsensor_msgs__rosidl_typesupport_introspection_cpp.so
+7f4a9e60d000-7f4a9e60f000 r--p 00021000 08:12 18357897                   /opt/ros/jazzy/lib/libsensor_msgs__rosidl_typesupport_introspection_cpp.so
+7f4a9e60f000-7f4a9e614000 rw-p 00023000 08:12 18357897                   /opt/ros/jazzy/lib/libsensor_msgs__rosidl_typesupport_introspection_cpp.so
+7f4a9e614000-7f4a9e69b000 rw-s 00000000 00:1d 52740                      /dev/shm/fastrtps_84053a3a0b537c08 (deleted)
+7f4a9e69b000-7f4a9e722000 rw-s 00000000 00:1d 52785                      /dev/shm/fastrtps_cafa044febe0e29e (deleted)
+7f4a9e722000-7f4a9e735000 r--p 00000000 08:12 18357895                   /opt/ros/jazzy/lib/libsensor_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4a9e735000-7f4a9e74a000 r-xp 00013000 08:12 18357895                   /opt/ros/jazzy/lib/libsensor_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4a9e74a000-7f4a9e750000 r--p 00028000 08:12 18357895                   /opt/ros/jazzy/lib/libsensor_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4a9e750000-7f4a9e751000 r--p 0002d000 08:12 18357895                   /opt/ros/jazzy/lib/libsensor_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4a9e751000-7f4a9e753000 rw-p 0002e000 08:12 18357895                   /opt/ros/jazzy/lib/libsensor_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4a9e753000-7f4a9e754000 ---p 00000000 00:00 0 
+7f4a9e754000-7f4a9ef54000 rw-p 00000000 00:00 0 
+7f4a9ef61000-7f4a9ef6d000 r--p 00000000 08:12 18380783                   /opt/ros/jazzy/lib/libstd_msgs__rosidl_typesupport_introspection_cpp.so
+7f4a9ef6d000-7f4a9ef71000 r-xp 0000c000 08:12 18380783                   /opt/ros/jazzy/lib/libstd_msgs__rosidl_typesupport_introspection_cpp.so
+7f4a9ef71000-7f4a9ef73000 r--p 00010000 08:12 18380783                   /opt/ros/jazzy/lib/libstd_msgs__rosidl_typesupport_introspection_cpp.so
+7f4a9ef73000-7f4a9ef75000 r--p 00012000 08:12 18380783                   /opt/ros/jazzy/lib/libstd_msgs__rosidl_typesupport_introspection_cpp.so
+7f4a9ef75000-7f4a9ef77000 rw-p 00014000 08:12 18380783                   /opt/ros/jazzy/lib/libstd_msgs__rosidl_typesupport_introspection_cpp.so
+7f4a9ef77000-7f4a9effe000 rw-s 00000000 00:1d 52886                      /dev/shm/fastrtps_ac41ccf48db09939 (deleted)
+7f4a9effe000-7f4a9efff000 ---p 00000000 00:00 0 
+7f4a9efff000-7f4a9f7ff000 rw-p 00000000 00:00 0 
+7f4a9f7ff000-7f4a9f800000 ---p 00000000 00:00 0 
+7f4a9f800000-7f4aa0000000 rw-p 00000000 00:00 0 
+7f4aa0000000-7f4aa003f000 rw-p 00000000 00:00 0 
+7f4aa003f000-7f4aa4000000 ---p 00000000 00:00 0 
+7f4aa4006000-7f4aa4012000 r--p 00000000 08:12 18383629                   /opt/ros/jazzy/lib/libgeometry_msgs__rosidl_typesupport_introspection_cpp.so
+7f4aa4012000-7f4aa4015000 r-xp 0000c000 08:12 18383629                   /opt/ros/jazzy/lib/libgeometry_msgs__rosidl_typesupport_introspection_cpp.so
+7f4aa4015000-7f4aa4017000 r--p 0000f000 08:12 18383629                   /opt/ros/jazzy/lib/libgeometry_msgs__rosidl_typesupport_introspection_cpp.so
+7f4aa4017000-7f4aa4019000 r--p 00010000 08:12 18383629                   /opt/ros/jazzy/lib/libgeometry_msgs__rosidl_typesupport_introspection_cpp.so
+7f4aa4019000-7f4aa401c000 rw-p 00012000 08:12 18383629                   /opt/ros/jazzy/lib/libgeometry_msgs__rosidl_typesupport_introspection_cpp.so
+7f4aa401c000-7f4aa402c000 r--p 00000000 08:12 18380781                   /opt/ros/jazzy/lib/libstd_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4aa402c000-7f4aa403b000 r-xp 00010000 08:12 18380781                   /opt/ros/jazzy/lib/libstd_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4aa403b000-7f4aa4040000 r--p 0001f000 08:12 18380781                   /opt/ros/jazzy/lib/libstd_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4aa4040000-7f4aa4041000 r--p 00024000 08:12 18380781                   /opt/ros/jazzy/lib/libstd_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4aa4041000-7f4aa4043000 rw-p 00025000 08:12 18380781                   /opt/ros/jazzy/lib/libstd_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4aa4043000-7f4aa4055000 r--p 00000000 08:12 18383627                   /opt/ros/jazzy/lib/libgeometry_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4aa4055000-7f4aa4061000 r-xp 00012000 08:12 18383627                   /opt/ros/jazzy/lib/libgeometry_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4aa4061000-7f4aa4066000 r--p 0001e000 08:12 18383627                   /opt/ros/jazzy/lib/libgeometry_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4aa4066000-7f4aa4067000 r--p 00022000 08:12 18383627                   /opt/ros/jazzy/lib/libgeometry_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4aa4067000-7f4aa4069000 rw-p 00023000 08:12 18383627                   /opt/ros/jazzy/lib/libgeometry_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4aa4069000-7f4aa4075000 r--p 00000000 08:12 18361474                   /opt/ros/jazzy/lib/libtf2_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4aa4075000-7f4aa4080000 r-xp 0000c000 08:12 18361474                   /opt/ros/jazzy/lib/libtf2_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4aa4080000-7f4aa4084000 r--p 00017000 08:12 18361474                   /opt/ros/jazzy/lib/libtf2_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4aa4084000-7f4aa4085000 r--p 0001a000 08:12 18361474                   /opt/ros/jazzy/lib/libtf2_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4aa4085000-7f4aa4086000 rw-p 0001b000 08:12 18361474                   /opt/ros/jazzy/lib/libtf2_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4aa4093000-7f4aa40a0000 rw-s 00000000 00:1d 52789                      /dev/shm/fastrtps_port19943
+7f4aa40c7000-7f4aa40d4000 rw-s 00000000 00:1d 52826                      /dev/shm/fastrtps_port7016
+7f4aa40d4000-7f4aa415b000 rw-s 00000000 00:1d 51646                      /dev/shm/fastrtps_820c83adcbde3e33 (deleted)
+7f4aa415b000-7f4aa41e2000 rw-s 00000000 00:1d 51602                      /dev/shm/fastrtps_837e411a5cccacd2 (deleted)
+7f4aa41e2000-7f4aa4269000 rw-s 00000000 00:1d 51604                      /dev/shm/fastrtps_c68d1c89e099a3f5 (deleted)
+7f4aa4278000-7f4aa4279000 r--p 00000000 08:12 18352253                   /opt/ros/jazzy/lib/libunique_identifier_msgs__rosidl_typesupport_introspection_cpp.so
+7f4aa4279000-7f4aa427a000 r-xp 00001000 08:12 18352253                   /opt/ros/jazzy/lib/libunique_identifier_msgs__rosidl_typesupport_introspection_cpp.so
+7f4aa427a000-7f4aa427b000 r--p 00002000 08:12 18352253                   /opt/ros/jazzy/lib/libunique_identifier_msgs__rosidl_typesupport_introspection_cpp.so
+7f4aa427b000-7f4aa427c000 r--p 00002000 08:12 18352253                   /opt/ros/jazzy/lib/libunique_identifier_msgs__rosidl_typesupport_introspection_cpp.so
+7f4aa427c000-7f4aa427d000 rw-p 00003000 08:12 18352253                   /opt/ros/jazzy/lib/libunique_identifier_msgs__rosidl_typesupport_introspection_cpp.so
+7f4aa427d000-7f4aa4286000 r--p 00000000 08:12 18361476                   /opt/ros/jazzy/lib/libtf2_msgs__rosidl_typesupport_introspection_cpp.so
+7f4aa4286000-7f4aa428b000 r-xp 00009000 08:12 18361476                   /opt/ros/jazzy/lib/libtf2_msgs__rosidl_typesupport_introspection_cpp.so
+7f4aa428b000-7f4aa428d000 r--p 0000e000 08:12 18361476                   /opt/ros/jazzy/lib/libtf2_msgs__rosidl_typesupport_introspection_cpp.so
+7f4aa428d000-7f4aa428e000 r--p 00010000 08:12 18361476                   /opt/ros/jazzy/lib/libtf2_msgs__rosidl_typesupport_introspection_cpp.so
+7f4aa428e000-7f4aa4290000 rw-p 00011000 08:12 18361476                   /opt/ros/jazzy/lib/libtf2_msgs__rosidl_typesupport_introspection_cpp.so
+7f4aa4290000-7f4aa429d000 rw-s 00000000 00:1d 51571                      /dev/shm/fastrtps_port7005
+7f4aa429d000-7f4aa42aa000 rw-s 00000000 00:1d 51502                      /dev/shm/fastrtps_port19925
+7f4aa42aa000-7f4aa42b7000 rw-s 00000000 00:1d 51663                      /dev/shm/fastrtps_port7008
+7f4aa42b7000-7f4aa42c4000 rw-s 00000000 00:1d 51488                      /dev/shm/fastrtps_port19921
+7f4aa42de000-7f4aa42eb000 rw-s 00000000 00:1d 51638                      /dev/shm/fastrtps_port19933
+7f4aa42eb000-7f4aa42f8000 rw-s 00000000 00:1d 51965                      /dev/shm/fastrtps_port7013
+7f4aa42f8000-7f4aa437f000 rw-s 00000000 00:1d 51479                      /dev/shm/fastrtps_c5ec2e5372c89f78 (deleted)
+7f4aa437f000-7f4aa4406000 rw-s 00000000 00:1d 55587                      /dev/shm/fastrtps_da3dae10f3c8edff (deleted)
+7f4aa4406000-7f4aa448d000 rw-s 00000000 00:1d 51476                      /dev/shm/fastrtps_f75d1920d105bb69 (deleted)
+7f4aa4506000-7f4aa4508000 r--p 00000000 08:12 18356111                   /opt/ros/jazzy/lib/libbond__rosidl_typesupport_introspection_cpp.so
+7f4aa4508000-7f4aa4509000 r-xp 00002000 08:12 18356111                   /opt/ros/jazzy/lib/libbond__rosidl_typesupport_introspection_cpp.so
+7f4aa4509000-7f4aa450a000 r--p 00003000 08:12 18356111                   /opt/ros/jazzy/lib/libbond__rosidl_typesupport_introspection_cpp.so
+7f4aa450a000-7f4aa450b000 r--p 00003000 08:12 18356111                   /opt/ros/jazzy/lib/libbond__rosidl_typesupport_introspection_cpp.so
+7f4aa450b000-7f4aa450c000 rw-p 00004000 08:12 18356111                   /opt/ros/jazzy/lib/libbond__rosidl_typesupport_introspection_cpp.so
+7f4aa450c000-7f4aa450f000 r--p 00000000 08:12 18356107                   /opt/ros/jazzy/lib/libbond__rosidl_typesupport_fastrtps_cpp.so
+7f4aa450f000-7f4aa4511000 r-xp 00003000 08:12 18356107                   /opt/ros/jazzy/lib/libbond__rosidl_typesupport_fastrtps_cpp.so
+7f4aa4511000-7f4aa4512000 r--p 00005000 08:12 18356107                   /opt/ros/jazzy/lib/libbond__rosidl_typesupport_fastrtps_cpp.so
+7f4aa4512000-7f4aa4513000 r--p 00005000 08:12 18356107                   /opt/ros/jazzy/lib/libbond__rosidl_typesupport_fastrtps_cpp.so
+7f4aa4513000-7f4aa4514000 rw-p 00006000 08:12 18356107                   /opt/ros/jazzy/lib/libbond__rosidl_typesupport_fastrtps_cpp.so
+7f4aa4514000-7f4aa459b000 rw-s 00000000 00:1d 51497                      /dev/shm/fastrtps_c52950cd5377cd22 (deleted)
+7f4aa45f6000-7f4aa4602000 r--p 00000000 08:12 18355189                   /opt/ros/jazzy/lib/liblifecycle_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4aa4602000-7f4aa460e000 r-xp 0000c000 08:12 18355189                   /opt/ros/jazzy/lib/liblifecycle_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4aa460e000-7f4aa4612000 r--p 00018000 08:12 18355189                   /opt/ros/jazzy/lib/liblifecycle_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4aa4612000-7f4aa4613000 r--p 0001b000 08:12 18355189                   /opt/ros/jazzy/lib/liblifecycle_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4aa4613000-7f4aa4614000 rw-p 0001c000 08:12 18355189                   /opt/ros/jazzy/lib/liblifecycle_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4aa4621000-7f4aa462e000 rw-s 00000000 00:1d 51424                      /dev/shm/fastrtps_port19913
+7f4aa462e000-7f4aa4638000 r--p 00000000 08:12 18355190                   /opt/ros/jazzy/lib/liblifecycle_msgs__rosidl_typesupport_introspection_c.so
+7f4aa4638000-7f4aa463a000 r-xp 0000a000 08:12 18355190                   /opt/ros/jazzy/lib/liblifecycle_msgs__rosidl_typesupport_introspection_c.so
+7f4aa463a000-7f4aa463c000 r--p 0000c000 08:12 18355190                   /opt/ros/jazzy/lib/liblifecycle_msgs__rosidl_typesupport_introspection_c.so
+7f4aa463c000-7f4aa463d000 r--p 0000d000 08:12 18355190                   /opt/ros/jazzy/lib/liblifecycle_msgs__rosidl_typesupport_introspection_c.so
+7f4aa463d000-7f4aa463f000 rw-p 0000e000 08:12 18355190                   /opt/ros/jazzy/lib/liblifecycle_msgs__rosidl_typesupport_introspection_c.so
+7f4aa463f000-7f4aa4648000 r--p 00000000 08:12 18355188                   /opt/ros/jazzy/lib/liblifecycle_msgs__rosidl_typesupport_fastrtps_c.so
+7f4aa4648000-7f4aa4650000 r-xp 00009000 08:12 18355188                   /opt/ros/jazzy/lib/liblifecycle_msgs__rosidl_typesupport_fastrtps_c.so
+7f4aa4650000-7f4aa4653000 r--p 00011000 08:12 18355188                   /opt/ros/jazzy/lib/liblifecycle_msgs__rosidl_typesupport_fastrtps_c.so
+7f4aa4653000-7f4aa4654000 r--p 00013000 08:12 18355188                   /opt/ros/jazzy/lib/liblifecycle_msgs__rosidl_typesupport_fastrtps_c.so
+7f4aa4654000-7f4aa4655000 rw-p 00014000 08:12 18355188                   /opt/ros/jazzy/lib/liblifecycle_msgs__rosidl_typesupport_fastrtps_c.so
+7f4aa4655000-7f4aa465b000 r--p 00000000 08:12 18354011                   /opt/ros/jazzy/lib/libtype_description_interfaces__rosidl_typesupport_fastrtps_c.so
+7f4aa465b000-7f4aa4662000 r-xp 00006000 08:12 18354011                   /opt/ros/jazzy/lib/libtype_description_interfaces__rosidl_typesupport_fastrtps_c.so
+7f4aa4662000-7f4aa4664000 r--p 0000d000 08:12 18354011                   /opt/ros/jazzy/lib/libtype_description_interfaces__rosidl_typesupport_fastrtps_c.so
+7f4aa4664000-7f4aa4665000 r--p 0000e000 08:12 18354011                   /opt/ros/jazzy/lib/libtype_description_interfaces__rosidl_typesupport_fastrtps_c.so
+7f4aa4665000-7f4aa4666000 rw-p 0000f000 08:12 18354011                   /opt/ros/jazzy/lib/libtype_description_interfaces__rosidl_typesupport_fastrtps_c.so
+7f4aa4680000-7f4aa4687000 r--p 00000000 08:12 18354508                   /opt/ros/jazzy/lib/librosgraph_msgs__rosidl_typesupport_introspection_cpp.so
+7f4aa4687000-7f4aa4693000 r-xp 00007000 08:12 18354508                   /opt/ros/jazzy/lib/librosgraph_msgs__rosidl_typesupport_introspection_cpp.so
+7f4aa4693000-7f4aa4696000 r--p 00013000 08:12 18354508                   /opt/ros/jazzy/lib/librosgraph_msgs__rosidl_typesupport_introspection_cpp.so
+7f4aa4696000-7f4aa4697000 r--p 00015000 08:12 18354508                   /opt/ros/jazzy/lib/librosgraph_msgs__rosidl_typesupport_introspection_cpp.so
+7f4aa4697000-7f4aa4699000 rw-p 00016000 08:12 18354508                   /opt/ros/jazzy/lib/librosgraph_msgs__rosidl_typesupport_introspection_cpp.so
+7f4aa4699000-7f4aa46a0000 r--p 00000000 08:12 18354505                   /opt/ros/jazzy/lib/librosgraph_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4aa46a0000-7f4aa46ac000 r-xp 00007000 08:12 18354505                   /opt/ros/jazzy/lib/librosgraph_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4aa46ac000-7f4aa46af000 r--p 00013000 08:12 18354505                   /opt/ros/jazzy/lib/librosgraph_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4aa46af000-7f4aa46b0000 r--p 00015000 08:12 18354505                   /opt/ros/jazzy/lib/librosgraph_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4aa46b0000-7f4aa46b1000 rw-p 00016000 08:12 18354505                   /opt/ros/jazzy/lib/librosgraph_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4aa46b1000-7f4aa46cc000 r--p 00000000 08:12 18379745                   /opt/ros/jazzy/lib/librcl_interfaces__rosidl_typesupport_introspection_cpp.so
+7f4aa46cc000-7f4aa46df000 r-xp 0001b000 08:12 18379745                   /opt/ros/jazzy/lib/librcl_interfaces__rosidl_typesupport_introspection_cpp.so
+7f4aa46df000-7f4aa46e6000 r--p 0002e000 08:12 18379745                   /opt/ros/jazzy/lib/librcl_interfaces__rosidl_typesupport_introspection_cpp.so
+7f4aa46e6000-7f4aa46e8000 r--p 00035000 08:12 18379745                   /opt/ros/jazzy/lib/librcl_interfaces__rosidl_typesupport_introspection_cpp.so
+7f4aa46e8000-7f4aa46eb000 rw-p 00037000 08:12 18379745                   /opt/ros/jazzy/lib/librcl_interfaces__rosidl_typesupport_introspection_cpp.so
+7f4aa46eb000-7f4aa4772000 rw-s 00000000 00:1d 51443                      /dev/shm/fastrtps_512af2875563e581 (deleted)
+7f4aa4772000-7f4aa47f9000 rw-s 00000000 00:1d 51780                      /dev/shm/fastrtps_70764e6ad998e47d (deleted)
+7f4aa47f9000-7f4aa47fa000 ---p 00000000 00:00 0 
+7f4aa47fa000-7f4aa4ffa000 rw-p 00000000 00:00 0 
+7f4aa4ffa000-7f4aa4ffb000 ---p 00000000 00:00 0 
+7f4aa4ffb000-7f4aa57fb000 rw-p 00000000 00:00 0 
+7f4aa57fb000-7f4aa57fc000 ---p 00000000 00:00 0 
+7f4aa57fc000-7f4aa5ffc000 rw-p 00000000 00:00 0 
+7f4aa5ffc000-7f4aa5ffd000 ---p 00000000 00:00 0 
+7f4aa5ffd000-7f4aa67fd000 rw-p 00000000 00:00 0 
+7f4aa67fd000-7f4aa67fe000 ---p 00000000 00:00 0 
+7f4aa67fe000-7f4aa6ffe000 rw-p 00000000 00:00 0 
+7f4aa6ffe000-7f4aa6fff000 ---p 00000000 00:00 0 
+7f4aa6fff000-7f4aa77ff000 rw-p 00000000 00:00 0 
+7f4aa77ff000-7f4aa7800000 ---p 00000000 00:00 0 
+7f4aa7800000-7f4aa8000000 rw-p 00000000 00:00 0 
+7f4aa8000000-7f4aa8021000 rw-p 00000000 00:00 0 
+7f4aa8021000-7f4aac000000 ---p 00000000 00:00 0 
+7f4aac001000-7f4aac002000 r--p 00000000 08:12 18352251                   /opt/ros/jazzy/lib/libunique_identifier_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4aac002000-7f4aac003000 r-xp 00001000 08:12 18352251                   /opt/ros/jazzy/lib/libunique_identifier_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4aac003000-7f4aac004000 r--p 00002000 08:12 18352251                   /opt/ros/jazzy/lib/libunique_identifier_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4aac004000-7f4aac005000 r--p 00002000 08:12 18352251                   /opt/ros/jazzy/lib/libunique_identifier_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4aac005000-7f4aac006000 rw-p 00003000 08:12 18352251                   /opt/ros/jazzy/lib/libunique_identifier_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4aac006000-7f4aac013000 rw-s 00000000 00:1d 51431                      /dev/shm/fastrtps_port7001
+7f4aac020000-7f4aac021000 r--p 00000000 08:12 18352027                   /opt/ros/jazzy/lib/libbuiltin_interfaces__rosidl_typesupport_introspection_cpp.so
+7f4aac021000-7f4aac022000 r-xp 00001000 08:12 18352027                   /opt/ros/jazzy/lib/libbuiltin_interfaces__rosidl_typesupport_introspection_cpp.so
+7f4aac022000-7f4aac023000 r--p 00002000 08:12 18352027                   /opt/ros/jazzy/lib/libbuiltin_interfaces__rosidl_typesupport_introspection_cpp.so
+7f4aac023000-7f4aac024000 r--p 00002000 08:12 18352027                   /opt/ros/jazzy/lib/libbuiltin_interfaces__rosidl_typesupport_introspection_cpp.so
+7f4aac024000-7f4aac025000 rw-p 00003000 08:12 18352027                   /opt/ros/jazzy/lib/libbuiltin_interfaces__rosidl_typesupport_introspection_cpp.so
+7f4aac025000-7f4aac026000 r--p 00000000 08:12 18352141                   /opt/ros/jazzy/lib/libservice_msgs__rosidl_typesupport_introspection_cpp.so
+7f4aac026000-7f4aac027000 r-xp 00001000 08:12 18352141                   /opt/ros/jazzy/lib/libservice_msgs__rosidl_typesupport_introspection_cpp.so
+7f4aac027000-7f4aac028000 r--p 00002000 08:12 18352141                   /opt/ros/jazzy/lib/libservice_msgs__rosidl_typesupport_introspection_cpp.so
+7f4aac028000-7f4aac029000 r--p 00002000 08:12 18352141                   /opt/ros/jazzy/lib/libservice_msgs__rosidl_typesupport_introspection_cpp.so
+7f4aac029000-7f4aac02a000 rw-p 00003000 08:12 18352141                   /opt/ros/jazzy/lib/libservice_msgs__rosidl_typesupport_introspection_cpp.so
+7f4aac037000-7f4aac044000 rw-s 00000000 00:1d 51542                      /dev/shm/fastrtps_port19929
+7f4aac044000-7f4aac0cb000 rw-s 00000000 00:1d 51435                      /dev/shm/fastrtps_b3bf1e535269b212 (deleted)
+7f4aac0cb000-7f4aac152000 rw-s 00000000 00:1d 51520                      /dev/shm/fastrtps_d772b95ae532ec9d (deleted)
+7f4aac152000-7f4aac154000 r--p 00000000 08:12 18352025                   /opt/ros/jazzy/lib/libbuiltin_interfaces__rosidl_typesupport_fastrtps_cpp.so
+7f4aac154000-7f4aac155000 r-xp 00002000 08:12 18352025                   /opt/ros/jazzy/lib/libbuiltin_interfaces__rosidl_typesupport_fastrtps_cpp.so
+7f4aac155000-7f4aac156000 r--p 00003000 08:12 18352025                   /opt/ros/jazzy/lib/libbuiltin_interfaces__rosidl_typesupport_fastrtps_cpp.so
+7f4aac156000-7f4aac157000 r--p 00003000 08:12 18352025                   /opt/ros/jazzy/lib/libbuiltin_interfaces__rosidl_typesupport_fastrtps_cpp.so
+7f4aac157000-7f4aac158000 rw-p 00004000 08:12 18352025                   /opt/ros/jazzy/lib/libbuiltin_interfaces__rosidl_typesupport_fastrtps_cpp.so
+7f4aac158000-7f4aac170000 r--p 00000000 08:12 18379743                   /opt/ros/jazzy/lib/librcl_interfaces__rosidl_typesupport_fastrtps_cpp.so
+7f4aac170000-7f4aac18e000 r-xp 00018000 08:12 18379743                   /opt/ros/jazzy/lib/librcl_interfaces__rosidl_typesupport_fastrtps_cpp.so
+7f4aac18e000-7f4aac197000 r--p 00036000 08:12 18379743                   /opt/ros/jazzy/lib/librcl_interfaces__rosidl_typesupport_fastrtps_cpp.so
+7f4aac197000-7f4aac198000 r--p 0003e000 08:12 18379743                   /opt/ros/jazzy/lib/librcl_interfaces__rosidl_typesupport_fastrtps_cpp.so
+7f4aac198000-7f4aac19b000 rw-p 0003f000 08:12 18379743                   /opt/ros/jazzy/lib/librcl_interfaces__rosidl_typesupport_fastrtps_cpp.so
+7f4aac19b000-7f4aac222000 rw-s 00000000 00:1d 51420                      /dev/shm/fastrtps_b2e7ce27213e56c5
+7f4aac222000-7f4aac2a9000 rw-s 00000000 00:1d 51506                      /dev/shm/fastrtps_d49928080b29e81d (deleted)
+7f4aac2a9000-7f4aac2c5000 r--p 00000000 08:12 18379744                   /opt/ros/jazzy/lib/librcl_interfaces__rosidl_typesupport_introspection_c.so
+7f4aac2c5000-7f4aac2cc000 r-xp 0001c000 08:12 18379744                   /opt/ros/jazzy/lib/librcl_interfaces__rosidl_typesupport_introspection_c.so
+7f4aac2cc000-7f4aac2d0000 r--p 00023000 08:12 18379744                   /opt/ros/jazzy/lib/librcl_interfaces__rosidl_typesupport_introspection_c.so
+7f4aac2d0000-7f4aac2d1000 r--p 00027000 08:12 18379744                   /opt/ros/jazzy/lib/librcl_interfaces__rosidl_typesupport_introspection_c.so
+7f4aac2d1000-7f4aac2d6000 rw-p 00028000 08:12 18379744                   /opt/ros/jazzy/lib/librcl_interfaces__rosidl_typesupport_introspection_c.so
+7f4aac2d6000-7f4aac376000 rw-p 00000000 00:00 0 
+7f4aac376000-7f4aac3fd000 rw-s 00000000 00:1d 51549                      /dev/shm/fastrtps_8daeb86a2eaebf00
+7f4aac3fd000-7f4aac3fe000 ---p 00000000 00:00 0 
+7f4aac3fe000-7f4aacbfe000 rw-p 00000000 00:00 0 
+7f4aacbfe000-7f4aacbff000 ---p 00000000 00:00 0 
+7f4aacbff000-7f4aad3ff000 rw-p 00000000 00:00 0 
+7f4aad3ff000-7f4aad400000 ---p 00000000 00:00 0 
+7f4aad400000-7f4aadc00000 rw-p 00000000 00:00 0 
+7f4aadc00000-7f4aadcb3000 r--p 00000000 08:12 42739863                   /usr/lib/x86_64-linux-gnu/libcrypto.so.3
+7f4aadcb3000-7f4aadfe7000 r-xp 000b3000 08:12 42739863                   /usr/lib/x86_64-linux-gnu/libcrypto.so.3
+7f4aadfe7000-7f4aae0b2000 r--p 003e7000 08:12 42739863                   /usr/lib/x86_64-linux-gnu/libcrypto.so.3
+7f4aae0b2000-7f4aae10e000 r--p 004b1000 08:12 42739863                   /usr/lib/x86_64-linux-gnu/libcrypto.so.3
+7f4aae10e000-7f4aae111000 rw-p 0050d000 08:12 42739863                   /usr/lib/x86_64-linux-gnu/libcrypto.so.3
+7f4aae111000-7f4aae114000 rw-p 00000000 00:00 0 
+7f4aae118000-7f4aae11a000 r--p 00000000 08:12 18352139                   /opt/ros/jazzy/lib/libservice_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4aae11a000-7f4aae11b000 r-xp 00002000 08:12 18352139                   /opt/ros/jazzy/lib/libservice_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4aae11b000-7f4aae11c000 r--p 00003000 08:12 18352139                   /opt/ros/jazzy/lib/libservice_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4aae11c000-7f4aae11d000 r--p 00003000 08:12 18352139                   /opt/ros/jazzy/lib/libservice_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4aae11d000-7f4aae11e000 rw-p 00004000 08:12 18352139                   /opt/ros/jazzy/lib/libservice_msgs__rosidl_typesupport_fastrtps_cpp.so
+7f4aae11e000-7f4aae11f000 r--p 00000000 08:12 18352026                   /opt/ros/jazzy/lib/libbuiltin_interfaces__rosidl_typesupport_introspection_c.so
+7f4aae11f000-7f4aae120000 r-xp 00001000 08:12 18352026                   /opt/ros/jazzy/lib/libbuiltin_interfaces__rosidl_typesupport_introspection_c.so
+7f4aae120000-7f4aae121000 r--p 00002000 08:12 18352026                   /opt/ros/jazzy/lib/libbuiltin_interfaces__rosidl_typesupport_introspection_c.so
+7f4aae121000-7f4aae122000 r--p 00002000 08:12 18352026                   /opt/ros/jazzy/lib/libbuiltin_interfaces__rosidl_typesupport_introspection_c.so
+7f4aae122000-7f4aae123000 rw-p 00003000 08:12 18352026                   /opt/ros/jazzy/lib/libbuiltin_interfaces__rosidl_typesupport_introspection_c.so
+7f4aae123000-7f4aae136000 r--p 00000000 08:12 18379742                   /opt/ros/jazzy/lib/librcl_interfaces__rosidl_typesupport_fastrtps_c.so
+7f4aae136000-7f4aae14c000 r-xp 00013000 08:12 18379742                   /opt/ros/jazzy/lib/librcl_interfaces__rosidl_typesupport_fastrtps_c.so
+7f4aae14c000-7f4aae152000 r--p 00029000 08:12 18379742                   /opt/ros/jazzy/lib/librcl_interfaces__rosidl_typesupport_fastrtps_c.so
+7f4aae152000-7f4aae153000 r--p 0002e000 08:12 18379742                   /opt/ros/jazzy/lib/librcl_interfaces__rosidl_typesupport_fastrtps_c.so
+7f4aae153000-7f4aae156000 rw-p 0002f000 08:12 18379742                   /opt/ros/jazzy/lib/librcl_interfaces__rosidl_typesupport_fastrtps_c.so
+7f4aae156000-7f4aae174000 r--p 00000000 08:12 42739864                   /usr/lib/x86_64-linux-gnu/libssl.so.3
+7f4aae174000-7f4aae1d6000 r-xp 0001e000 08:12 42739864                   /usr/lib/x86_64-linux-gnu/libssl.so.3
+7f4aae1d6000-7f4aae1f2000 r--p 00080000 08:12 42739864                   /usr/lib/x86_64-linux-gnu/libssl.so.3
+7f4aae1f2000-7f4aae1fc000 r--p 0009c000 08:12 42739864                   /usr/lib/x86_64-linux-gnu/libssl.so.3
+7f4aae1fc000-7f4aae200000 rw-p 000a6000 08:12 42739864                   /usr/lib/x86_64-linux-gnu/libssl.so.3
+7f4aae200000-7f4aae37a000 r--p 00000000 08:12 18353620                   /opt/ros/jazzy/lib/libfastrtps.so.2.14.6
+7f4aae37a000-7f4aae976000 r-xp 0017a000 08:12 18353620                   /opt/ros/jazzy/lib/libfastrtps.so.2.14.6
+7f4aae976000-7f4aaeaa1000 r--p 00776000 08:12 18353620                   /opt/ros/jazzy/lib/libfastrtps.so.2.14.6
+7f4aaeaa1000-7f4aaeab6000 r--p 008a0000 08:12 18353620                   /opt/ros/jazzy/lib/libfastrtps.so.2.14.6
+7f4aaeab6000-7f4aaeac5000 rw-p 008b5000 08:12 18353620                   /opt/ros/jazzy/lib/libfastrtps.so.2.14.6
+7f4aaeac5000-7f4aaeb31000 rw-p 00000000 00:00 0 
+7f4aaeb33000-7f4aaeb34000 r--p 00000000 08:12 18352140                   /opt/ros/jazzy/lib/libservice_msgs__rosidl_typesupport_introspection_c.so
+7f4aaeb34000-7f4aaeb35000 r-xp 00001000 08:12 18352140                   /opt/ros/jazzy/lib/libservice_msgs__rosidl_typesupport_introspection_c.so
+7f4aaeb35000-7f4aaeb36000 r--p 00002000 08:12 18352140                   /opt/ros/jazzy/lib/libservice_msgs__rosidl_typesupport_introspection_c.so
+7f4aaeb36000-7f4aaeb37000 r--p 00002000 08:12 18352140                   /opt/ros/jazzy/lib/libservice_msgs__rosidl_typesupport_introspection_c.so
+7f4aaeb37000-7f4aaeb38000 rw-p 00003000 08:12 18352140                   /opt/ros/jazzy/lib/libservice_msgs__rosidl_typesupport_introspection_c.so
+7f4aaeb38000-7f4aaeb3a000 r--p 00000000 08:12 18352024                   /opt/ros/jazzy/lib/libbuiltin_interfaces__rosidl_typesupport_fastrtps_c.so
+7f4aaeb3a000-7f4aaeb3b000 r-xp 00002000 08:12 18352024                   /opt/ros/jazzy/lib/libbuiltin_interfaces__rosidl_typesupport_fastrtps_c.so
+7f4aaeb3b000-7f4aaeb3c000 r--p 00003000 08:12 18352024                   /opt/ros/jazzy/lib/libbuiltin_interfaces__rosidl_typesupport_fastrtps_c.so
+7f4aaeb3c000-7f4aaeb3d000 r--p 00003000 08:12 18352024                   /opt/ros/jazzy/lib/libbuiltin_interfaces__rosidl_typesupport_fastrtps_c.so
+7f4aaeb3d000-7f4aaeb3e000 rw-p 00004000 08:12 18352024                   /opt/ros/jazzy/lib/libbuiltin_interfaces__rosidl_typesupport_fastrtps_c.so
+7f4aaeb3e000-7f4aaeb40000 r--p 00000000 08:12 18352138                   /opt/ros/jazzy/lib/libservice_msgs__rosidl_typesupport_fastrtps_c.so
+7f4aaeb40000-7f4aaeb41000 r-xp 00002000 08:12 18352138                   /opt/ros/jazzy/lib/libservice_msgs__rosidl_typesupport_fastrtps_c.so
+7f4aaeb41000-7f4aaeb42000 r--p 00003000 08:12 18352138                   /opt/ros/jazzy/lib/libservice_msgs__rosidl_typesupport_fastrtps_c.so
+7f4aaeb42000-7f4aaeb43000 r--p 00003000 08:12 18352138                   /opt/ros/jazzy/lib/libservice_msgs__rosidl_typesupport_fastrtps_c.so
+7f4aaeb43000-7f4aaeb44000 rw-p 00004000 08:12 18352138                   /opt/ros/jazzy/lib/libservice_msgs__rosidl_typesupport_fastrtps_c.so
+7f4aaeb44000-7f4aaeb51000 rw-s 00000000 00:1d 51889                      /dev/shm/fastrtps_port7012
+7f4aaeb51000-7f4aaeb5e000 rw-s 00000000 00:1d 51789                      /dev/shm/fastrtps_port7010
+7f4aaeb6c000-7f4aaeb6f000 r--p 00000000 08:12 18352974                   /opt/ros/jazzy/lib/librmw_dds_common__rosidl_typesupport_introspection_cpp.so
+7f4aaeb6f000-7f4aaeb71000 r-xp 00003000 08:12 18352974                   /opt/ros/jazzy/lib/librmw_dds_common__rosidl_typesupport_introspection_cpp.so
+7f4aaeb71000-7f4aaeb72000 r--p 00005000 08:12 18352974                   /opt/ros/jazzy/lib/librmw_dds_common__rosidl_typesupport_introspection_cpp.so
+7f4aaeb72000-7f4aaeb73000 r--p 00005000 08:12 18352974                   /opt/ros/jazzy/lib/librmw_dds_common__rosidl_typesupport_introspection_cpp.so
+7f4aaeb73000-7f4aaeb74000 rw-p 00006000 08:12 18352974                   /opt/ros/jazzy/lib/librmw_dds_common__rosidl_typesupport_introspection_cpp.so
+7f4aaeb74000-7f4aaeb77000 r--p 00000000 08:12 18352972                   /opt/ros/jazzy/lib/librmw_dds_common__rosidl_typesupport_fastrtps_cpp.so
+7f4aaeb77000-7f4aaeb7a000 r-xp 00003000 08:12 18352972                   /opt/ros/jazzy/lib/librmw_dds_common__rosidl_typesupport_fastrtps_cpp.so
+7f4aaeb7a000-7f4aaeb7b000 r--p 00006000 08:12 18352972                   /opt/ros/jazzy/lib/librmw_dds_common__rosidl_typesupport_fastrtps_cpp.so
+7f4aaeb7b000-7f4aaeb7c000 r--p 00006000 08:12 18352972                   /opt/ros/jazzy/lib/librmw_dds_common__rosidl_typesupport_fastrtps_cpp.so
+7f4aaeb7c000-7f4aaeb7d000 rw-p 00007000 08:12 18352972                   /opt/ros/jazzy/lib/librmw_dds_common__rosidl_typesupport_fastrtps_cpp.so
+7f4aaeb7d000-7f4aaeb8a000 rw-s 00000000 00:1d 51565                      /dev/shm/fastrtps_port19931
+7f4aaeb8b000-7f4aaeb8d000 r--p 00000000 08:12 18352967                   /opt/ros/jazzy/lib/librmw_dds_common__rosidl_generator_c.so
+7f4aaeb8d000-7f4aaeb90000 r-xp 00002000 08:12 18352967                   /opt/ros/jazzy/lib/librmw_dds_common__rosidl_generator_c.so
+7f4aaeb90000-7f4aaeb91000 r--p 00005000 08:12 18352967                   /opt/ros/jazzy/lib/librmw_dds_common__rosidl_generator_c.so
+7f4aaeb91000-7f4aaeb92000 r--p 00006000 08:12 18352967                   /opt/ros/jazzy/lib/librmw_dds_common__rosidl_generator_c.so
+7f4aaeb92000-7f4aaeb93000 rw-p 00007000 08:12 18352967                   /opt/ros/jazzy/lib/librmw_dds_common__rosidl_generator_c.so
+7f4aaeb93000-7f4aaeb94000 r--p 00000000 08:12 18351852                   /opt/ros/jazzy/lib/librosidl_typesupport_introspection_c.so
+7f4aaeb94000-7f4aaeb95000 r-xp 00001000 08:12 18351852                   /opt/ros/jazzy/lib/librosidl_typesupport_introspection_c.so
+7f4aaeb95000-7f4aaeb96000 r--p 00002000 08:12 18351852                   /opt/ros/jazzy/lib/librosidl_typesupport_introspection_c.so
+7f4aaeb96000-7f4aaeb97000 r--p 00002000 08:12 18351852                   /opt/ros/jazzy/lib/librosidl_typesupport_introspection_c.so
+7f4aaeb97000-7f4aaeb98000 rw-p 00003000 08:12 18351852                   /opt/ros/jazzy/lib/librosidl_typesupport_introspection_c.so
+7f4aaeb98000-7f4aaeba0000 r--p 00000000 08:12 18350117                   /opt/ros/jazzy/lib/libfastcdr.so.2.2.7
+7f4aaeba0000-7f4aaebab000 r-xp 00008000 08:12 18350117                   /opt/ros/jazzy/lib/libfastcdr.so.2.2.7
+7f4aaebab000-7f4aaebaf000 r--p 00013000 08:12 18350117                   /opt/ros/jazzy/lib/libfastcdr.so.2.2.7
+7f4aaebaf000-7f4aaebb0000 r--p 00016000 08:12 18350117                   /opt/ros/jazzy/lib/libfastcdr.so.2.2.7
+7f4aaebb0000-7f4aaebb1000 rw-p 00017000 08:12 18350117                   /opt/ros/jazzy/lib/libfastcdr.so.2.2.7
+7f4aaebb1000-7f4aaebb3000 r--p 00000000 08:12 18352970                   /opt/ros/jazzy/lib/librmw_dds_common__rosidl_typesupport_cpp.so
+7f4aaebb3000-7f4aaebb4000 r-xp 00002000 08:12 18352970                   /opt/ros/jazzy/lib/librmw_dds_common__rosidl_typesupport_cpp.so
+7f4aaebb4000-7f4aaebb5000 r--p 00003000 08:12 18352970                   /opt/ros/jazzy/lib/librmw_dds_common__rosidl_typesupport_cpp.so
+7f4aaebb5000-7f4aaebb6000 r--p 00003000 08:12 18352970                   /opt/ros/jazzy/lib/librmw_dds_common__rosidl_typesupport_cpp.so
+7f4aaebb6000-7f4aaebb7000 rw-p 00004000 08:12 18352970                   /opt/ros/jazzy/lib/librmw_dds_common__rosidl_typesupport_cpp.so
+7f4aaebb7000-7f4aaebb8000 r--p 00000000 08:12 18351799                   /opt/ros/jazzy/lib/librosidl_typesupport_fastrtps_c.so
+7f4aaebb8000-7f4aaebb9000 r-xp 00001000 08:12 18351799                   /opt/ros/jazzy/lib/librosidl_typesupport_fastrtps_c.so
+7f4aaebb9000-7f4aaebba000 r--p 00002000 08:12 18351799                   /opt/ros/jazzy/lib/librosidl_typesupport_fastrtps_c.so
+7f4aaebba000-7f4aaebbb000 r--p 00002000 08:12 18351799                   /opt/ros/jazzy/lib/librosidl_typesupport_fastrtps_c.so
+7f4aaebbb000-7f4aaebbc000 rw-p 00003000 08:12 18351799                   /opt/ros/jazzy/lib/librosidl_typesupport_fastrtps_c.so
+7f4aaebbc000-7f4aaebcd000 r--p 00000000 08:12 18353733                   /opt/ros/jazzy/lib/librosidl_dynamic_typesupport_fastrtps.so
+7f4aaebcd000-7f4aaebe5000 r-xp 00011000 08:12 18353733                   /opt/ros/jazzy/lib/librosidl_dynamic_typesupport_fastrtps.so
+7f4aaebe5000-7f4aaebed000 r--p 00029000 08:12 18353733                   /opt/ros/jazzy/lib/librosidl_dynamic_typesupport_fastrtps.so
+7f4aaebed000-7f4aaebee000 r--p 00030000 08:12 18353733                   /opt/ros/jazzy/lib/librosidl_dynamic_typesupport_fastrtps.so
+7f4aaebee000-7f4aaebef000 rw-p 00031000 08:12 18353733                   /opt/ros/jazzy/lib/librosidl_dynamic_typesupport_fastrtps.so
+7f4aaebef000-7f4aaebf1000 rw-p 00000000 00:00 0 
+7f4aaebf1000-7f4aaebf8000 r--p 00000000 08:12 18352966                   /opt/ros/jazzy/lib/librmw_dds_common.so
+7f4aaebf8000-7f4aaec0b000 r-xp 00007000 08:12 18352966                   /opt/ros/jazzy/lib/librmw_dds_common.so
+7f4aaec0b000-7f4aaec0f000 r--p 0001a000 08:12 18352966                   /opt/ros/jazzy/lib/librmw_dds_common.so
+7f4aaec0f000-7f4aaec10000 r--p 0001e000 08:12 18352966                   /opt/ros/jazzy/lib/librmw_dds_common.so
+7f4aaec10000-7f4aaec11000 rw-p 0001f000 08:12 18352966                   /opt/ros/jazzy/lib/librmw_dds_common.so
+7f4aaec11000-7f4aaec12000 r--p 00000000 08:12 18351597                   /opt/ros/jazzy/lib/librosidl_typesupport_fastrtps_cpp.so
+7f4aaec12000-7f4aaec13000 r-xp 00001000 08:12 18351597                   /opt/ros/jazzy/lib/librosidl_typesupport_fastrtps_cpp.so
+7f4aaec13000-7f4aaec14000 r--p 00002000 08:12 18351597                   /opt/ros/jazzy/lib/librosidl_typesupport_fastrtps_cpp.so
+7f4aaec14000-7f4aaec15000 r--p 00002000 08:12 18351597                   /opt/ros/jazzy/lib/librosidl_typesupport_fastrtps_cpp.so
+7f4aaec15000-7f4aaec16000 rw-p 00003000 08:12 18351597                   /opt/ros/jazzy/lib/librosidl_typesupport_fastrtps_cpp.so
+7f4aaec16000-7f4aaec2d000 r--p 00000000 08:12 18353689                   /opt/ros/jazzy/lib/librmw_fastrtps_shared_cpp.so
+7f4aaec2d000-7f4aaec7a000 r-xp 00017000 08:12 18353689                   /opt/ros/jazzy/lib/librmw_fastrtps_shared_cpp.so
+7f4aaec7a000-7f4aaec88000 r--p 00064000 08:12 18353689                   /opt/ros/jazzy/lib/librmw_fastrtps_shared_cpp.so
+7f4aaec88000-7f4aaec8a000 r--p 00072000 08:12 18353689                   /opt/ros/jazzy/lib/librmw_fastrtps_shared_cpp.so
+7f4aaec8a000-7f4aaec8b000 rw-p 00074000 08:12 18353689                   /opt/ros/jazzy/lib/librmw_fastrtps_shared_cpp.so
+7f4aaec8b000-7f4aaec9c000 rw-p 00000000 00:00 0 
+7f4aaec9c000-7f4aaecaa000 r--p 00000000 08:12 18353779                   /opt/ros/jazzy/lib/librmw_fastrtps_cpp.so
+7f4aaecaa000-7f4aaecd1000 r-xp 0000e000 08:12 18353779                   /opt/ros/jazzy/lib/librmw_fastrtps_cpp.so
+7f4aaecd1000-7f4aaecda000 r--p 00035000 08:12 18353779                   /opt/ros/jazzy/lib/librmw_fastrtps_cpp.so
+7f4aaecda000-7f4aaecdc000 r--p 0003d000 08:12 18353779                   /opt/ros/jazzy/lib/librmw_fastrtps_cpp.so
+7f4aaecdc000-7f4aaecdd000 rw-p 0003f000 08:12 18353779                   /opt/ros/jazzy/lib/librmw_fastrtps_cpp.so
+7f4aaecdd000-7f4aaece5000 rw-p 00000000 00:00 0 
+7f4aaece5000-7f4aaecea000 rw-s 00000000 00:1d 51404                      /dev/shm/shm-event-notifier-error-accounting-1770 (deleted)
+7f4aaecea000-7f4aaecef000 rw-s 00000000 00:1d 51403                      /dev/shm/shm-event-notifier-error-accounting-1770 (deleted)
+7f4aaecef000-7f4aaecf4000 rw-s 00000000 00:1d 51402                      /dev/shm/shm-event-notifier-error-accounting-1770 (deleted)
+7f4aaecf4000-7f4aaecf9000 rw-s 00000000 00:1d 51401                      /dev/shm/shm-event-notifier-error-accounting-1770 (deleted)
+7f4aaecf9000-7f4aaecfe000 rw-s 00000000 00:1d 51400                      /dev/shm/shm-event-notifier-error-accounting-1770 (deleted)
+7f4aaecfe000-7f4aaed03000 rw-s 00000000 00:1d 51399                      /dev/shm/shm-event-notifier-error-accounting-1770 (deleted)
+7f4aaed03000-7f4aaed08000 rw-s 00000000 00:1d 51398                      /dev/shm/shm-event-notifier-error-accounting-1770 (deleted)
+7f4aaed08000-7f4aaed0d000 rw-s 00000000 00:1d 51397                      /dev/shm/shm-event-notifier-error-accounting-1770 (deleted)
+7f4aaed0d000-7f4aaed12000 rw-s 00000000 00:1d 51396                      /dev/shm/shm-event-notifier-error-accounting-1770 (deleted)
+7f4aaed12000-7f4aaed17000 rw-s 00000000 00:1d 51395                      /dev/shm/shm-event-notifier-error-accounting-1770 (deleted)
+7f4aaed17000-7f4aaed1c000 rw-s 00000000 00:1d 51394                      /dev/shm/shm-event-notifier-error-accounting-1770 (deleted)
+7f4aaed1c000-7f4aaed21000 rw-s 00000000 00:1d 51393                      /dev/shm/shm-event-notifier-error-accounting-1770 (deleted)
+7f4aaed21000-7f4aaed26000 rw-s 00000000 00:1d 51392                      /dev/shm/shm-event-notifier-error-accounting-1770 (deleted)
+7f4aaed26000-7f4aaed2b000 rw-s 00000000 00:1d 51391                      /dev/shm/shm-event-notifier-error-accounting-1770 (deleted)
+7f4aaed2b000-7f4aaed2c000 ---p 00000000 00:00 0 
+7f4aaed2c000-7f4aaf52c000 rw-p 00000000 00:00 0 
+7f4aaf52c000-7f4aaf52d000 ---p 00000000 00:00 0 
+7f4aaf52d000-7f4aafd2d000 rw-p 00000000 00:00 0 
+7f4aafd2d000-7f4aafd3b000 rw-p 00000000 00:00 0 
+7f4aafd3b000-7f4aafd3e000 r--p 00000000 08:12 42763331                   /usr/lib/x86_64-linux-gnu/libfmt.so.9.1.0
+7f4aafd3e000-7f4aafd55000 r-xp 00003000 08:12 42763331                   /usr/lib/x86_64-linux-gnu/libfmt.so.9.1.0
+7f4aafd55000-7f4aafd5a000 r--p 0001a000 08:12 42763331                   /usr/lib/x86_64-linux-gnu/libfmt.so.9.1.0
+7f4aafd5a000-7f4aafd5b000 r--p 0001e000 08:12 42763331                   /usr/lib/x86_64-linux-gnu/libfmt.so.9.1.0
+7f4aafd5b000-7f4aafd5c000 rw-p 0001f000 08:12 42763331                   /usr/lib/x86_64-linux-gnu/libfmt.so.9.1.0
+7f4aafd5c000-7f4aafd5e000 r--p 00000000 08:12 18356101                   /opt/ros/jazzy/lib/libbond__rosidl_generator_c.so
+7f4aafd5e000-7f4aafd60000 r-xp 00002000 08:12 18356101                   /opt/ros/jazzy/lib/libbond__rosidl_generator_c.so
+7f4aafd60000-7f4aafd61000 r--p 00004000 08:12 18356101                   /opt/ros/jazzy/lib/libbond__rosidl_generator_c.so
+7f4aafd61000-7f4aafd62000 r--p 00004000 08:12 18356101                   /opt/ros/jazzy/lib/libbond__rosidl_generator_c.so
+7f4aafd62000-7f4aafd63000 rw-p 00005000 08:12 18356101                   /opt/ros/jazzy/lib/libbond__rosidl_generator_c.so
+7f4aafd63000-7f4aafd69000 r--p 00000000 08:12 18358121                   /opt/ros/jazzy/lib/libstd_srvs__rosidl_generator_c.so
+7f4aafd69000-7f4aafd70000 r-xp 00006000 08:12 18358121                   /opt/ros/jazzy/lib/libstd_srvs__rosidl_generator_c.so
+7f4aafd70000-7f4aafd73000 r--p 0000d000 08:12 18358121                   /opt/ros/jazzy/lib/libstd_srvs__rosidl_generator_c.so
+7f4aafd73000-7f4aafd74000 r--p 00010000 08:12 18358121                   /opt/ros/jazzy/lib/libstd_srvs__rosidl_generator_c.so
+7f4aafd74000-7f4aafd76000 rw-p 00011000 08:12 18358121                   /opt/ros/jazzy/lib/libstd_srvs__rosidl_generator_c.so
+7f4aafd76000-7f4aafd77000 rw-p 00000000 00:00 0 
+7f4aafd77000-7f4aafd85000 r--p 00000000 08:12 18375651                   /opt/ros/jazzy/lib/libmap_msgs__rosidl_generator_c.so
+7f4aafd85000-7f4aafd98000 r-xp 0000e000 08:12 18375651                   /opt/ros/jazzy/lib/libmap_msgs__rosidl_generator_c.so
+7f4aafd98000-7f4aafd9f000 r--p 00021000 08:12 18375651                   /opt/ros/jazzy/lib/libmap_msgs__rosidl_generator_c.so
+7f4aafd9f000-7f4aafda1000 r--p 00028000 08:12 18375651                   /opt/ros/jazzy/lib/libmap_msgs__rosidl_generator_c.so
+7f4aafda1000-7f4aafda7000 rw-p 0002a000 08:12 18375651                   /opt/ros/jazzy/lib/libmap_msgs__rosidl_generator_c.so
+7f4aafda7000-7f4aafdac000 rw-p 00000000 00:00 0 
+7f4aafdac000-7f4aafdae000 r--p 00000000 08:12 42763611                   /usr/lib/x86_64-linux-gnu/liblttng-ust-tracepoint.so.1.0.0
+7f4aafdae000-7f4aafdb5000 r-xp 00002000 08:12 42763611                   /usr/lib/x86_64-linux-gnu/liblttng-ust-tracepoint.so.1.0.0
+7f4aafdb5000-7f4aafdb7000 r--p 00009000 08:12 42763611                   /usr/lib/x86_64-linux-gnu/liblttng-ust-tracepoint.so.1.0.0
+7f4aafdb7000-7f4aafdb8000 r--p 0000b000 08:12 42763611                   /usr/lib/x86_64-linux-gnu/liblttng-ust-tracepoint.so.1.0.0
+7f4aafdb8000-7f4aafdb9000 rw-p 0000c000 08:12 42763611                   /usr/lib/x86_64-linux-gnu/liblttng-ust-tracepoint.so.1.0.0
+7f4aafdb9000-7f4aafdc9000 rw-p 00000000 00:00 0 
+7f4aafdc9000-7f4aafdcb000 r--p 00000000 08:12 42739782                   /usr/lib/x86_64-linux-gnu/liblttng-ust-common.so.1.0.0
+7f4aafdcb000-7f4aafdd2000 r-xp 00002000 08:12 42739782                   /usr/lib/x86_64-linux-gnu/liblttng-ust-common.so.1.0.0
+7f4aafdd2000-7f4aafdd4000 r--p 00009000 08:12 42739782                   /usr/lib/x86_64-linux-gnu/liblttng-ust-common.so.1.0.0
+7f4aafdd4000-7f4aafdd5000 r--p 0000a000 08:12 42739782                   /usr/lib/x86_64-linux-gnu/liblttng-ust-common.so.1.0.0
+7f4aafdd5000-7f4aafdd6000 rw-p 0000b000 08:12 42739782                   /usr/lib/x86_64-linux-gnu/liblttng-ust-common.so.1.0.0
+7f4aafdd6000-7f4aafdd9000 r--p 00000000 08:12 42741407                   /usr/lib/x86_64-linux-gnu/libnuma.so.1.0.0
+7f4aafdd9000-7f4aafde0000 r-xp 00003000 08:12 42741407                   /usr/lib/x86_64-linux-gnu/libnuma.so.1.0.0
+7f4aafde0000-7f4aafde2000 r--p 0000a000 08:12 42741407                   /usr/lib/x86_64-linux-gnu/libnuma.so.1.0.0
+7f4aafde2000-7f4aafde3000 r--p 0000b000 08:12 42741407                   /usr/lib/x86_64-linux-gnu/libnuma.so.1.0.0
+7f4aafde3000-7f4aafde4000 rw-p 0000c000 08:12 42741407                   /usr/lib/x86_64-linux-gnu/libnuma.so.1.0.0
+7f4aafde4000-7f4aafe17000 r--p 00000000 08:12 42764480                   /usr/lib/x86_64-linux-gnu/libspdlog.so.1.12.0
+7f4aafe17000-7f4aafe57000 r-xp 00033000 08:12 42764480                   /usr/lib/x86_64-linux-gnu/libspdlog.so.1.12.0
+7f4aafe57000-7f4aafe67000 r--p 00073000 08:12 42764480                   /usr/lib/x86_64-linux-gnu/libspdlog.so.1.12.0
+7f4aafe67000-7f4aafe6a000 r--p 00083000 08:12 42764480                   /usr/lib/x86_64-linux-gnu/libspdlog.so.1.12.0
+7f4aafe6a000-7f4aafe6b000 rw-p 00086000 08:12 42764480                   /usr/lib/x86_64-linux-gnu/libspdlog.so.1.12.0
+7f4aafe6b000-7f4aafe6f000 r--p 00000000 08:12 18354697                   /opt/ros/jazzy/lib/librcl_action.so
+7f4aafe6f000-7f4aafe78000 r-xp 00004000 08:12 18354697                   /opt/ros/jazzy/lib/librcl_action.so
+7f4aafe78000-7f4aafe7c000 r--p 0000d000 08:12 18354697                   /opt/ros/jazzy/lib/librcl_action.so
+7f4aafe7c000-7f4aafe7d000 r--p 00010000 08:12 18354697                   /opt/ros/jazzy/lib/librcl_action.so
+7f4aafe7d000-7f4aafe7e000 rw-p 00011000 08:12 18354697                   /opt/ros/jazzy/lib/librcl_action.so
+7f4aafe7e000-7f4aafe82000 r--p 00000000 08:12 18352412                   /opt/ros/jazzy/lib/libaction_msgs__rosidl_generator_c.so
+7f4aafe82000-7f4aafe88000 r-xp 00004000 08:12 18352412                   /opt/ros/jazzy/lib/libaction_msgs__rosidl_generator_c.so
+7f4aafe88000-7f4aafe8a000 r--p 0000a000 08:12 18352412                   /opt/ros/jazzy/lib/libaction_msgs__rosidl_generator_c.so
+7f4aafe8a000-7f4aafe8b000 r--p 0000c000 08:12 18352412                   /opt/ros/jazzy/lib/libaction_msgs__rosidl_generator_c.so
+7f4aafe8b000-7f4aafe8d000 rw-p 0000d000 08:12 18352412                   /opt/ros/jazzy/lib/libaction_msgs__rosidl_generator_c.so
+7f4aafe8d000-7f4aafe8e000 rw-p 00000000 00:00 0 
+7f4aafe8e000-7f4aafe90000 r--p 00000000 08:12 18352020                   /opt/ros/jazzy/lib/libbuiltin_interfaces__rosidl_generator_c.so
+7f4aafe90000-7f4aafe92000 r-xp 00002000 08:12 18352020                   /opt/ros/jazzy/lib/libbuiltin_interfaces__rosidl_generator_c.so
+7f4aafe92000-7f4aafe93000 r--p 00004000 08:12 18352020                   /opt/ros/jazzy/lib/libbuiltin_interfaces__rosidl_generator_c.so
+7f4aafe93000-7f4aafe94000 r--p 00004000 08:12 18352020                   /opt/ros/jazzy/lib/libbuiltin_interfaces__rosidl_generator_c.so
+7f4aafe94000-7f4aafe95000 rw-p 00005000 08:12 18352020                   /opt/ros/jazzy/lib/libbuiltin_interfaces__rosidl_generator_c.so
+7f4aafe95000-7f4aafe96000 r--p 00000000 08:12 18352134                   /opt/ros/jazzy/lib/libservice_msgs__rosidl_generator_c.so
+7f4aafe96000-7f4aafe97000 r-xp 00001000 08:12 18352134                   /opt/ros/jazzy/lib/libservice_msgs__rosidl_generator_c.so
+7f4aafe97000-7f4aafe98000 r--p 00002000 08:12 18352134                   /opt/ros/jazzy/lib/libservice_msgs__rosidl_generator_c.so
+7f4aafe98000-7f4aafe99000 r--p 00002000 08:12 18352134                   /opt/ros/jazzy/lib/libservice_msgs__rosidl_generator_c.so
+7f4aafe99000-7f4aafe9a000 rw-p 00003000 08:12 18352134                   /opt/ros/jazzy/lib/libservice_msgs__rosidl_generator_c.so
+7f4aafe9a000-7f4aafe9b000 r--p 00000000 08:12 18352245                   /opt/ros/jazzy/lib/libunique_identifier_msgs__rosidl_generator_c.so
+7f4aafe9b000-7f4aafe9c000 r-xp 00001000 08:12 18352245                   /opt/ros/jazzy/lib/libunique_identifier_msgs__rosidl_generator_c.so
+7f4aafe9c000-7f4aafe9d000 r--p 00002000 08:12 18352245                   /opt/ros/jazzy/lib/libunique_identifier_msgs__rosidl_generator_c.so
+7f4aafe9d000-7f4aafe9e000 r--p 00002000 08:12 18352245                   /opt/ros/jazzy/lib/libunique_identifier_msgs__rosidl_generator_c.so
+7f4aafe9e000-7f4aafe9f000 rw-p 00003000 08:12 18352245                   /opt/ros/jazzy/lib/libunique_identifier_msgs__rosidl_generator_c.so
+7f4aafe9f000-7f4aafeb0000 r--p 00000000 08:12 18367994                   /opt/ros/jazzy/lib/libgeographic_msgs__rosidl_generator_c.so
+7f4aafeb0000-7f4aafecb000 r-xp 00011000 08:12 18367994                   /opt/ros/jazzy/lib/libgeographic_msgs__rosidl_generator_c.so
+7f4aafecb000-7f4aafed5000 r--p 0002c000 08:12 18367994                   /opt/ros/jazzy/lib/libgeographic_msgs__rosidl_generator_c.so
+7f4aafed5000-7f4aafed7000 r--p 00036000 08:12 18367994                   /opt/ros/jazzy/lib/libgeographic_msgs__rosidl_generator_c.so
+7f4aafed7000-7f4aafee0000 rw-p 00038000 08:12 18367994                   /opt/ros/jazzy/lib/libgeographic_msgs__rosidl_generator_c.so
+7f4aafee0000-7f4aafee5000 rw-p 00000000 00:00 0 
+7f4aafee5000-7f4aafef3000 r--p 00000000 08:12 18357252                   /opt/ros/jazzy/lib/libnav_msgs__rosidl_generator_c.so
+7f4aafef3000-7f4aaff09000 r-xp 0000e000 08:12 18357252                   /opt/ros/jazzy/lib/libnav_msgs__rosidl_generator_c.so
+7f4aaff09000-7f4aaff11000 r--p 00024000 08:12 18357252                   /opt/ros/jazzy/lib/libnav_msgs__rosidl_generator_c.so
+7f4aaff11000-7f4aaff13000 r--p 0002b000 08:12 18357252                   /opt/ros/jazzy/lib/libnav_msgs__rosidl_generator_c.so
+7f4aaff13000-7f4aaff1a000 rw-p 0002d000 08:12 18357252                   /opt/ros/jazzy/lib/libnav_msgs__rosidl_generator_c.so
+7f4aaff1a000-7f4aaff1e000 rw-p 00000000 00:00 0 
+7f4aaff1e000-7f4aaff20000 r--p 00000000 08:12 42730082                   /usr/lib/x86_64-linux-gnu/libuuid.so.1.3.0
+7f4aaff20000-7f4aaff25000 r-xp 00002000 08:12 42730082                   /usr/lib/x86_64-linux-gnu/libuuid.so.1.3.0
+7f4aaff25000-7f4aaff26000 r--p 00007000 08:12 42730082                   /usr/lib/x86_64-linux-gnu/libuuid.so.1.3.0
+7f4aaff26000-7f4aaff27000 r--p 00007000 08:12 42730082                   /usr/lib/x86_64-linux-gnu/libuuid.so.1.3.0
+7f4aaff27000-7f4aaff28000 rw-p 00008000 08:12 42730082                   /usr/lib/x86_64-linux-gnu/libuuid.so.1.3.0
+7f4aaff28000-7f4aaff29000 r--p 00000000 08:12 18356105                   /opt/ros/jazzy/lib/libbond__rosidl_typesupport_cpp.so
+7f4aaff29000-7f4aaff2a000 r-xp 00001000 08:12 18356105                   /opt/ros/jazzy/lib/libbond__rosidl_typesupport_cpp.so
+7f4aaff2a000-7f4aaff2b000 r--p 00002000 08:12 18356105                   /opt/ros/jazzy/lib/libbond__rosidl_typesupport_cpp.so
+7f4aaff2b000-7f4aaff2c000 r--p 00002000 08:12 18356105                   /opt/ros/jazzy/lib/libbond__rosidl_typesupport_cpp.so
+7f4aaff2c000-7f4aaff2d000 rw-p 00003000 08:12 18356105                   /opt/ros/jazzy/lib/libbond__rosidl_typesupport_cpp.so
+7f4aaff2d000-7f4aaff34000 r--p 00000000 08:12 42762049                   /usr/lib/x86_64-linux-gnu/libtinyxml2.so.10.0.0
+7f4aaff34000-7f4aaff3e000 r-xp 00007000 08:12 42762049                   /usr/lib/x86_64-linux-gnu/libtinyxml2.so.10.0.0
+7f4aaff3e000-7f4aaff42000 r--p 00011000 08:12 42762049                   /usr/lib/x86_64-linux-gnu/libtinyxml2.so.10.0.0
+7f4aaff42000-7f4aaff43000 r--p 00014000 08:12 42762049                   /usr/lib/x86_64-linux-gnu/libtinyxml2.so.10.0.0
+7f4aaff43000-7f4aaff44000 rw-p 00015000 08:12 42762049                   /usr/lib/x86_64-linux-gnu/libtinyxml2.so.10.0.0
+7f4aaff44000-7f4aaff48000 r--p 00000000 08:12 18358124                   /opt/ros/jazzy/lib/libstd_srvs__rosidl_typesupport_cpp.so
+7f4aaff48000-7f4aaff4a000 r-xp 00004000 08:12 18358124                   /opt/ros/jazzy/lib/libstd_srvs__rosidl_typesupport_cpp.so
+7f4aaff4a000-7f4aaff4c000 r--p 00006000 08:12 18358124                   /opt/ros/jazzy/lib/libstd_srvs__rosidl_typesupport_cpp.so
+7f4aaff4c000-7f4aaff4d000 r--p 00007000 08:12 18358124                   /opt/ros/jazzy/lib/libstd_srvs__rosidl_typesupport_cpp.so
+7f4aaff4d000-7f4aaff4e000 rw-p 00008000 08:12 18358124                   /opt/ros/jazzy/lib/libstd_srvs__rosidl_typesupport_cpp.so
+7f4aaff4e000-7f4aaff56000 r--p 00000000 08:12 18375654                   /opt/ros/jazzy/lib/libmap_msgs__rosidl_typesupport_cpp.so
+7f4aaff56000-7f4aaff59000 r-xp 00008000 08:12 18375654                   /opt/ros/jazzy/lib/libmap_msgs__rosidl_typesupport_cpp.so
+7f4aaff59000-7f4aaff5c000 r--p 0000b000 08:12 18375654                   /opt/ros/jazzy/lib/libmap_msgs__rosidl_typesupport_cpp.so
+7f4aaff5c000-7f4aaff5d000 r--p 0000e000 08:12 18375654                   /opt/ros/jazzy/lib/libmap_msgs__rosidl_typesupport_cpp.so
+7f4aaff5d000-7f4aaff5e000 rw-p 0000f000 08:12 18375654                   /opt/ros/jazzy/lib/libmap_msgs__rosidl_typesupport_cpp.so
+7f4aaff5e000-7f4aaff74000 r--p 00000000 08:12 18379738                   /opt/ros/jazzy/lib/librcl_interfaces__rosidl_generator_c.so
+7f4aaff74000-7f4aaff90000 r-xp 00016000 08:12 18379738                   /opt/ros/jazzy/lib/librcl_interfaces__rosidl_generator_c.so
+7f4aaff90000-7f4aaff9b000 r--p 00032000 08:12 18379738                   /opt/ros/jazzy/lib/librcl_interfaces__rosidl_generator_c.so
+7f4aaff9b000-7f4aaff9e000 r--p 0003c000 08:12 18379738                   /opt/ros/jazzy/lib/librcl_interfaces__rosidl_generator_c.so
+7f4aaff9e000-7f4aaffa9000 rw-p 0003f000 08:12 18379738                   /opt/ros/jazzy/lib/librcl_interfaces__rosidl_generator_c.so
+7f4aaffa9000-7f4aaffac000 rw-p 00000000 00:00 0 
+7f4aaffac000-7f4aaffb2000 r--p 00000000 08:12 18354500                   /opt/ros/jazzy/lib/librosgraph_msgs__rosidl_generator_c.so
+7f4aaffb2000-7f4aaffba000 r-xp 00006000 08:12 18354500                   /opt/ros/jazzy/lib/librosgraph_msgs__rosidl_generator_c.so
+7f4aaffba000-7f4aaffbe000 r--p 0000e000 08:12 18354500                   /opt/ros/jazzy/lib/librosgraph_msgs__rosidl_generator_c.so
+7f4aaffbe000-7f4aaffbf000 r--p 00012000 08:12 18354500                   /opt/ros/jazzy/lib/librosgraph_msgs__rosidl_generator_c.so
+7f4aaffbf000-7f4aaffc3000 rw-p 00013000 08:12 18354500                   /opt/ros/jazzy/lib/librosgraph_msgs__rosidl_generator_c.so
+7f4aaffc3000-7f4aaffc4000 rw-p 00000000 00:00 0 
+7f4aaffc4000-7f4aaffce000 r--p 00000000 08:12 18355183                   /opt/ros/jazzy/lib/liblifecycle_msgs__rosidl_generator_c.so
+7f4aaffce000-7f4aaffdb000 r-xp 0000a000 08:12 18355183                   /opt/ros/jazzy/lib/liblifecycle_msgs__rosidl_generator_c.so
+7f4aaffdb000-7f4aaffe0000 r--p 00017000 08:12 18355183                   /opt/ros/jazzy/lib/liblifecycle_msgs__rosidl_generator_c.so
+7f4aaffe0000-7f4aaffe2000 r--p 0001b000 08:12 18355183                   /opt/ros/jazzy/lib/liblifecycle_msgs__rosidl_generator_c.so
+7f4aaffe2000-7f4aaffe7000 rw-p 0001d000 08:12 18355183                   /opt/ros/jazzy/lib/liblifecycle_msgs__rosidl_generator_c.so
+7f4aaffe7000-7f4aaffe9000 rw-p 00000000 00:00 0 
+7f4aaffe9000-7f4aafff7000 r--p 00000000 08:12 18380776                   /opt/ros/jazzy/lib/libstd_msgs__rosidl_generator_c.so
+7f4aafff7000-7f4ab0009000 r-xp 0000e000 08:12 18380776                   /opt/ros/jazzy/lib/libstd_msgs__rosidl_generator_c.so
+7f4ab0009000-7f4ab0011000 r--p 00020000 08:12 18380776                   /opt/ros/jazzy/lib/libstd_msgs__rosidl_generator_c.so
+7f4ab0011000-7f4ab0013000 r--p 00028000 08:12 18380776                   /opt/ros/jazzy/lib/libstd_msgs__rosidl_generator_c.so
+7f4ab0013000-7f4ab0019000 rw-p 0002a000 08:12 18380776                   /opt/ros/jazzy/lib/libstd_msgs__rosidl_generator_c.so
+7f4ab0019000-7f4ab001a000 rw-p 00000000 00:00 0 
+7f4ab001a000-7f4ab002a000 r--p 00000000 08:12 18383619                   /opt/ros/jazzy/lib/libgeometry_msgs__rosidl_generator_c.so
+7f4ab002a000-7f4ab0042000 r-xp 00010000 08:12 18383619                   /opt/ros/jazzy/lib/libgeometry_msgs__rosidl_generator_c.so
+7f4ab0042000-7f4ab004d000 r--p 00028000 08:12 18383619                   /opt/ros/jazzy/lib/libgeometry_msgs__rosidl_generator_c.so
+7f4ab004d000-7f4ab004f000 r--p 00033000 08:12 18383619                   /opt/ros/jazzy/lib/libgeometry_msgs__rosidl_generator_c.so
+7f4ab004f000-7f4ab0057000 rw-p 00035000 08:12 18383619                   /opt/ros/jazzy/lib/libgeometry_msgs__rosidl_generator_c.so
+7f4ab0057000-7f4ab0059000 rw-p 00000000 00:00 0 
+7f4ab0059000-7f4ab0064000 r--p 00000000 08:12 18361469                   /opt/ros/jazzy/lib/libtf2_msgs__rosidl_generator_c.so
+7f4ab0064000-7f4ab0072000 r-xp 0000b000 08:12 18361469                   /opt/ros/jazzy/lib/libtf2_msgs__rosidl_generator_c.so
+7f4ab0072000-7f4ab0077000 r--p 00019000 08:12 18361469                   /opt/ros/jazzy/lib/libtf2_msgs__rosidl_generator_c.so
+7f4ab0077000-7f4ab0079000 r--p 0001d000 08:12 18361469                   /opt/ros/jazzy/lib/libtf2_msgs__rosidl_generator_c.so
+7f4ab0079000-7f4ab007d000 rw-p 0001f000 08:12 18361469                   /opt/ros/jazzy/lib/libtf2_msgs__rosidl_generator_c.so
+7f4ab007d000-7f4ab0080000 rw-p 00000000 00:00 0 
+7f4ab0080000-7f4ab008c000 r--p 00000000 08:12 42763612                   /usr/lib/x86_64-linux-gnu/liblttng-ust.so.1.0.0
+7f4ab008c000-7f4ab00d7000 r-xp 0000c000 08:12 42763612                   /usr/lib/x86_64-linux-gnu/liblttng-ust.so.1.0.0
+7f4ab00d7000-7f4ab00f0000 r--p 00057000 08:12 42763612                   /usr/lib/x86_64-linux-gnu/liblttng-ust.so.1.0.0
+7f4ab00f0000-7f4ab00f4000 r--p 00070000 08:12 42763612                   /usr/lib/x86_64-linux-gnu/liblttng-ust.so.1.0.0
+7f4ab00f4000-7f4ab00fa000 rw-p 00074000 08:12 42763612                   /usr/lib/x86_64-linux-gnu/liblttng-ust.so.1.0.0
+7f4ab00fa000-7f4ab0103000 rw-p 00000000 00:00 0 
+7f4ab0103000-7f4ab0105000 r--p 00000000 08:12 42741677                   /usr/lib/x86_64-linux-gnu/libyaml-0.so.2.0.9
+7f4ab0105000-7f4ab011e000 r-xp 00002000 08:12 42741677                   /usr/lib/x86_64-linux-gnu/libyaml-0.so.2.0.9
+7f4ab011e000-7f4ab0122000 r--p 0001b000 08:12 42741677                   /usr/lib/x86_64-linux-gnu/libyaml-0.so.2.0.9
+7f4ab0122000-7f4ab0123000 r--p 0001e000 08:12 42741677                   /usr/lib/x86_64-linux-gnu/libyaml-0.so.2.0.9
+7f4ab0123000-7f4ab0124000 rw-p 0001f000 08:12 42741677                   /usr/lib/x86_64-linux-gnu/libyaml-0.so.2.0.9
+7f4ab0124000-7f4ab012a000 r--p 00000000 08:12 18354002                   /opt/ros/jazzy/lib/libtype_description_interfaces__rosidl_generator_c.so
+7f4ab012a000-7f4ab0132000 r-xp 00006000 08:12 18354002                   /opt/ros/jazzy/lib/libtype_description_interfaces__rosidl_generator_c.so
+7f4ab0132000-7f4ab0135000 r--p 0000e000 08:12 18354002                   /opt/ros/jazzy/lib/libtype_description_interfaces__rosidl_generator_c.so
+7f4ab0135000-7f4ab0136000 r--p 00011000 08:12 18354002                   /opt/ros/jazzy/lib/libtype_description_interfaces__rosidl_generator_c.so
+7f4ab0136000-7f4ab013b000 rw-p 00012000 08:12 18354002                   /opt/ros/jazzy/lib/libtype_description_interfaces__rosidl_generator_c.so
+7f4ab013b000-7f4ab013c000 rw-p 00000000 00:00 0 
+7f4ab013c000-7f4ab0145000 r--p 00000000 08:12 18379740                   /opt/ros/jazzy/lib/librcl_interfaces__rosidl_typesupport_c.so
+7f4ab0145000-7f4ab0146000 r-xp 00009000 08:12 18379740                   /opt/ros/jazzy/lib/librcl_interfaces__rosidl_typesupport_c.so
+7f4ab0146000-7f4ab0149000 r--p 0000a000 08:12 18379740                   /opt/ros/jazzy/lib/librcl_interfaces__rosidl_typesupport_c.so
+7f4ab0149000-7f4ab014b000 r--p 0000c000 08:12 18379740                   /opt/ros/jazzy/lib/librcl_interfaces__rosidl_typesupport_c.so
+7f4ab014b000-7f4ab014c000 rw-p 0000e000 08:12 18379740                   /opt/ros/jazzy/lib/librcl_interfaces__rosidl_typesupport_c.so
+7f4ab014c000-7f4ab015b000 r--p 00000000 08:12 18354736                   /opt/ros/jazzy/lib/librclcpp_action.so
+7f4ab015b000-7f4ab017a000 r-xp 0000f000 08:12 18354736                   /opt/ros/jazzy/lib/librclcpp_action.so
+7f4ab017a000-7f4ab0184000 r--p 0002e000 08:12 18354736                   /opt/ros/jazzy/lib/librclcpp_action.so
+7f4ab0184000-7f4ab0186000 r--p 00037000 08:12 18354736                   /opt/ros/jazzy/lib/librclcpp_action.so
+7f4ab0186000-7f4ab0187000 rw-p 00039000 08:12 18354736                   /opt/ros/jazzy/lib/librclcpp_action.so
+7f4ab0187000-7f4ab0198000 r--p 00000000 08:12 18357890                   /opt/ros/jazzy/lib/libsensor_msgs__rosidl_generator_c.so
+7f4ab0198000-7f4ab01af000 r-xp 00011000 08:12 18357890                   /opt/ros/jazzy/lib/libsensor_msgs__rosidl_generator_c.so
+7f4ab01af000-7f4ab01b8000 r--p 00028000 08:12 18357890                   /opt/ros/jazzy/lib/libsensor_msgs__rosidl_generator_c.so
+7f4ab01b8000-7f4ab01ba000 r--p 00031000 08:12 18357890                   /opt/ros/jazzy/lib/libsensor_msgs__rosidl_generator_c.so
+7f4ab01ba000-7f4ab01ca000 rw-p 00033000 08:12 18357890                   /opt/ros/jazzy/lib/libsensor_msgs__rosidl_generator_c.so
+7f4ab01ca000-7f4ab01cc000 rw-p 00000000 00:00 0 
+7f4ab01cc000-7f4ab01d8000 r--p 00000000 08:12 18358702                   /opt/ros/jazzy/lib/libvisualization_msgs__rosidl_generator_c.so
+7f4ab01d8000-7f4ab01ea000 r-xp 0000c000 08:12 18358702                   /opt/ros/jazzy/lib/libvisualization_msgs__rosidl_generator_c.so
+7f4ab01ea000-7f4ab01f1000 r--p 0001e000 08:12 18358702                   /opt/ros/jazzy/lib/libvisualization_msgs__rosidl_generator_c.so
+7f4ab01f1000-7f4ab01f3000 r--p 00024000 08:12 18358702                   /opt/ros/jazzy/lib/libvisualization_msgs__rosidl_generator_c.so
+7f4ab01f3000-7f4ab01fd000 rw-p 00026000 08:12 18358702                   /opt/ros/jazzy/lib/libvisualization_msgs__rosidl_generator_c.so
+7f4ab01fd000-7f4ab0200000 rw-p 00000000 00:00 0 
+7f4ab0200000-7f4ab0294000 r--p 00000000 08:12 18364935                   /opt/ros/jazzy/lib/libnav2_msgs__rosidl_generator_c.so
+7f4ab0294000-7f4ab0373000 r-xp 00094000 08:12 18364935                   /opt/ros/jazzy/lib/libnav2_msgs__rosidl_generator_c.so
+7f4ab0373000-7f4ab03b3000 r--p 00173000 08:12 18364935                   /opt/ros/jazzy/lib/libnav2_msgs__rosidl_generator_c.so
+7f4ab03b3000-7f4ab03c5000 r--p 001b2000 08:12 18364935                   /opt/ros/jazzy/lib/libnav2_msgs__rosidl_generator_c.so
+7f4ab03c5000-7f4ab0406000 rw-p 001c4000 08:12 18364935                   /opt/ros/jazzy/lib/libnav2_msgs__rosidl_generator_c.so
+7f4ab0406000-7f4ab0432000 rw-p 00000000 00:00 0 
+7f4ab0432000-7f4ab0464000 r--p 00000000 08:12 18356154                   /opt/ros/jazzy/lib/libbondcpp.so
+7f4ab0464000-7f4ab0495000 r-xp 00032000 08:12 18356154                   /opt/ros/jazzy/lib/libbondcpp.so
+7f4ab0495000-7f4ab04a8000 r--p 00063000 08:12 18356154                   /opt/ros/jazzy/lib/libbondcpp.so
+7f4ab04a8000-7f4ab04ab000 r--p 00075000 08:12 18356154                   /opt/ros/jazzy/lib/libbondcpp.so
+7f4ab04ab000-7f4ab04ac000 rw-p 00078000 08:12 18356154                   /opt/ros/jazzy/lib/libbondcpp.so
+7f4ab04ac000-7f4ab0511000 r--p 00000000 08:12 18363969                   /opt/ros/jazzy/lib/libnav2_costmap_2d_core.so
+7f4ab0511000-7f4ab05c1000 r-xp 00065000 08:12 18363969                   /opt/ros/jazzy/lib/libnav2_costmap_2d_core.so
+7f4ab05c1000-7f4ab05f6000 r--p 00115000 08:12 18363969                   /opt/ros/jazzy/lib/libnav2_costmap_2d_core.so
+7f4ab05f6000-7f4ab05fd000 r--p 0014a000 08:12 18363969                   /opt/ros/jazzy/lib/libnav2_costmap_2d_core.so
+7f4ab05fd000-7f4ab0600000 rw-p 00151000 08:12 18363969                   /opt/ros/jazzy/lib/libnav2_costmap_2d_core.so
+7f4ab0600000-7f4ab0628000 r--p 00000000 08:12 42762465                   /usr/lib/x86_64-linux-gnu/libc.so.6
+7f4ab0628000-7f4ab07b1000 r-xp 00028000 08:12 42762465                   /usr/lib/x86_64-linux-gnu/libc.so.6
+7f4ab07b1000-7f4ab0800000 r--p 001b1000 08:12 42762465                   /usr/lib/x86_64-linux-gnu/libc.so.6
+7f4ab0800000-7f4ab0804000 r--p 001ff000 08:12 42762465                   /usr/lib/x86_64-linux-gnu/libc.so.6
+7f4ab0804000-7f4ab0806000 rw-p 00203000 08:12 42762465                   /usr/lib/x86_64-linux-gnu/libc.so.6
+7f4ab0806000-7f4ab0813000 rw-p 00000000 00:00 0 
+7f4ab0813000-7f4ab0814000 r--p 00000000 08:12 18351284                   /opt/ros/jazzy/lib/librosidl_typesupport_c.so
+7f4ab0814000-7f4ab0816000 r-xp 00001000 08:12 18351284                   /opt/ros/jazzy/lib/librosidl_typesupport_c.so
+7f4ab0816000-7f4ab0817000 r--p 00003000 08:12 18351284                   /opt/ros/jazzy/lib/librosidl_typesupport_c.so
+7f4ab0817000-7f4ab0818000 r--p 00003000 08:12 18351284                   /opt/ros/jazzy/lib/librosidl_typesupport_c.so
+7f4ab0818000-7f4ab0819000 rw-p 00004000 08:12 18351284                   /opt/ros/jazzy/lib/librosidl_typesupport_c.so
+7f4ab0819000-7f4ab081d000 rw-p 00000000 00:00 0 
+7f4ab081d000-7f4ab0821000 r--p 00000000 08:12 18352835                   /opt/ros/jazzy/lib/librcl_logging_spdlog.so
+7f4ab0821000-7f4ab0824000 r-xp 00004000 08:12 18352835                   /opt/ros/jazzy/lib/librcl_logging_spdlog.so
+7f4ab0824000-7f4ab0825000 r--p 00007000 08:12 18352835                   /opt/ros/jazzy/lib/librcl_logging_spdlog.so
+7f4ab0825000-7f4ab0826000 r--p 00008000 08:12 18352835                   /opt/ros/jazzy/lib/librcl_logging_spdlog.so
+7f4ab0826000-7f4ab0827000 rw-p 00009000 08:12 18352835                   /opt/ros/jazzy/lib/librcl_logging_spdlog.so
+7f4ab0827000-7f4ab082a000 r--p 00000000 08:12 18354192                   /opt/ros/jazzy/lib/libstatistics_msgs__rosidl_generator_c.so
+7f4ab082a000-7f4ab082c000 r-xp 00003000 08:12 18354192                   /opt/ros/jazzy/lib/libstatistics_msgs__rosidl_generator_c.so
+7f4ab082c000-7f4ab082d000 r--p 00005000 08:12 18354192                   /opt/ros/jazzy/lib/libstatistics_msgs__rosidl_generator_c.so
+7f4ab082d000-7f4ab082e000 r--p 00006000 08:12 18354192                   /opt/ros/jazzy/lib/libstatistics_msgs__rosidl_generator_c.so
+7f4ab082e000-7f4ab0830000 rw-p 00007000 08:12 18354192                   /opt/ros/jazzy/lib/libstatistics_msgs__rosidl_generator_c.so
+7f4ab0830000-7f4ab0832000 rw-p 00000000 00:00 0 
+7f4ab0832000-7f4ab0833000 r--p 00000000 08:12 18351429                   /opt/ros/jazzy/lib/librosidl_typesupport_cpp.so
+7f4ab0833000-7f4ab0835000 r-xp 00001000 08:12 18351429                   /opt/ros/jazzy/lib/librosidl_typesupport_cpp.so
+7f4ab0835000-7f4ab0836000 r--p 00003000 08:12 18351429                   /opt/ros/jazzy/lib/librosidl_typesupport_cpp.so
+7f4ab0836000-7f4ab0837000 r--p 00003000 08:12 18351429                   /opt/ros/jazzy/lib/librosidl_typesupport_cpp.so
+7f4ab0837000-7f4ab0838000 rw-p 00004000 08:12 18351429                   /opt/ros/jazzy/lib/librosidl_typesupport_cpp.so
+7f4ab0838000-7f4ab083b000 r--p 00000000 08:12 18352420                   /opt/ros/jazzy/lib/libaction_msgs__rosidl_typesupport_cpp.so
+7f4ab083b000-7f4ab083c000 r-xp 00003000 08:12 18352420                   /opt/ros/jazzy/lib/libaction_msgs__rosidl_typesupport_cpp.so
+7f4ab083c000-7f4ab083d000 r--p 00004000 08:12 18352420                   /opt/ros/jazzy/lib/libaction_msgs__rosidl_typesupport_cpp.so
+7f4ab083d000-7f4ab083e000 r--p 00004000 08:12 18352420                   /opt/ros/jazzy/lib/libaction_msgs__rosidl_typesupport_cpp.so
+7f4ab083e000-7f4ab083f000 rw-p 00005000 08:12 18352420                   /opt/ros/jazzy/lib/libaction_msgs__rosidl_typesupport_cpp.so
+7f4ab083f000-7f4ab0841000 rw-p 00000000 00:00 0 
+7f4ab0841000-7f4ab0848000 r--p 00000000 08:12 18357255                   /opt/ros/jazzy/lib/libnav_msgs__rosidl_typesupport_cpp.so
+7f4ab0848000-7f4ab084b000 r-xp 00007000 08:12 18357255                   /opt/ros/jazzy/lib/libnav_msgs__rosidl_typesupport_cpp.so
+7f4ab084b000-7f4ab084d000 r--p 0000a000 08:12 18357255                   /opt/ros/jazzy/lib/libnav_msgs__rosidl_typesupport_cpp.so
+7f4ab084d000-7f4ab084e000 r--p 0000c000 08:12 18357255                   /opt/ros/jazzy/lib/libnav_msgs__rosidl_typesupport_cpp.so
+7f4ab084e000-7f4ab084f000 rw-p 0000d000 08:12 18357255                   /opt/ros/jazzy/lib/libnav_msgs__rosidl_typesupport_cpp.so
+7f4ab084f000-7f4ab0856000 r--p 00000000 08:12 18350833                   /opt/ros/jazzy/lib/librosidl_runtime_c.so
+7f4ab0856000-7f4ab0863000 r-xp 00007000 08:12 18350833                   /opt/ros/jazzy/lib/librosidl_runtime_c.so
+7f4ab0863000-7f4ab0869000 r--p 00014000 08:12 18350833                   /opt/ros/jazzy/lib/librosidl_runtime_c.so
+7f4ab0869000-7f4ab086a000 r--p 00019000 08:12 18350833                   /opt/ros/jazzy/lib/librosidl_runtime_c.so
+7f4ab086a000-7f4ab086e000 rw-p 0001a000 08:12 18350833                   /opt/ros/jazzy/lib/librosidl_runtime_c.so
+7f4ab086e000-7f4ab0872000 r--p 00000000 08:12 18351248                   /opt/ros/jazzy/lib/librcpputils.so
+7f4ab0872000-7f4ab0879000 r-xp 00004000 08:12 18351248                   /opt/ros/jazzy/lib/librcpputils.so
+7f4ab0879000-7f4ab087b000 r--p 0000b000 08:12 18351248                   /opt/ros/jazzy/lib/librcpputils.so
+7f4ab087b000-7f4ab087c000 r--p 0000c000 08:12 18351248                   /opt/ros/jazzy/lib/librcpputils.so
+7f4ab087c000-7f4ab087d000 rw-p 0000d000 08:12 18351248                   /opt/ros/jazzy/lib/librcpputils.so
+7f4ab087d000-7f4ab087f000 rw-p 00000000 00:00 0 
+7f4ab087f000-7f4ab0880000 r--p 00000000 08:12 18351908                   /opt/ros/jazzy/lib/librosidl_typesupport_introspection_cpp.so
+7f4ab0880000-7f4ab0881000 r-xp 00001000 08:12 18351908                   /opt/ros/jazzy/lib/librosidl_typesupport_introspection_cpp.so
+7f4ab0881000-7f4ab0882000 r--p 00002000 08:12 18351908                   /opt/ros/jazzy/lib/librosidl_typesupport_introspection_cpp.so
+7f4ab0882000-7f4ab0883000 r--p 00002000 08:12 18351908                   /opt/ros/jazzy/lib/librosidl_typesupport_introspection_cpp.so
+7f4ab0883000-7f4ab0884000 rw-p 00003000 08:12 18351908                   /opt/ros/jazzy/lib/librosidl_typesupport_introspection_cpp.so
+7f4ab0884000-7f4ab088b000 r--p 00000000 08:12 18350874                   /opt/ros/jazzy/lib/librosidl_dynamic_typesupport.so
+7f4ab088b000-7f4ab0896000 r-xp 00007000 08:12 18350874                   /opt/ros/jazzy/lib/librosidl_dynamic_typesupport.so
+7f4ab0896000-7f4ab089a000 r--p 00012000 08:12 18350874                   /opt/ros/jazzy/lib/librosidl_dynamic_typesupport.so
+7f4ab089a000-7f4ab089b000 r--p 00015000 08:12 18350874                   /opt/ros/jazzy/lib/librosidl_dynamic_typesupport.so
+7f4ab089b000-7f4ab089c000 rw-p 00016000 08:12 18350874                   /opt/ros/jazzy/lib/librosidl_dynamic_typesupport.so
+7f4ab089c000-7f4ab089d000 rw-p 00000000 00:00 0 
+7f4ab089d000-7f4ab08a9000 r--p 00000000 08:12 18379741                   /opt/ros/jazzy/lib/librcl_interfaces__rosidl_typesupport_cpp.so
+7f4ab08a9000-7f4ab08af000 r-xp 0000c000 08:12 18379741                   /opt/ros/jazzy/lib/librcl_interfaces__rosidl_typesupport_cpp.so
+7f4ab08af000-7f4ab08b4000 r--p 00012000 08:12 18379741                   /opt/ros/jazzy/lib/librcl_interfaces__rosidl_typesupport_cpp.so
+7f4ab08b4000-7f4ab08b6000 r--p 00016000 08:12 18379741                   /opt/ros/jazzy/lib/librcl_interfaces__rosidl_typesupport_cpp.so
+7f4ab08b6000-7f4ab08b7000 rw-p 00018000 08:12 18379741                   /opt/ros/jazzy/lib/librcl_interfaces__rosidl_typesupport_cpp.so
+7f4ab08b7000-7f4ab08b8000 rw-p 00000000 00:00 0 
+7f4ab08b8000-7f4ab08bb000 r--p 00000000 08:12 18354008                   /opt/ros/jazzy/lib/libtype_description_interfaces__rosidl_typesupport_c.so
+7f4ab08bb000-7f4ab08bc000 r-xp 00003000 08:12 18354008                   /opt/ros/jazzy/lib/libtype_description_interfaces__rosidl_typesupport_c.so
+7f4ab08bc000-7f4ab08bd000 r--p 00004000 08:12 18354008                   /opt/ros/jazzy/lib/libtype_description_interfaces__rosidl_typesupport_c.so
+7f4ab08bd000-7f4ab08be000 r--p 00005000 08:12 18354008                   /opt/ros/jazzy/lib/libtype_description_interfaces__rosidl_typesupport_c.so
+7f4ab08be000-7f4ab08bf000 rw-p 00006000 08:12 18354008                   /opt/ros/jazzy/lib/libtype_description_interfaces__rosidl_typesupport_c.so
+7f4ab08bf000-7f4ab08c2000 r--p 00000000 08:12 18352637                   /opt/ros/jazzy/lib/libament_index_cpp.so
+7f4ab08c2000-7f4ab08c9000 r-xp 00003000 08:12 18352637                   /opt/ros/jazzy/lib/libament_index_cpp.so
+7f4ab08c9000-7f4ab08ca000 r--p 0000a000 08:12 18352637                   /opt/ros/jazzy/lib/libament_index_cpp.so
+7f4ab08ca000-7f4ab08cb000 r--p 0000b000 08:12 18352637                   /opt/ros/jazzy/lib/libament_index_cpp.so
+7f4ab08cb000-7f4ab08cc000 rw-p 0000c000 08:12 18352637                   /opt/ros/jazzy/lib/libament_index_cpp.so
+7f4ab08cc000-7f4ab08ce000 rw-p 00000000 00:00 0 
+7f4ab08ce000-7f4ab08d1000 r--p 00000000 08:12 18353816                   /opt/ros/jazzy/lib/librmw_implementation.so
+7f4ab08d1000-7f4ab08d6000 r-xp 00003000 08:12 18353816                   /opt/ros/jazzy/lib/librmw_implementation.so
+7f4ab08d6000-7f4ab08d9000 r--p 00008000 08:12 18353816                   /opt/ros/jazzy/lib/librmw_implementation.so
+7f4ab08d9000-7f4ab08da000 r--p 0000a000 08:12 18353816                   /opt/ros/jazzy/lib/librmw_implementation.so
+7f4ab08da000-7f4ab08db000 rw-p 0000b000 08:12 18353816                   /opt/ros/jazzy/lib/librmw_implementation.so
+7f4ab08db000-7f4ab08dc000 r--p 00000000 08:12 18352791                   /opt/ros/jazzy/lib/librcl_logging_interface.so
+7f4ab08dc000-7f4ab08dd000 r-xp 00001000 08:12 18352791                   /opt/ros/jazzy/lib/librcl_logging_interface.so
+7f4ab08dd000-7f4ab08de000 r--p 00002000 08:12 18352791                   /opt/ros/jazzy/lib/librcl_logging_interface.so
+7f4ab08de000-7f4ab08df000 r--p 00002000 08:12 18352791                   /opt/ros/jazzy/lib/librcl_logging_interface.so
+7f4ab08df000-7f4ab08e0000 rw-p 00003000 08:12 18352791                   /opt/ros/jazzy/lib/librcl_logging_interface.so
+7f4ab08e0000-7f4ab08e2000 r--p 00000000 08:12 18352865                   /opt/ros/jazzy/lib/librcl_yaml_param_parser.so
+7f4ab08e2000-7f4ab08e8000 r-xp 00002000 08:12 18352865                   /opt/ros/jazzy/lib/librcl_yaml_param_parser.so
+7f4ab08e8000-7f4ab08ea000 r--p 00008000 08:12 18352865                   /opt/ros/jazzy/lib/librcl_yaml_param_parser.so
+7f4ab08ea000-7f4ab08eb000 r--p 00009000 08:12 18352865                   /opt/ros/jazzy/lib/librcl_yaml_param_parser.so
+7f4ab08eb000-7f4ab08ec000 rw-p 0000a000 08:12 18352865                   /opt/ros/jazzy/lib/librcl_yaml_param_parser.so
+7f4ab08ec000-7f4ab08f1000 r--p 00000000 08:12 18355186                   /opt/ros/jazzy/lib/liblifecycle_msgs__rosidl_typesupport_c.so
+7f4ab08f1000-7f4ab08f2000 r-xp 00005000 08:12 18355186                   /opt/ros/jazzy/lib/liblifecycle_msgs__rosidl_typesupport_c.so
+7f4ab08f2000-7f4ab08f4000 r--p 00006000 08:12 18355186                   /opt/ros/jazzy/lib/liblifecycle_msgs__rosidl_typesupport_c.so
+7f4ab08f4000-7f4ab08f5000 r--p 00007000 08:12 18355186                   /opt/ros/jazzy/lib/liblifecycle_msgs__rosidl_typesupport_c.so
+7f4ab08f5000-7f4ab08f6000 rw-p 00008000 08:12 18355186                   /opt/ros/jazzy/lib/liblifecycle_msgs__rosidl_typesupport_c.so
+7f4ab08f6000-7f4ab08fc000 r--p 00000000 08:12 18355187                   /opt/ros/jazzy/lib/liblifecycle_msgs__rosidl_typesupport_cpp.so
+7f4ab08fc000-7f4ab08fe000 r-xp 00006000 08:12 18355187                   /opt/ros/jazzy/lib/liblifecycle_msgs__rosidl_typesupport_cpp.so
+7f4ab08fe000-7f4ab0900000 r--p 00008000 08:12 18355187                   /opt/ros/jazzy/lib/liblifecycle_msgs__rosidl_typesupport_cpp.so
+7f4ab0900000-7f4ab0901000 r--p 0000a000 08:12 18355187                   /opt/ros/jazzy/lib/liblifecycle_msgs__rosidl_typesupport_cpp.so
+7f4ab0901000-7f4ab0902000 rw-p 0000b000 08:12 18355187                   /opt/ros/jazzy/lib/liblifecycle_msgs__rosidl_typesupport_cpp.so
+7f4ab0902000-7f4ab0904000 r--p 00000000 08:12 18355274                   /opt/ros/jazzy/lib/librcl_lifecycle.so
+7f4ab0904000-7f4ab0908000 r-xp 00002000 08:12 18355274                   /opt/ros/jazzy/lib/librcl_lifecycle.so
+7f4ab0908000-7f4ab090a000 r--p 00006000 08:12 18355274                   /opt/ros/jazzy/lib/librcl_lifecycle.so
+7f4ab090a000-7f4ab090b000 r--p 00007000 08:12 18355274                   /opt/ros/jazzy/lib/librcl_lifecycle.so
+7f4ab090b000-7f4ab090c000 rw-p 00008000 08:12 18355274                   /opt/ros/jazzy/lib/librcl_lifecycle.so
+7f4ab090c000-7f4ab091c000 r--p 00000000 08:12 42762468                   /usr/lib/x86_64-linux-gnu/libm.so.6
+7f4ab091c000-7f4ab099b000 r-xp 00010000 08:12 42762468                   /usr/lib/x86_64-linux-gnu/libm.so.6
+7f4ab099b000-7f4ab09f3000 r--p 0008f000 08:12 42762468                   /usr/lib/x86_64-linux-gnu/libm.so.6
+7f4ab09f3000-7f4ab09f4000 r--p 000e7000 08:12 42762468                   /usr/lib/x86_64-linux-gnu/libm.so.6
+7f4ab09f4000-7f4ab09f5000 rw-p 000e8000 08:12 42762468                   /usr/lib/x86_64-linux-gnu/libm.so.6
+7f4ab09f5000-7f4ab09f8000 r--p 00000000 08:12 18350972                   /opt/ros/jazzy/lib/librmw.so
+7f4ab09f8000-7f4ab09fc000 r-xp 00003000 08:12 18350972                   /opt/ros/jazzy/lib/librmw.so
+7f4ab09fc000-7f4ab09fe000 r--p 00007000 08:12 18350972                   /opt/ros/jazzy/lib/librmw.so
+7f4ab09fe000-7f4ab09ff000 r--p 00009000 08:12 18350972                   /opt/ros/jazzy/lib/librmw.so
+7f4ab09ff000-7f4ab0a00000 rw-p 0000a000 08:12 18350972                   /opt/ros/jazzy/lib/librmw.so
+7f4ab0a00000-7f4ab0a9d000 r--p 00000000 08:12 42733846                   /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33
+7f4ab0a9d000-7f4ab0be5000 r-xp 0009d000 08:12 42733846                   /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33
+7f4ab0be5000-7f4ab0c6c000 r--p 001e5000 08:12 42733846                   /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33
+7f4ab0c6c000-7f4ab0c77000 r--p 0026b000 08:12 42733846                   /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33
+7f4ab0c77000-7f4ab0c7a000 rw-p 00276000 08:12 42733846                   /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.33
+7f4ab0c7a000-7f4ab0c7e000 rw-p 00000000 00:00 0 
+7f4ab0c7e000-7f4ab0c81000 r--p 00000000 08:12 18354503                   /opt/ros/jazzy/lib/librosgraph_msgs__rosidl_typesupport_cpp.so
+7f4ab0c81000-7f4ab0c82000 r-xp 00003000 08:12 18354503                   /opt/ros/jazzy/lib/librosgraph_msgs__rosidl_typesupport_cpp.so
+7f4ab0c82000-7f4ab0c83000 r--p 00004000 08:12 18354503                   /opt/ros/jazzy/lib/librosgraph_msgs__rosidl_typesupport_cpp.so
+7f4ab0c83000-7f4ab0c84000 r--p 00004000 08:12 18354503                   /opt/ros/jazzy/lib/librosgraph_msgs__rosidl_typesupport_cpp.so
+7f4ab0c84000-7f4ab0c85000 rw-p 00005000 08:12 18354503                   /opt/ros/jazzy/lib/librosgraph_msgs__rosidl_typesupport_cpp.so
+7f4ab0c85000-7f4ab0c87000 rw-p 00000000 00:00 0 
+7f4ab0c87000-7f4ab0c8e000 r--p 00000000 08:12 18380779                   /opt/ros/jazzy/lib/libstd_msgs__rosidl_typesupport_cpp.so
+7f4ab0c8e000-7f4ab0c8f000 r-xp 00007000 08:12 18380779                   /opt/ros/jazzy/lib/libstd_msgs__rosidl_typesupport_cpp.so
+7f4ab0c8f000-7f4ab0c91000 r--p 00008000 08:12 18380779                   /opt/ros/jazzy/lib/libstd_msgs__rosidl_typesupport_cpp.so
+7f4ab0c91000-7f4ab0c92000 r--p 0000a000 08:12 18380779                   /opt/ros/jazzy/lib/libstd_msgs__rosidl_typesupport_cpp.so
+7f4ab0c92000-7f4ab0c93000 rw-p 0000b000 08:12 18380779                   /opt/ros/jazzy/lib/libstd_msgs__rosidl_typesupport_cpp.so
+7f4ab0c93000-7f4ab0c9b000 r--p 00000000 08:12 18383625                   /opt/ros/jazzy/lib/libgeometry_msgs__rosidl_typesupport_cpp.so
+7f4ab0c9b000-7f4ab0c9c000 r-xp 00008000 08:12 18383625                   /opt/ros/jazzy/lib/libgeometry_msgs__rosidl_typesupport_cpp.so
+7f4ab0c9c000-7f4ab0c9f000 r--p 00009000 08:12 18383625                   /opt/ros/jazzy/lib/libgeometry_msgs__rosidl_typesupport_cpp.so
+7f4ab0c9f000-7f4ab0ca0000 r--p 0000c000 08:12 18383625                   /opt/ros/jazzy/lib/libgeometry_msgs__rosidl_typesupport_cpp.so
+7f4ab0ca0000-7f4ab0ca1000 rw-p 0000d000 08:12 18383625                   /opt/ros/jazzy/lib/libgeometry_msgs__rosidl_typesupport_cpp.so
+7f4ab0ca1000-7f4ab0cad000 r--p 00000000 08:12 18354088                   /opt/ros/jazzy/lib/librcl.so
+7f4ab0cad000-7f4ab0cd7000 r-xp 0000c000 08:12 18354088                   /opt/ros/jazzy/lib/librcl.so
+7f4ab0cd7000-7f4ab0ce5000 r--p 00036000 08:12 18354088                   /opt/ros/jazzy/lib/librcl.so
+7f4ab0ce5000-7f4ab0ce6000 r--p 00043000 08:12 18354088                   /opt/ros/jazzy/lib/librcl.so
+7f4ab0ce6000-7f4ab0ce8000 rw-p 00044000 08:12 18354088                   /opt/ros/jazzy/lib/librcl.so
+7f4ab0ce8000-7f4ab0d21000 r--p 00000000 08:12 18361603                   /opt/ros/jazzy/lib/libtf2_ros.so
+7f4ab0d21000-7f4ab0d5c000 r-xp 00039000 08:12 18361603                   /opt/ros/jazzy/lib/libtf2_ros.so
+7f4ab0d5c000-7f4ab0d71000 r--p 00074000 08:12 18361603                   /opt/ros/jazzy/lib/libtf2_ros.so
+7f4ab0d71000-7f4ab0d75000 r--p 00088000 08:12 18361603                   /opt/ros/jazzy/lib/libtf2_ros.so
+7f4ab0d75000-7f4ab0d76000 rw-p 0008c000 08:12 18361603                   /opt/ros/jazzy/lib/libtf2_ros.so
+7f4ab0d76000-7f4ab0dc2000 r--p 00000000 08:12 18364941                   /opt/ros/jazzy/lib/libnav2_msgs__rosidl_typesupport_cpp.so
+7f4ab0dc2000-7f4ab0dd7000 r-xp 0004c000 08:12 18364941                   /opt/ros/jazzy/lib/libnav2_msgs__rosidl_typesupport_cpp.so
+7f4ab0dd7000-7f4ab0df0000 r--p 00061000 08:12 18364941                   /opt/ros/jazzy/lib/libnav2_msgs__rosidl_typesupport_cpp.so
+7f4ab0df0000-7f4ab0df8000 r--p 00079000 08:12 18364941                   /opt/ros/jazzy/lib/libnav2_msgs__rosidl_typesupport_cpp.so
+7f4ab0df8000-7f4ab0dfe000 rw-p 00081000 08:12 18364941                   /opt/ros/jazzy/lib/libnav2_msgs__rosidl_typesupport_cpp.so
+7f4ab0dfe000-7f4ab0e00000 rw-p 00000000 00:00 0 
+7f4ab0e00000-7f4ab0ebf000 r--p 00000000 08:12 18380444                   /opt/ros/jazzy/lib/librclcpp.so
+7f4ab0ebf000-7f4ab100d000 r-xp 000bf000 08:12 18380444                   /opt/ros/jazzy/lib/librclcpp.so
+7f4ab100d000-7f4ab1075000 r--p 0020d000 08:12 18380444                   /opt/ros/jazzy/lib/librclcpp.so
+7f4ab1075000-7f4ab1081000 r--p 00275000 08:12 18380444                   /opt/ros/jazzy/lib/librclcpp.so
+7f4ab1081000-7f4ab1085000 rw-p 00281000 08:12 18380444                   /opt/ros/jazzy/lib/librclcpp.so
+7f4ab1085000-7f4ab1087000 rw-p 00000000 00:00 0 
+7f4ab1087000-7f4ab108d000 r--p 00000000 08:12 18361472                   /opt/ros/jazzy/lib/libtf2_msgs__rosidl_typesupport_cpp.so
+7f4ab108d000-7f4ab108f000 r-xp 00006000 08:12 18361472                   /opt/ros/jazzy/lib/libtf2_msgs__rosidl_typesupport_cpp.so
+7f4ab108f000-7f4ab1091000 r--p 00008000 08:12 18361472                   /opt/ros/jazzy/lib/libtf2_msgs__rosidl_typesupport_cpp.so
+7f4ab1091000-7f4ab1092000 r--p 0000a000 08:12 18361472                   /opt/ros/jazzy/lib/libtf2_msgs__rosidl_typesupport_cpp.so
+7f4ab1092000-7f4ab1093000 rw-p 0000b000 08:12 18361472                   /opt/ros/jazzy/lib/libtf2_msgs__rosidl_typesupport_cpp.so
+7f4ab1093000-7f4ab109d000 r--p 00000000 08:12 18353064                   /opt/ros/jazzy/lib/libtracetools.so
+7f4ab109d000-7f4ab10a4000 r-xp 0000a000 08:12 18353064                   /opt/ros/jazzy/lib/libtracetools.so
+7f4ab10a4000-7f4ab10a8000 r--p 00011000 08:12 18353064                   /opt/ros/jazzy/lib/libtracetools.so
+7f4ab10a8000-7f4ab10ab000 r--p 00015000 08:12 18353064                   /opt/ros/jazzy/lib/libtracetools.so
+7f4ab10ab000-7f4ab10ad000 rw-p 00018000 08:12 18353064                   /opt/ros/jazzy/lib/libtracetools.so
+7f4ab10ad000-7f4ab10af000 r--p 00000000 08:12 18354196                   /opt/ros/jazzy/lib/libstatistics_msgs__rosidl_typesupport_cpp.so
+7f4ab10af000-7f4ab10b0000 r-xp 00002000 08:12 18354196                   /opt/ros/jazzy/lib/libstatistics_msgs__rosidl_typesupport_cpp.so
+7f4ab10b0000-7f4ab10b1000 r--p 00003000 08:12 18354196                   /opt/ros/jazzy/lib/libstatistics_msgs__rosidl_typesupport_cpp.so
+7f4ab10b1000-7f4ab10b2000 r--p 00003000 08:12 18354196                   /opt/ros/jazzy/lib/libstatistics_msgs__rosidl_typesupport_cpp.so
+7f4ab10b2000-7f4ab10b3000 rw-p 00004000 08:12 18354196                   /opt/ros/jazzy/lib/libstatistics_msgs__rosidl_typesupport_cpp.so
+7f4ab10b3000-7f4ab10b5000 rw-p 00000000 00:00 0 
+7f4ab10b5000-7f4ab10b7000 r--p 00000000 08:12 18354296                   /opt/ros/jazzy/lib/liblibstatistics_collector.so
+7f4ab10b7000-7f4ab10ba000 r-xp 00002000 08:12 18354296                   /opt/ros/jazzy/lib/liblibstatistics_collector.so
+7f4ab10ba000-7f4ab10bb000 r--p 00005000 08:12 18354296                   /opt/ros/jazzy/lib/liblibstatistics_collector.so
+7f4ab10bb000-7f4ab10bc000 r--p 00005000 08:12 18354296                   /opt/ros/jazzy/lib/liblibstatistics_collector.so
+7f4ab10bc000-7f4ab10bd000 rw-p 00006000 08:12 18354296                   /opt/ros/jazzy/lib/liblibstatistics_collector.so
+7f4ab10bd000-7f4ab10d4000 r--p 00000000 08:12 42764270                   /usr/lib/x86_64-linux-gnu/liborocos-kdl.so.1.5.1
+7f4ab10d4000-7f4ab113e000 r-xp 00017000 08:12 42764270                   /usr/lib/x86_64-linux-gnu/liborocos-kdl.so.1.5.1
+7f4ab113e000-7f4ab116e000 r--p 00081000 08:12 42764270                   /usr/lib/x86_64-linux-gnu/liborocos-kdl.so.1.5.1
+7f4ab116e000-7f4ab1170000 r--p 000b0000 08:12 42764270                   /usr/lib/x86_64-linux-gnu/liborocos-kdl.so.1.5.1
+7f4ab1170000-7f4ab1171000 rw-p 000b2000 08:12 42764270                   /usr/lib/x86_64-linux-gnu/liborocos-kdl.so.1.5.1
+7f4ab1171000-7f4ab11a9000 r--p 00000000 08:12 18364956                   /opt/ros/jazzy/lib/libnav2_util_core.so
+7f4ab11a9000-7f4ab11e7000 r-xp 00038000 08:12 18364956                   /opt/ros/jazzy/lib/libnav2_util_core.so
+7f4ab11e7000-7f4ab11fc000 r--p 00076000 08:12 18364956                   /opt/ros/jazzy/lib/libnav2_util_core.so
+7f4ab11fc000-7f4ab11ff000 r--p 0008b000 08:12 18364956                   /opt/ros/jazzy/lib/libnav2_util_core.so
+7f4ab11ff000-7f4ab1200000 rw-p 0008e000 08:12 18364956                   /opt/ros/jazzy/lib/libnav2_util_core.so
+7f4ab1200000-7f4ab1351000 r--p 00000000 08:12 18378439                   /opt/ros/jazzy/lib/libcollision_monitor_core.so
+7f4ab1351000-7f4ab1436000 r-xp 00151000 08:12 18378439                   /opt/ros/jazzy/lib/libcollision_monitor_core.so
+7f4ab1436000-7f4ab1492000 r--p 00236000 08:12 18378439                   /opt/ros/jazzy/lib/libcollision_monitor_core.so
+7f4ab1492000-7f4ab149f000 r--p 00291000 08:12 18378439                   /opt/ros/jazzy/lib/libcollision_monitor_core.so
+7f4ab149f000-7f4ab14a1000 rw-p 0029e000 08:12 18378439                   /opt/ros/jazzy/lib/libcollision_monitor_core.so
+7f4ab14a1000-7f4ab14a8000 r--p 00000000 08:12 18361321                   /opt/ros/jazzy/lib/libtf2.so
+7f4ab14a8000-7f4ab14bd000 r-xp 00007000 08:12 18361321                   /opt/ros/jazzy/lib/libtf2.so
+7f4ab14bd000-7f4ab14c1000 r--p 0001c000 08:12 18361321                   /opt/ros/jazzy/lib/libtf2.so
+7f4ab14c1000-7f4ab14c2000 r--p 00020000 08:12 18361321                   /opt/ros/jazzy/lib/libtf2.so
+7f4ab14c2000-7f4ab14c3000 rw-p 00021000 08:12 18361321                   /opt/ros/jazzy/lib/libtf2.so
+7f4ab14c3000-7f4ab14cb000 r--p 00000000 08:12 18357893                   /opt/ros/jazzy/lib/libsensor_msgs__rosidl_typesupport_cpp.so
+7f4ab14cb000-7f4ab14cd000 r-xp 00008000 08:12 18357893                   /opt/ros/jazzy/lib/libsensor_msgs__rosidl_typesupport_cpp.so
+7f4ab14cd000-7f4ab14d0000 r--p 0000a000 08:12 18357893                   /opt/ros/jazzy/lib/libsensor_msgs__rosidl_typesupport_cpp.so
+7f4ab14d0000-7f4ab14d1000 r--p 0000d000 08:12 18357893                   /opt/ros/jazzy/lib/libsensor_msgs__rosidl_typesupport_cpp.so
+7f4ab14d1000-7f4ab14d2000 rw-p 0000e000 08:12 18357893                   /opt/ros/jazzy/lib/libsensor_msgs__rosidl_typesupport_cpp.so
+7f4ab14d2000-7f4ab14d4000 r--p 00000000 08:12 42763201                   /usr/lib/x86_64-linux-gnu/libconsole_bridge.so.1.0
+7f4ab14d4000-7f4ab14d5000 r-xp 00002000 08:12 42763201                   /usr/lib/x86_64-linux-gnu/libconsole_bridge.so.1.0
+7f4ab14d5000-7f4ab14d6000 r--p 00003000 08:12 42763201                   /usr/lib/x86_64-linux-gnu/libconsole_bridge.so.1.0
+7f4ab14d6000-7f4ab14d7000 r--p 00003000 08:12 42763201                   /usr/lib/x86_64-linux-gnu/libconsole_bridge.so.1.0
+7f4ab14d7000-7f4ab14d8000 rw-p 00004000 08:12 42763201                   /usr/lib/x86_64-linux-gnu/libconsole_bridge.so.1.0
+7f4ab14d8000-7f4ab14da000 rw-p 00000000 00:00 0 
+7f4ab14da000-7f4ab14df000 r--p 00000000 08:12 18354789                   /opt/ros/jazzy/lib/libclass_loader.so
+7f4ab14df000-7f4ab14e8000 r-xp 00005000 08:12 18354789                   /opt/ros/jazzy/lib/libclass_loader.so
+7f4ab14e8000-7f4ab14eb000 r--p 0000e000 08:12 18354789                   /opt/ros/jazzy/lib/libclass_loader.so
+7f4ab14eb000-7f4ab14ec000 r--p 00011000 08:12 18354789                   /opt/ros/jazzy/lib/libclass_loader.so
+7f4ab14ec000-7f4ab14ed000 rw-p 00012000 08:12 18354789                   /opt/ros/jazzy/lib/libclass_loader.so
+7f4ab14ed000-7f4ab14f2000 r--p 00000000 08:12 18358705                   /opt/ros/jazzy/lib/libvisualization_msgs__rosidl_typesupport_cpp.so
+7f4ab14f2000-7f4ab14f5000 r-xp 00005000 08:12 18358705                   /opt/ros/jazzy/lib/libvisualization_msgs__rosidl_typesupport_cpp.so
+7f4ab14f5000-7f4ab14f7000 r--p 00008000 08:12 18358705                   /opt/ros/jazzy/lib/libvisualization_msgs__rosidl_typesupport_cpp.so
+7f4ab14f7000-7f4ab14f8000 r--p 00009000 08:12 18358705                   /opt/ros/jazzy/lib/libvisualization_msgs__rosidl_typesupport_cpp.so
+7f4ab14f8000-7f4ab14f9000 rw-p 0000a000 08:12 18358705                   /opt/ros/jazzy/lib/libvisualization_msgs__rosidl_typesupport_cpp.so
+7f4ab14f9000-7f4ab14fb000 rw-p 00000000 00:00 0 
+7f4ab14fb000-7f4ab156f000 r--p 00000000 08:12 18363968                   /opt/ros/jazzy/lib/libnav2_costmap_2d_client.so
+7f4ab156f000-7f4ab15bc000 r-xp 00074000 08:12 18363968                   /opt/ros/jazzy/lib/libnav2_costmap_2d_client.so
+7f4ab15bc000-7f4ab15dc000 r--p 000c1000 08:12 18363968                   /opt/ros/jazzy/lib/libnav2_costmap_2d_client.so
+7f4ab15dc000-7f4ab15e1000 r--p 000e1000 08:12 18363968                   /opt/ros/jazzy/lib/libnav2_costmap_2d_client.so
+7f4ab15e1000-7f4ab15e2000 rw-p 000e6000 08:12 18363968                   /opt/ros/jazzy/lib/libnav2_costmap_2d_client.so
+7f4ab15e2000-7f4ab15e6000 r--p 00000000 08:12 42738568                   /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+7f4ab15e6000-7f4ab160a000 r-xp 00004000 08:12 42738568                   /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+7f4ab160a000-7f4ab160e000 r--p 00028000 08:12 42738568                   /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+7f4ab160e000-7f4ab160f000 r--p 0002b000 08:12 42738568                   /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+7f4ab160f000-7f4ab1610000 rw-p 0002c000 08:12 42738568                   /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
+7f4ab1610000-7f4ab1615000 rw-s 00000000 00:1d 51390                      /dev/shm/shm-event-notifier-error-accounting-1770 (deleted)
+7f4ab1615000-7f4ab161a000 rw-s 00000000 00:1d 51389                      /dev/shm/shm-event-notifier-error-accounting-1770 (deleted)
+7f4ab161a000-7f4ab161b000 r--s 00000000 00:1d 9133                       /dev/shm/lttng-ust-wait-8-1000
+7f4ab161b000-7f4ab161c000 r--s 00000000 00:1d 2                          /dev/shm/lttng-ust-wait-8
+7f4ab161c000-7f4ab163e000 rw-p 00000000 00:00 0 
+7f4ab163e000-7f4ab1643000 r--p 00000000 08:12 18375889                   /opt/ros/jazzy/lib/librcutils.so
+7f4ab1643000-7f4ab1650000 r-xp 00005000 08:12 18375889                   /opt/ros/jazzy/lib/librcutils.so
+7f4ab1650000-7f4ab1656000 r--p 00012000 08:12 18375889                   /opt/ros/jazzy/lib/librcutils.so
+7f4ab1656000-7f4ab1657000 r--p 00017000 08:12 18375889                   /opt/ros/jazzy/lib/librcutils.so
+7f4ab1657000-7f4ab1658000 rw-p 00018000 08:12 18375889                   /opt/ros/jazzy/lib/librcutils.so
+7f4ab1658000-7f4ab1660000 rw-p 00000000 00:00 0 
+7f4ab1660000-7f4ab1675000 r--p 00000000 08:12 18356126                   /opt/ros/jazzy/lib/librclcpp_lifecycle.so
+7f4ab1675000-7f4ab168e000 r-xp 00015000 08:12 18356126                   /opt/ros/jazzy/lib/librclcpp_lifecycle.so
+7f4ab168e000-7f4ab1697000 r--p 0002e000 08:12 18356126                   /opt/ros/jazzy/lib/librclcpp_lifecycle.so
+7f4ab1697000-7f4ab1699000 r--p 00037000 08:12 18356126                   /opt/ros/jazzy/lib/librclcpp_lifecycle.so
+7f4ab1699000-7f4ab169a000 rw-p 00039000 08:12 18356126                   /opt/ros/jazzy/lib/librclcpp_lifecycle.so
+7f4ab169a000-7f4ab169c000 rw-p 00000000 00:00 0 
+7f4ab169c000-7f4ab16a0000 r--p 00000000 00:00 0                          [vvar]
+7f4ab16a0000-7f4ab16a2000 r--p 00000000 00:00 0                          [vvar_vclock]
+7f4ab16a2000-7f4ab16a4000 r-xp 00000000 00:00 0                          [vdso]
+7f4ab16a4000-7f4ab16a5000 r--p 00000000 08:12 42762462                   /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+7f4ab16a5000-7f4ab16d0000 r-xp 00001000 08:12 42762462                   /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+7f4ab16d0000-7f4ab16da000 r--p 0002c000 08:12 42762462                   /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+7f4ab16da000-7f4ab16dc000 r--p 00036000 08:12 42762462                   /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+7f4ab16dc000-7f4ab16de000 rw-p 00038000 08:12 42762462                   /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+7ffe2d87b000-7ffe2d89e000 rw-p 00000000 00:00 0                          [stack]
+ffffffffff600000-ffffffffff601000 --xp 00000000 00:00 0                  [vsyscall]

@@ -183,3 +183,14 @@ Nada de hardware, nada de navegação, e nada sobre o robô 2.
 |---|---|---|
 | `20260928_140215` | **falha do instrumento, N=0**: a varredura de resíduo inicial rodava **antes** do `source /opt/ros/jazzy/setup.bash`; sem o ambiente (apagado pela reexecução limpa), o `ros2 node list` quebrou (`PackageNotFoundError: ros2cli`) e a varredura, que trata consulta com erro como "não prova vazio", acusou resíduo e recusou subir. Nada foi lançado. O teste offline não pegou porque o calço do `ros2` não precisava do ambiente. Corrigido com vermelho antes (`35aaf86`): o calço passou a exigir o ambiente, o teste percorre a reexecução real com prefixo sujo injetado, e o `source` tem o código conferido | **não** |
 | `20260928_141047` | **INCOMPLETA**: subida 1 **nominal**; no teardown, SIGSEGV do `collision_monitor` e 34 segmentos Fast DDS órfãos; a varredura antes da subida 2 interrompeu. Dois defeitos do instrumento apareceram nela: a limpeza do `trap` escreveu na `subida_02` (que não subiu) **depois** do manifesto, que por isso não fecha; e o escopo exigia `subida_02/launch.log`. Corrigidos com vermelho (`bee4e5a`). A pasta fica **intocada**, manifesto incluído | 1 subida medida; **não** é bateria válida |
+| `20260928_144822` | **ensaio N=1** depois do reinício do PC (queda de luz; `/dev/shm` zerado): subida 1 **nominal** (Nav2 + TF em 38,2 s), teardown **limpo** (0 SIGSEGV, 0 órfão), veredito ESTÁVEL 1/1, manifesto confere. Os cinco `exit code 1` da 057 aparecem também aqui | ensaio; **não** é bateria |
+| `20260928_145005` | **INCOMPLETA por interrupção manual.** Subida 1 **nominal** (23,6 s); no teardown, **SIGSEGV do `collision_monitor`** e 36 órfãos (8 pelo `shm clean`, 28 pela remoção manual; limpeza APROVADA). Pela ordem do dono (SIGSEGV = parar), SIGINT no **grupo do script** com a subida 2 já lançada; a limpeza dela aprovou, mas o `tee` morreu junto — `console.txt` corta, **sem `veredito.txt`**, e o amostrador ficou órfão (encerrado por PID). A subida 2 **não** ganhou linha. Evidência e nota: `docs/dados/2026-09-28-subidas-robo3/bateria_20260928_145005{,.NOTA.md,.SHA256SUMS}` | só a subida 1; **não** é bateria válida |
+
+**Lição do instrumento (145005):** parar a bateria com sinal no grupo do
+script perde o console, porque o `tee` está no mesmo grupo. Ainda não há
+parada pedida limpa (ex.: parar ao fim da subida corrente); até haver, um
+SIGSEGV observado só é interrompido com esse custo, que fica registrado.
+
+**Estado depois de 145005:** a bateria de 20 **não foi feita**. Pelo dono,
+**nenhuma outra bateria** até a correção do SIGSEGV (057, adendo de 28-09
+tarde) passar por ensaio e bateria limpa.

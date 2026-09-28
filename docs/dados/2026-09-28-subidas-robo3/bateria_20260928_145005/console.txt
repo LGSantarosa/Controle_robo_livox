@@ -1,0 +1,50 @@
+== subidas do robô 3 · 20 × headless · 20260928_145005 ==
+   pasta: /home/rbe-luis/subidas-robo3/20260928_145005 · ROS_DOMAIN_ID=50
+== compilando robot_base robot_motion robot_nav, UMA vez (build.log) ==
+      Starting >>> robot_base
+      Finished <<< robot_base [1.89s]
+      Starting >>> robot_motion
+      Starting >>> robot_nav
+      Finished <<< robot_motion [2.16s]
+      Finished <<< robot_nav [2.18s]
+      
+      Summary: 3 packages finished [4.43s]
+
+== subida 1/20 ==
+   pilha_robo3: PID=PGID 27986 (starttime 37094)
+== limpeza ==
+   🟢 limpeza: nada marcado, domínios vazios — APROVADO 
+   == limpeza ==
+   grupos do wrapper (PGID STARTTIME PAPEL):
+      27986 37094 pilha_robo3
+   pilha_robo3 pgid=27986 (nosso) pid=27986: sinalizado
+   pilha_robo3 pgid=27986 (nosso) pid=28078: sinalizado
+   pilha_robo3 pgid=27986 (nosso) pid=28079: sinalizado
+   pilha_robo3 pgid=27986 (nosso) pid=28080: sinalizado
+   pilha_robo3 pgid=27986 (nosso) pid=28081: sinalizado
+   pilha_robo3 pgid=27986 (nosso) pid=28082: sinalizado
+   pilha_robo3 pgid=27986 (nosso) pid=28084: sinalizado
+   pilha_robo3 pgid=27986 (nosso) pid=28085: sinalizado
+   pilha_robo3 pgid=27986 (nosso) pid=28086: sinalizado
+   pilha_robo3 pgid=27986 (nosso) pid=28087: sinalizado
+   pilha_robo3 pgid=27986 (nosso) pid=28088: sinalizado
+   pilha_robo3 pgid=27986 (nosso) pid=28089: sinalizado
+   pilha_robo3 pgid=27986 (nosso) pid=28090: sinalizado
+   pilha_robo3 pgid=27986 (nosso) pid=28091: sinalizado
+   pilha_robo3 pgid=27986 (nosso) pid=28092: sinalizado
+   pilha_robo3 pgid=27986 (nosso) pid=28093: sinalizado
+   pilha_robo3 pgid=27986 (nosso) pid=28094: sinalizado
+   pilha_robo3 pgid=27986 (nosso) pid=28095: sinalizado
+   pilha_robo3 pgid=27986 (nosso) pid=28096: sinalizado
+   pilha_robo3 pgid=27986 (nosso) pid=28097: sinalizado
+   sobras com a marca desta rodada:
+      28000 pgid=27993 /usr/bin/python3 -c from ros2cli.daemon.daemonize import main; main() --name ros2-daemon --ros-domain-id 50 --rmw-implementation rmw_fastrtps_cpp
+   marcado pid=28000 pgid=27993 /usr/bin/python3 -c from ros2cli.daemon.daemonize import main; main() --name ros2-daemon --ros-domain-id 50 --rmw-implem: sinalizado
+   processos marcados depois: 0
+   domínio 50: nenhum nó (consulta com código 0)
+   🟠 36 segmento(s) órfão(s) depois do teardown — fastdds shm clean
+   🟠 remoção manual controlada: 28 arquivo(s)
+   1,1,1,23.6,active,active,1,59,8,0,0,0,1.683683,0.197213,1,0,10.94,13.22,4265016,34,1,36,1,1,1
+
+== subida 2/20 ==
+   pilha_robo3: PID=PGID 34201 (starttime 44074)

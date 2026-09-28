@@ -1,0 +1,437 @@
+adduser 3.137ubuntu1
+apt 2.8.3
+apt-utils 2.8.3
+babeltrace 1.5.11-3build3
+base-passwd 3.6.3build1
+binutils 2.42-4ubuntu2.10
+binutils-common 2.42-4ubuntu2.10
+binutils-x86-64-linux-gnu 2.42-4ubuntu2.10
+ca-certificates 20260601~24.04.1
+catch2 3.4.0-1build1
+cmake 3.28.3-1build7
+cmake-data 3.28.3-1build7
+cpp 4:13.2.0-7ubuntu1
+cpp-13 13.3.0-6ubuntu2~24.04.1
+cpp-13-x86-64-linux-gnu 13.3.0-6ubuntu2~24.04.1
+cpp-x86-64-linux-gnu 4:13.2.0-7ubuntu1
+cppcheck 2.13.0-2ubuntu3
+debconf 1.5.86ubuntu1
+debconf-i18n 1.5.86ubuntu1
+docutils-common 0.20.1+dfsg-3
+dpkg 1.22.6ubuntu6.6
+fontconfig-config 2.15.0-1.1ubuntu2
+fonts-dejavu-core 2.37-8
+fonts-dejavu-mono 2.37-8
+gcc 4:13.2.0-7ubuntu1
+gcc-13 13.3.0-6ubuntu2~24.04.1
+gcc-13-base 13.3.0-6ubuntu2~24.04.1
+gcc-13-x86-64-linux-gnu 13.3.0-6ubuntu2~24.04.1
+gcc-14-base 14.2.0-4ubuntu2~24.04.1
+gcc-x86-64-linux-gnu 4:13.2.0-7ubuntu1
+google-mock 1.14.0-1
+googletest 1.14.0-1
+gpgv 2.4.4-2ubuntu17.6
+init-system-helpers 1.66ubuntu1
+javascript-common 11+nmu1
+krb5-locales 1.20.1-6ubuntu2.7
+libacl1 2.3.2-1build1.1
+libaom3 3.8.2-2ubuntu0.2
+libapt-pkg6.0t64 2.8.3
+libarchive13t64 3.7.2-2ubuntu0.8
+libasan8 14.2.0-4ubuntu2~24.04.1
+libassuan0 2.5.6-1build1
+libatomic1 14.2.0-4ubuntu2~24.04.1
+libaudit-common 1:3.1.2-2.1build1.1
+libaudit1 1:3.1.2-2.1build1.1
+libbabeltrace1 1.5.11-3build3
+libbinutils 2.42-4ubuntu2.10
+libblas3 3.12.0-3build1.1
+libblkid1 2.39.3-9ubuntu6.6
+libbrotli1 1.1.0-2build2
+libbsd0 0.12.1-1build1.1
+libbz2-1.0 1.0.8-5.1ubuntu0.1
+libc-dev-bin 2.39-0ubuntu8.9
+libc-devtools 2.39-0ubuntu8.9
+libc6 2.39-0ubuntu8.9
+libc6-dev 2.39-0ubuntu8.9
+libcap-ng0 0.8.4-2build2
+libcap2 1:2.66-5ubuntu2.4
+libcc1-0 14.2.0-4ubuntu2~24.04.1
+libcom-err2 1.47.0-2.4~exp1ubuntu4.1
+libconsole-bridge-dev 1.0.1+dfsg2-3build1
+libconsole-bridge1.0 1.0.1+dfsg2-3build1
+libcrypt-dev 1:4.4.36-4build1
+libcrypt1 1:4.4.36-4build1
+libctf-nobfd0 2.42-4ubuntu2.10
+libctf0 2.42-4ubuntu2.10
+libcurl4t64 8.5.0-2ubuntu10.13
+libdb5.3t64 5.3.28+dfsg2-7
+libdebconfclient0 0.271ubuntu3
+libdeflate0 1.19-1build1.1
+libdw1t64 0.190-1.1ubuntu0.1
+libeigen3-dev 3.4.0-4build0.1
+libelf1t64 0.190-1.1ubuntu0.1
+libexpat1 2.6.1-2ubuntu0.5
+libexpat1-dev 2.6.1-2ubuntu0.5
+libffi8 3.4.6-1build1
+libfmt-dev 9.1.0+ds1-2
+libfmt9 9.1.0+ds1-2
+libfontconfig1 2.15.0-1.1ubuntu2
+libfreetype6 2.13.2+dfsg-1ubuntu0.1
+libfribidi0 1.0.13-3build1
+libgcc-13-dev 13.3.0-6ubuntu2~24.04.1
+libgcc-s1 14.2.0-4ubuntu2~24.04.1
+libgcrypt20 1.10.3-2ubuntu0.2
+libgd3 2.3.3-9ubuntu5
+libgfortran5 14.2.0-4ubuntu2~24.04.1
+libglib2.0-0t64 2.80.0-6ubuntu3.9
+libglib2.0-data 2.80.0-6ubuntu3.9
+libgmp10 2:6.3.0+dfsg-2ubuntu6.1
+libgnutls30t64 3.8.3-1.1ubuntu3.6
+libgomp1 14.2.0-4ubuntu2~24.04.1
+libgpg-error-l10n 1.47-3build2.1
+libgpg-error0 1.47-3build2.1
+libgpm2 1.20.7-11
+libgprofng0 2.42-4ubuntu2.10
+libgraphite2-3 1.3.14-2ubuntu0.24.04.1
+libgssapi-krb5-2 1.20.1-6ubuntu2.7
+libgtest-dev 1.14.0-1
+libharfbuzz0b 8.3.0-2build2
+libheif-plugin-aomdec 1.17.6-1ubuntu4.8
+libheif-plugin-aomenc 1.17.6-1ubuntu4.8
+libheif1 1.17.6-1ubuntu4.8
+libhogweed6t64 3.9.1-2.2build1.1
+libhwasan0 14.2.0-4ubuntu2~24.04.1
+libicu74 74.2-1ubuntu3.1
+libidn2-0 2.3.7-2build1.1
+libimagequant0 2.18.0-1build1
+libisl23 0.26-3build1.1
+libitm1 14.2.0-4ubuntu2~24.04.1
+libjansson4 2.14-2build2
+libjbig0 2.1-6.1ubuntu2
+libjpeg-turbo8 2.1.5-2ubuntu2
+libjpeg8 8c-2ubuntu11
+libjs-jquery 3.6.1+dfsg+~3.5.14-1
+libjs-sphinxdoc 7.2.6-6
+libjs-underscore 1.13.4~dfsg+~1.11.4-3
+libjsoncpp25 1.9.5-6build1
+libk5crypto3 1.20.1-6ubuntu2.7
+libkeyutils1 1.6.3-3build1
+libkmod2 31+20240202-2ubuntu7.2
+libkrb5-3 1.20.1-6ubuntu2.7
+libkrb5support0 1.20.1-6ubuntu2.7
+liblapack3 3.12.0-3build1.1
+liblcms2-2 2.14-2ubuntu0.1
+libldap-common 2.6.10+dfsg-0ubuntu0.24.04.1
+libldap2 2.6.10+dfsg-0ubuntu0.24.04.1
+liblerc4 4.0.0+ds-4ubuntu2
+liblocale-gettext-perl 1.07-6ubuntu5
+liblsan0 14.2.0-4ubuntu2~24.04.1
+liblttng-ctl0t64 2.13.11-2.1build4
+liblttng-ust-common1t64 2.13.7-1.1ubuntu2
+liblttng-ust-ctl5t64 2.13.7-1.1ubuntu2
+liblttng-ust-dev 2.13.7-1.1ubuntu2
+liblttng-ust-python-agent1t64 2.13.7-1.1ubuntu2
+liblttng-ust1t64 2.13.7-1.1ubuntu2
+liblz4-1 1.9.4-1build1.1
+liblzma5 5.6.1+really5.4.5-1ubuntu0.3
+libmd0 1.1.0-2build1.1
+libmount1 2.39.3-9ubuntu6.6
+libmpc3 1.3.1-1build1.1
+libmpfr6 4.2.1-1build1.1
+libncursesw6 6.4+20240113-1ubuntu2.2
+libnettle8t64 3.9.1-2.2build1.1
+libnghttp2-14 1.59.0-1ubuntu0.4
+libnpth0t64 1.6-3.1build1
+libnuma1 2.0.18-1ubuntu0.24.04.1
+libopenjp2-7 2.5.0-2ubuntu0.5
+liborocos-kdl-dev 1.5.1-4build1
+liborocos-kdl1.5 1.5.1-4build1
+libp11-kit0 0.25.3-4ubuntu2.2
+libpam-modules 1.5.3-5ubuntu5.7
+libpam-modules-bin 1.5.3-5ubuntu5.7
+libpam0g 1.5.3-5ubuntu5.7
+libpaper-utils 1.1.29build1
+libpaper1 1.1.29build1
+libpcre2-8-0 10.42-4ubuntu2.1
+libpkgconf3 1.8.1-2build1
+libpng16-16t64 1.6.43-5ubuntu0.6
+libpopt0 1.19+dfsg-1build1
+libproc2-0 2:4.0.4-4ubuntu3.2
+libpsl5t64 0.21.2-1.1build1
+libpython3-dev 3.12.3-0ubuntu2.1
+libpython3-stdlib 3.12.3-0ubuntu2.1
+libpython3.12-dev 3.12.3-1ubuntu0.17
+libpython3.12-minimal 3.12.3-1ubuntu0.17
+libpython3.12-stdlib 3.12.3-1ubuntu0.17
+libpython3.12t64 3.12.3-1ubuntu0.17
+libquadmath0 14.2.0-4ubuntu2~24.04.1
+libraqm0 0.10.1-1build1
+libreadline8t64 8.2-4build1
+librhash0 1.4.3-3build1
+librtmp1 2.4+20151223.gitfa8646d.1-2build7
+libsasl2-2 2.1.28+dfsg1-5ubuntu3.1
+libsasl2-modules 2.1.28+dfsg1-5ubuntu3.1
+libsasl2-modules-db 2.1.28+dfsg1-5ubuntu3.1
+libseccomp2 2.5.5-1ubuntu3.1
+libselinux1 3.5-2ubuntu2.1
+libsemanage-common 3.5-1build5
+libsemanage2 3.5-1build5
+libsepol2 3.5-2build1
+libsframe1 2.42-4ubuntu2.10
+libsharpyuv0 1.3.2-0.4build3
+libsmartcols1 2.39.3-9ubuntu6.6
+libspdlog-dev 1:1.12.0+ds-2build1
+libspdlog1.12 1:1.12.0+ds-2build1
+libsqlite3-0 3.45.1-1ubuntu2.8
+libssh-4 0.10.6-2ubuntu0.5
+libssl-dev 3.0.13-0ubuntu3.15
+libssl3t64 3.0.13-0ubuntu3.15
+libstdc++6 14.2.0-4ubuntu2~24.04.1
+libsystemd0 255.4-1ubuntu8.17
+libtasn1-6 4.19.0-3ubuntu0.24.04.2
+libtext-charwidth-perl 0.04-11build3
+libtext-iconv-perl 1.7-8build3
+libtext-wrapi18n-perl 0.06-10
+libtiff6 4.5.1+git230720-4ubuntu2.5
+libtinfo6 6.4+20240113-1ubuntu2.2
+libtinyxml2-10 10.0.0+dfsg-2
+libtinyxml2-dev 10.0.0+dfsg-2
+libtsan2 14.2.0-4ubuntu2~24.04.1
+libubsan1 14.2.0-4ubuntu2~24.04.1
+libudev1 255.4-1ubuntu8.17
+libunistring5 1.1-2build1.1
+liburcu-dev 0.14.0-3.1build1
+liburcu8t64 0.14.0-3.1build1
+libuuid1 2.39.3-9ubuntu6.6
+libuv1t64 1.48.0-1.1build1
+libwebp7 1.3.2-0.4build3
+libwebpdemux2 1.3.2-0.4build3
+libwebpmux3 1.3.2-0.4build3
+libx11-6 2:1.8.7-1build1
+libx11-data 2:1.8.7-1build1
+libxau6 1:1.0.9-1build6
+libxcb1 1.15-1ubuntu2
+libxdmcp6 1:1.1.3-0ubuntu6
+libxml2 2.9.14+dfsg-1.3ubuntu3.9
+libxpm4 1:3.5.17-1ubuntu0.24.04.1
+libxxhash0 0.8.2-2build1
+libyaml-0-2 0.2.5-1build1
+libyaml-dev 0.2.5-1build1
+libzstd1 1.5.5+dfsg2-2build1.1
+linux-libc-dev 6.8.0-142.142
+lttng-tools 2.13.11-2.1build4
+make 4.3-4.1build2
+manpages 6.7-2
+manpages-dev 6.7-2
+media-types 10.1.0
+netbase 6.4
+openssl 3.0.13-0ubuntu3.15
+passwd 1:4.13+dfsg1-4ubuntu3.2
+perl-base 5.38.2-3.2ubuntu0.6
+pkg-config 1.8.1-2build1
+pkgconf 1.8.1-2build1
+pkgconf-bin 1.8.1-2build1
+procps 2:4.0.4-4ubuntu3.2
+psmisc 23.7-1build1
+publicsuffix 20231001.0357-0.1
+pydocstyle 6.3.0-1.1
+pyflakes3 3.2.0-1
+python3 3.12.3-0ubuntu2.1
+python3-argcomplete 3.1.4-1ubuntu0.1
+python3-catkin-pkg-modules 1.1.0-2 [origin: unknown]
+python3-dateutil 2.8.2-3ubuntu1
+python3-dev 3.12.3-0ubuntu2.1
+python3-docutils 0.20.1+dfsg-3
+python3-empy 3.3.4-2
+python3-flake8 7.0.0-1
+python3-flake8-builtins 2.1.0-1
+python3-flake8-comprehensions 3.14.0-1
+python3-flake8-docstrings 1.6.0-2
+python3-flake8-import-order 0.18.2-2
+python3-flake8-quotes 3.4.0-1
+python3-importlib-metadata 4.12.0-1
+python3-iniconfig 1.1.1-2
+python3-lark 1.1.9-1
+python3-mccabe 0.7.0-1
+python3-minimal 3.12.3-0ubuntu2.1
+python3-more-itertools 10.2.0-1
+python3-numpy 1:1.26.4+ds-6ubuntu1
+python3-olefile 0.46-3
+python3-packaging 24.0-1
+python3-pil 10.2.0-1ubuntu1.3
+python3-pkg-resources 68.1.2-2ubuntu1.2
+python3-pluggy 1.4.0-1
+python3-pycodestyle 2.11.1-1
+python3-pydocstyle 6.3.0-1.1
+python3-pyflakes 3.2.0-1
+python3-pygments 2.17.2+dfsg-1
+python3-pyparsing 3.1.1-1
+python3-pytest 7.4.4-1
+python3-roman 3.3-3
+python3-setuptools 68.1.2-2ubuntu1.2
+python3-six 1.16.0-4
+python3-snowballstemmer 2.2.0-4build1
+python3-typing-extensions 4.10.0-1
+python3-yaml 6.0.1-2build2
+python3-zipp 1.0.0-6ubuntu0.1
+python3.12 3.12.3-1ubuntu0.17
+python3.12-dev 3.12.3-1ubuntu0.17
+python3.12-minimal 3.12.3-1ubuntu0.17
+readline-common 8.2-4build1
+ros-jazzy-action-msgs 2.0.4-1noble.20260612.054718 [origin: unknown]
+ros-jazzy-ament-cmake 2.5.6-2noble.20260225.222913 [origin: ROS]
+ros-jazzy-ament-cmake-core 2.5.6-2noble.20260224.191131 [origin: ROS]
+ros-jazzy-ament-cmake-cppcheck 0.17.5-1noble.20260410.113607 [origin: ROS]
+ros-jazzy-ament-cmake-cpplint 0.17.5-1noble.20260410.105800 [origin: ROS]
+ros-jazzy-ament-cmake-export-definitions 2.5.6-2noble.20260224.232207 [origin: ROS]
+ros-jazzy-ament-cmake-export-dependencies 2.5.6-2noble.20260225.043730 [origin: ROS]
+ros-jazzy-ament-cmake-export-include-directories 2.5.6-2noble.20260224.232223 [origin: ROS]
+ros-jazzy-ament-cmake-export-interfaces 2.5.6-2noble.20260225.042039 [origin: ROS]
+ros-jazzy-ament-cmake-export-libraries 2.5.6-2noble.20260224.232254 [origin: ROS]
+ros-jazzy-ament-cmake-export-link-flags 2.5.6-2noble.20260225.042107 [origin: ROS]
+ros-jazzy-ament-cmake-export-targets 2.5.6-2noble.20260225.042100 [origin: ROS]
+ros-jazzy-ament-cmake-flake8 0.17.5-1noble.20260410.113910 [origin: ROS]
+ros-jazzy-ament-cmake-gen-version-h 2.5.6-2noble.20260225.042237 [origin: ROS]
+ros-jazzy-ament-cmake-gmock 2.5.6-2noble.20260225.215706 [origin: ROS]
+ros-jazzy-ament-cmake-gtest 2.5.6-2noble.20260225.145055 [origin: ROS]
+ros-jazzy-ament-cmake-include-directories 2.5.6-2noble.20260225.042241 [origin: ROS]
+ros-jazzy-ament-cmake-libraries 2.5.6-2noble.20260225.042312 [origin: ROS]
+ros-jazzy-ament-cmake-pep257 0.17.5-1noble.20260410.113929 [origin: ROS]
+ros-jazzy-ament-cmake-pytest 2.5.6-2noble.20260225.145739 [origin: ROS]
+ros-jazzy-ament-cmake-python 2.5.6-2noble.20260225.042312 [origin: ROS]
+ros-jazzy-ament-cmake-ros 0.12.1-1noble.20260603.150631 [origin: ROS]
+ros-jazzy-ament-cmake-target-dependencies 2.5.6-2noble.20260225.043936 [origin: ROS]
+ros-jazzy-ament-cmake-test 2.5.6-2noble.20260225.143205 [origin: ROS]
+ros-jazzy-ament-cmake-uncrustify 0.17.5-1noble.20260410.113615 [origin: ROS]
+ros-jazzy-ament-cmake-version 2.5.6-2noble.20260225.042330 [origin: ROS]
+ros-jazzy-ament-cppcheck 0.17.5-1noble.20260410.080408 [origin: ROS]
+ros-jazzy-ament-cpplint 0.17.5-1noble.20260410.080348 [origin: ROS]
+ros-jazzy-ament-flake8 0.17.5-1noble.20260410.113507 [origin: ROS]
+ros-jazzy-ament-index-cpp 1.8.4-1noble.20260519.011052 [origin: ROS]
+ros-jazzy-ament-index-python 1.8.4-1noble.20260519.010916 [origin: ROS]
+ros-jazzy-ament-lint 0.17.5-1noble.20260410.080358 [origin: ROS]
+ros-jazzy-ament-package 0.16.5-1noble.20260121.174946 [origin: ROS]
+ros-jazzy-ament-pep257 0.17.5-1noble.20260410.113520 [origin: ROS]
+ros-jazzy-ament-uncrustify 0.17.5-1noble.20260410.080359 [origin: ROS]
+ros-jazzy-angles 1.16.1-1noble.20260225.231445 [origin: ROS]
+ros-jazzy-bond 4.2.0-1noble.20260615.104841 [origin: unknown]
+ros-jazzy-bondcpp 4.2.0-1noble.20260615.141016 [origin: unknown]
+ros-jazzy-builtin-interfaces 2.0.4-1noble.20260612.052109 [origin: unknown]
+ros-jazzy-class-loader 2.7.1-1noble.20260604.024917 [origin: ROS]
+ros-jazzy-composition-interfaces 2.0.4-1noble.20260615.103339 [origin: unknown]
+ros-jazzy-console-bridge-vendor 1.7.2-1noble.20260603.150411 [origin: ROS]
+ros-jazzy-domain-coordinator 0.12.1-1noble.20260603.150342 [origin: ROS]
+ros-jazzy-eigen3-cmake-module 0.3.1-1noble.20260603.150413 [origin: ROS]
+ros-jazzy-fastcdr 2.2.7-1noble.20260225.051855 [origin: unknown]
+ros-jazzy-fastrtps 2.14.6-1noble.20260303.233638 [origin: unknown]
+ros-jazzy-fastrtps-cmake-module 3.6.4-1noble.20260603.150331 [origin: ROS]
+ros-jazzy-foonathan-memory-vendor 1.3.1-3noble.20260225.055155 [origin: ROS]
+ros-jazzy-geographic-msgs 1.0.6-2noble.20260615.111621 [origin: unknown]
+ros-jazzy-geometry-msgs 5.3.8-1noble.20260615.110340 [origin: unknown]
+ros-jazzy-gmock-vendor 1.14.9000-2noble.20260225.143751 [origin: ROS]
+ros-jazzy-gtest-vendor 1.14.9000-2noble.20260225.055309 [origin: ROS]
+ros-jazzy-laser-geometry 2.7.2-1noble.20260615.144235 [origin: unknown]
+ros-jazzy-launch 3.4.11-1noble.20260603.150356 [origin: ROS]
+ros-jazzy-launch-ros 0.26.12-1noble.20260615.134004 [origin: unknown]
+ros-jazzy-libstatistics-collector 1.7.4-1noble.20260615.132833 [origin: unknown]
+ros-jazzy-libyaml-vendor 1.6.4-2noble.20260603.150356 [origin: ROS]
+ros-jazzy-lifecycle-msgs 2.0.4-1noble.20260615.102420 [origin: unknown]
+ros-jazzy-map-msgs 2.4.1-2noble.20260615.113621 [origin: unknown]
+ros-jazzy-message-filters 4.11.17-1noble.20260615.140122 [origin: unknown]
+ros-jazzy-nav-msgs 5.3.8-1noble.20260615.112021 [origin: unknown]
+ros-jazzy-nav2-common 1.3.12-1noble.20260615.145421 [origin: unknown]
+ros-jazzy-nav2-costmap-2d 1.3.12-1noble.20260615.154707 [origin: unknown]
+ros-jazzy-nav2-msgs 1.3.12-1noble.20260615.145957 [origin: unknown]
+ros-jazzy-nav2-util 1.3.12-1noble.20260615.152147 [origin: unknown]
+ros-jazzy-nav2-voxel-grid 1.3.12-1noble.20260615.154410 [origin: unknown]
+ros-jazzy-orocos-kdl-vendor 0.5.2-1noble.20260603.150813 [origin: ROS]
+ros-jazzy-osrf-pycommon 2.1.7-1noble.20260225.055811 [origin: ROS]
+ros-jazzy-pluginlib 5.4.5-1noble.20260604.025205 [origin: unknown]
+ros-jazzy-python-cmake-module 0.11.1-2noble.20260226.000327 [origin: ROS]
+ros-jazzy-rcl 9.2.11-1noble.20260615.132422 [origin: unknown]
+ros-jazzy-rcl-action 9.2.11-1noble.20260615.132842 [origin: unknown]
+ros-jazzy-rcl-interfaces 2.0.4-1noble.20260615.102556 [origin: unknown]
+ros-jazzy-rcl-lifecycle 9.2.11-1noble.20260615.132825 [origin: unknown]
+ros-jazzy-rcl-logging-interface 3.1.1-1noble.20260603.152452 [origin: ROS]
+ros-jazzy-rcl-logging-spdlog 3.1.1-1noble.20260604.025148 [origin: ROS]
+ros-jazzy-rcl-yaml-param-parser 9.2.11-1noble.20260612.050432 [origin: ROS]
+ros-jazzy-rclcpp 28.1.21-1noble.20260615.133124 [origin: unknown]
+ros-jazzy-rclcpp-action 28.1.21-1noble.20260615.145316 [origin: unknown]
+ros-jazzy-rclcpp-components 28.1.21-1noble.20260615.140757 [origin: unknown]
+ros-jazzy-rclcpp-lifecycle 28.1.21-1noble.20260615.134238 [origin: unknown]
+ros-jazzy-rclpy 7.1.11-1noble.20260615.133206 [origin: unknown]
+ros-jazzy-rcpputils 2.11.4-1noble.20260603.152446 [origin: ROS]
+ros-jazzy-rcutils 6.7.6-1noble.20260603.152220 [origin: ROS]
+ros-jazzy-rmw 7.3.3-1noble.20260612.050218 [origin: ROS]
+ros-jazzy-rmw-dds-common 3.1.1-1noble.20260615.102804 [origin: unknown]
+ros-jazzy-rmw-fastrtps-cpp 8.4.4-1noble.20260615.124621 [origin: unknown]
+ros-jazzy-rmw-fastrtps-shared-cpp 8.4.4-1noble.20260615.124045 [origin: unknown]
+ros-jazzy-rmw-implementation 2.15.6-1noble.20260615.132010 [origin: unknown]
+ros-jazzy-rmw-implementation-cmake 7.3.3-1noble.20260225.225156 [origin: ROS]
+ros-jazzy-ros-environment 4.2.1-1noble.20260225.043405 [origin: ROS]
+ros-jazzy-ros-workspace 1.0.3-7noble.20260224.191628 [origin: ROS]
+ros-jazzy-rosgraph-msgs 2.0.4-1noble.20260615.103338 [origin: unknown]
+ros-jazzy-rosidl-adapter 4.6.9-1noble.20260612.045507 [origin: ROS]
+ros-jazzy-rosidl-cli 4.6.9-1noble.20260612.045120 [origin: ROS]
+ros-jazzy-rosidl-cmake 4.6.9-1noble.20260612.050210 [origin: ROS]
+ros-jazzy-rosidl-core-generators 0.2.1-1noble.20260612.051702 [origin: unknown]
+ros-jazzy-rosidl-core-runtime 0.2.1-1noble.20260612.051559 [origin: unknown]
+ros-jazzy-rosidl-default-generators 1.6.1-1noble.20260612.064900 [origin: unknown]
+ros-jazzy-rosidl-default-runtime 1.6.1-1noble.20260615.090842 [origin: unknown]
+ros-jazzy-rosidl-dynamic-typesupport 0.1.2-3noble.20260612.045843 [origin: ROS]
+ros-jazzy-rosidl-dynamic-typesupport-fastrtps 0.1.0-3noble.20260612.050231 [origin: unknown]
+ros-jazzy-rosidl-generator-c 4.6.9-1noble.20260612.050418 [origin: ROS]
+ros-jazzy-rosidl-generator-cpp 4.6.9-1noble.20260612.050852 [origin: ROS]
+ros-jazzy-rosidl-generator-py 0.22.2-1noble.20260612.051058 [origin: ROS]
+ros-jazzy-rosidl-generator-rs 0.4.12-1noble.20260612.051117 [origin: unknown]
+ros-jazzy-rosidl-generator-type-description 4.6.9-1noble.20260612.050043 [origin: ROS]
+ros-jazzy-rosidl-parser 4.6.9-1noble.20260612.045810 [origin: ROS]
+ros-jazzy-rosidl-pycommon 4.6.9-1noble.20260612.045929 [origin: ROS]
+ros-jazzy-rosidl-runtime-c 4.6.9-1noble.20260612.045513 [origin: ROS]
+ros-jazzy-rosidl-runtime-cpp 4.6.9-1noble.20260612.045852 [origin: ROS]
+ros-jazzy-rosidl-typesupport-c 3.2.3-1noble.20260612.050857 [origin: ROS]
+ros-jazzy-rosidl-typesupport-cpp 3.2.3-1noble.20260612.051324 [origin: ROS]
+ros-jazzy-rosidl-typesupport-fastrtps-c 3.6.4-1noble.20260612.051449 [origin: unknown]
+ros-jazzy-rosidl-typesupport-fastrtps-cpp 3.6.4-1noble.20260612.051139 [origin: unknown]
+ros-jazzy-rosidl-typesupport-interface 4.6.9-1noble.20260612.045126 [origin: ROS]
+ros-jazzy-rosidl-typesupport-introspection-c 4.6.9-1noble.20260612.050623 [origin: ROS]
+ros-jazzy-rosidl-typesupport-introspection-cpp 4.6.9-1noble.20260612.051103 [origin: ROS]
+ros-jazzy-rpyutils 0.4.2-1noble.20260225.142204 [origin: ROS]
+ros-jazzy-sensor-msgs 5.3.8-1noble.20260615.112429 [origin: unknown]
+ros-jazzy-sensor-msgs-py 5.3.8-1noble.20260615.124842 [origin: unknown]
+ros-jazzy-service-msgs 2.0.4-1noble.20260612.053052 [origin: unknown]
+ros-jazzy-smclib 4.2.0-1noble.20260317.155007 [origin: ROS]
+ros-jazzy-spdlog-vendor 1.6.2-1noble.20260603.150612 [origin: ROS]
+ros-jazzy-statistics-msgs 2.0.4-1noble.20260615.102920 [origin: unknown]
+ros-jazzy-std-msgs 5.3.8-1noble.20260615.102930 [origin: unknown]
+ros-jazzy-std-srvs 5.3.8-1noble.20260615.102935 [origin: unknown]
+ros-jazzy-tf2 0.36.21-1noble.20260615.130312 [origin: unknown]
+ros-jazzy-tf2-geometry-msgs 0.36.21-1noble.20260615.151523 [origin: unknown]
+ros-jazzy-tf2-msgs 0.36.21-1noble.20260615.112712 [origin: unknown]
+ros-jazzy-tf2-py 0.36.21-1noble.20260615.143600 [origin: unknown]
+ros-jazzy-tf2-ros 0.36.21-1noble.20260615.145818 [origin: unknown]
+ros-jazzy-tf2-ros-py 0.36.21-1noble.20260615.143931 [origin: unknown]
+ros-jazzy-tf2-sensor-msgs 0.36.21-1noble.20260615.151025 [origin: unknown]
+ros-jazzy-tinyxml2-vendor 0.9.2-1noble.20260225.230621 [origin: ROS]
+ros-jazzy-tracetools 8.2.6-1noble.20260603.152223 [origin: ROS]
+ros-jazzy-type-description-interfaces 2.0.4-1noble.20260612.054739 [origin: unknown]
+ros-jazzy-uncrustify-vendor 3.0.1-1noble.20260225.230730 [origin: ROS]
+ros-jazzy-unique-identifier-msgs 2.5.1-1noble.20260612.052108 [origin: unknown]
+ros-jazzy-visualization-msgs 5.3.8-1noble.20260615.114026 [origin: unknown]
+rpcsvc-proto 1.4.2-0ubuntu7
+sed 4.9-2ubuntu0.24.04.1
+sensible-utils 0.0.22
+sgml-base 1.31
+shared-mime-info 2.4-4
+tar 1.35+dfsg-3ubuntu0.4
+tzdata 2026c-0ubuntu0.24.04.1
+ubuntu-keyring 2023.11.28.1
+ucf 3.0043+nmu1
+uncrustify 0.78.1+dfsg1-1
+uuid-dev 2.39.3-9ubuntu6.6
+uuid-runtime 2.39.3-9ubuntu6.6
+xdg-user-dirs 0.18-1build1
+xml-core 0.19
+zlib1g 1:1.3.dfsg-3.1ubuntu2.2
+zlib1g-dev 1:1.3.dfsg-3.1ubuntu2.2
