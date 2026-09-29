@@ -72,7 +72,9 @@
       "erro_no_repouso_m": 0.144,
       "dentro_da_tolerancia": true,
       "erro_no_succeeded_m": 0.172,
-      "freio_apos_o_succeeded": []
+      "freio_apos_o_succeeded": [
+        -0.103
+      ]
     },
     {
       "corrida": 2,
@@ -136,6 +138,7 @@
       "avanco_residual_cm": 14.1,
       "t_fim_do_avanco_s": 0.728,
       "recuo_do_freio_cm": 8.2,
+      "fase_separavel": true,
       "t_cruza_zero_s": 0.728,
       "t_fim_do_recuo_s": 1.587,
       "episodios_de_freio_nesta_janela": [

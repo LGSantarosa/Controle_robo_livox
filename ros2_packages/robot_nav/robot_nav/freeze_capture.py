@@ -111,6 +111,12 @@ class FreezeCapture(Node):
             '/compensador_rumo/cmd_vel',         # o que o mux repassou
             '/hoverboard_base_controller/cmd_vel',   # o que foi ao atuador
             '/cmd_vel_bruto',                    # idem, no simulador
+            # O escape do `path_follower`. Ele entrou em 29-09: na ida e volta
+            # daquele dia os dois escapes só apareceram como TEXTO no
+            # `launch.log`, e o juiz do A/B (062 §7, critério 6) precisa
+            # contá-los como dado. Sem o tópico aqui, "nenhum escape" e "escape
+            # não medido" ficam indistinguíveis.
+            '/unstuck_vel',
             '/joy_vel', '/key_vel', '/web_vel',  # o humano, se interferiu
         ]).value
 

@@ -178,23 +178,40 @@ def fases_do_stop(dados, t_stop, t_libera, eps):
     # fase 2: a ré do freio, do cruzamento do zero até o robô ASSENTAR. O fim é
     # ficar parado, não voltar a andar: o próximo movimento para a frente é o
     # escape do `path_follower`, que é outra fase e não pode entrar nesta.
-    recuo, t_fim_re = 0.0, None
+    recuo, t_fim_re, separavel = 0.0, None, True
     if cz:
         # ⚠️ Não basta "a primeira amostra com |vx| <= V_PARADO": a odometria
         # cruza o zero ao inverter o sentido, e uma única amostra zerada no
         # MEIO da ré encerraria o recuo cedo demais. O fim é o repouso
         # SUSTENTADO por `T_REPOUSO`, a mesma régua da chegada.
+        #
+        # 🔴 E a busca PARA no primeiro escape: se o `path_follower` começar a
+        # empurrar antes de o robô assentar, o repouso só vem depois do escape
+        # e a distância somaria ré + avanço — num cenário sintético isso deu
+        # 26,6 cm de "recuo". Quando não há repouso antes do escape, a fase
+        # não é separável, e isso é DITO em vez de virar número.
+        esc = escapes(dados) or []
+        prim_escape = next((e['t_inicio'] for e in esc if e['t_inicio'] > cz[0]),
+                           None)
+        limite = prim_escape if prim_escape else t_libera + 0.5
         rep = repouso(dados, cz[0])
-        depois = [x for x in od if x[0] > cz[0]]
-        t_fim_re = rep[0] if rep else (depois[-1][0] if depois else cz[0])
-        recuo = distancia(dados, cz[0], t_fim_re)
+        if rep and rep[0] <= limite:
+            t_fim_re = rep[0]
+        elif prim_escape:
+            separavel = False
+            t_fim_re = prim_escape
+        else:
+            depois = [x for x in od if x[0] > cz[0]]
+            t_fim_re = depois[-1][0] if depois else cz[0]
+        recuo = distancia(dados, cz[0], t_fim_re) if separavel else 0.0
 
     return {
         't_stop': t_stop,
         'duracao_total_do_stop_s': round(t_libera - t_stop, 3),
         'avanco_residual_cm': round(avanco * 100, 1),
         't_fim_do_avanco_s': round(t_fim_avanco - t_stop, 3),
-        'recuo_do_freio_cm': round(recuo * 100, 1),
+        'recuo_do_freio_cm': round(recuo * 100, 1) if separavel else None,
+        'fase_separavel': separavel,
         't_cruza_zero_s': round(cz[0] - t_stop, 3) if cz else None,
         't_fim_do_recuo_s': round(t_fim_re - t_stop, 3) if t_fim_re else None,
         'episodios_de_freio_nesta_janela': [
@@ -309,8 +326,14 @@ def relatorio(csv_path, log_path=None, goals=None):
             if od_b:
                 item['erro_no_succeeded_m'] = round(math.hypot(
                     od_b[-1][3] - alvo[0], od_b[-1][4] - alvo[1]), 3)
+        # 🔴 SOBREPOSIÇÃO com a janela, não "começou dentro dela". O episódio da
+        # ida de 29-09 vai de −0,103 s a +0,420 s em relação ao `SUCCEEDED`:
+        # começa ANTES e atravessa a chegada. Comparando só o início, a lista
+        # saía VAZIA numa corrida em que o freio atuou — falso negativo no
+        # critério 1 do A/B, que é justamente "zero episódio de freio".
         item['freio_apos_o_succeeded'] = [
-            round(e[0] - b, 3) for e in eps if b <= e[0] <= b + JANELA_FIM]
+            round(e[0] - b, 3) for e in eps
+            if e[1] >= b and e[0] <= b + JANELA_FIM]
         out['corridas'].append(item)
 
     # O CSV é a fonte preferida; o log só entra se o tópico não foi gravado.

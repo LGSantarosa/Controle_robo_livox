@@ -289,3 +289,69 @@ def test_escape_nao_medido_e_diferente_de_zero_escape(tmp_path):
                        '', '', ''])
     r2 = fp.relatorio(escreve(tmp_path, linhas))
     assert r2['escapes_medidos'] is True and len(r2['escapes']) == 1, r2
+
+
+# ─── os dois falsos resultados da revisão (2ª rodada) ────────────────────────
+
+def test_freio_que_atravessa_a_chegada_e_contado(tmp_path):
+    """🔴 FALSO NEGATIVO no critério 1 do A/B.
+
+    O episódio da ida de 29-09 vai de −0,103 s a +0,420 s em relação ao
+    `SUCCEEDED`: começa ANTES da chegada e atravessa. Comparando só o INÍCIO
+    contra a janela, a lista saía vazia — o juiz diria "zero episódio de freio"
+    numa corrida em que o freio atuou, e o A/B aprovaria a condição errada.
+    """
+    perfil = [0.30] * 100 + [0.0] * 100
+    # goal cai em t=1,0 s; o freio vai de 0,9 s a 1,4 s — atravessa a chegada
+    caminho = escreve(tmp_path, corrida(
+        perfil,
+        saida=lambda u: -0.5 if 0.9 <= u <= 1.4 else 0.0,
+        entrada=lambda u: 0.0,
+        goal=(0.1, 1.0)))
+    c = fp.relatorio(caminho)['corridas'][0]
+    assert c['freio_apos_o_succeeded'], (
+        'freio que atravessa a chegada não pode sumir do veredito')
+
+
+def test_freio_bem_antes_da_chegada_nao_entra(tmp_path):
+    """O contrapeso: sobreposição não pode virar "qualquer freio conta"."""
+    perfil = [0.30] * 300
+    caminho = escreve(tmp_path, corrida(
+        perfil,
+        saida=lambda u: -0.5 if 0.2 <= u <= 0.4 else 0.0,
+        entrada=lambda u: 0.0,
+        goal=(0.1, 4.0)))          # chegada bem depois do episódio
+    c = fp.relatorio(caminho)['corridas'][0]
+    assert c['freio_apos_o_succeeded'] == [], c['freio_apos_o_succeeded']
+
+
+def test_escape_antes_do_repouso_marca_fase_nao_separavel(tmp_path):
+    """🔴 O recuo somava ré + escape quando o escape vinha antes do repouso.
+
+    Num cenário assim a fase não é separável, e o juiz tem de DIZER isso em vez
+    de devolver um número que mistura os dois sentidos.
+    """
+    # ⚠️ Tem de haver repouso DEPOIS do escape: sem ele os dois caminhos do
+    # código coincidem e o teste não distingue a versão certa da errada.
+    perfil, t = [], 0.0
+    while t < 4.0:
+        if t < 0.2:
+            vx = 0.30
+        elif t < 0.9:
+            vx = -0.20           # a ré do freio, ainda em curso
+        elif t < 1.7:
+            vx = 0.25            # o escape começa SEM o robô ter assentado
+        else:
+            vx = 0.0             # só AQUI ele assenta — depois do escape
+        perfil.append(vx)
+        t += DT
+    linhas = corrida(perfil, saida=lambda u: -0.5 if u < 0.2 else 0.0,
+                     entrada=lambda u: 0.0)
+    for i in range(40):
+        linhas.append([f'{T0 + 0.9 + i * DT:.6f}', fp.ESCAPE, '0.25', '0',
+                       '', '', ''])
+    linhas.append([f'{T0 + 3.9:.6f}', fp.ESCAPE, '0.0', '0', '', '', ''])
+    dados = fp.carrega(escreve(tmp_path, linhas))
+    f = fp.fases_do_stop(dados, T0, T0 + 4.0, fp.episodios_de_freio(dados))
+    assert f['fase_separavel'] is False, f
+    assert f['recuo_do_freio_cm'] is None, f
