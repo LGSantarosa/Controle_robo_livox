@@ -274,10 +274,21 @@ class CompensadorRumo(Node):
                 f"o robô anda +0,10 m depois do corte — foi a batida de 13-08, "
                 f"com o reflexo tendo cortado a 0,30 m da parede.")
         else:
-            self.get_logger().error(
-                "FREIO LINEAR DESLIGADO — o corte de comando não para este "
-                "robô: ele desliza +0,10 m depois de zerar. Só rode assim numa "
-                "bancada que precise do deslizamento cru.")
+            # ⚠️ Era `error()` com "ele desliza +0,10 m", número do ROBÔ 2
+            # (batida de 13-08, placa que segura 0,52 s). Desligado passou a
+            # ser o default do robô 3, onde o freio INVERTIA a marcha — 9,6 cm
+            # de ré depois da chegada, medido em 29-09. Um ERROR em cima do
+            # default correto de um robô é ruído que ensina a ignorar o rosout.
+            # Continua WARN, e não INFO, porque o deslizamento que sobra é
+            # real: sem freio quem para é só a planta, e o quanto ela escorrega
+            # NÃO foi medido em nenhum dos dois robôs de verdade.
+            self.get_logger().warn(
+                "FREIO LINEAR DESLIGADO — nada de contra-torque: depois do "
+                "corte quem para o robô é só a planta, e o que ela escorrega "
+                "não está medido. É o DEFAULT do robô 3 (o contra-torque "
+                "invertia a marcha: 9,6 cm de ré na chegada, 29-09). No robô "
+                "2 desligar é regressão: lá a placa segura 0,52 s e ele anda "
+                "+0,10 m depois de zerar — foi a batida de 13-08.")
         # De onde veio o feedforward — a linha que separa "medido hoje" de
         # "herdado". Ela é WARN nos dois casos de propósito: o `rosout` é como
         # eu leio a bancada por ssh (o dono só roda), e um INFO se perde no

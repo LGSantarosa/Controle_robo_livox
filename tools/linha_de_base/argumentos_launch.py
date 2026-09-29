@@ -61,8 +61,18 @@ LAUNCHES = (
 )
 
 # Argumento novo só entra se estiver aqui, com o default exato (§8).
+#
+# ⚠️ `freio_linear` tem default POR ROBÔ: 'true' no 2 (o de sempre) e 'false'
+# no 3. A extração roda sem `robo:=` na linha de comando, logo cai no robô 2 e
+# o que a trava vê é 'true' — ou seja, esta linha continua provando que o robô
+# 2 não mudou. Quem prova o 'false' do robô 3 é
+# `test_freio_linear_tem_default_por_robo`, em
+# `ros2_packages/robot_motion/test/test_pilha_robo3.py`.
 NOVOS_PERMITIDOS = {
-    'ros2_packages/robot_motion/launch/pilha.launch.py': {'robo': '2'},
+    'ros2_packages/robot_motion/launch/pilha.launch.py': {
+        'robo': '2',
+        'freio_linear': 'true',
+    },
 }
 
 # Os pacotes ROS deste repo. Tudo o mais é terceiro, e a recursão para nele.

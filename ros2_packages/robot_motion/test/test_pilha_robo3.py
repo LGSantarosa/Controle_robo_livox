@@ -569,3 +569,81 @@ def test_o_include_do_sim_so_passa_argumento_declarado_pelo_alvo(monkeypatch):
     # E o conjunto esperado tem de ser mesmo o que o alvo declara — senão o
     # teste estaria conferindo a lista contra ela mesma.
     assert ARGS_DO_SIM_ROBO3 <= declarados, sorted(ARGS_DO_SIM_ROBO3 - declarados)
+
+
+# ─── o freio linear: default POR ROBÔ (29-09) ────────────────────────────────
+#
+# O freio da 038 é contra-torque: quando o comando some com o robô andando, o
+# compensador manda marcha ao contrário para matar a inércia que a placa do
+# robô 2 segura por 0,52 s. No robô 3 isso não para — INVERTE. Medido no
+# Gazebo em 29-09 (`~/sessao-robo3/20260929_103954`): comando `-0,500 m/s` no
+# instante da chegada, o robô cruza o zero 0,64 s depois, pico de ré
+# `-0,245 m/s`, e ele estaciona 9,6 cm ATRÁS do ponto onde deveria parar.
+#
+# Estes testes travam as DUAS pontas. A da esquerda é a que importa mais: a
+# mudança não pode ter tocado no robô 2, onde desligar o freio é regressão
+# conhecida (batida de 13-08, o reflexo cortou a 0,30 m e ele comeu 0,10 m da
+# parede).
+
+def _freio_do_compensador(monkeypatch, argv, ctx_args):
+    """O `freio_linear` que o `compensador_rumo` recebe, no robô do argv."""
+    _argv(monkeypatch, *argv)
+    ld = _descricao()
+    ctx = _contexto(ld, **ctx_args)
+    nos = _nos(ld, 'compensador_rumo')
+    # Há dois `compensador_rumo` na descrição (sim e real), separados por
+    # condição. Sem esta linha o teste leria o do outro ramo e passaria por
+    # acidente.
+    assert nos, 'nenhum compensador_rumo na descrição'
+    achados = [p['freio_linear'] for no in nos for p in _params(ctx, no)
+               if isinstance(p, dict) and 'freio_linear' in p]
+    assert achados, 'o compensador_rumo não recebe `freio_linear` nenhum'
+    assert len(set(achados)) == 1, f'ramos discordando: {achados}'
+    return achados[0]
+
+
+@pytest.mark.parametrize('sim', ['true', 'false'], ids=['gazebo', 'real'])
+def test_o_robo2_continua_com_o_freio_ligado(monkeypatch, sim):
+    """🔴 CONTROLE DE REGRESSÃO — o robô 2 não pode ter mudado.
+
+    Nas DUAS bordas: o freio é do robô, não da máquina, e desligá-lo no robô 2
+    é voltar para a batida de 13-08.
+    """
+    freio = _freio_do_compensador(monkeypatch, [f'sim:={sim}'], {'sim': sim})
+    assert freio is True, f'robô 2 com sim:={sim} perdeu o freio linear'
+
+
+def test_o_robo3_nasce_com_o_freio_desligado(monkeypatch):
+    """A mudança de 29-09: no robô 3 o contra-torque virava 9,6 cm de ré."""
+    freio = _freio_do_compensador(
+        monkeypatch, ['robo:=3', 'sim:=true'], {'robo': '3', 'sim': 'true'})
+    assert freio is False, 'o robô 3 ainda nasce com o freio linear ligado'
+
+
+def test_o_freio_do_robo3_e_argumento_e_nao_hardcode(monkeypatch):
+    """Desligado é DEFAULT, não decisão embutida.
+
+    A mudança é experimental e o A/B precisa das duas pontas na mesma máquina:
+    se o `false` estivesse escrito no nó em vez de no default do argumento, a
+    corrida de controle exigiria recompilar — e comparação que depende de
+    recompilar entre as duas metades não é comparação.
+    """
+    freio = _freio_do_compensador(
+        monkeypatch,
+        ['robo:=3', 'sim:=true', 'freio_linear:=true'],
+        {'robo': '3', 'sim': 'true', 'freio_linear': 'true'})
+    assert freio is True, 'freio_linear:=true não religa o freio no robô 3'
+
+
+def test_o_freio_chega_como_bool_e_nao_como_texto(monkeypatch):
+    """O nó declara `freio_linear` como bool.
+
+    Texto cru derruba o compensador na subida com "parameter type mismatch" —
+    o mesmo defeito que o comentário do `curv_frente` registra. E compensador
+    que não sobe é a pilha inteira de pé sem ninguém na última camada.
+    """
+    for argv, ctx_args in (
+            (['sim:=true'], {'sim': 'true'}),
+            (['robo:=3', 'sim:=true'], {'robo': '3', 'sim': 'true'})):
+        freio = _freio_do_compensador(monkeypatch, argv, ctx_args)
+        assert isinstance(freio, bool), f'{argv}: {type(freio)} em vez de bool'

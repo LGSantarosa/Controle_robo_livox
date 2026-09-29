@@ -11422,3 +11422,96 @@ launch terminou no `Ctrl-C` e não gravou o teardown; zero processo, marca e
 SHM foram conferidos depois, mas a sessão não conta como prova positiva nem
 negativa do SIGSEGV da 057. Nenhum patch de produção foi feito. O bloqueio de
 hardware continua.
+
+## 🟢 2026-09-29 (PC de dev, GAZEBO + RVIZ, robô e lidar DESLIGADOS) — IDA E VOLTA LIMPAS, E O REBOTE DE 9,6 CM ERA O FREIO DO ROBÔ 2
+
+Primeira sessão desta máquina na `etapa6-pilha-robo3` (a `main` não tem a
+etapa 6). O `install/` estava na `main` antiga e o `colcon build` reprovou em
+`wheel_msgs` — `build/` sujo de uma compilação anterior sem `--symlink-install`.
+Apagar `build/`, `install/` e `log/` e recompilar do zero resolveu: 7 pacotes
+em 22,1 s.
+
+Pré-voo antes de subir: zero processo ROS/Gazebo, porta 5000 livre, e **três
+segmentos de SHM órfãos de 22-09** — todos com a trava `_el`, removidos pelo
+`fastdds shm clean`. Pilha no domínio 50, `robo:=3 sim:=true gui:=true
+rviz:=true localizacao:=fixa`. TF `map→base_link` em (2,000; 5,000), `/scan` a
+~6 Hz, `/navigate_to_pose` presente.
+
+⚠️ A primeira consulta de `ros2 action list` respondeu **AUSENTE** e a segunda,
+segundos depois, listou a ação. Foi cedo demais, não defeito — mas serve de
+lembrete de que uma leitura só não é pré-voo.
+
+### As corridas
+
+O dono mandou um objetivo pelo RViz, o robô atravessou a pista, e depois
+mandou **voltar ao ponto de partida** — a volta também fechou. Avaliação dele:
+*"se ele se mover assim na vida real é o melhor q tivemos até hoje"* e *"se o
+real se mover assim vencemos tudo"*. Visualmente bom; ele registrou que ainda
+dá para ficar mais "clean" andando.
+
+### O defeito que ele apontou: o pulinho de rebote
+
+*"ele quando para, da um pulinho de rebote pra trás, isso surgiu como freio do
+robô 2 e ele pegou."* Estava certo, e os dados fecham a cadeia inteira: a
+entrada do compensador vai a zero, 2 ms depois a **saída** vai a −0,500 m/s, o
+robô cruza o zero 0,64 s depois da chegada, chega a −0,245 m/s e estaciona
+**9,6 cm atrás**. É o `FreioLinear` da 038, ligado (conferido por
+`ros2 param get` no nó vivo).
+
+Isso foi levado a uma revisão independente, que confirmou o diagnóstico e
+acrescentou quatro ressalvas — todas incorporadas na decisão **062**: o
+simulador do robô 3 usa a placa `medido` **do robô 2**; desligar o freio afeta
+também o `STOP:PolygonStop`, não só a chegada; quatro apoios não anulam torque
+retido pela eletrônica; e a mensagem de `ERROR` do compensador era específica
+do robô 2.
+
+### O teardown e o custo do bag
+
+A revisão avisou que o bag passava de 6,6 GB **ainda crescendo** — `--all-topics`
+grava a nuvem do Livox simulado. O dono mandou matar. SIGINT nos três grupos de
+processo (o `setsid` cria grupo próprio: o PGID que eu tinha anotado era o do
+meu shell, não o da pilha).
+
+✅ Teardown **limpo**: zero processo, bag fechado em 9,5 GB, e **nenhum
+SIGSEGV** — todos os nós saíram com `exit -2`, que é SIGINT. A dívida 057 não
+apareceu. ⚠️ Eu cheguei a anunciar 15 SIGSEGV: era um `grep` meu contando
+`process has died` junto, erro de leitura, corrigido na hora.
+
+Sobraram **68 segmentos de SHM**. Um `ros2-daemon` do domínio 50 — das minhas
+próprias consultas, não da pilha — segurava parte deles; `ros2 daemon stop`
+soltou. O `fastdds shm clean` levou os que tinham `_el` e **52 ficaram sem a
+trava**, o caso exato da 061 §2.3.2. Foram pela remoção controlada do
+`shm_recupera.py`, com "nada vivo" reconferido por `/proc`. Recontagem final:
+**zero**.
+
+⚠️ **Fracasso do método, registrado:** o inventário "antes" eu **reconstruí**
+depois do fato (o `/dev/shm` estava zerado às 10:38, eu mesmo limpei antes de
+subir). A ferramenta recusou na primeira tentativa — com o "antes" vazio, os
+arquivos de sistema (`lttng`, `snap.*`) viraram candidatos e ela interrompeu
+sem remover nada, que é o comportamento certo. Se esta fosse corrida oficial, o
+inventário teria de ser tirado ANTES de subir.
+
+### A mudança (decisão 062)
+
+`freio_linear` virou argumento da pilha com default **por robô**: `true` no 2
+(nas duas bordas), `false` no 3. A lei não mudou, o nó não mudou, o robô 2 não
+mudou — mudou quem liga. A mensagem de bringup com o freio desligado deixou de
+ser `ERROR` com o número do robô 2 e virou `warn` que diz o que de fato não
+está medido.
+
+Cinco testes novos, com as **duas mutações conferidas** (default sempre `true`
+derruba o teste do robô 3; sempre `false` derruba os dois do robô 2). Suíte
+completa: **1768 passaram, 0 falharam**.
+
+🔴 **O que NÃO prova:** nenhuma corrida foi rodada depois da mudança — o A/B da
+062 §7 está em aberto, e ele precisa repetir **a passagem da segunda porta**,
+não só uma parada em área livre. Nada de hardware.
+
+### Combinado para a sequência
+
+1. destrinchar como o robô se moveu nesta ida e volta (bag de 9,5 GB);
+2. **acoplar o web ao robô 3**, para aposentar o RViz como forma de mandar
+   objetivo;
+3. gravar uma corrida ida-e-volta dentro da salinha daquele mapa;
+4. começar os preparativos do teste no robô real — o passo crucial, sabendo
+   que o robô real se move diferente da simulação.

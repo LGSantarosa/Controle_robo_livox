@@ -374,6 +374,39 @@ def generate_launch_description():
         {'ganho_wz': ParameterValue(LaunchConfiguration('ganho_wz'),
                                     value_type=float)},
     ]
+    # 🔴 FREIO LINEAR (decisão 038) — LIGADO no robô 2, DESLIGADO no robô 3.
+    #
+    # O freio existe porque a placa do robô 2 segura o último comando por
+    # 0,52 s: sem contra-torque o reflexo cortava a 0,30 m da parede e o robô
+    # comia 0,10 m dela (batida de 13-08). No robô 3 ele não para — INVERTE.
+    # Medido na corrida `~/sessao-robo3/20260929_103954` (29-09, Gazebo):
+    #
+    #     t=-0,105 s  Nav2 chega, `/auto_vel` e a entrada do compensador = 0
+    #     t=-0,103 s  `/cmd_vel_bruto` = -0,500 m/s   <- o contra-torque
+    #     t=+0,49 s   o freio solta (v abaixo de `solta_em` 0,25)
+    #     t=+0,64 s   o robô CRUZA O ZERO e anda para trás
+    #     t=+0,96 s   pico de ré -0,245 m/s
+    #     t=+1,49 s   para, 9,6 cm atrás do ponto onde deveria ter parado
+    #
+    # ⚠️ Isto é EXPERIMENTAL e vale só para o robô 3, por dois motivos:
+    #
+    #  1. o Gazebo do robô 3 roda com `placa:=medido`, que é o modelo de
+    #     atuador DO ROBÔ 2 (está escrito na `sim_robo3.launch.py`). Os 0,52 s
+    #     de retenção que ampliam o rebote também são herdados. Sem o freio
+    #     não há ré comandada, mas ainda pode haver avanço residual por
+    #     0,52 s — e isso NÃO foi medido;
+    #  2. o freio não atua só na chegada: ele atua em todo corte de comando,
+    #     inclusive no `STOP:PolygonStop` do reflexo. Em 28-09 ele atuou na
+    #     parada de proteção da segunda porta. Quem for aprovar esta mudança
+    #     tem de repetir a PASSAGEM DA PORTA, não só uma parada em área livre.
+    #
+    # O robô 2 fica exatamente como estava: o default só muda para `robo:=3`.
+    # ⚠️ Mesmo cuidado de tipo do `curv_frente`: o nó declara `freio_linear`
+    # como bool e argumento de launch chega como TEXTO.
+    freio = [
+        {'freio_linear': ParameterValue(LaunchConfiguration('freio_linear'),
+                                        value_type=bool)},
+    ]
     # ⚠️ Mesmo cuidado do `curv_frente` acima: o nó declara `lookahead_piso`
     # como double, e argumento de launch chega como TEXTO. Cru, o seguidor cai
     # na subida com "parameter type mismatch" — e sem seguidor a pilha sobe
@@ -732,6 +765,19 @@ def generate_launch_description():
             'retencao_giro_s', default_value='',
             description='[s] retencao da placa descontada do erro de rumo. '
                         'Vazio = YAML. Robo: 0.52. Gazebo: 0.20'),
+        # O default depende do ROBÔ, não da máquina: ver o bloco `freio` lá em
+        # cima. `true` no robô 2 (o estado de sempre), `false` no robô 3, onde
+        # o contra-torque inverte a marcha em vez de parar.
+        DeclareLaunchArgument(
+            'freio_linear',
+            default_value='false' if ROBO == '3' else 'true',
+            description='freio por contra-torque da decisão 038. LIGADO no '
+                        'robô 2 (a placa segura 0,52 s e ele desliza 0,10 m '
+                        'depois do corte). DESLIGADO no robô 3, onde medimos '
+                        'o contra-torque INVERTENDO a marcha: 9,6 cm de ré '
+                        'depois da chegada (29-09). Mudança experimental — '
+                        'o A/B tem de cobrir a passagem da porta, onde o '
+                        'reflexo também corta o comando'),
         DeclareLaunchArgument(
             'tolerancia_entra_rumo', default_value='',
             description='[rad] limiar de ENTRADA do giro (histerese). Vazio = '
@@ -951,14 +997,14 @@ def generate_launch_description():
         Node(package='robot_motion', executable='compensador_rumo',
              name='compensador_rumo', output='both',
              parameters=[{'use_sim_time': sim, 'segura_rumo': False}]
-                        + curv + ganho,
+                        + curv + ganho + freio,
              remappings=[('/hoverboard_base_controller/cmd_vel',
                           '/cmd_vel_bruto')],
              condition=IfCondition(sim)),
         Node(package='robot_motion', executable='compensador_rumo',
              name='compensador_rumo', output='both',
              parameters=[{'use_sim_time': sim, 'segura_rumo': False}]
-                        + curv + ganho,
+                        + curv + ganho + freio,
              condition=UnlessCondition(sim)),
         Node(package='robot_motion', executable='path_follower',
              name='path_follower', output='both',

@@ -1,7 +1,8 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Atualizado em **2026-09-28** (PC de dev, robô, lidar e Gazebo desligados). Esta é a
+> Atualizado em **2026-09-29** (PC de dev, robô e lidar desligados; Gazebo
+> subido e derrubado limpo na sessão). Esta é a
 > cópia da branch **`etapa6-pilha-robo3`**, que desde 25-09 reúne três frentes
 > de 24-09 (merge da `main` e cherry-pick da 058; ver tabela abaixo):
 >
@@ -38,6 +39,55 @@
 | `main` (`1851ffb`) | etapa 5, notebook sincronizado, prova parada do Mid-360 | **não** tem etapa 6, 058 nem 059 |
 | `livox-config-maquina-sensor` (`279f408`) | só a 058 | já incorporada aqui por cherry-pick; não é mais base de nada |
 | `backup/etapa6-pre-merge-main` (`d52b5da`, local) | etapa 6 antes do merge | ponto de volta se a integração precisar ser desfeita |
+
+---
+
+## 🟢 29-09 — IDA E VOLTA NO GAZEBO, E O REBOTE VIRA A DECISÃO 062
+
+Primeira sessão **nesta máquina** (`luiz-santarosa-750XGK`) na branch
+`etapa6-pilha-robo3`. O dono dirigiu o robô 3 pelo RViz: um objetivo de ida,
+outro de volta ao ponto de partida, **os dois fecharam**. Avaliação dele: *"se
+o real se mover assim vencemos tudo"*.
+
+⚠️ **Se for compilar nesta máquina:** o `install/` estava na `main` antiga e o
+`colcon build` reprova em `wheel_msgs` (`build/` sujo de compilação sem
+`--symlink-install`). Apagar `build/`, `install/` e `log/` e recompilar do
+zero — 7 pacotes em 22,1 s. O comando é
+`colcon build --base-paths ros2_packages --symlink-install`.
+
+**O defeito achado e corrigido — decisão 062:** ao parar, o robô recuava
+**9,6 cm**. Era o `FreioLinear` da 038, herdado do robô 2: a entrada do
+compensador zera e a **saída** vai a −0,500 m/s; o robô cruza o zero 0,64 s
+depois da chegada e chega a −0,245 m/s. `freio_linear` virou argumento da
+pilha, com default **por robô**: `true` no 2 (as duas bordas, intacto),
+`false` no 3. Cinco testes novos, duas mutações conferidas, **suíte 1768/0**.
+
+🔴 **A 062 é EXPERIMENTAL e o A/B não foi rodado.** Nenhuma corrida aconteceu
+depois da mudança. Quando rodar, ele tem de repetir **a passagem da segunda
+porta** (o freio também atua no `STOP:PolygonStop`), não só uma parada em área
+livre — critérios completos na 062 §7. E o Gazebo do robô 3 usa `placa:=medido`,
+que é o atuador **do robô 2**: pode sobrar avanço residual de 0,52 s, não
+medido.
+
+**Teardown:** limpo. Zero processo, bag fechado em **9,5 GB**, e **nenhum
+SIGSEGV** (todos saíram com `exit -2` = SIGINT; a dívida 057 não apareceu).
+Sobraram 68 segmentos de SHM — 52 sem a trava `_el`, removidos pela remoção
+controlada da 061 §2.3.2; recontagem **zero**. ⚠️ O inventário "antes" foi
+**reconstruído depois do fato**; corrida oficial exige tirá-lo antes de subir.
+
+⚠️ **O bag é caro:** `--all-topics` grava a nuvem do Livox simulado e passa de
+**600 MB/min**. Para corrida longa, ou se restringe os tópicos, ou se vigia o
+disco.
+
+**Combinado para a sequência** (ordem do dono):
+
+1. destrinchar como o robô se moveu nesta ida e volta (bag de 9,5 GB);
+2. **acoplar o web ao robô 3** — aposentar o RViz como forma de mandar objetivo;
+3. gravar uma corrida ida-e-volta dentro da **salinha** daquele mapa;
+4. preparativos do teste no **robô real**, o passo crucial.
+
+Evidência: `~/sessao-robo3/20260929_103954/` (ESTA MÁQUINA; o bag não vem pelo
+git).
 
 ---
 
