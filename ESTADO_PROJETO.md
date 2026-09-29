@@ -70,7 +70,11 @@ que é o atuador **do robô 2**: pode sobrar avanço residual de 0,52 s, não
 medido.
 
 **Teardown:** limpo. Zero processo, bag fechado em **9,5 GB**, e **nenhum
-SIGSEGV** (todos saíram com `exit -2` = SIGINT; a dívida 057 não apareceu).
+SIGSEGV** — a dívida 057 não apareceu. ⚠️ Os códigos de saída **não** foram
+todos `-2`: onze nós saíram com `exit -2` (SIGINT), três com `exit 1`
+(`compensador_rumo`, `heading_controller`, `placa_simulada`) e o gravador com
+`exit 2`. Nenhum deles é sinal de segmentação; o que a corrida sustenta é
+"sem SIGSEGV", não "todos −2".
 Sobraram 68 segmentos de SHM — 52 sem a trava `_el`, removidos pela remoção
 controlada da 061 §2.3.2; recontagem **zero**. ⚠️ O inventário "antes" foi
 **reconstruído depois do fato**; corrida oficial exige tirá-lo antes de subir.

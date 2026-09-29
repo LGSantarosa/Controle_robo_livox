@@ -109,14 +109,62 @@ assim, na parada de proteção da segunda porta (vão de 0,80 m).
 
 ## 7. Como esta mudança passa (o A/B)
 
-Mesma pilha, mesma máquina, mesmo objetivo, alternando só
-`freio_linear:=true|false`. Critérios, todos:
+**Desenho: A–B–A**, nesta ordem — `true` → `false` → `true`. A repetição do A
+no fim é o que separa "o freio mudou o resultado" de "a máquina mudou entre as
+metades". **Pilha reiniciada entre condições**, porque `self.freio` só é
+construído na inicialização.
 
-1. zero comando negativo em `/cmd_vel_bruto` depois da chegada;
-2. nenhum recuo relevante (o de referência a bater é 9,6 cm);
-3. chegada dentro da tolerância viva de 0,25 m;
-4. **a passagem da segunda porta repetida**, com nenhum avanço perigoso depois
-   de um `STOP:PolygonStop` — parada em área livre não cobre este critério.
+### Como as corridas são disparadas
+
+🔴 **Os objetivos NÃO vão pelo RViz.** A linha de base de 29-09 foi clicada, e
+clique não se repete: as poses saem por ação/script, exatamente as registradas.
+Acompanhar pela tela, sim; clicar, não.
+
+🔴 **Cada tentativa parte da mesma pose.** Na linha de base a volta começou onde
+a ida terminou — ou seja, **o próprio freio escolheu a pose de entrada na
+porta**, e isso impede conclusão causal sobre a passagem. A prova da porta
+reinicia sempre da mesma pose, perto do destino da ida.
+
+🔴 **`freio_linear` explícito na linha de comando** nas duas condições, nunca
+por default, e o valor **vivo** registrado por `ros2 param get /compensador_rumo
+freio_linear` dentro da pasta da corrida. Default é o que se está testando; não
+serve de testemunha de si mesmo.
+
+### Gravação
+
+`bag:=false` **não basta** — a própria `pilha.launch.py` registra que o
+`freeze_capture` não substitui o bag. Gravar com **lista curta** de tópicos:
+odometria, `/scan`, TF, objetivo, plano, a cadeia de comandos
+(`/auto_vel`, `/compensador_rumo/cmd_vel`, `/cmd_vel_bruto`), o estado do
+`collision_monitor` e o status da ação. `--all-topics` custa ~600 MB/min por
+causa da nuvem do Livox simulado.
+
+### Critérios
+
+Julgados por `tools/analise_corrida/freio_e_porta.py` — o mesmo instrumento nas
+duas condições, com as mesmas réguas.
+
+**Na chegada:**
+
+1. zero episódio de freio depois do `SUCCEEDED`;
+2. recuo não relevante (a referência a bater é **9,6 cm / 8,7 cm**);
+3. pose de **repouso** dentro da tolerância viva de 0,25 m — a pose do
+   `SUCCEEDED` não serve, o robô ainda anda a ~0,29 m/s nela.
+
+**Na porta**, com as fases separadas (medir os 6,98 s inteiros mistura
+retenção, freio, recuperação e um segundo freio):
+
+4. **avanço residual** do corte até o robô parar de ir para a frente — a
+   referência é **14,1 cm**, e este é o número que decide segurança: é ele que
+   empurra o robô para dentro do polígono;
+5. **recuo do freio** (referência 8,2 cm) — deve sumir com o freio desligado;
+6. **escape frontal**: ocorre? quantos?
+7. **segunda atuação do freio** ao cortarem o escape (ocorreu em +6,628 s na
+   linha de base) — deve sumir;
+8. duração total do `STOP` apenas como **resultado secundário** (6,982 s).
+
+Linha de base completa das oito medidas:
+`docs/dados/2026-09-29-robo3-ida-e-volta/`.
 
 ## 8. A mensagem de bringup
 

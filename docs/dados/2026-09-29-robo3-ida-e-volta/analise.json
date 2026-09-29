@@ -1,0 +1,124 @@
+{
+  "arquivo": "docs/dados/2026-09-29-robo3-ida-e-volta/ros_logs/freeze_capture.csv",
+  "reguas": {
+    "V_PARADO": 0.005,
+    "T_REPOUSO": 0.3,
+    "GAP_EPISODIO": 0.3,
+    "JANELA_FIM": 6.0,
+    "cmd_saida": "/cmd_vel_bruto",
+    "cmd_entrada": "/compensador_rumo/cmd_vel"
+  },
+  "episodios_de_freio": [
+    {
+      "t_inicio": 1790689350.182,
+      "duracao_s": 0.523,
+      "vx_comandado": -0.5,
+      "amostras": 11
+    },
+    {
+      "t_inicio": 1790689943.868,
+      "duracao_s": 0.0,
+      "vx_comandado": -0.5,
+      "amostras": 1
+    },
+    {
+      "t_inicio": 1790689958.076,
+      "duracao_s": 0.43,
+      "vx_comandado": -0.5,
+      "amostras": 9
+    },
+    {
+      "t_inicio": 1790689964.701,
+      "duracao_s": 0.0,
+      "vx_comandado": -0.5,
+      "amostras": 1
+    },
+    {
+      "t_inicio": 1790689998.17,
+      "duracao_s": 0.515,
+      "vx_comandado": -0.5,
+      "amostras": 10
+    }
+  ],
+  "corridas": [
+    {
+      "corrida": 1,
+      "duracao_goal_s": 51.04,
+      "partiu_de": [
+        2.0,
+        5.0
+      ],
+      "pose_no_succeeded": [
+        11.067,
+        1.583
+      ],
+      "vx_no_succeeded": 0.298,
+      "dist_ate_o_succeeded_m": 13.259,
+      "pose_de_repouso": [
+        11.051,
+        1.558
+      ],
+      "t_repouso_apos_goal_s": 1.492,
+      "dist_ate_o_repouso_m": 13.484,
+      "recuo_cm": 9.6,
+      "t_cruza_zero_apos_goal_s": 0.642,
+      "pico_de_re_m_s": -0.245
+    },
+    {
+      "corrida": 2,
+      "duracao_goal_s": 61.94,
+      "partiu_de": [
+        11.051,
+        1.558
+      ],
+      "pose_no_succeeded": [
+        2.029,
+        4.747
+      ],
+      "vx_no_succeeded": 0.282,
+      "dist_ate_o_succeeded_m": 13.266,
+      "pose_de_repouso": [
+        2.013,
+        4.812
+      ],
+      "t_repouso_apos_goal_s": 1.578,
+      "dist_ate_o_repouso_m": 13.51,
+      "recuo_cm": 8.7,
+      "t_cruza_zero_apos_goal_s": 0.798,
+      "pico_de_re_m_s": -0.219
+    }
+  ],
+  "monitor": [
+    {
+      "t": 1790689728.0504436,
+      "evento": "Robot to stop due to invalid"
+    },
+    {
+      "t": 1790689728.1785808,
+      "evento": "Robot to continue normal operation"
+    },
+    {
+      "t": 1790689958.0726187,
+      "evento": "Robot to stop due to PolygonStop"
+    },
+    {
+      "t": 1790689965.0547652,
+      "evento": "Robot to continue normal operation"
+    }
+  ],
+  "paradas_de_protecao": [
+    {
+      "t_stop": 1790689958.0726187,
+      "duracao_total_do_stop_s": 6.982,
+      "avanco_residual_cm": 14.1,
+      "t_fim_do_avanco_s": 0.728,
+      "recuo_do_freio_cm": 8.2,
+      "t_cruza_zero_s": 0.728,
+      "t_fim_do_recuo_s": 1.587,
+      "episodios_de_freio_nesta_janela": [
+        0.003,
+        6.628
+      ]
+    }
+  ]
+}

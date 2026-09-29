@@ -14,12 +14,22 @@ Pilha: `robo:=3 sim:=true gui:=true rviz:=true localizacao:=fixa`, mundo
 
 | | corrida 1 (ida) | corrida 2 (volta) |
 |---|---|---|
-| duração com goal ativo | 51,0 s | 61,9 s |
-| distância em `/Odometry` | 13,484 m | 13,510 m |
+| duração com goal ativo | 51,04 s | 61,94 s |
 | partiu de | (2,000; 5,000) | (11,051; 1,558) |
-| parou em | (11,067; 1,583) | (2,029; 4,747) |
+| **pose no `SUCCEEDED`** | (11,067; 1,583) | (2,029; 4,747) |
+| **`vx` no `SUCCEEDED`** | **+0,298 m/s** | **+0,282 m/s** |
+| distância até o `SUCCEEDED` | 13,259 m | 13,266 m |
+| **pose de repouso** | (11,051; 1,558) | (2,013; 4,812) |
+| repouso em | +1,492 s | +1,578 s |
+| distância até o repouso | 13,484 m | 13,510 m |
 | `vx` máximo | +0,366 m/s | +0,366 m/s |
 | `vx` mínimo | **−0,245 m/s** | **−0,219 m/s** |
+
+⚠️ **A pose do `SUCCEEDED` não é onde o robô parou** — ele ainda anda a ~0,29 e
+~0,28 m/s nesse instante. As duas linhas estão separadas de propósito: a
+distância de 13,484 / 13,510 m **inclui o assentamento** posterior, e é maior
+que a percorrida até o `SUCCEEDED`. "Repouso" aqui tem definição: parado
+(`|vx| <= 0,005 m/s`) por 0,30 s seguidos — ver `analise.json` e o script.
 
 As duas fecharam. Avaliação do dono: *"se ele se mover assim na vida real é o
 melhor q tivemos até hoje"*, com a ressalva de que dá para ficar mais "clean".
@@ -41,6 +51,21 @@ A entrada do compensador (`/compensador_rumo/cmd_vel`) estava em **zero** em
 toda essa janela: o −0,500 é do `FreioLinear` da 038, não do Nav2 nem do
 seguidor. É a medida que originou a **decisão 062**.
 
+### O freio atuou CINCO vezes na sessão, não duas
+
+| # | t (epoch) | duração | onde |
+|---|---|---|---|
+| 1 | 1790689350,182 | 0,52 s | chegada da ida |
+| 2 | 1790689943,868 | 1 amostra | durante a volta, fora de parada |
+| 3 | 1790689958,076 | 0,43 s | **início do `PolygonStop`** |
+| 4 | 1790689964,701 | 1 amostra | **fim do escape, ainda no `PolygonStop`** |
+| 5 | 1790689998,170 | 0,52 s | chegada da volta |
+
+⚠️ **Contar as linhas de `FREIO LINEAR` no `launch.log` dá 7, e 7 está errado**:
+a mensagem tem `throttle_duration_sec=0.5`, então um episódio de 0,52 s aparece
+duas vezes. Os episódios acima vêm dos **dados** — amostras negativas
+consecutivas em `/cmd_vel_bruto` com a entrada em zero —, não do log.
+
 ## 2. 🔴 O freio atua no `PolygonStop`, não só na chegada
 
 Este é o achado que a linha de base acrescenta, e ele **confirma a ressalva da
@@ -50,27 +75,35 @@ Houve **um** `PolygonStop` na sessão, na **volta**, na segunda porta (o aperto
 de 0,80 m em `x = 8,9…9,1`). Ele durou **6,98 s** — pior que os 5,282 s da
 sessão de 28-09.
 
-O que aconteceu dentro dele:
+🔴 **Medir os 6,98 s inteiros não serve**: essa janela mistura quatro coisas
+diferentes. Separadas, com as réguas do script:
 
-| t (do início do STOP) | pediu | saiu | `odom vx` | pose |
-|---:|---:|---:|---:|---|
-| +0,05 s | +0,000 | **−0,500** | +0,303 | (9,137; 3,489) |
-| +0,71 s | +0,000 | +0,000 | −0,016 | (9,009; 3,483) |
-| +1,46 s | +0,000 | +0,000 | −0,041 | (9,088; 3,485) |
-| +2,18 s | +0,000 | +0,000 | +0,000 | (9,091; 3,485) |
-| +7,43 s | +0,500 | +0,500 | +0,066 | (8,734; 3,502) |
+| fase | quando | quanto |
+|---|---|---|
+| 1. **avanço residual** — a planta ainda indo para a frente depois do corte | do STOP até +0,728 s | **14,1 cm para a frente** |
+| 2. **ré do freio** — do cruzamento do zero até assentar | +0,728 s → +1,587 s | **8,2 cm para trás** |
+| 3. **escape frontal** do `path_follower`, deliberado, ainda dentro do STOP | começa ~+5,1 s, termina +6,63 s | 0,21 m em 1,3 s |
+| 4. **segunda atuação do freio**, ao cortarem o escape | +6,628 s | robô a +0,27 m/s |
+| — | STOP libera | **+6,982 s** (resultado secundário) |
 
-O reflexo zerou `/auto_vel` com o robô a +0,303 m/s **dentro do vão da porta**,
-e o freio respondeu com −0,500 m/s: o robô **andou para trás** durante a parada
-de proteção (de `x = 9,137` para `9,009`, voltando depois a `9,088`).
+O reflexo zerou `/auto_vel` com o robô a +0,30 m/s **dentro do vão da porta**.
+O robô ainda avançou 14,1 cm por inércia, o freio então o jogou 8,2 cm para
+trás, o `path_follower` o desencalhou com um escape reto — e quando o escape
+foi cortado, **o freio atuou de novo**, agora contra o próprio escape.
 
-⚠️ **Isto corta para os dois lados no A/B da 062**: sem o freio não haverá essa
-ré dentro do vão, mas também não haverá nada cancelando a retenção da placa —
-o robô pode **avançar** mais para dentro do polígono. É exatamente por isso que
-o A/B tem de repetir esta passagem, e não só uma parada em área livre.
+⚠️ **Isto corta para os dois lados no A/B da 062**: sem o freio não haverá a ré
+da fase 2 nem a fase 4, mas também não haverá nada cancelando a retenção da
+placa — o avanço residual da fase 1 pode ficar **maior** que 14,1 cm, e ele é
+justamente o que empurra o robô para dentro do polígono. É exatamente por isso
+que o A/B tem de repetir esta passagem, e não só uma parada em área livre.
 
-Houve ainda **dois escapes retos** do `path_follower` na sessão (0,21 m em 0,8 s
-e 0,21 m em 1,3 s).
+Houve **dois escapes retos** do `path_follower` na sessão (0,21 m em 0,8 s e
+0,21 m em 1,3 s); o segundo é a fase 3 acima.
+
+⚠️ **Limite deste dado para inferir causa**: a volta começou onde a ida
+terminou, então **o próprio freio da ida escolheu a pose de entrada na porta**.
+Para testar a porta causalmente, cada tentativa tem de começar da **mesma pose**
+perto do destino da ida — não encadeada. Está no protocolo da 062 §7.
 
 ## 3. Qualidade do seguimento (2 009 amostras)
 
@@ -113,16 +146,32 @@ do A/B.
 
 Nesta pasta, em `ros_logs/`:
 
-- `freeze_capture.csv` — 19 816 amostras: `odom`, `/auto_vel`,
+- `freeze_capture.csv` — **63 816** amostras: `odom`, `/auto_vel`,
   `/auto_vel_raw`, `/compensador_rumo/cmd_vel`, `/cmd_vel_bruto`,
   `/hoverboard_base_controller/cmd_vel` e os quatro `goal_active`;
-- `freeze_diag.csv` — 1 130 amostras de diagnóstico periódico;
+- `freeze_diag.csv` — **3 970** amostras de diagnóstico periódico;
 - `seguidor_2026-09-29_103958.csv` — 2 009 amostras do seguidor;
 - `launch.log` — bringup, objetivos, escapes, o `PolygonStop` e o teardown;
 - `perfil_nav2.yaml` e `perfil_collision_monitor.yaml` — parâmetros
   materializados da corrida.
 
-`ORIGEM_SHA256SUMS` traz os hashes dos arquivos na pasta original.
+E fora de `ros_logs/`:
+
+- `analise.json` — a saída do script, com as réguas usadas gravadas dentro;
+- `ORIGEM_SHA256SUMS` — hashes dos arquivos na pasta original, MCAP e
+  `metadata.yaml` inclusive.
+
+**As fórmulas estão versionadas** em `tools/analise_corrida/freio_e_porta.py`,
+que é o mesmo instrumento que vai julgar o A/B — ele fixa o limiar de "parado"
+(`|vx| <= 0,005 m/s`), o tempo de repouso (0,30 s), o que separa dois episódios
+de freio (0,30 s de buraco), a janela depois do objetivo (6,0 s) e de quais
+tópicos sai cada número (`/cmd_vel_bruto` para a saída, `/compensador_rumo/cmd_vel`
+para a entrada, `odom` para pose e `vx`). O `wz` da seção 3 sai de
+`/cmd_vel_bruto`.
+
+⚠️ `launch.log` está versionado com `git add -f`: a raiz ignora `*.log`, e sem
+o `-f` ele não chegaria a um clone novo — e é nele que estão os objetivos, os
+escapes, o `PolygonStop` e o teardown.
 
 🔴 **O bag MCAP bruto fica FORA do Git**: `~/sessao-robo3/20260929_103954/`,
 **10 132 979 782 bytes** (9,4 GiB), 794 s, ~2,76 milhões de mensagens, dois

@@ -1,0 +1,1219 @@
+[INFO] [launch]: All log files can be found below /home/luiz-santarosa/.ros/log/2026-09-29-10-39-56-147880-luiz-santarosa-750XGK-1439165
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [launch.user]: perfil materializado: /home/luiz-santarosa/sessao-robo3/20260929_103954/corrida_2026-09-29_103956/perfil_nav2.yaml
+[INFO] [launch.user]: perfil materializado: /home/luiz-santarosa/sessao-robo3/20260929_103954/corrida_2026-09-29_103956/perfil_collision_monitor.yaml
+[INFO] [launch.user]: PILHA subindo — espere os servidores ativarem (o Smac leva ~16 s montando a heurística) e então clique "2D Goal Pose" no RViz.
+[INFO] [gazebo-1]: process started with pid [1439206]
+[INFO] [robot_state_publisher-2]: process started with pid [1439207]
+[INFO] [placa_simulada-3]: process started with pid [1439208]
+[INFO] [parameter_bridge-4]: process started with pid [1439210]
+[INFO] [create-5]: process started with pid [1439211]
+[INFO] [pointcloud_to_laserscan_node-6]: process started with pid [1439212]
+[INFO] [map_server-7]: process started with pid [1439213]
+[INFO] [planner_server-8]: process started with pid [1439214]
+[INFO] [smoother_server-9]: process started with pid [1439215]
+[INFO] [controller_server-10]: process started with pid [1439220]
+[INFO] [bt_navigator-11]: process started with pid [1439221]
+[INFO] [lifecycle_manager-12]: process started with pid [1439222]
+[INFO] [static_transform_publisher-13]: process started with pid [1439223]
+[INFO] [heading_controller-14]: process started with pid [1439224]
+[INFO] [collision_monitor-15]: process started with pid [1439225]
+[INFO] [twist_mux-16]: process started with pid [1439226]
+[INFO] [compensador_rumo-17]: process started with pid [1439227]
+[INFO] [path_follower-18]: process started with pid [1439228]
+[INFO] [freeze_capture-19]: process started with pid [1439229]
+[INFO] [rviz2-20]: process started with pid [1439230]
+[INFO] [ros2-21]: process started with pid [1439231]
+[bt_navigator-11] [INFO] [1790689197.447388226] [bt_navigator]: 
+[bt_navigator-11] 	bt_navigator lifecycle node launched. 
+[bt_navigator-11] 	Waiting on external lifecycle transitions to activate
+[bt_navigator-11] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[robot_state_publisher-2] [WARN] [1790689197.464125148] [kdl_parser]: The root link base_link has an inertia specified in the URDF, but KDL does not support a root link with an inertia.  As a workaround, you can add an extra dummy link to your URDF.
+[robot_state_publisher-2] [INFO] [1790689197.465659739] [robot_state_publisher]: Robot initialized
+[bt_navigator-11] [INFO] [1790689197.477390790] [bt_navigator]: Creating
+[map_server-7] [INFO] [1790689197.501743320] [map_server]: 
+[map_server-7] 	map_server lifecycle node launched. 
+[map_server-7] 	Waiting on external lifecycle transitions to activate
+[map_server-7] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[map_server-7] [INFO] [1790689197.503423947] [map_server]: Creating
+[controller_server-10] [INFO] [1790689197.506084628] [controller_server]: 
+[controller_server-10] 	controller_server lifecycle node launched. 
+[controller_server-10] 	Waiting on external lifecycle transitions to activate
+[controller_server-10] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[static_transform_publisher-13] [INFO] [1790689197.515401794] [tf_map_odom]: Spinning until stopped - publishing transform
+[static_transform_publisher-13] translation: ('0.000000', '0.000000', '0.000000')
+[static_transform_publisher-13] rotation: ('0.000000', '0.000000', '0.000000', '1.000000')
+[static_transform_publisher-13] from 'map' to 'odom'
+[controller_server-10] [INFO] [1790689197.525737176] [controller_server]: Creating controller server
+[twist_mux-16] [INFO] [1790689197.534518660] [twist_mux]: Topic handler 'topics.autonomia' subscribed to topic 'auto_vel': timeout = 0.500000s , priority = 10.
+[smoother_server-9] [INFO] [1790689197.533359199] [smoother_server]: 
+[smoother_server-9] 	smoother_server lifecycle node launched. 
+[smoother_server-9] 	Waiting on external lifecycle transitions to activate
+[smoother_server-9] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[twist_mux-16] [INFO] [1790689197.538830858] [twist_mux]: Topic handler 'topics.desencalhe' subscribed to topic 'unstuck_vel': timeout = 0.500000s , priority = 30.
+[twist_mux-16] [INFO] [1790689197.541763995] [twist_mux]: Topic handler 'topics.direcional' subscribed to topic 'dpad_vel': timeout = 0.300000s , priority = 110.
+[twist_mux-16] [INFO] [1790689197.543607942] [twist_mux]: Topic handler 'topics.joystick' subscribed to topic 'joy_vel': timeout = 0.500000s , priority = 100.
+[smoother_server-9] [INFO] [1790689197.545331370] [smoother_server]: Creating smoother server
+[lifecycle_manager-12] [INFO] [1790689197.556651062] [lifecycle_manager_pilha]: Creating
+[parameter_bridge-4] [INFO] [1790689197.560365148] [ros_gz_bridge]: Creating GZ->ROS Bridge: [/clock (gz.msgs.Clock) -> /clock (rosgraph_msgs/msg/Clock)] (Lazy 0)
+[create-5] [INFO] [1790689197.562667821] [ros_gz_sim]: Requesting list of world names.
+[controller_server-10] [INFO] [1790689197.567816161] [local_costmap.local_costmap]: 
+[controller_server-10] 	local_costmap lifecycle node launched. 
+[controller_server-10] 	Waiting on external lifecycle transitions to activate
+[controller_server-10] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[controller_server-10] [INFO] [1790689197.572153855] [local_costmap.local_costmap]: Creating Costmap
+[collision_monitor-15] [INFO] [1790689197.572687626] [collision_monitor]: 
+[collision_monitor-15] 	collision_monitor lifecycle node launched. 
+[collision_monitor-15] 	Waiting on external lifecycle transitions to activate
+[collision_monitor-15] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[planner_server-8] [INFO] [1790689197.577978525] [planner_server]: 
+[planner_server-8] 	planner_server lifecycle node launched. 
+[planner_server-8] 	Waiting on external lifecycle transitions to activate
+[planner_server-8] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[planner_server-8] [INFO] [1790689197.580599426] [planner_server]: Creating
+[parameter_bridge-4] [INFO] [1790689197.581228314] [ros_gz_bridge]: Creating GZ->ROS Bridge: [/Odometry (gz.msgs.Odometry) -> /Odometry (nav_msgs/msg/Odometry)] (Lazy 0)
+[lifecycle_manager-12] [INFO] [1790689197.589867472] [lifecycle_manager_pilha]: [34m[1mCreating and initializing lifecycle service clients[0m[0m
+[lifecycle_manager-12] [INFO] [1790689197.602594977] [lifecycle_manager_pilha]: [34m[1mStarting managed nodes bringup...[0m[0m
+[lifecycle_manager-12] [INFO] [1790689197.602643054] [lifecycle_manager_pilha]: [34m[1mConfiguring map_server[0m[0m
+[map_server-7] [INFO] [1790689197.603312219] [map_server]: Configuring
+[map_server-7] [INFO] [1790689197.603389282] [map_io]: Loading yaml file: /home/luiz-santarosa/Workspace/Controle_robo_livox/maps/pista_obstaculos.yaml
+[map_server-7] [INFO] [1790689197.605085990] [map_io]: resolution: 0.05
+[map_server-7] [INFO] [1790689197.605143575] [map_io]: origin[0]: 0
+[map_server-7] [INFO] [1790689197.605152745] [map_io]: origin[1]: 0
+[map_server-7] [INFO] [1790689197.605158492] [map_io]: origin[2]: 0
+[map_server-7] [INFO] [1790689197.605164587] [map_io]: free_thresh: 0.196
+[map_server-7] [INFO] [1790689197.605170769] [map_io]: occupied_thresh: 0.65
+[map_server-7] [INFO] [1790689197.605178575] [map_io]: mode: trinary
+[map_server-7] [INFO] [1790689197.605184904] [map_io]: negate: 0
+[parameter_bridge-4] [INFO] [1790689197.614649527] [ros_gz_bridge]: Creating GZ->ROS Bridge: [/tf_odom (gz.msgs.Pose_V) -> /tf_odom (tf2_msgs/msg/TFMessage)] (Lazy 0)
+[parameter_bridge-4] [INFO] [1790689197.632745384] [ros_gz_bridge]: Creating GZ->ROS Bridge: [/livox/lidar/points (gz.msgs.PointCloudPacked) -> /livox/lidar/points (sensor_msgs/msg/PointCloud2)] (Lazy 0)
+[map_server-7] [INFO] [1790689197.633761988] [map_io]: Loading image_file: /home/luiz-santarosa/Workspace/Controle_robo_livox/maps/pista_obstaculos.pgm
+[planner_server-8] [INFO] [1790689197.645413306] [global_costmap.global_costmap]: 
+[planner_server-8] 	global_costmap lifecycle node launched. 
+[planner_server-8] 	Waiting on external lifecycle transitions to activate
+[planner_server-8] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[planner_server-8] [INFO] [1790689197.646227184] [global_costmap.global_costmap]: Creating Costmap
+[map_server-7] [INFO] [1790689197.660264297] [map_io]: Read map /home/luiz-santarosa/Workspace/Controle_robo_livox/maps/pista_obstaculos.pgm: 240 X 160 map @ 0.05 m/cell
+[lifecycle_manager-12] [INFO] [1790689197.673440738] [lifecycle_manager_pilha]: [34m[1mConfiguring planner_server[0m[0m
+[planner_server-8] [INFO] [1790689197.674238234] [planner_server]: Configuring
+[planner_server-8] [INFO] [1790689197.674271243] [global_costmap.global_costmap]: Configuring
+[planner_server-8] [INFO] [1790689197.688285915] [global_costmap.global_costmap]: Using plugin "static_layer"
+[planner_server-8] [INFO] [1790689197.718611299] [global_costmap.global_costmap]: Subscribing to the map topic (/map) with transient local durability
+[planner_server-8] [INFO] [1790689197.722466793] [global_costmap.global_costmap]: Initialized plugin "static_layer"
+[planner_server-8] [INFO] [1790689197.722515504] [global_costmap.global_costmap]: Using plugin "obstacle_layer"
+[planner_server-8] [INFO] [1790689197.724643897] [global_costmap.global_costmap]: Subscribed to Topics: livox
+[planner_server-8] [INFO] [1790689197.740891140] [global_costmap.global_costmap]: Initialized plugin "obstacle_layer"
+[planner_server-8] [INFO] [1790689197.741705354] [global_costmap.global_costmap]: Using plugin "inflation_layer"
+[planner_server-8] [INFO] [1790689197.742731469] [global_costmap.global_costmap]: Initialized plugin "inflation_layer"
+[ros2-21] stdin is not a terminal device. Keyboard handling disabled.[INFO] [1790689197.874137196] [rosbag2_recorder]: Press SPACE for pausing/resuming
+[ros2-21] [INFO] [1790689197.874137446] [rosbag2_recorder]: Event publisher thread: Started
+[ros2-21] [INFO] [1790689197.968328694] [rosbag2_recorder]: Starting recording to '/home/luiz-santarosa/sessao-robo3/20260929_103954/corrida_2026-09-29_103956/bag'
+[ros2-21] [INFO] [1790689198.012823219] [rosbag2_recorder]: Listening for topics...
+[ros2-21] [INFO] [1790689198.012888435] [rosbag2_recorder]: Recording...
+[ros2-21] [INFO] [1790689198.014455229] [rosbag2_recorder]: Topics discovery started.
+[ros2-21] [INFO] [1790689198.014521599] [rosbag2_recorder]: use_sim_time set, waiting for /clock before starting recording...
+[planner_server-8] [INFO] [1790689198.136100160] [planner_server]: Created global planner plugin GridBased of type nav2_smac_planner::SmacPlanner2D
+[planner_server-8] [INFO] [1790689198.136178177] [planner_server]: Configuring GridBased of type SmacPlanner2D
+[planner_server-8] [INFO] [1790689198.139684233] [planner_server]: Configured plugin GridBased of type SmacPlanner2D with tolerance 0.25, maximum iterations 1000000, max on approach iterations 1000, and not allowing unknown traversal.
+[planner_server-8] [INFO] [1790689198.139751769] [planner_server]: Planner Server has GridBased  planners available.
+[lifecycle_manager-12] [INFO] [1790689198.174011782] [lifecycle_manager_pilha]: [34m[1mConfiguring smoother_server[0m[0m
+[smoother_server-9] [INFO] [1790689198.175009509] [smoother_server]: Configuring smoother server
+[smoother_server-9] [INFO] [1790689198.240981722] [smoother_server]: Created smoother : suave of type nav2_constrained_smoother/ConstrainedSmoother
+[heading_controller-14] [WARN] [1790689198.248812389] [heading_controller]: parâmetros NÃO MEDIDOS neste robô — a_dec=0.3 rad/s², zona_morta=0.1 m/s, bitola=0.27 m. Rodar tools/banco/ e corrigir (BO-3).
+[heading_controller-14] [INFO] [1790689198.249342469] [heading_controller]: pivô DISPONÍVEL acima de 0.74 rad/s — o robô consegue virar no próprio eixo
+[smoother_server-9] [INFO] [1790689198.250227621] [smoother_server]: Created smoother : simples of type nav2_smoother::SimpleSmoother
+[placa_simulada-3] [WARN] [1790689198.251203549] [placa_simulada]: placa MEDIDA (31-07): patamar de 0.009 a 0.864 m/s de comando vira SEMPRE 0.307 m/s de borda. Nessa faixa cmd_vel escolhe sentido, não módulo.
+[placa_simulada-3] [WARN] [1790689198.252354450] [placa_simulada]: latência 0.27 s, escala real 0.0372 rad/s/unidade (2.8x menor que a assumida pelo driver).
+[placa_simulada-3] [WARN] [1790689198.255455063] [placa_simulada]: atraso de DESLIGA 0.52 s: depois do comando zerar a placa CONTINUA empurrando (04-08, n=3). Num pulso curto quase todo o movimento acontece aí — pivô de 0,2 s gira 35,8° no robô, dos quais 35,4° com o comando já em zero.
+[placa_simulada-3] [WARN] [1790689198.256184024] [placa_simulada]: o robô ARCA (04-08): curvatura -0.817 1/m de frente, -0.098 de ré — 8.3x de assimetria. Não espere reta deste robô.
+[placa_simulada-3] [WARN] [1790689198.256881939] [placa_simulada]: para isso a esquerda entrega +39.1% de frente e -3.8% de ré (derivado, com rendimento de giro do Gazebo em 0.80). O encoder do robô mediu 11-12% / ~0%: a diferença é o termo de CORPO entrando disfarçado de roda. Modelo FENOMENOLÓGICO.
+[compensador_rumo-17] [WARN] [1790689198.261625176] [compensador_rumo]: compensador de rumo (decisão 011): ff -0.817 1/m frente, -0.098 ré; kp=0.25 ki=0.12, correção limitada a ±0.60 rad/s. Curva pedida (|wz|≥0.05) passa intocada.
+[compensador_rumo-17] [WARN] [1790689198.263366087] [compensador_rumo]: GANHO DA CADEIA 0.45 (decisão 038): o que a lei quer de giro sai dividido por ele, porque o robô entrega só essa fração do que se pede. Com 1,00 o nó volta ao comportamento de antes — e 1,00 é o que o ROBÔ REAL usa até alguém medir o ganho lá.
+[compensador_rumo-17] [WARN] [1790689198.264131788] [compensador_rumo]: FREIO LINEAR LIGADO (decisão 038): comando cortado com o robô andando vira contra-torque, soltando em 0.25 m/s, teto 1.0 s. Sem ele a placa segura 0,52 s e o robô anda +0,10 m depois do corte — foi a batida de 13-08, com o reflexo tendo cortado a 0,30 m da parede.
+[compensador_rumo-17] [WARN] [1790689198.264954190] [compensador_rumo]: ⚠️ ff HERDADO: curv_frente -0.8170 NÃO foi medido nesta sessão. A planta muda ~13,5% entre dias (04-08: −0,8031 · 05-08: −0,9116, faixas que não se tocam), e o resíduo disso é maior que o critério de aceitação da 011. Protocolo (decisão 013): três corridas SEM compensador, `medir.py --resumo curvatura`, e subir a pilha com `curv_frente:=<média> curv_medido_em:=<data>`.
+[smoother_server-9] [INFO] [1790689198.269703749] [smoother_server]: Created smoother : savgol of type nav2_smoother::SavitzkyGolaySmoother
+[smoother_server-9] [INFO] [1790689198.271780968] [smoother_server]: Smoother Server has suave simples savgol  smoothers available.
+[lifecycle_manager-12] [INFO] [1790689198.290412901] [lifecycle_manager_pilha]: [34m[1mConfiguring controller_server[0m[0m
+[controller_server-10] [INFO] [1790689198.290696472] [controller_server]: Configuring controller interface
+[controller_server-10] [INFO] [1790689198.290721669] [controller_server]: getting progress checker plugins..
+[controller_server-10] [INFO] [1790689198.290915731] [controller_server]: getting goal checker plugins..
+[controller_server-10] [INFO] [1790689198.291008280] [controller_server]: Controller frequency set to 5.0000Hz
+[controller_server-10] [INFO] [1790689198.291033844] [local_costmap.local_costmap]: Configuring
+[controller_server-10] [INFO] [1790689198.306990098] [local_costmap.local_costmap]: Using plugin "static_layer"
+[controller_server-10] [INFO] [1790689198.314844141] [local_costmap.local_costmap]: Subscribing to the map topic (/map) with transient local durability
+[controller_server-10] [INFO] [1790689198.316976064] [local_costmap.local_costmap]: Initialized plugin "static_layer"
+[controller_server-10] [INFO] [1790689198.317010555] [local_costmap.local_costmap]: Using plugin "obstacle_layer"
+[controller_server-10] [INFO] [1790689198.317523613] [local_costmap.local_costmap]: Subscribed to Topics: livox
+[controller_server-10] [INFO] [1790689198.334419195] [local_costmap.local_costmap]: Initialized plugin "obstacle_layer"
+[controller_server-10] [INFO] [1790689198.334453366] [local_costmap.local_costmap]: Using plugin "inflation_layer"
+[controller_server-10] [INFO] [1790689198.336650557] [local_costmap.local_costmap]: Initialized plugin "inflation_layer"
+[pointcloud_to_laserscan_node-6] [INFO] [1790689198.386421456] [scan_2d]: Got a subscriber to laserscan, starting pointcloud subscriber
+[controller_server-10] [INFO] [1790689198.397508395] [controller_server]: Created progress_checker : progress_checker of type nav2_controller::SimpleProgressChecker
+[controller_server-10] [INFO] [1790689198.407384751] [controller_server]: Controller Server has progress_checker  progress checkers available.
+[controller_server-10] [INFO] [1790689198.419044067] [controller_server]: Created goal checker : goal_checker of type nav2_controller::SimpleGoalChecker
+[controller_server-10] [INFO] [1790689198.419444227] [controller_server]: Controller Server has goal_checker  goal checkers available.
+[path_follower-18] [INFO] [1790689198.424917564] [path_follower]: log da corrida -> /home/luiz-santarosa/sessao-robo3/20260929_103954/seguidor_2026-09-29_103958.csv
+[path_follower-18] [INFO] [1790689198.425577223] [path_follower]: seguidor de pé — raio da máquina 0.37 m, mira 0.37 m em curva e 1.00 m em reta (040), piso de linear 0.203 m/s
+[path_follower-18] [INFO] [1790689198.426075735] [path_follower]: raio de chegada 0.25 m (mínimo viável 0.07 m)
+[controller_server-10] [INFO] [1790689198.430136156] [controller_server]: Created controller : FollowPath of type nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[controller_server-10] [INFO] [1790689198.455609241] [controller_server]: Controller Server has FollowPath  controllers available.
+[lifecycle_manager-12] [INFO] [1790689198.523858434] [lifecycle_manager_pilha]: [34m[1mConfiguring bt_navigator[0m[0m
+[bt_navigator-11] [INFO] [1790689198.524207518] [bt_navigator]: Configuring
+[bt_navigator-11] [INFO] [1790689198.540425797] [bt_navigator]: Creating navigator id navigate_to_pose of type nav2_bt_navigator::NavigateToPoseNavigator
+[bt_navigator-11] [WARN] [1790689198.581976429] [bt_navigator]: Error_code parameters were not set. Using default values of: follow_path_error_code compute_path_error_code
+[bt_navigator-11] Make sure these match your BT and there are not other sources of error codes youreported to your application
+[rviz2-20] [INFO] [1790689198.692065252] [rviz2]: Stereo is NOT SUPPORTED
+[rviz2-20] [INFO] [1790689198.692216970] [rviz2]: OpenGl version: 4.6 (GLSL 4.6)
+[rviz2-20] [INFO] [1790689198.761751508] [rviz2]: Stereo is NOT SUPPORTED
+[lifecycle_manager-12] [INFO] [1790689199.130350806] [lifecycle_manager_pilha]: [34m[1mConfiguring collision_monitor[0m[0m
+[collision_monitor-15] [INFO] [1790689199.132769462] [collision_monitor]: Configuring
+[collision_monitor-15] [INFO] [1790689199.153363139] [collision_monitor]: [livox]: Creating PointCloud
+[collision_monitor-15] [INFO] [1790689199.160107384] [collision_monitor]: [PolygonApproach]: Creating Polygon
+[collision_monitor-15] [INFO] [1790689199.167067934] [collision_monitor]: [PolygonStop]: Creating Polygon
+[lifecycle_manager-12] [INFO] [1790689199.208463264] [lifecycle_manager_pilha]: [34m[1mActivating map_server[0m[0m
+[map_server-7] [INFO] [1790689199.209208243] [map_server]: Activating
+[map_server-7] [INFO] [1790689199.209737867] [map_server]: Creating bond (map_server) to lifecycle manager.
+[controller_server-10] [INFO] [1790689199.210721330] [local_costmap.local_costmap]: StaticLayer: Resizing static layer to 240 X 160 at 0.050000 m/pix
+[planner_server-8] [INFO] [1790689199.210721917] [global_costmap.global_costmap]: StaticLayer: Resizing costmap to 240 X 160 at 0.050000 m/pix
+[create-5] [INFO] [1790689199.225078587] [ros_gz_sim]: Waiting messages on topic [robot_description].
+[freeze_capture-19] [INFO] [1790689199.225589056] [freeze_capture]: freeze_capture: chain=/home/luiz-santarosa/sessao-robo3/20260929_103954/freeze_capture.csv diag=/home/luiz-santarosa/sessao-robo3/20260929_103954/freeze_diag.csv
+[create-5] [INFO] [1790689199.239468862] [ros_gz_sim]: Entity creation successful.
+[lifecycle_manager-12] [INFO] [1790689199.321688617] [lifecycle_manager_pilha]: Server map_server connected with bond.
+[lifecycle_manager-12] [INFO] [1790689199.321769006] [lifecycle_manager_pilha]: [34m[1mActivating planner_server[0m[0m
+[planner_server-8] [INFO] [1790689199.322168682] [planner_server]: Activating
+[planner_server-8] [INFO] [1790689199.322219296] [global_costmap.global_costmap]: Activating
+[planner_server-8] [INFO] [1790689199.322233364] [global_costmap.global_costmap]: Checking transform
+[planner_server-8] [INFO] [1790689199.322292011] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Could not find a connection between 'map' and 'base_link' because they are not part of the same tree.Tf has two or more unconnected trees.
+[rviz2-20] [INFO] [1790689199.389242217] [rviz2]: Trying to create a map of size 240 x 160 using 1 swatches
+[INFO] [create-5]: process has finished cleanly [pid 1439211]
+[rviz2-20] [ERROR] [1790689199.399180529] [rviz2]: rviz/glsl120/indexed_8bit_image.vert
+[rviz2-20] rviz/glsl120/indexed_8bit_image.frag
+[rviz2-20]  GLSL link result : 
+[rviz2-20] active samplers with a different type refer to the same texture image unit
+[INFO] [spawner-22]: process started with pid [1439656]
+[planner_server-8] [INFO] [1790689199.822359761] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Could not find a connection between 'map' and 'base_link' because they are not part of the same tree.Tf has two or more unconnected trees.
+[spawner-22] [INFO] [1790689199.957699621] [spawner_joint_state_broadcaster]: waiting for service /controller_manager/list_controllers to become available...
+[gazebo-1] [1;33mWarning [Utils.cc:132][0m [/sdf/model[@name="robo3"]/link[@name="livox_frame"]/sensor[@name="livox_mid360"]/gz_frame_id:<urdf-string>:L0]: XML Element[gz_frame_id], child of element[sensor], not defined in SDF. Copying[gz_frame_id] as children of [sensor].
+[gazebo-1] [INFO] [1790689200.243707561] [gz_ros_control]: [gz_ros2_control] Fixed joint ['livox_joint'] (Entity='82') is skipped.
+[gazebo-1] [INFO] [1790689200.252739452] [gz_ros_control]: Loading controller_manager
+[gazebo-1] [INFO] [1790689200.309346186] [controller_manager]: Using ROS clock for triggering controller manager cycles.
+[planner_server-8] [INFO] [1790689200.322340478] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Could not find a connection between 'map' and 'base_link' because they are not part of the same tree.Tf has two or more unconnected trees.
+[gazebo-1] [INFO] [1790689200.328230670] [controller_manager]: Subscribing to '/robot_description' topic for robot description.
+[gazebo-1] [WARN] [1790689200.331698901] [gz_ros_control]: Waiting RM to load and initialize hardware...
+[planner_server-8] [INFO] [1790689200.822356391] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Could not find a connection between 'map' and 'base_link' because they are not part of the same tree.Tf has two or more unconnected trees.
+[gazebo-1] [INFO] [1790689201.152933286] [controller_manager]: Received robot description from topic.
+[gazebo-1] [INFO] [1790689201.153023603] [controller_manager]: Enforcing command limits is disabled. Command limits from URDF will be ignored.
+[gazebo-1] [INFO] [1790689201.161642063] [gz_ros_control]: The position_proportional_gain has been set to: 0.1
+[gazebo-1] [INFO] [1790689201.161753445] [gz_ros_control]: Loading joint: left_wheel_joint
+[gazebo-1] [INFO] [1790689201.161770410] [gz_ros_control]: 	State:
+[gazebo-1] [INFO] [1790689201.161780956] [gz_ros_control]: 		 position
+[gazebo-1] [INFO] [1790689201.161787010] [gz_ros_control]: 		 velocity
+[gazebo-1] [INFO] [1790689201.161800948] [gz_ros_control]: 	Command:
+[gazebo-1] [INFO] [1790689201.161807671] [gz_ros_control]: 		 velocity
+[gazebo-1] [INFO] [1790689201.161831987] [gz_ros_control]: Loading joint: right_wheel_joint
+[gazebo-1] [INFO] [1790689201.161839453] [gz_ros_control]: 	State:
+[gazebo-1] [INFO] [1790689201.161845481] [gz_ros_control]: 		 position
+[gazebo-1] [INFO] [1790689201.161852270] [gz_ros_control]: 		 velocity
+[gazebo-1] [INFO] [1790689201.161858931] [gz_ros_control]: 	Command:
+[gazebo-1] [INFO] [1790689201.161863613] [gz_ros_control]: 		 velocity
+[gazebo-1] [INFO] [1790689201.162444740] [controller_manager]: Initialize hardware 'GazeboSimSystem' 
+[gazebo-1] [WARN] [1790689201.162512497] [controller_manager.hardware_component.system.GazeboSimSystem]: Executor is not available during hardware component initialization for 'GazeboSimSystem'. Skipping node creation!
+[gazebo-1] [INFO] [1790689201.162621234] [controller_manager]: Successful initialization of hardware 'GazeboSimSystem'
+[gazebo-1] [INFO] [1790689201.162852242] [controller_manager]: Activating component 'GazeboSimSystem'.
+[gazebo-1] [INFO] [1790689201.163426102] [resource_manager]: 'configure' hardware 'GazeboSimSystem' 
+[gazebo-1] [INFO] [1790689201.163471737] [gz_ros_control]: System Successfully configured!
+[gazebo-1] [INFO] [1790689201.163513932] [resource_manager]: Successful 'configure' of hardware 'GazeboSimSystem'
+[gazebo-1] [INFO] [1790689201.163543372] [resource_manager]: 'activate' hardware 'GazeboSimSystem' 
+[gazebo-1] [INFO] [1790689201.163596406] [resource_manager]: Successful 'activate' of hardware 'GazeboSimSystem'
+[gazebo-1] [WARN] [1790689201.163852199] [controller_manager]: Component 'GazeboSimSystem' does not have read or write statistics initialized, skipping registration.
+[gazebo-1] [INFO] [1790689201.163890222] [controller_manager]: Resource Manager has been successfully initialized. Starting Controller Manager services...
+[gazebo-1] [INFO] [1790689201.217752201] [controller_manager]: Loading controller : 'joint_state_broadcaster' of type 'joint_state_broadcaster/JointStateBroadcaster'
+[gazebo-1] [INFO] [1790689201.217866787] [controller_manager]: Loading controller 'joint_state_broadcaster'
+[gazebo-1] [INFO] [1790689201.233837486] [controller_manager]: Controller 'joint_state_broadcaster' node arguments: --ros-args --params-file /home/luiz-santarosa/Workspace/Controle_robo_livox/install/robot_base/share/robot_base/config/hoverboard_controllers_sim_robo3.yaml -p use_sim_time:=true --param use_sim_time:=true 
+[spawner-22] [INFO] [1790689201.266687971] [spawner_joint_state_broadcaster]: Loaded joint_state_broadcaster
+[gazebo-1] [INFO] [1790689201.270267062] [controller_manager]: Configuring controller: 'joint_state_broadcaster'
+[gazebo-1] [INFO] [1790689201.270678533] [joint_state_broadcaster]: 'joints' or 'interfaces' parameter is empty. All available state interfaces will be published
+[gazebo-1] [INFO] [1790689201.300754029] [controller_manager]: Activating controllers: [ joint_state_broadcaster ]
+[planner_server-8] [INFO] [1790689201.322339487] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Could not find a connection between 'map' and 'base_link' because they are not part of the same tree.Tf has two or more unconnected trees.
+[planner_server-8] [INFO] [1790689201.824181222] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Could not find a connection between 'map' and 'base_link' because they are not part of the same tree.Tf has two or more unconnected trees.
+[planner_server-8] [INFO] [1790689202.322388180] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Could not find a connection between 'map' and 'base_link' because they are not part of the same tree.Tf has two or more unconnected trees.
+[ros2-21] [INFO] [1790689202.450361538] [rosbag2_recorder]: Sim time /clock found, starting recording.
+[ros2-21] [WARN] [1790689202.455030925] [ROSBAG2_TRANSPORT]: Hidden topics are not recorded. Enable them with --include-hidden-topics
+[ros2-21] [INFO] [1790689202.476609650] [rosbag2_recorder]: Subscribed to topic '/local_costmap/static_layer'
+[ros2-21] [INFO] [1790689202.486316120] [rosbag2_recorder]: Subscribed to topic '/local_costmap/obstacle_layer_raw'
+[ros2-21] [INFO] [1790689202.492824438] [rosbag2_recorder]: Subscribed to topic '/livox/pontos'
+[gazebo-1] [WARN] [1790689202.497353025] [gz_ros_control]:  Desired controller update period (0.1 s) is slower than the gazebo simulation period (0.001 s).
+[ros2-21] [INFO] [1790689202.497629941] [rosbag2_recorder]: Subscribed to topic '/local_costmap/costmap_updates'
+[ros2-21] [INFO] [1790689202.500812086] [rosbag2_recorder]: Subscribed to topic '/local_costmap/costmap_raw_updates'
+[ros2-21] [INFO] [1790689202.501868791] [rosbag2_recorder]: Subscribed to topic '/local_costmap/costmap_raw'
+[ros2-21] [INFO] [1790689202.505150425] [rosbag2_recorder]: Subscribed to topic '/local_costmap/local_costmap/transition_event'
+[ros2-21] [INFO] [1790689202.506139239] [rosbag2_recorder]: Subscribed to topic '/local_costmap/obstacle_layer_updates'
+[ros2-21] [INFO] [1790689202.507046352] [rosbag2_recorder]: Subscribed to topic '/global_costmap/clearing_endpoints'
+[ros2-21] [INFO] [1790689202.507956285] [rosbag2_recorder]: Subscribed to topic '/local_costmap/static_layer_raw_updates'
+[ros2-21] [INFO] [1790689202.508942539] [rosbag2_recorder]: Subscribed to topic '/local_costmap/obstacle_layer'
+[ros2-21] [INFO] [1790689202.512506004] [rosbag2_recorder]: Subscribed to topic '/joint_states'
+[ros2-21] [INFO] [1790689202.513697942] [rosbag2_recorder]: Subscribed to topic '/joint_state_broadcaster/transition_event'
+[ros2-21] [INFO] [1790689202.514994623] [rosbag2_recorder]: Subscribed to topic '/global_costmap/obstacle_layer_updates'
+[ros2-21] [INFO] [1790689202.516141326] [rosbag2_recorder]: Subscribed to topic '/local_costmap/costmap'
+[ros2-21] [INFO] [1790689202.520728214] [rosbag2_recorder]: Subscribed to topic '/controller_manager/introspection_data/values'
+[ros2-21] [INFO] [1790689202.524151407] [rosbag2_recorder]: Subscribed to topic '/initialpose'
+[ros2-21] [INFO] [1790689202.531558067] [rosbag2_recorder]: Subscribed to topic '/hoverboard_base_controller/cmd_vel'
+[ros2-21] [INFO] [1790689202.539363147] [rosbag2_recorder]: Subscribed to topic '/heading_controller/rumo_alvo'
+[ros2-21] [INFO] [1790689202.543663276] [rosbag2_recorder]: Subscribed to topic '/local_costmap/clearing_endpoints'
+[ros2-21] [INFO] [1790689202.547584374] [rosbag2_recorder]: Subscribed to topic '/controller_manager/statistics/values'
+[ros2-21] [INFO] [1790689202.551593226] [rosbag2_recorder]: Subscribed to topic '/global_costmap/static_layer_raw_updates'
+[ros2-21] [INFO] [1790689202.554527666] [rosbag2_recorder]: Subscribed to topic '/local_costmap/obstacle_layer_raw_updates'
+[ros2-21] [INFO] [1790689202.559998762] [rosbag2_recorder]: Subscribed to topic '/auto_vel_raw'
+[ros2-21] [INFO] [1790689202.570668087] [rosbag2_recorder]: Subscribed to topic '/received_global_plan'
+[ros2-21] [INFO] [1790689202.573852345] [rosbag2_recorder]: Subscribed to topic '/controller_manager/statistics/full'
+[ros2-21] [INFO] [1790689202.576116000] [rosbag2_recorder]: Subscribed to topic '/plan_smoothed'
+[ros2-21] [INFO] [1790689202.582454855] [rosbag2_recorder]: Subscribed to topic '/Odometry'
+[ros2-21] [INFO] [1790689202.587759731] [rosbag2_recorder]: Subscribed to topic '/events/write_split'
+[ros2-21] [INFO] [1790689202.590231892] [rosbag2_recorder]: Subscribed to topic '/compensador_rumo/cmd_vel'
+[ros2-21] [INFO] [1790689202.595714373] [rosbag2_recorder]: Subscribed to topic '/global_costmap/costmap_raw_updates'
+[ros2-21] [INFO] [1790689202.599388137] [rosbag2_recorder]: Subscribed to topic '/map_server/transition_event'
+[ros2-21] [INFO] [1790689202.600756268] [rosbag2_recorder]: Subscribed to topic '/global_costmap/global_costmap/transition_event'
+[ros2-21] [INFO] [1790689202.602240603] [rosbag2_recorder]: Subscribed to topic '/planner_server/transition_event'
+[ros2-21] [INFO] [1790689202.604224089] [rosbag2_recorder]: Subscribed to topic '/global_costmap/costmap_updates'
+[ros2-21] [INFO] [1790689202.605957319] [rosbag2_recorder]: Subscribed to topic '/path_follower/plano_aceito'
+[ros2-21] [INFO] [1790689202.607761227] [rosbag2_recorder]: Subscribed to topic '/lookahead_collision_arc'
+[ros2-21] [INFO] [1790689202.609344484] [rosbag2_recorder]: Subscribed to topic '/map'
+[ros2-21] [INFO] [1790689202.612177887] [rosbag2_recorder]: Subscribed to topic '/plan'
+[ros2-21] [INFO] [1790689202.617389944] [rosbag2_recorder]: Subscribed to topic '/tf_static'
+[ros2-21] [INFO] [1790689202.619971772] [rosbag2_recorder]: Subscribed to topic '/controller_manager/statistics/names'
+[ros2-21] [INFO] [1790689202.622312377] [rosbag2_recorder]: Subscribed to topic '/robot_description'
+[ros2-21] [INFO] [1790689202.624313326] [rosbag2_recorder]: Subscribed to topic '/tf'
+[ros2-21] [INFO] [1790689202.628589883] [rosbag2_recorder]: Subscribed to topic '/polygon_approach'
+[ros2-21] [INFO] [1790689202.638210867] [rosbag2_recorder]: Subscribed to topic '/collision_monitor/collision_points_marker'
+[ros2-21] [INFO] [1790689202.640969531] [rosbag2_recorder]: Subscribed to topic '/bond'
+[ros2-21] [INFO] [1790689202.642646296] [rosbag2_recorder]: Subscribed to topic '/controller_manager/introspection_data/names'
+[ros2-21] [INFO] [1790689202.644842255] [rosbag2_recorder]: Subscribed to topic '/global_costmap/static_layer_updates'
+[ros2-21] [INFO] [1790689202.647789767] [rosbag2_recorder]: Subscribed to topic '/smoother_server/transition_event'
+[ros2-21] [INFO] [1790689202.649910253] [rosbag2_recorder]: Subscribed to topic '/local_costmap/static_layer_raw'
+[ros2-21] [INFO] [1790689202.652126736] [rosbag2_recorder]: Subscribed to topic '/curvature_lookahead_point'
+[ros2-21] [INFO] [1790689202.653919089] [rosbag2_recorder]: Subscribed to topic '/scan'
+[ros2-21] [INFO] [1790689202.658771435] [rosbag2_recorder]: Subscribed to topic '/parameter_events'
+[ros2-21] [INFO] [1790689202.662699713] [rosbag2_recorder]: Subscribed to topic '/controller_manager/activity'
+[ros2-21] [INFO] [1790689202.664110845] [rosbag2_recorder]: Subscribed to topic '/lookahead_point'
+[ros2-21] [INFO] [1790689202.667589765] [rosbag2_recorder]: Subscribed to topic '/diagnostics'
+[ros2-21] [INFO] [1790689202.668885091] [rosbag2_recorder]: Subscribed to topic '/local_costmap/static_layer_updates'
+[ros2-21] [INFO] [1790689202.670068779] [rosbag2_recorder]: Subscribed to topic '/unstuck_vel'
+[ros2-21] [INFO] [1790689202.674759725] [rosbag2_recorder]: Subscribed to topic '/rosout'
+[ros2-21] [INFO] [1790689202.676476586] [rosbag2_recorder]: Subscribed to topic '/nav2_cmd_vel_ignorado'
+[ros2-21] [INFO] [1790689202.678459345] [rosbag2_recorder]: Subscribed to topic '/collision_monitor_state'
+[ros2-21] [INFO] [1790689202.680644943] [rosbag2_recorder]: Subscribed to topic '/clock'
+[ros2-21] [INFO] [1790689202.682355376] [rosbag2_recorder]: Subscribed to topic '/heading_controller/velocidade_alvo'
+[ros2-21] [INFO] [1790689202.684129801] [rosbag2_recorder]: Subscribed to topic '/goal_pose'
+[ros2-21] [INFO] [1790689202.685415383] [rosbag2_recorder]: Subscribed to topic '/unsmoothed_plan'
+[ros2-21] [INFO] [1790689202.686633226] [rosbag2_recorder]: Subscribed to topic '/auto_vel'
+[ros2-21] [INFO] [1790689202.688606483] [rosbag2_recorder]: Subscribed to topic '/controller_server/transition_event'
+[ros2-21] [INFO] [1790689202.690735583] [rosbag2_recorder]: Subscribed to topic '/polygon_stop'
+[ros2-21] [INFO] [1790689202.698986978] [rosbag2_recorder]: Subscribed to topic '/dynamic_joint_states'
+[ros2-21] [INFO] [1790689202.701121233] [rosbag2_recorder]: Subscribed to topic '/bt_navigator/transition_event'
+[ros2-21] [INFO] [1790689202.703117339] [rosbag2_recorder]: Subscribed to topic '/cmd_vel_bruto'
+[ros2-21] [INFO] [1790689202.704908359] [rosbag2_recorder]: Subscribed to topic '/global_costmap/obstacle_layer_raw_updates'
+[ros2-21] [INFO] [1790689202.707121202] [rosbag2_recorder]: Subscribed to topic '/global_costmap/costmap'
+[ros2-21] [INFO] [1790689202.708846947] [rosbag2_recorder]: Subscribed to topic '/global_costmap/costmap_raw'
+[ros2-21] [INFO] [1790689202.711343628] [rosbag2_recorder]: Subscribed to topic '/collision_monitor/transition_event'
+[ros2-21] [INFO] [1790689202.713320623] [rosbag2_recorder]: Subscribed to topic '/controller_manager/introspection_data/full'
+[ros2-21] [INFO] [1790689202.714812717] [rosbag2_recorder]: Subscribed to topic '/global_costmap/obstacle_layer'
+[ros2-21] [INFO] [1790689202.716541861] [rosbag2_recorder]: Subscribed to topic '/local_costmap/voxel_grid'
+[ros2-21] [INFO] [1790689202.718154001] [rosbag2_recorder]: Subscribed to topic '/global_costmap/published_footprint'
+[ros2-21] [INFO] [1790689202.721431923] [rosbag2_recorder]: Subscribed to topic '/is_rotating_to_heading'
+[ros2-21] [INFO] [1790689202.723108347] [rosbag2_recorder]: Subscribed to topic '/global_costmap/static_layer'
+[ros2-21] [INFO] [1790689202.724466047] [rosbag2_recorder]: Subscribed to topic '/local_costmap/published_footprint'
+[ros2-21] [INFO] [1790689202.726299111] [rosbag2_recorder]: Subscribed to topic '/global_costmap/obstacle_layer_raw'
+[ros2-21] [INFO] [1790689202.727948434] [rosbag2_recorder]: Subscribed to topic '/global_costmap/static_layer_raw'
+[planner_server-8] [INFO] [1790689202.822342124] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Could not find a connection between 'map' and 'base_link' because they are not part of the same tree.Tf has two or more unconnected trees.
+[gazebo-1] [1;33mWarning [Utils.cc:132][0m [/sdf/model[@name="robo3"]/link[@name="livox_frame"]/sensor[@name="livox_mid360"]/gz_frame_id:<data-string>:L324]: XML Element[gz_frame_id], child of element[sensor], not defined in SDF. Copying[gz_frame_id] as children of [sensor].
+[gazebo-1] [INFO] [1790689202.981732416] [controller_manager]: Successfully switched controllers!
+[spawner-22] [INFO] [1790689203.103154660] [spawner_joint_state_broadcaster]: Configured and activated joint_state_broadcaster
+[INFO] [spawner-22]: process has finished cleanly [pid 1439656]
+[INFO] [spawner-23]: process started with pid [1439881]
+[planner_server-8] [INFO] [1790689203.322514556] [global_costmap.global_costmap]: start
+[spawner-23] [INFO] [1790689204.053818452] [spawner_hoverboard_base_controller]: waiting for service /controller_manager/list_controllers to become available...
+[planner_server-8] [INFO] [1790689204.377326417] [planner_server]: Activating plugin GridBased of type SmacPlanner2D
+[planner_server-8] [INFO] [1790689204.380625647] [planner_server]: Creating bond (planner_server) to lifecycle manager.
+[lifecycle_manager-12] [INFO] [1790689204.499074139] [lifecycle_manager_pilha]: Server planner_server connected with bond.
+[lifecycle_manager-12] [INFO] [1790689204.499158551] [lifecycle_manager_pilha]: [34m[1mActivating smoother_server[0m[0m
+[smoother_server-9] [INFO] [1790689204.500197752] [smoother_server]: Activating
+[smoother_server-9] [INFO] [1790689204.500259496] [smoother_server]: Activating smoother: suave of type nav2_constrained_smoother::ConstrainedSmoother
+[smoother_server-9] [INFO] [1790689204.500279144] [smoother_server]: Creating bond (smoother_server) to lifecycle manager.
+[gazebo-1] [INFO] [1790689204.597059499] [controller_manager]: Loading controller : 'hoverboard_base_controller' of type 'diff_drive_controller/DiffDriveController'
+[gazebo-1] [INFO] [1790689204.597170088] [controller_manager]: Loading controller 'hoverboard_base_controller'
+[lifecycle_manager-12] [INFO] [1790689204.608705996] [lifecycle_manager_pilha]: Server smoother_server connected with bond.
+[gazebo-1] [INFO] [1790689204.608742695] [controller_manager]: Controller 'hoverboard_base_controller' node arguments: --ros-args --params-file /home/luiz-santarosa/Workspace/Controle_robo_livox/install/robot_base/share/robot_base/config/hoverboard_controllers_sim_robo3.yaml -p use_sim_time:=true --param use_sim_time:=true 
+[lifecycle_manager-12] [INFO] [1790689204.609086576] [lifecycle_manager_pilha]: [34m[1mActivating controller_server[0m[0m
+[controller_server-10] [INFO] [1790689204.611049766] [controller_server]: Activating
+[controller_server-10] [INFO] [1790689204.611147243] [local_costmap.local_costmap]: Activating
+[controller_server-10] [INFO] [1790689204.611173621] [local_costmap.local_costmap]: Checking transform
+[controller_server-10] [INFO] [1790689204.611363554] [local_costmap.local_costmap]: start
+[ros2-21] [INFO] [1790689204.670324146] [rosbag2_recorder]: Subscribed to topic '/hoverboard_base_controller/transition_event'
+[spawner-23] [INFO] [1790689204.779122998] [spawner_hoverboard_base_controller]: Loaded hoverboard_base_controller
+[gazebo-1] [INFO] [1790689204.781681989] [controller_manager]: Configuring controller: 'hoverboard_base_controller'
+[gazebo-1] [WARN] [1790689204.781910159] [hoverboard_base_controller]: [deprecated] has_jerk_limits parameter is deprecated, instead set the respective limits to NAN
+[gazebo-1] [WARN] [1790689204.781952048] [hoverboard_base_controller]: [deprecated] has_jerk_limits parameter is deprecated, instead set the respective limits to NAN
+[ros2-21] [INFO] [1790689204.809914981] [rosbag2_recorder]: Subscribed to topic '/hoverboard_base_controller/odom'
+[controller_server-10] [INFO] [1790689204.817725948] [controller_server]: Activating controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[controller_server-10] [INFO] [1790689204.817814986] [controller_server]: Creating bond (controller_server) to lifecycle manager.
+[gazebo-1] [INFO] [1790689204.912723122] [controller_manager]: Activating controllers: [ hoverboard_base_controller ]
+[lifecycle_manager-12] [INFO] [1790689204.927002567] [lifecycle_manager_pilha]: Server controller_server connected with bond.
+[lifecycle_manager-12] [INFO] [1790689204.927171778] [lifecycle_manager_pilha]: [34m[1mActivating bt_navigator[0m[0m
+[bt_navigator-11] [INFO] [1790689204.927899857] [bt_navigator]: Activating
+[bt_navigator-11] [INFO] [1790689205.017354371] [bt_navigator]: Creating bond (bt_navigator) to lifecycle manager.
+[ros2-21] [INFO] [1790689205.045503966] [rosbag2_recorder]: Subscribed to topic '/behavior_tree_log'
+[gazebo-1] [INFO] [1790689205.050214592] [controller_manager]: Successfully switched controllers!
+[lifecycle_manager-12] [INFO] [1790689205.142336053] [lifecycle_manager_pilha]: Server bt_navigator connected with bond.
+[lifecycle_manager-12] [INFO] [1790689205.142431097] [lifecycle_manager_pilha]: [34m[1mActivating collision_monitor[0m[0m
+[collision_monitor-15] [INFO] [1790689205.142813930] [collision_monitor]: Activating
+[collision_monitor-15] [INFO] [1790689205.153834638] [collision_monitor]: Creating bond (collision_monitor) to lifecycle manager.
+[spawner-23] [INFO] [1790689205.158318334] [spawner_hoverboard_base_controller]: Configured and activated hoverboard_base_controller
+[lifecycle_manager-12] [INFO] [1790689205.263367195] [lifecycle_manager_pilha]: Server collision_monitor connected with bond.
+[lifecycle_manager-12] [INFO] [1790689205.263511211] [lifecycle_manager_pilha]: [34m[1mManaged nodes are active[0m[0m
+[lifecycle_manager-12] [INFO] [1790689205.263546334] [lifecycle_manager_pilha]: [34m[1mCreating bond timer...[0m[0m
+[INFO] [spawner-23]: process has finished cleanly [pid 1439881]
+[controller_server-10] [WARN] [1790689220.411841918] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.54 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689220.412733522] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.54 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689236.411760141] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.58 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689236.412238294] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.58 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689243.411784026] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.64 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689243.411906373] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.64 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689247.412898960] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.53 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689247.413025855] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.53 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689253.811794240] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.53 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689253.811913734] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.53 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689254.011814133] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.68 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689254.011932050] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.68 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689260.011803427] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.65 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689260.011935347] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.65 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689264.211818720] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.54 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689264.212134355] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.54 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689264.322969196] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.63 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689264.323104169] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.63 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689264.411793167] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.69 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689264.411966668] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.69 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689267.012736087] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.51 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689267.012872847] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.51 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689268.812318153] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.52 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689268.812596023] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.52 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689269.011775045] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.71 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689269.011878583] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.71 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689269.211791467] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.90 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689269.211911239] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.90 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689274.322960650] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.53 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689274.323541089] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.53 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689277.411782720] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.51 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689277.411922319] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.51 seconds, and it should be updated every 0.50 seconds.
+[rviz2-20] [INFO] [1790689299.242019881] [rviz2]: Setting goal pose: Frame:map, Position(11.0196, 1.41717, 0), Orientation(0, 0, -0.712391, 0.701783) = Angle: -1.5858
+[bt_navigator-11] [INFO] [1790689299.244119381] [bt_navigator]: Begin navigating from current location (2.00, 5.00) to (11.02, 1.42)
+[path_follower-18] [WARN] [1790689299.278965818] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[smoother_server-9] [INFO] [1790689299.286713395] [smoother_server]: Received a path to smooth.
+[controller_server-10] [INFO] [1790689299.306383928] [controller_server]: Received a goal, begin computing control effort.
+[controller_server-10] [WARN] [1790689299.306470061] [controller_server]: No goal checker was specified in parameter 'current_goal_checker'. Server will use only plugin loaded goal_checker . This warning will appear once.
+[controller_server-10] [WARN] [1790689299.306506368] [controller_server]: No progress checker was specified in parameter 'current_progress_checker'. Server will use only plugin loaded progress_checker . This warning will appear once.
+[path_follower-18] [INFO] [1790689304.151827816] [path_follower]: 88 amostras -> /home/luiz-santarosa/sessao-robo3/20260929_103954/seguidor_2026-09-29_103958.csv
+[smoother_server-9] [INFO] [1790689304.355879726] [smoother_server]: Received a path to smooth.
+[controller_server-10] [WARN] [1790689304.374861642] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-10] [INFO] [1790689304.506671893] [controller_server]: Passing new path to controller.
+[path_follower-18] [WARN] [1790689309.406310131] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[smoother_server-9] [INFO] [1790689309.415459410] [smoother_server]: Received a path to smooth.
+[controller_server-10] [WARN] [1790689309.434803238] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-10] [INFO] [1790689309.506674146] [controller_server]: Passing new path to controller.
+[controller_server-10] [WARN] [1790689310.411803542] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.57 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689310.412622521] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.57 seconds, and it should be updated every 0.50 seconds.
+[smoother_server-9] [INFO] [1790689314.475720029] [smoother_server]: Received a path to smooth.
+[controller_server-10] [WARN] [1790689314.494992730] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-10] [INFO] [1790689314.506666516] [controller_server]: Passing new path to controller.
+[path_follower-18] [WARN] [1790689319.525526578] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[smoother_server-9] [INFO] [1790689319.535467818] [smoother_server]: Received a path to smooth.
+[controller_server-10] [WARN] [1790689319.555488313] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-10] [INFO] [1790689319.707150945] [controller_server]: Passing new path to controller.
+[smoother_server-9] [INFO] [1790689324.576346425] [smoother_server]: Received a path to smooth.
+[controller_server-10] [WARN] [1790689324.585477672] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-10] [INFO] [1790689324.706681191] [controller_server]: Passing new path to controller.
+[controller_server-10] [WARN] [1790689329.011765391] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.59 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689329.011885323] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.59 seconds, and it should be updated every 0.50 seconds.
+[path_follower-18] [WARN] [1790689329.616030418] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[smoother_server-9] [INFO] [1790689329.625532269] [smoother_server]: Received a path to smooth.
+[controller_server-10] [WARN] [1790689329.635061698] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-10] [INFO] [1790689329.706666445] [controller_server]: Passing new path to controller.
+[smoother_server-9] [INFO] [1790689334.665119810] [smoother_server]: Received a path to smooth.
+[controller_server-10] [WARN] [1790689334.675266180] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-10] [INFO] [1790689334.706678153] [controller_server]: Passing new path to controller.
+[planner_server-8] [WARN] [1790689336.322984743] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.74 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689336.323125325] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.74 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689336.411770497] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.52 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689336.411868068] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.52 seconds, and it should be updated every 0.50 seconds.
+[path_follower-18] [INFO] [1790689337.300058605] [path_follower]: 688 amostras -> /home/luiz-santarosa/sessao-robo3/20260929_103954/seguidor_2026-09-29_103958.csv
+[controller_server-10] [WARN] [1790689337.611823271] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.58 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689337.611955251] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.58 seconds, and it should be updated every 0.50 seconds.
+[path_follower-18] [WARN] [1790689339.690856973] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[smoother_server-9] [INFO] [1790689339.705158698] [smoother_server]: Received a path to smooth.
+[controller_server-10] [INFO] [1790689339.706717624] [controller_server]: Passing new path to controller.
+[controller_server-10] [INFO] [1790689339.906683746] [controller_server]: Passing new path to controller.
+[controller_server-10] [WARN] [1790689343.011853589] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.52 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689343.012019485] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.52 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689344.011813324] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.56 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689344.011941260] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.56 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689344.211804474] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.75 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689344.212428453] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.75 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689344.323006947] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.85 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689344.323139634] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.85 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689344.411799591] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.93 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689344.411925096] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.93 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [ERROR] [1790689344.437219477] [controller_server]: Costmap timed out waiting for update
+[controller_server-10] [WARN] [1790689344.437388918] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-10] [INFO] [1790689344.454939567] [local_costmap.local_costmap]: Received request to clear entirely the local_costmap
+[controller_server-10] [INFO] [1790689344.455696054] [controller_server]: Received a goal, begin computing control effort.
+[smoother_server-9] [INFO] [1790689345.344949667] [smoother_server]: Received a path to smooth.
+[controller_server-10] [WARN] [1790689345.355059119] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-10] [INFO] [1790689345.456811782] [controller_server]: Passing new path to controller.
+[path_follower-18] [INFO] [1790689350.116932608] [path_follower]: parado (chegou)
+[compensador_rumo-17] [WARN] [1790689350.180971296] [compensador_rumo]: FREIO LINEAR: cortaram o comando com o robô a +0.30 m/s — contra-torque -0.50 (freando)
+[controller_server-10] [INFO] [1790689350.256293534] [controller_server]: Reached the goal!
+[bt_navigator-11] [INFO] [1790689350.284451512] [bt_navigator]: Goal succeeded
+[compensador_rumo-17] [WARN] [1790689350.702871204] [compensador_rumo]: FREIO LINEAR: cortaram o comando com o robô a +0.25 m/s — contra-torque -0.50 (freando)
+[controller_server-10] [WARN] [1790689357.611816095] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.57 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689357.611955217] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.57 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689369.323065974] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.54 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689369.323839146] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.54 seconds, and it should be updated every 0.50 seconds.
+[path_follower-18] [INFO] [1790689369.953706194] [path_follower]: 922 amostras -> /home/luiz-santarosa/sessao-robo3/20260929_103954/seguidor_2026-09-29_103958.csv
+[controller_server-10] [WARN] [1790689375.011999995] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.55 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689375.012159691] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.55 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689378.211840264] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.58 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689378.211992572] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.58 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689381.211892188] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.64 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689381.212024730] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.64 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689397.323426818] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.51 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689397.323555809] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.51 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689397.411887857] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.58 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689397.412007350] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.58 seconds, and it should be updated every 0.50 seconds.
+[path_follower-18] [INFO] [1790689402.552912520] [path_follower]: 922 amostras -> /home/luiz-santarosa/sessao-robo3/20260929_103954/seguidor_2026-09-29_103958.csv
+[controller_server-10] [WARN] [1790689408.011928984] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.60 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689408.012110023] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.60 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689415.611794696] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.65 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689415.611928604] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.65 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689419.211824251] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.51 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689419.211987509] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.51 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689419.322984392] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.58 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689419.323240144] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.58 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689419.411816998] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.64 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689419.411979102] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.64 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689420.211836715] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.58 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689420.212545439] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.58 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689431.411916514] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.50 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689431.412572742] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.50 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689431.611786478] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.65 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689431.612688731] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.65 seconds, and it should be updated every 0.50 seconds.
+[path_follower-18] [INFO] [1790689432.585735591] [path_follower]: 922 amostras -> /home/luiz-santarosa/sessao-robo3/20260929_103954/seguidor_2026-09-29_103958.csv
+[controller_server-10] [WARN] [1790689445.811837203] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.60 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689445.811981536] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.60 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689455.811775973] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.51 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689455.811948482] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.51 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689461.411848499] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.52 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689461.412014833] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.52 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689461.611826506] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.68 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689461.611966451] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.68 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689461.812044538] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.84 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689461.812201520] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.84 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689462.011883412] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.99 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689462.012020187] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.99 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689462.211837246] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 1.14 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689462.211981401] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 1.14 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689462.322986656] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 1.23 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689462.323136285] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 1.23 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689462.411816988] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 1.29 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689462.412194482] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 1.29 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689462.611826234] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 1.43 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689462.612432192] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 1.43 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689462.811983050] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 1.55 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689462.812229360] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 1.55 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689463.612320136] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.56 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689463.612466747] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.56 seconds, and it should be updated every 0.50 seconds.
+[path_follower-18] [INFO] [1790689464.036992091] [path_follower]: 922 amostras -> /home/luiz-santarosa/sessao-robo3/20260929_103954/seguidor_2026-09-29_103958.csv
+[controller_server-10] [WARN] [1790689466.412661882] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.52 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689466.412807719] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.52 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689466.611933583] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.68 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689466.612335299] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.68 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689486.011891217] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.51 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689486.012306045] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.51 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689497.011768369] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.67 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689497.011871902] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.67 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689497.325400063] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.86 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689497.325575656] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.86 seconds, and it should be updated every 0.50 seconds.
+[path_follower-18] [INFO] [1790689500.105216474] [path_follower]: 922 amostras -> /home/luiz-santarosa/sessao-robo3/20260929_103954/seguidor_2026-09-29_103958.csv
+[controller_server-10] [WARN] [1790689505.811843154] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.62 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689505.812810104] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.62 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689508.323301653] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.58 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689508.323445913] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.58 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689508.411788829] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.66 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689508.411903940] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.66 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689508.611891340] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.81 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689508.612061423] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.81 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689518.211864061] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.56 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689518.212005512] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.56 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689518.323007898] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.65 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689518.323142079] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.65 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689519.211827491] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.61 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689519.211960230] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.61 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689519.322969003] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.70 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689519.323120299] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.70 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689519.411851695] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.77 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689519.412948274] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.77 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689528.412271337] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.53 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689528.412460213] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.53 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689529.611827422] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.56 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689529.611959680] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.56 seconds, and it should be updated every 0.50 seconds.
+[path_follower-18] [INFO] [1790689530.334031861] [path_follower]: 922 amostras -> /home/luiz-santarosa/sessao-robo3/20260929_103954/seguidor_2026-09-29_103958.csv
+[controller_server-10] [WARN] [1790689531.811816237] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.60 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689531.811955694] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.60 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689549.011821443] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.62 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689549.011978380] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.62 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689549.211799689] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.79 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689549.212384951] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.79 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689554.812050031] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.54 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689554.812188252] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.54 seconds, and it should be updated every 0.50 seconds.
+[path_follower-18] [INFO] [1790689560.549765851] [path_follower]: 922 amostras -> /home/luiz-santarosa/sessao-robo3/20260929_103954/seguidor_2026-09-29_103958.csv
+[planner_server-8] [WARN] [1790689571.323004218] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.51 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689571.323189826] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.51 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689571.411810429] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.59 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689571.411949603] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.59 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689585.212289839] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.52 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689585.212417188] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.52 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689585.322956223] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.62 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689585.323251686] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.62 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689593.211819359] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.69 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689593.211951387] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.69 seconds, and it should be updated every 0.50 seconds.
+[path_follower-18] [INFO] [1790689593.902524305] [path_follower]: 922 amostras -> /home/luiz-santarosa/sessao-robo3/20260929_103954/seguidor_2026-09-29_103958.csv
+[controller_server-10] [WARN] [1790689611.411832235] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.59 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689611.411974559] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.59 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689616.411853737] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.54 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689616.412350019] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.54 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689618.415138239] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.61 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689618.415291286] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.61 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689618.611973054] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.76 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689618.612171440] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.76 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689618.812469141] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.93 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689618.812654178] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.93 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689621.611827181] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.56 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689621.611984363] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.56 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689621.812105576] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.72 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689621.812245486] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.72 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689622.011929465] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.87 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689622.012071885] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.87 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689622.211837494] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 1.02 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689622.212304218] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 1.02 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689622.411801442] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 1.18 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689622.412632492] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 1.18 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689624.011792213] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.59 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689624.011942118] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.59 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689626.813226808] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.66 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689626.813376674] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.66 seconds, and it should be updated every 0.50 seconds.
+[path_follower-18] [INFO] [1790689629.281220752] [path_follower]: 922 amostras -> /home/luiz-santarosa/sessao-robo3/20260929_103954/seguidor_2026-09-29_103958.csv
+[controller_server-10] [WARN] [1790689635.411788544] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.58 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689635.412047445] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.58 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689642.322983054] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.84 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689642.323194101] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.84 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689650.011833713] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.57 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689650.011977938] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.57 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689656.412014953] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.56 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689656.412146501] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.56 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689659.811896260] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.60 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689659.812057420] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.60 seconds, and it should be updated every 0.50 seconds.
+[path_follower-18] [INFO] [1790689664.050821329] [path_follower]: 922 amostras -> /home/luiz-santarosa/sessao-robo3/20260929_103954/seguidor_2026-09-29_103958.csv
+[controller_server-10] [WARN] [1790689666.811819216] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.55 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689666.811970077] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.55 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689689.811820429] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.61 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689689.811958381] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.61 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689696.211810629] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.60 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689696.211936611] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.60 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689696.412199040] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.78 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689696.412336665] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.78 seconds, and it should be updated every 0.50 seconds.
+[path_follower-18] [INFO] [1790689697.008176904] [path_follower]: 922 amostras -> /home/luiz-santarosa/sessao-robo3/20260929_103954/seguidor_2026-09-29_103958.csv
+[controller_server-10] [WARN] [1790689723.811790865] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.60 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689723.811916968] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.60 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689727.211817539] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.54 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689727.211947689] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.54 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689727.411802543] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.71 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689727.411923683] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.71 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689727.611856691] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.88 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689727.612055115] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.88 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689727.811921315] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 1.06 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689727.812049443] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 1.06 seconds, and it should be updated every 0.50 seconds.
+[collision_monitor-15] [WARN] [1790689728.049821424] [collision_monitor]: [livox]: Latest source and current collision monitor node timestamps differ on 1.054000 seconds. Ignoring the source.
+[collision_monitor-15] [WARN] [1790689728.050443705] [collision_monitor]: Robot to stop due to invalid source. Either due to data not published yet, or to lack of new data received within the sensor timeout, or if impossible to transform data to base frame
+[collision_monitor-15] [WARN] [1790689728.107915226] [collision_monitor]: [livox]: Latest source and current collision monitor node timestamps differ on 1.101000 seconds. Ignoring the source.
+[collision_monitor-15] [INFO] [1790689728.178580694] [collision_monitor]: Robot to continue normal operation
+[path_follower-18] [INFO] [1790689731.102761720] [path_follower]: 922 amostras -> /home/luiz-santarosa/sessao-robo3/20260929_103954/seguidor_2026-09-29_103958.csv
+[planner_server-8] [WARN] [1790689736.323059315] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.51 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689736.323214571] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.51 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689736.411901781] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.59 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689736.412064214] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.59 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689736.612256836] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.74 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689736.614231155] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.74 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689745.211826386] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.53 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689745.211976896] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.53 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689750.411839187] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.64 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689750.411982120] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.64 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689754.611824205] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.57 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689754.611965137] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.57 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689755.612170427] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.57 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689755.612313392] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.57 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689755.812387000] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.75 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689755.812546988] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.75 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689758.612534408] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.56 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689758.612868231] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.56 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689758.811815736] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.74 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689758.812390565] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.74 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689759.011795355] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.92 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689759.012430722] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.92 seconds, and it should be updated every 0.50 seconds.
+[path_follower-18] [INFO] [1790689764.399872204] [path_follower]: 922 amostras -> /home/luiz-santarosa/sessao-robo3/20260929_103954/seguidor_2026-09-29_103958.csv
+[controller_server-10] [WARN] [1790689766.811822845] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.59 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689766.812579004] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.59 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689767.811814436] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.66 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689767.811946184] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.66 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689769.811845244] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.57 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689769.812005436] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.57 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689771.322947959] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.67 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689771.323117556] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.67 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689771.411896961] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.65 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689771.412089358] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.65 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689771.611909005] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.83 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689771.612039196] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.83 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689771.811793250] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.99 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689771.811903737] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.99 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689774.411960170] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.51 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689774.412090031] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.51 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689778.812258764] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.58 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689778.812530401] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.58 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689782.323044611] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.58 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689782.323287846] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.58 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689789.612241522] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.68 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689789.612368510] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.68 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689789.811877077] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.85 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689789.812944485] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.85 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689790.011859426] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 1.03 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689790.012301405] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 1.03 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689791.011870006] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.53 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689791.012013048] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.53 seconds, and it should be updated every 0.50 seconds.
+[path_follower-18] [INFO] [1790689798.678284272] [path_follower]: 922 amostras -> /home/luiz-santarosa/sessao-robo3/20260929_103954/seguidor_2026-09-29_103958.csv
+[controller_server-10] [WARN] [1790689826.811837740] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.53 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689826.811995504] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.53 seconds, and it should be updated every 0.50 seconds.
+[path_follower-18] [INFO] [1790689834.348636841] [path_follower]: 922 amostras -> /home/luiz-santarosa/sessao-robo3/20260929_103954/seguidor_2026-09-29_103958.csv
+[controller_server-10] [WARN] [1790689838.411852935] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.58 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689838.411990316] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.58 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689851.611812194] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.58 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689851.611981640] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.58 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689851.811827426] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.73 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689851.812171970] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.73 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689852.011794483] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.90 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689852.012221336] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.90 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689852.211790840] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 1.07 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689852.211901542] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 1.07 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689853.611812096] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.56 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689853.611999823] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.56 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689860.212125227] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.51 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689860.212244533] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.51 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689860.322950551] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.82 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689860.323060480] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.82 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689860.411920623] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.69 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689860.412103854] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.69 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689863.812250502] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.53 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689863.812398960] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.53 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689868.411818527] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.57 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689868.411966329] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.57 seconds, and it should be updated every 0.50 seconds.
+[path_follower-18] [INFO] [1790689869.612212095] [path_follower]: 922 amostras -> /home/luiz-santarosa/sessao-robo3/20260929_103954/seguidor_2026-09-29_103958.csv
+[controller_server-10] [WARN] [1790689873.811782543] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.55 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689873.811895927] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.55 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689874.012052930] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.71 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689874.012253840] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.71 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689874.212737111] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.89 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689874.212875228] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.89 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689874.411963402] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 1.06 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689874.412769677] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 1.06 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689874.612515192] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 1.24 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689874.612660668] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 1.24 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689881.611789925] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.59 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689881.612640492] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.59 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689884.011808560] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.51 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689884.012420537] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.51 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689884.211819078] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.67 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689884.211969252] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.67 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689884.412282280] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.83 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689884.413845597] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.83 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689884.611876377] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.99 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689884.613025263] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.99 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689885.611797015] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.60 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689885.611954530] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.60 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689885.812281479] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.77 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689885.812398949] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.77 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689899.011787800] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.61 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689899.011969285] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.61 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689899.212106901] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.75 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689899.212255422] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.75 seconds, and it should be updated every 0.50 seconds.
+[path_follower-18] [INFO] [1790689899.879882549] [path_follower]: 922 amostras -> /home/luiz-santarosa/sessao-robo3/20260929_103954/seguidor_2026-09-29_103958.csv
+[planner_server-8] [WARN] [1790689902.322981264] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.54 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689902.323132353] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.54 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689905.323005997] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.59 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790689905.323147911] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.59 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689905.611815075] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.66 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689905.611958182] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.66 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689913.011821496] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.55 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689913.012515407] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.56 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689914.211822017] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.62 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689914.211979957] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.62 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689914.412439634] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.78 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689914.412571015] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.78 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689915.211803636] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.63 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689915.211925743] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.63 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689916.011790463] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.58 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689916.011908592] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.58 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689917.611862617] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.54 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689917.612019425] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.54 seconds, and it should be updated every 0.50 seconds.
+[path_follower-18] [INFO] [1790689934.879677413] [path_follower]: 922 amostras -> /home/luiz-santarosa/sessao-robo3/20260929_103954/seguidor_2026-09-29_103958.csv
+[rviz2-20] [INFO] [1790689936.227011205] [rviz2]: Setting goal pose: Frame:map, Position(1.98959, 4.97654, 0), Orientation(0, 0, 0.687961, 0.725747) = Angle: 1.51735
+[bt_navigator-11] [INFO] [1790689936.228005809] [bt_navigator]: Begin navigating from current location (11.05, 1.56) to (1.99, 4.98)
+[path_follower-18] [WARN] [1790689936.251533034] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[smoother_server-9] [INFO] [1790689936.260498910] [smoother_server]: Received a path to smooth.
+[controller_server-10] [INFO] [1790689936.278977388] [controller_server]: Received a goal, begin computing control effort.
+[heading_controller-14] [INFO] [1790689936.324638821] [heading_controller]: PIVÔ: -176° de erro — parando para virar no eixo (arcar daria raio de ~0,8 m)
+[heading_controller-14] [INFO] [1790689938.154988084] [heading_controller]: FREIO: giro a -1.58 rad/s com a lei calada — contra-torque +1.00
+[heading_controller-14] [ERROR] [1790689940.244944837] [heading_controller]: PIVÔ DESISTIU — 1 pulsos e ainda faltam 7° — o resíduo é menor que o pivô mínimo desta máquina?
+[smoother_server-9] [INFO] [1790689941.318939573] [smoother_server]: Received a path to smooth.
+[controller_server-10] [WARN] [1790689941.329249411] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-10] [INFO] [1790689941.479278717] [controller_server]: Passing new path to controller.
+[path_follower-18] [WARN] [1790689942.857620158] [path_follower]: EMPERRADO com frente livre (0.66 m) — escape RETO para frente de até 0.20 m, remedindo a cada ciclo
+[controller_server-10] [WARN] [1790689943.012227834] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.58 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689943.012373025] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.58 seconds, and it should be updated every 0.50 seconds.
+[path_follower-18] [WARN] [1790689943.864660800] [path_follower]: fim do escape para frente: percorreu 0.21 m em 0.8 s
+[compensador_rumo-17] [WARN] [1790689943.866382677] [compensador_rumo]: FREIO LINEAR: cortaram o comando com o robô a +0.26 m/s — contra-torque -0.50 (marcha caiu abaixo do limiar)
+[controller_server-10] [WARN] [1790689944.011905362] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.62 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689944.012054710] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.62 seconds, and it should be updated every 0.50 seconds.
+[path_follower-18] [WARN] [1790689946.355950365] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[smoother_server-9] [INFO] [1790689946.359422888] [smoother_server]: Received a path to smooth.
+[controller_server-10] [WARN] [1790689946.379005892] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-10] [INFO] [1790689946.479131436] [controller_server]: Passing new path to controller.
+[controller_server-10] [WARN] [1790689949.012066709] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.54 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689949.012210742] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.54 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689949.211992417] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.70 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689949.212185969] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.70 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689949.411815371] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.82 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689949.411972111] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.82 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [ERROR] [1790689949.519276939] [controller_server]: Costmap timed out waiting for update
+[controller_server-10] [WARN] [1790689949.519517703] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-10] [INFO] [1790689949.540045686] [local_costmap.local_costmap]: Received request to clear entirely the local_costmap
+[controller_server-10] [INFO] [1790689949.541271263] [controller_server]: Received a goal, begin computing control effort.
+[smoother_server-9] [INFO] [1790689951.420778430] [smoother_server]: Received a path to smooth.
+[controller_server-10] [WARN] [1790689951.429522697] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-10] [INFO] [1790689951.541450002] [controller_server]: Passing new path to controller.
+[path_follower-18] [WARN] [1790689956.457985180] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[smoother_server-9] [INFO] [1790689956.469030685] [smoother_server]: Received a path to smooth.
+[controller_server-10] [WARN] [1790689956.473397899] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-10] [INFO] [1790689956.541444995] [controller_server]: Passing new path to controller.
+[collision_monitor-15] [INFO] [1790689958.072618682] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[compensador_rumo-17] [WARN] [1790689958.074626185] [compensador_rumo]: FREIO LINEAR: cortaram o comando com o robô a +0.30 m/s — contra-torque -0.50 (voltaram a pedir marcha)
+[controller_server-10] [WARN] [1790689959.211782693] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.66 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689959.211898348] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.66 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689959.411790633] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.82 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689959.412559365] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.82 seconds, and it should be updated every 0.50 seconds.
+[heading_controller-14] [ERROR] [1790689960.338156917] [heading_controller]: ROBÔ PARADO COM COMANDO SAINDO há 0.6 s — pedindo v=0.500 m/s, wz=0.000 rad/s e a pose não mexe. Suspeita: zona morta (parâmetro=0.1 m/s, não medido). Rodar tools/banco/, ensaios de zona morta.
+[smoother_server-9] [INFO] [1790689961.509112304] [smoother_server]: Received a path to smooth.
+[controller_server-10] [WARN] [1790689961.512838106] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-10] [INFO] [1790689961.541454876] [controller_server]: Passing new path to controller.
+[path_follower-18] [WARN] [1790689963.167549036] [path_follower]: EMPERRADO com frente livre (4.87 m) — escape RETO para frente de até 0.20 m, remedindo a cada ciclo
+[path_follower-18] [WARN] [1790689964.698263053] [path_follower]: fim do escape para frente: percorreu 0.21 m em 1.3 s
+[compensador_rumo-17] [WARN] [1790689964.699430319] [compensador_rumo]: FREIO LINEAR: cortaram o comando com o robô a +0.27 m/s — contra-torque -0.50 (marcha caiu abaixo do limiar)
+[collision_monitor-15] [INFO] [1790689965.054765316] [collision_monitor]: Robot to continue normal operation
+[path_follower-18] [WARN] [1790689966.535279380] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[smoother_server-9] [INFO] [1790689966.548903562] [smoother_server]: Received a path to smooth.
+[controller_server-10] [WARN] [1790689966.568757353] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-10] [INFO] [1790689966.741504193] [controller_server]: Passing new path to controller.
+[controller_server-10] [WARN] [1790689968.611790074] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.55 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689968.611893490] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.55 seconds, and it should be updated every 0.50 seconds.
+[path_follower-18] [INFO] [1790689969.419010959] [path_follower]: 1495 amostras -> /home/luiz-santarosa/sessao-robo3/20260929_103954/seguidor_2026-09-29_103958.csv
+[smoother_server-9] [INFO] [1790689971.598841750] [smoother_server]: Received a path to smooth.
+[controller_server-10] [WARN] [1790689971.609639158] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-10] [INFO] [1790689971.741658123] [controller_server]: Passing new path to controller.
+[controller_server-10] [WARN] [1790689973.611797805] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.65 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689973.611929198] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.65 seconds, and it should be updated every 0.50 seconds.
+[path_follower-18] [WARN] [1790689976.620580825] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[smoother_server-9] [INFO] [1790689976.629191985] [smoother_server]: Received a path to smooth.
+[controller_server-10] [WARN] [1790689976.633727166] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-10] [INFO] [1790689976.741448772] [controller_server]: Passing new path to controller.
+[controller_server-10] [WARN] [1790689978.611773408] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.55 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689978.611869449] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.55 seconds, and it should be updated every 0.50 seconds.
+[smoother_server-9] [INFO] [1790689981.660197317] [smoother_server]: Received a path to smooth.
+[controller_server-10] [WARN] [1790689981.664234101] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-10] [INFO] [1790689981.741444865] [controller_server]: Passing new path to controller.
+[path_follower-18] [WARN] [1790689986.673296547] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[smoother_server-9] [INFO] [1790689986.689432419] [smoother_server]: Received a path to smooth.
+[controller_server-10] [WARN] [1790689986.699358451] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-10] [INFO] [1790689986.741494346] [controller_server]: Passing new path to controller.
+[controller_server-10] [WARN] [1790689988.011805383] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.63 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689988.012007514] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.63 seconds, and it should be updated every 0.50 seconds.
+[smoother_server-9] [INFO] [1790689991.729049823] [smoother_server]: Received a path to smooth.
+[controller_server-10] [WARN] [1790689991.730462540] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-10] [INFO] [1790689991.741445766] [controller_server]: Passing new path to controller.
+[path_follower-18] [WARN] [1790689996.740926327] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[smoother_server-9] [INFO] [1790689996.749135549] [smoother_server]: Received a path to smooth.
+[controller_server-10] [WARN] [1790689996.751222417] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-10] [INFO] [1790689996.941492450] [controller_server]: Passing new path to controller.
+[path_follower-18] [INFO] [1790689998.104215777] [path_follower]: parado (chegou)
+[controller_server-10] [INFO] [1790689998.141670612] [controller_server]: Reached the goal!
+[bt_navigator-11] [INFO] [1790689998.168559928] [bt_navigator]: Goal succeeded
+[compensador_rumo-17] [WARN] [1790689998.168781100] [compensador_rumo]: FREIO LINEAR: cortaram o comando com o robô a +0.28 m/s — contra-torque -0.50 (voltaram a pedir marcha)
+[controller_server-10] [WARN] [1790689998.411805616] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.51 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790689998.412648705] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.51 seconds, and it should be updated every 0.50 seconds.
+[compensador_rumo-17] [WARN] [1790689998.684202287] [compensador_rumo]: FREIO LINEAR: cortaram o comando com o robô a +0.26 m/s — contra-torque -0.50 (voltaram a pedir marcha)
+[path_follower-18] [INFO] [1790690002.702535653] [path_follower]: 2009 amostras -> /home/luiz-santarosa/sessao-robo3/20260929_103954/seguidor_2026-09-29_103958.csv
+[controller_server-10] [WARN] [1790690010.411803950] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.62 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790690010.411938509] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.62 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790690025.322978121] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.51 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790690025.323133081] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.51 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790690025.811795680] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.55 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790690025.812225584] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.55 seconds, and it should be updated every 0.50 seconds.
+[path_follower-18] [INFO] [1790690035.891499278] [path_follower]: 2009 amostras -> /home/luiz-santarosa/sessao-robo3/20260929_103954/seguidor_2026-09-29_103958.csv
+[controller_server-10] [WARN] [1790690040.411802177] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.51 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790690040.411958605] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.51 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790690040.611803820] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.69 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790690040.611929854] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.69 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790690053.811791445] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.57 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790690053.812442913] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.57 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790690056.212433450] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.58 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790690056.212554669] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.58 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790690066.812213397] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.50 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790690066.812337309] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.50 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790690067.011897504] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.67 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790690067.013249624] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.67 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790690067.211795023] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.85 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790690067.212031404] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.85 seconds, and it should be updated every 0.50 seconds.
+[path_follower-18] [INFO] [1790690070.080569013] [path_follower]: 2009 amostras -> /home/luiz-santarosa/sessao-robo3/20260929_103954/seguidor_2026-09-29_103958.csv
+[controller_server-10] [WARN] [1790690070.611903914] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.58 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790690070.612043158] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.58 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790690091.211859066] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.61 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790690091.211954991] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.61 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790690091.412222454] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.79 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790690091.412346491] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.79 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790690092.212147347] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.61 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790690092.212262801] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.61 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790690092.322961603] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.52 seconds, and it should be updated every 0.50 seconds.
+[planner_server-8] [WARN] [1790690092.323110093] [global_costmap.global_costmap]: The /livox/pontos observation buffer has not been updated for 0.52 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790690092.411797243] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.79 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790690092.411930848] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.79 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790690093.411768609] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.58 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790690093.412181522] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.58 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790690101.611770384] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.52 seconds, and it should be updated every 0.50 seconds.
+[controller_server-10] [WARN] [1790690101.611869502] [local_costmap.local_costmap]: The /livox/pontos observation buffer has not been updated for 0.52 seconds, and it should be updated every 0.50 seconds.
+[path_follower-18] [INFO] [1790690102.645445601] [path_follower]: 2009 amostras -> /home/luiz-santarosa/sessao-robo3/20260929_103954/seguidor_2026-09-29_103958.csv
+[WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+[collision_monitor-15] [INFO] [1790690112.514422620] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[collision_monitor-15] [INFO] [1790690112.514526879] [collision_monitor]: Running Nav2 LifecycleNode rcl preshutdown (collision_monitor)
+[collision_monitor-15] [INFO] [1790690112.514677292] [collision_monitor]: Deactivating
+[collision_monitor-15] [INFO] [1790690112.514717760] [collision_monitor]: Destroying bond (collision_monitor) to lifecycle manager.
+[twist_mux-16] [INFO] [1790690112.514481447] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[robot_state_publisher-2] [INFO] [1790690112.514652761] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[parameter_bridge-4] [INFO] [1790690112.514677612] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[ros2-21] [INFO] [1790690112.514684153] [rosbag2_recorder]: Topics discovery stopped.
+[ros2-21] [INFO] [1790690112.514970992] [rosbag2_recorder]: Pausing recording.
+[ros2-21] [INFO] [1790690112.517544305] [rosbag2_cpp]: Writing remaining messages from cache to the bag. It may take a while
+[smoother_server-9] [INFO] [1790690112.514759362] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[smoother_server-9] [INFO] [1790690112.514794244] [smoother_server]: Running Nav2 LifecycleNode rcl preshutdown (smoother_server)
+[smoother_server-9] [INFO] [1790690112.517777936] [smoother_server]: Deactivating
+[smoother_server-9] [INFO] [1790690112.517849179] [smoother_server]: Deactivating smoother: suave of type nav2_constrained_smoother::ConstrainedSmoother
+[smoother_server-9] [INFO] [1790690112.517874523] [smoother_server]: Destroying bond (smoother_server) to lifecycle manager.
+[bt_navigator-11] [INFO] [1790690112.514976853] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[bt_navigator-11] [INFO] [1790690112.515031555] [bt_navigator]: Running Nav2 LifecycleNode rcl preshutdown (bt_navigator)
+[bt_navigator-11] [INFO] [1790690112.515163058] [bt_navigator]: Deactivating
+[bt_navigator-11] [INFO] [1790690112.515203172] [bt_navigator]: Destroying bond (bt_navigator) to lifecycle manager.
+[rviz2-20] [INFO] [1790690112.515240202] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[pointcloud_to_laserscan_node-6] [INFO] [1790690112.515486114] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[static_transform_publisher-13] [INFO] [1790690112.515741987] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[controller_server-10] [INFO] [1790690112.517133937] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[controller_server-10] [INFO] [1790690112.517197208] [controller_server]: Running Nav2 LifecycleNode rcl preshutdown (controller_server)
+[controller_server-10] [INFO] [1790690112.518143497] [controller_server]: Deactivating
+[controller_server-10] [INFO] [1790690112.518173761] [controller_server]: Deactivating controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[controller_server-10] [INFO] [1790690112.518195329] [local_costmap.local_costmap]: Deactivating
+[planner_server-8] [INFO] [1790690112.518241051] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[planner_server-8] [INFO] [1790690112.518296872] [planner_server]: Running Nav2 LifecycleNode rcl preshutdown (planner_server)
+[planner_server-8] [INFO] [1790690112.518392531] [planner_server]: Deactivating
+[planner_server-8] [INFO] [1790690112.518445048] [global_costmap.global_costmap]: Deactivating
+[lifecycle_manager-12] [INFO] [1790690112.518978397] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[lifecycle_manager-12] [INFO] [1790690112.519075740] [lifecycle_manager_pilha]: Running Nav2 LifecycleManager rcl preshutdown (lifecycle_manager_pilha)
+[lifecycle_manager-12] [INFO] [1790690112.519158488] [lifecycle_manager_pilha]: [34m[1mTerminating bond timer...[0m[0m
+[INFO] [ros2-21]: sending signal 'SIGINT' to process[ros2-21]
+[INFO] [rviz2-20]: sending signal 'SIGINT' to process[rviz2-20]
+[INFO] [freeze_capture-19]: sending signal 'SIGINT' to process[freeze_capture-19]
+[INFO] [path_follower-18]: sending signal 'SIGINT' to process[path_follower-18]
+[INFO] [compensador_rumo-17]: sending signal 'SIGINT' to process[compensador_rumo-17]
+[INFO] [twist_mux-16]: sending signal 'SIGINT' to process[twist_mux-16]
+[INFO] [collision_monitor-15]: sending signal 'SIGINT' to process[collision_monitor-15]
+[INFO] [heading_controller-14]: sending signal 'SIGINT' to process[heading_controller-14]
+[ERROR] [twist_mux-16]: process has died [pid 1439226, exit code -2, cmd '/home/luiz-santarosa/Workspace/Controle_robo_livox/install/twist_mux/lib/twist_mux/twist_mux --ros-args -r __node:=twist_mux --params-file /home/luiz-santarosa/Workspace/Controle_robo_livox/install/robot_motion/share/robot_motion/config/twist_mux_pilha_robo3.yaml --params-file /tmp/launch_params_hlzb69j1 -r /cmd_vel_out:=/compensador_rumo/cmd_vel'].
+[INFO] [static_transform_publisher-13]: sending signal 'SIGINT' to process[static_transform_publisher-13]
+[INFO] [lifecycle_manager-12]: sending signal 'SIGINT' to process[lifecycle_manager-12]
+[ERROR] [collision_monitor-15]: process has died [pid 1439225, exit code -2, cmd '/opt/ros/jazzy/lib/nav2_collision_monitor/collision_monitor --ros-args -r __node:=collision_monitor --params-file /home/luiz-santarosa/sessao-robo3/20260929_103954/corrida_2026-09-29_103956/perfil_collision_monitor.yaml --params-file /tmp/launch_params_3ei11lpg'].
+[ERROR] [rviz2-20]: process has died [pid 1439230, exit code -2, cmd '/opt/ros/jazzy/lib/rviz2/rviz2 -d /home/luiz-santarosa/Workspace/Controle_robo_livox/install/robot_motion/share/robot_motion/rviz/pilha.rviz --ros-args -r __node:=rviz2 --params-file /tmp/launch_params_wwkkakyy'].
+[INFO] [bt_navigator-11]: sending signal 'SIGINT' to process[bt_navigator-11]
+[ERROR] [static_transform_publisher-13]: process has died [pid 1439223, exit code -2, cmd '/opt/ros/jazzy/lib/tf2_ros/static_transform_publisher --frame-id map --child-frame-id odom --ros-args -r __node:=tf_map_odom --params-file /tmp/launch_params_fdapjzeu'].
+[INFO] [controller_server-10]: sending signal 'SIGINT' to process[controller_server-10]
+[INFO] [smoother_server-9]: sending signal 'SIGINT' to process[smoother_server-9]
+[INFO] [planner_server-8]: sending signal 'SIGINT' to process[planner_server-8]
+[INFO] [map_server-7]: sending signal 'SIGINT' to process[map_server-7]
+[INFO] [pointcloud_to_laserscan_node-6]: sending signal 'SIGINT' to process[pointcloud_to_laserscan_node-6]
+[ERROR] [smoother_server-9]: process has died [pid 1439215, exit code -2, cmd '/opt/ros/jazzy/lib/nav2_smoother/smoother_server --ros-args -r __node:=smoother_server --params-file /home/luiz-santarosa/sessao-robo3/20260929_103954/corrida_2026-09-29_103956/perfil_nav2.yaml --params-file /tmp/launch_params_i3jr6phz'].
+[INFO] [parameter_bridge-4]: sending signal 'SIGINT' to process[parameter_bridge-4]
+[INFO] [placa_simulada-3]: sending signal 'SIGINT' to process[placa_simulada-3]
+[ERROR] [map_server-7]: process has died [pid 1439213, exit code -2, cmd '/opt/ros/jazzy/lib/nav2_map_server/map_server --ros-args -r __node:=map_server --params-file /home/luiz-santarosa/sessao-robo3/20260929_103954/corrida_2026-09-29_103956/perfil_nav2.yaml --params-file /tmp/launch_params_phdnt_8r'].
+[INFO] [robot_state_publisher-2]: sending signal 'SIGINT' to process[robot_state_publisher-2]
+[ERROR] [pointcloud_to_laserscan_node-6]: process has died [pid 1439212, exit code -2, cmd '/opt/ros/jazzy/lib/pointcloud_to_laserscan/pointcloud_to_laserscan_node --ros-args -r __node:=scan_2d --params-file /home/luiz-santarosa/Workspace/Controle_robo_livox/install/robot_base/share/robot_base/config/scan_2d.yaml --params-file /tmp/launch_params_69e_efi5 -r cloud_in:=/livox/pontos -r scan:=/scan'].
+[INFO] [gazebo-1]: sending signal 'SIGINT' to process[gazebo-1]
+[map_server-7] [INFO] [1790690112.522255076] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[map_server-7] [INFO] [1790690112.522362577] [map_server]: Running Nav2 LifecycleNode rcl preshutdown (map_server)
+[map_server-7] [INFO] [1790690112.522464608] [map_server]: Deactivating
+[map_server-7] [INFO] [1790690112.522486710] [map_server]: Destroying bond (map_server) to lifecycle manager.
+[map_server-7] [INFO] [1790690112.532888406] [map_server]: Cleaning up
+[map_server-7] [INFO] [1790690112.533323606] [map_server]: Destroying bond (map_server) to lifecycle manager.
+[map_server-7] [INFO] [1790690112.550905282] [map_server]: Destroying
+[ERROR] [robot_state_publisher-2]: process has died [pid 1439207, exit code -2, cmd '/opt/ros/jazzy/lib/robot_state_publisher/robot_state_publisher --ros-args --params-file /tmp/launch_params_jge2k7nf'].
+[collision_monitor-15] [INFO] [1790690112.526599503] [collision_monitor]: Cleaning up
+[collision_monitor-15] [INFO] [1790690112.526668467] [collision_monitor]: [PolygonApproach]: Destroying Polygon
+[collision_monitor-15] [INFO] [1790690112.526692402] [collision_monitor]: [PolygonStop]: Destroying Polygon
+[collision_monitor-15] [INFO] [1790690112.526711056] [collision_monitor]: [livox]: Destroying PointCloud
+[collision_monitor-15] [INFO] [1790690112.553756213] [collision_monitor]: Destroying bond (collision_monitor) to lifecycle manager.
+[bt_navigator-11] [INFO] [1790690112.527267443] [bt_navigator]: Cleaning up
+[smoother_server-9] [INFO] [1790690112.528685813] [smoother_server]: Cleaning up
+[smoother_server-9] [INFO] [1790690112.528727634] [smoother_server]: Cleaning up smoother: suave of type nav2_constrained_smoother::ConstrainedSmoother
+[smoother_server-9] [INFO] [1790690112.567491476] [smoother_server]: Destroying bond (smoother_server) to lifecycle manager.
+[smoother_server-9] [INFO] [1790690112.570434173] [smoother_server]: Destroying
+[freeze_capture-19] Traceback (most recent call last):
+[freeze_capture-19]   File "/home/luiz-santarosa/Workspace/Controle_robo_livox/install/robot_nav/lib/robot_nav/freeze_capture", line 33, in <module>
+[freeze_capture-19]     sys.exit(load_entry_point('robot-nav', 'console_scripts', 'freeze_capture')())
+[freeze_capture-19]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[freeze_capture-19]   File "/home/luiz-santarosa/Workspace/Controle_robo_livox/build/robot_nav/robot_nav/freeze_capture.py", line 294, in main
+[freeze_capture-19]     node.destroy_node()
+[freeze_capture-19]   File "/home/luiz-santarosa/Workspace/Controle_robo_livox/build/robot_nav/robot_nav/freeze_capture.py", line 283, in destroy_node
+[freeze_capture-19]     super().destroy_node()
+[freeze_capture-19]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/node.py", line 1962, in destroy_node
+[controller_server-10] [INFO] [1790690112.615372514] [controller_server]: Destroying bond (controller_server) to lifecycle manager.
+[freeze_capture-19]     self.destroy_service(self._services[0])
+[freeze_capture-19]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/node.py", line 1886, in destroy_service
+[freeze_capture-19]     service.destroy()
+[freeze_capture-19]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/service.py", line 123, in destroy
+[freeze_capture-19]     self.__service.destroy_when_not_in_use()
+[freeze_capture-19] KeyboardInterrupt
+[path_follower-18] Traceback (most recent call last):
+[path_follower-18]   File "/home/luiz-santarosa/Workspace/Controle_robo_livox/install/robot_motion/lib/robot_motion/path_follower", line 33, in <module>
+[path_follower-18]     sys.exit(load_entry_point('robot-motion', 'console_scripts', 'path_follower')())
+[path_follower-18]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[path_follower-18]   File "/home/luiz-santarosa/Workspace/Controle_robo_livox/build/robot_motion/robot_motion/path_follower.py", line 1633, in main
+[path_follower-18]     no.destroy_node()
+[path_follower-18]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/node.py", line 1958, in destroy_node
+[path_follower-18]     self.destroy_subscription(self._subscriptions[0])
+[path_follower-18]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/node.py", line 1854, in destroy_subscription
+[path_follower-18]     subscription.destroy()
+[path_follower-18]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/subscription.py", line 101, in destroy
+[path_follower-18]     self.handle.destroy_when_not_in_use()
+[path_follower-18] KeyboardInterrupt
+[controller_server-10] [INFO] [1790690112.625824036] [controller_server]: Cleaning up
+[controller_server-10] [INFO] [1790690112.625862727] [controller_server]: Cleaning up controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[controller_server-10] [INFO] [1790690112.625921934] [local_costmap.local_costmap]: Cleaning up
+[compensador_rumo-17] Traceback (most recent call last):
+[compensador_rumo-17]   File "/home/luiz-santarosa/Workspace/Controle_robo_livox/install/robot_motion/lib/robot_motion/compensador_rumo", line 33, in <module>
+[compensador_rumo-17]     sys.exit(load_entry_point('robot-motion', 'console_scripts', 'compensador_rumo')())
+[compensador_rumo-17]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[compensador_rumo-17]   File "/home/luiz-santarosa/Workspace/Controle_robo_livox/build/robot_motion/robot_motion/compensador_rumo.py", line 413, in main
+[compensador_rumo-17]     rclpy.shutdown()
+[compensador_rumo-17]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/__init__.py", line 134, in shutdown
+[compensador_rumo-17]     _shutdown(context=context)
+[compensador_rumo-17]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/utilities.py", line 82, in shutdown
+[compensador_rumo-17]     context.shutdown()
+[compensador_rumo-17]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/context.py", line 129, in shutdown
+[compensador_rumo-17]     self.__context.shutdown()
+[compensador_rumo-17] rclpy._rclpy_pybind11.RCLError: failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:333
+[compensador_rumo-17] Error in sys.excepthook:
+[compensador_rumo-17] Traceback (most recent call last):
+[compensador_rumo-17]   File "/usr/lib/python3/dist-packages/apport_python_hook.py", line 228, in partial_apport_excepthook
+[compensador_rumo-17]     return apport_excepthook(binary, exc_type, exc_obj, exc_tb)
+[compensador_rumo-17]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[compensador_rumo-17]   File "/usr/lib/python3/dist-packages/apport_python_hook.py", line 66, in apport_excepthook
+[compensador_rumo-17]     import apport.report
+[compensador_rumo-17]   File "/usr/lib/python3/dist-packages/apport/__init__.py", line 7, in <module>
+[compensador_rumo-17]     from apport.packaging_impl import impl as packaging
+[compensador_rumo-17]   File "/usr/lib/python3/dist-packages/apport/packaging_impl/__init__.py", line 33, in <module>
+[collision_monitor-15] [INFO] [1790690112.629205088] [collision_monitor]: Destroying
+[compensador_rumo-17]     impl = load_packaging_implementation()
+[compensador_rumo-17]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[compensador_rumo-17]   File "/usr/lib/python3/dist-packages/apport/packaging_impl/__init__.py", line 27, in load_packaging_implementation
+[compensador_rumo-17]     module = importlib.import_module(
+[compensador_rumo-17]              ^^^^^^^^^^^^^^^^^^^^^^^^
+[compensador_rumo-17]   File "/usr/lib/python3.12/importlib/__init__.py", line 90, in import_module
+[compensador_rumo-17]     return _bootstrap._gcd_import(name[level:], package, level)
+[compensador_rumo-17]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[compensador_rumo-17]   File "/usr/lib/python3/dist-packages/apport/packaging_impl/apt_dpkg.py", line 49, in <module>
+[compensador_rumo-17]     import apt
+[compensador_rumo-17]   File "/usr/lib/python3/dist-packages/apt/__init__.py", line 37, in <module>
+[compensador_rumo-17]     apt_pkg.init_config()
+[compensador_rumo-17] KeyboardInterrupt
+[compensador_rumo-17] 
+[compensador_rumo-17] Original exception was:
+[compensador_rumo-17] Traceback (most recent call last):
+[compensador_rumo-17]   File "/home/luiz-santarosa/Workspace/Controle_robo_livox/install/robot_motion/lib/robot_motion/compensador_rumo", line 33, in <module>
+[compensador_rumo-17]     sys.exit(load_entry_point('robot-motion', 'console_scripts', 'compensador_rumo')())
+[compensador_rumo-17]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[compensador_rumo-17]   File "/home/luiz-santarosa/Workspace/Controle_robo_livox/build/robot_motion/robot_motion/compensador_rumo.py", line 413, in main
+[heading_controller-14] Traceback (most recent call last):
+[heading_controller-14]   File "/home/luiz-santarosa/Workspace/Controle_robo_livox/install/robot_motion/lib/robot_motion/heading_controller", line 33, in <module>
+[heading_controller-14]     sys.exit(load_entry_point('robot-motion', 'console_scripts', 'heading_controller')())
+[heading_controller-14]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[heading_controller-14]   File "/home/luiz-santarosa/Workspace/Controle_robo_livox/build/robot_motion/robot_motion/heading_controller.py", line 533, in main
+[compensador_rumo-17]     rclpy.shutdown()
+[compensador_rumo-17]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/__init__.py", line 134, in shutdown
+[compensador_rumo-17]     _shutdown(context=context)
+[compensador_rumo-17]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/utilities.py", line 82, in shutdown
+[compensador_rumo-17]     context.shutdown()
+[compensador_rumo-17]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/context.py", line 129, in shutdown
+[compensador_rumo-17]     self.__context.shutdown()
+[compensador_rumo-17] rclpy._rclpy_pybind11.RCLError: failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:333
+[heading_controller-14]     no.publica(0.0, 0.0)
+[heading_controller-14]   File "/home/luiz-santarosa/Workspace/Controle_robo_livox/build/robot_motion/robot_motion/heading_controller.py", line 521, in publica
+[heading_controller-14]     self.pub.publish(m)
+[heading_controller-14]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/publisher.py", line 70, in publish
+[heading_controller-14]     self.__publisher.publish(msg)
+[heading_controller-14] rclpy._rclpy_pybind11.RCLError: Failed to publish: publisher's context is invalid, at ./src/rcl/publisher.c:423
+[heading_controller-14] Error in sys.excepthook:
+[heading_controller-14] Traceback (most recent call last):
+[heading_controller-14]   File "/usr/lib/python3/dist-packages/apport_python_hook.py", line 228, in partial_apport_excepthook
+[heading_controller-14]     return apport_excepthook(binary, exc_type, exc_obj, exc_tb)
+[heading_controller-14]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[heading_controller-14]   File "/usr/lib/python3/dist-packages/apport_python_hook.py", line 66, in apport_excepthook
+[heading_controller-14]     import apport.report
+[heading_controller-14]   File "/usr/lib/python3/dist-packages/apport/__init__.py", line 7, in <module>
+[heading_controller-14]     from apport.packaging_impl import impl as packaging
+[heading_controller-14]   File "/usr/lib/python3/dist-packages/apport/packaging_impl/__init__.py", line 33, in <module>
+[heading_controller-14]     impl = load_packaging_implementation()
+[heading_controller-14]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[heading_controller-14]   File "/usr/lib/python3/dist-packages/apport/packaging_impl/__init__.py", line 27, in load_packaging_implementation
+[heading_controller-14]     module = importlib.import_module(
+[heading_controller-14]              ^^^^^^^^^^^^^^^^^^^^^^^^
+[heading_controller-14]   File "/usr/lib/python3.12/importlib/__init__.py", line 90, in import_module
+[heading_controller-14]     return _bootstrap._gcd_import(name[level:], package, level)
+[heading_controller-14]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[heading_controller-14]   File "/usr/lib/python3/dist-packages/apport/packaging_impl/apt_dpkg.py", line 51, in <module>
+[heading_controller-14]     import aptsources.sourceslist as apt_sl
+[heading_controller-14]   File "/usr/lib/python3/dist-packages/aptsources/sourceslist.py", line 41, in <module>
+[ros2-21] [INFO] [1790690112.649931969] [rosbag2_recorder]: Recording stopped
+[ros2-21] [WARN] [1790690112.649978193] [rosbag2_recorder]: Number of messages lost on the transport layer: 2059
+[lifecycle_manager-12] [INFO] [1790690112.660118282] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[lifecycle_manager-12] [INFO] [1790690112.660277035] [lifecycle_manager_pilha]: Destroying lifecycle_manager_pilha
+[heading_controller-14]     from .distinfo import DistInfo, Template
+[heading_controller-14]   File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+[heading_controller-14]   File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+[heading_controller-14]   File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+[heading_controller-14]   File "<frozen importlib._bootstrap_external>", line 991, in exec_module
+[heading_controller-14]   File "<frozen importlib._bootstrap_external>", line 1087, in get_code
+[heading_controller-14]   File "<frozen importlib._bootstrap_external>", line 1187, in get_data
+[heading_controller-14] KeyboardInterrupt
+[heading_controller-14] 
+[heading_controller-14] Original exception was:
+[heading_controller-14] Traceback (most recent call last):
+[heading_controller-14]   File "/home/luiz-santarosa/Workspace/Controle_robo_livox/install/robot_motion/lib/robot_motion/heading_controller", line 33, in <module>
+[heading_controller-14]     sys.exit(load_entry_point('robot-motion', 'console_scripts', 'heading_controller')())
+[heading_controller-14]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[heading_controller-14]   File "/home/luiz-santarosa/Workspace/Controle_robo_livox/build/robot_motion/robot_motion/heading_controller.py", line 533, in main
+[heading_controller-14]     no.publica(0.0, 0.0)
+[heading_controller-14]   File "/home/luiz-santarosa/Workspace/Controle_robo_livox/build/robot_motion/robot_motion/heading_controller.py", line 521, in publica
+[heading_controller-14]     self.pub.publish(m)
+[heading_controller-14]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/publisher.py", line 70, in publish
+[heading_controller-14]     self.__publisher.publish(msg)
+[heading_controller-14] rclpy._rclpy_pybind11.RCLError: Failed to publish: publisher's context is invalid, at ./src/rcl/publisher.c:423
+[ros2-21] [INFO] [1790690112.669851405] [rosbag2_recorder]: Event publisher thread: Exited
+[INFO] [parameter_bridge-4]: process has finished cleanly [pid 1439210]
+[parameter_bridge-4] [INFO] [1790690112.679788554] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[bt_navigator-11] [INFO] [1790690112.689966496] [bt_navigator]: Completed Cleaning up
+[bt_navigator-11] [INFO] [1790690112.690062028] [bt_navigator]: Destroying bond (bt_navigator) to lifecycle manager.
+[bt_navigator-11] [INFO] [1790690112.691013265] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[placa_simulada-3] Traceback (most recent call last):
+[placa_simulada-3]   File "/home/luiz-santarosa/Workspace/Controle_robo_livox/install/robot_base/lib/robot_base/placa_simulada", line 33, in <module>
+[placa_simulada-3]     sys.exit(load_entry_point('robot-base', 'console_scripts', 'placa_simulada')())
+[placa_simulada-3]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[placa_simulada-3]   File "/home/luiz-santarosa/Workspace/Controle_robo_livox/build/robot_base/robot_base/placa_simulada.py", line 446, in main
+[placa_simulada-3]     rclpy.shutdown()
+[placa_simulada-3]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/__init__.py", line 134, in shutdown
+[placa_simulada-3]     _shutdown(context=context)
+[placa_simulada-3]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/utilities.py", line 82, in shutdown
+[placa_simulada-3]     context.shutdown()
+[placa_simulada-3]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/context.py", line 129, in shutdown
+[placa_simulada-3]     self.__context.shutdown()
+[placa_simulada-3] rclpy._rclpy_pybind11.RCLError: failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:333
+[placa_simulada-3] Error in sys.excepthook:
+[placa_simulada-3] Traceback (most recent call last):
+[placa_simulada-3]   File "/usr/lib/python3/dist-packages/apport_python_hook.py", line 228, in partial_apport_excepthook
+[placa_simulada-3]     return apport_excepthook(binary, exc_type, exc_obj, exc_tb)
+[placa_simulada-3]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[placa_simulada-3]   File "/usr/lib/python3/dist-packages/apport_python_hook.py", line 66, in apport_excepthook
+[placa_simulada-3]     import apport.report
+[placa_simulada-3]   File "/usr/lib/python3/dist-packages/apport/__init__.py", line 8, in <module>
+[placa_simulada-3]     from apport.report import Report
+[placa_simulada-3]   File "/usr/lib/python3/dist-packages/apport/report.py", line 41, in <module>
+[controller_server-10] [INFO] [1790690112.702372807] [controller_server]: Destroying bond (controller_server) to lifecycle manager.
+[controller_server-10] [INFO] [1790690112.705208133] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[bt_navigator-11] [INFO] [1790690112.706017240] [bt_navigator]: Destroying
+[controller_server-10] [INFO] [1790690112.707685149] [local_costmap.local_costmap]: Destroying
+[placa_simulada-3]     import xml.dom.minidom
+[placa_simulada-3]   File "/usr/lib/python3.12/xml/dom/minidom.py", line 23, in <module>
+[controller_server-10] [INFO] [1790690112.717734515] [controller_server]: Destroying
+[placa_simulada-3]     from xml.dom.xmlbuilder import DOMImplementationLS, DocumentLS
+[placa_simulada-3]   File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+[placa_simulada-3]   File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+[placa_simulada-3]   File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+[placa_simulada-3]   File "<frozen importlib._bootstrap_external>", line 991, in exec_module
+[placa_simulada-3]   File "<frozen importlib._bootstrap_external>", line 1087, in get_code
+[placa_simulada-3]   File "<frozen importlib._bootstrap_external>", line 1187, in get_data
+[placa_simulada-3] KeyboardInterrupt
+[placa_simulada-3] 
+[placa_simulada-3] Original exception was:
+[placa_simulada-3] Traceback (most recent call last):
+[placa_simulada-3]   File "/home/luiz-santarosa/Workspace/Controle_robo_livox/install/robot_base/lib/robot_base/placa_simulada", line 33, in <module>
+[placa_simulada-3]     sys.exit(load_entry_point('robot-base', 'console_scripts', 'placa_simulada')())
+[ERROR] [freeze_capture-19]: process has died [pid 1439229, exit code -2, cmd '/home/luiz-santarosa/Workspace/Controle_robo_livox/install/robot_nav/lib/robot_nav/freeze_capture --ros-args -r __node:=freeze_capture --params-file /tmp/launch_params_lqkza6y4'].
+[placa_simulada-3]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[placa_simulada-3]   File "/home/luiz-santarosa/Workspace/Controle_robo_livox/build/robot_base/robot_base/placa_simulada.py", line 446, in main
+[placa_simulada-3]     rclpy.shutdown()
+[placa_simulada-3]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/__init__.py", line 134, in shutdown
+[placa_simulada-3]     _shutdown(context=context)
+[placa_simulada-3]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/utilities.py", line 82, in shutdown
+[placa_simulada-3]     context.shutdown()
+[placa_simulada-3]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/context.py", line 129, in shutdown
+[placa_simulada-3]     self.__context.shutdown()
+[placa_simulada-3] rclpy._rclpy_pybind11.RCLError: failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:333
+[gazebo-1] [INFO] [1790690112.748270280] [controller_manager.pal_statistics]: Async messages lost 0
+[gazebo-1] [INFO] [1790690112.748345922] [controller_manager.pal_statistics]: publish_async_failures_ 0
+[gazebo-1] [INFO] [1790690112.751318103] [controller_manager.pal_statistics]: Async messages lost 222
+[gazebo-1] [INFO] [1790690112.751371872] [controller_manager.pal_statistics]: publish_async_failures_ 67
+[ERROR] [path_follower-18]: process has died [pid 1439228, exit code -2, cmd '/home/luiz-santarosa/Workspace/Controle_robo_livox/install/robot_motion/lib/robot_motion/path_follower --ros-args -r __node:=path_follower --params-file /tmp/launch_params_bczbrhqq --params-file /tmp/launch_params_6q0kkwn8 --params-file /tmp/launch_params_9mu03yt1 --params-file /tmp/launch_params_oaqsnbxs --params-file /tmp/launch_params_ek1j5tss --params-file /tmp/launch_params_xb9zh890 --params-file /tmp/launch_params___pkrh4s --params-file /tmp/launch_params_yf62yn3z --params-file /tmp/launch_params_jnu_mj_p --params-file /tmp/launch_params__07xfu1_ -r /path_follower/rumo_alvo:=/heading_controller/rumo_alvo -r /path_follower/velocidade_alvo:=/heading_controller/velocidade_alvo'].
+[INFO] [lifecycle_manager-12]: process has finished cleanly [pid 1439222]
+[INFO] [bt_navigator-11]: process has finished cleanly [pid 1439221]
+[INFO] [controller_server-10]: process has finished cleanly [pid 1439220]
+[ERROR] [compensador_rumo-17]: process has died [pid 1439227, exit code 1, cmd '/home/luiz-santarosa/Workspace/Controle_robo_livox/install/robot_motion/lib/robot_motion/compensador_rumo --ros-args -r __node:=compensador_rumo --params-file /tmp/launch_params_trha_roh --params-file /tmp/launch_params_s3ka24q3 --params-file /tmp/launch_params_4la2twnt -r /hoverboard_base_controller/cmd_vel:=/cmd_vel_bruto'].
+[ERROR] [ros2-21]: process has died [pid 1439231, exit code 2, cmd 'ros2 bag record -o /home/luiz-santarosa/sessao-robo3/20260929_103954/corrida_2026-09-29_103956/bag --all-topics --use-sim-time --storage-preset-profile fastwrite'].
+[ERROR] [heading_controller-14]: process has died [pid 1439224, exit code 1, cmd '/home/luiz-santarosa/Workspace/Controle_robo_livox/install/robot_motion/lib/robot_motion/heading_controller --ros-args -r __node:=heading_controller --params-file /home/luiz-santarosa/Workspace/Controle_robo_livox/install/robot_motion/share/robot_motion/config/movimentacao_sim.yaml --params-file /tmp/launch_params_fauv6d2b -r /hoverboard_base_controller/cmd_vel:=/auto_vel_raw'].
+[ERROR] [placa_simulada-3]: process has died [pid 1439208, exit code 1, cmd '/home/luiz-santarosa/Workspace/Controle_robo_livox/install/robot_base/lib/robot_base/placa_simulada --ros-args -r __node:=placa_simulada --params-file /tmp/launch_params_wec_ljjr'].
+[gazebo-1] /opt/ros/jazzy/opt/gz_sim_vendor/lib/ruby/gz/cmdsim8.rb:201:in `kill': No such process (Errno::ESRCH)
+[gazebo-1] 	from /opt/ros/jazzy/opt/gz_sim_vendor/lib/ruby/gz/cmdsim8.rb:201:in `killProcess'
+[gazebo-1] 	from /opt/ros/jazzy/opt/gz_sim_vendor/lib/ruby/gz/cmdsim8.rb:570:in `handle_signal'
+[gazebo-1] 	from /opt/ros/jazzy/opt/gz_sim_vendor/lib/ruby/gz/cmdsim8.rb:574:in `block in execute'
+[gazebo-1] 	from /opt/ros/jazzy/opt/gz_sim_vendor/lib/ruby/gz/cmdsim8.rb:584:in `wait2'
+[gazebo-1] 	from /opt/ros/jazzy/opt/gz_sim_vendor/lib/ruby/gz/cmdsim8.rb:584:in `execute'
+[gazebo-1] 	from /opt/ros/jazzy/opt/gz_tools_vendor/bin/gz:316:in `<main>'
+[ERROR] [gazebo-1]: process has died [pid 1439206, exit code -2, cmd 'ruby /opt/ros/jazzy/opt/gz_tools_vendor/bin/gz sim /home/luiz-santarosa/Workspace/Controle_robo_livox/worlds/pista_obstaculos.sdf -r  --force-version 8'].
+[planner_server-8] [INFO] [1790690113.323551037] [planner_server]: Deactivating plugin GridBased of type SmacPlanner2D
+[planner_server-8] [INFO] [1790690113.323688833] [planner_server]: Destroying bond (planner_server) to lifecycle manager.
+[planner_server-8] [INFO] [1790690113.334158557] [planner_server]: Cleaning up
+[planner_server-8] [INFO] [1790690113.343039175] [global_costmap.global_costmap]: Cleaning up
+[planner_server-8] [INFO] [1790690113.349320223] [planner_server]: Cleaning up plugin GridBased of type SmacPlanner2D
+[planner_server-8] [INFO] [1790690113.350481030] [planner_server]: Destroying plugin GridBased of type SmacPlanner2D
+[planner_server-8] [INFO] [1790690113.360944659] [planner_server]: Destroying bond (planner_server) to lifecycle manager.
+[planner_server-8] [INFO] [1790690113.363118138] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[planner_server-8] [INFO] [1790690113.366486790] [global_costmap.global_costmap]: Destroying
+[planner_server-8] [INFO] [1790690113.372780300] [planner_server]: Destroying
+[INFO] [planner_server-8]: process has finished cleanly [pid 1439214]
