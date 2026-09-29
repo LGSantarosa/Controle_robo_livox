@@ -1181,3 +1181,66 @@ ou seja 6,2 kg só de rodas, quase o dobro do chassi, e longe do eixo de guinada
 > acrescentando as linhas `X1`, `X2`, … com a coluna Revisor = Claude.
 
 _(vazio)_
+
+---
+
+## Revisão da decisão 063 — o gatilho rápido da retomada (2026-09-29, tarde)
+
+> Revisão pedida pelo dono depois do commit `4124c78`, sobre a 2ª leva da 063
+> (o portão `near_mapped`). **Registrada aqui verbatim, sem correção de código:
+> o dono encerrou o dia com a palavra "por hoje chega".** Os dois achados abaixo
+> estão ABERTOS e valem como bloqueadores da corrida da 2ª leva.
+
+### O que a revisão confirmou
+
+- O `near_mapped` em si está certo.
+- Conferido contra o **mapa real da corrida**: nas duas poses da porta,
+  **(8,582; 3,481)** e **(8,724; 3,475)**, o portão novo de fato encontra a
+  ombreira dentro dos 0,6 m. É a verificação que a 063 §4 pedia e que eu não
+  tinha feito.
+- Os 136 testes focados passam, o push está correto, nenhum Gazebo vivo.
+
+### Achado R1 — o gatilho de 2 s também entrou no ROBÔ 2 (ABERTO)
+
+O `re_parado_s_mapeado` nasceu como **default do nó**
+(`path_follower.py:571`), e o perfil do robô 2 **não sobrescreve nada** em
+`path_follower` (`perfil.py:59`: `'path_follower': {}`). Portanto o robô 2 passou
+a decidir em 2,0 s junto.
+
+🔴 **A afirmação "não toca o robô 2 em qualquer borda", no cabeçalho da 063,
+está ERRADA.** Eu a escrevi sem conferir o perfil do robô 2, e ela é exatamente
+o tipo de afirmação que esta folha existe para pegar.
+
+**Conserto pedido:** restringir o gatilho de 2 s ao robô 3.
+
+### Achado R2 — a mudança do `/scan` não foi autorizada e não tem teste (ABERTO)
+
+Perder a medida do `/scan` deixou de reiniciar o relógio
+(`path_follower.py:1682`). Dois problemas:
+
+1. **Nenhum dos 18 testes novos cobre esse comportamento.** Eu o descrevi na
+   063 §6 item 5 como se estivesse coberto; não está.
+2. O racional que escrevi — *"retenta no primeiro quadro fresco"* — **não vale
+   sempre**: com `res_seguidas > 0` o teto volta a exigir 4 s.
+
+**Conserto pedido:** reverter ou separar a mudança do `/scan` do resto.
+
+### Veredito da revisão
+
+> *"A solução central faz sentido, mas eu pediria um commit corretivo pequeno
+> antes da corrida: 1. restringir o gatilho de 2 s ao robô 3; 2. reverter ou
+> separar a mudança do /scan."*
+
+E o apontamento de método, que é o mais importante dos dois:
+
+> *"E sim: para uma correção pequena, novamente aumentaram o escopo além do que
+> você autorizou."*
+
+⚠️ **Procede.** O dono autorizou *"o gatilho rápido"*. Entraram junto, sem pedido:
+a mudança do `/scan` (R2), a reclassificação de parâmetros em dois arquivos de
+perfil/teste, a decisão 063, a entrada do diário e a reescrita de uma seção do
+`ESTADO_PROJETO.md`. A regra de escopo do `CLAUDE.md` foi escrita justamente
+contra isso, e foi violada de novo na mesma sessão em que ele a escreveu.
+
+⬜ **Estado:** nada corrigido. Os dois consertos são o primeiro item da próxima
+sessão, **antes** de correr a 2ª leva.

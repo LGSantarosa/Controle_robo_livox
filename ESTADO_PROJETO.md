@@ -79,7 +79,18 @@ frente livre (4,38 m)"*. Na porta 2 quem segura o robô é a **ombreira ao lado*
 e a sonda portada olhava só para a frente — a recuperação veio 6,84 s depois do
 `STOP` em vez de 2,0 s. Daí o `near_mapped` da 2ª leva.
 
+🔴 **REVISÃO DA MESMA TARDE ACHOU DOIS BLOQUEADORES** (verbatim em
+`docs/ROBO3_REVISAO_CRUZADA.md`; nada corrigido, o dono encerrou o dia):
+**R1** — o gatilho de 2 s **também entrou no robô 2**: nasceu como default do nó
+e o perfil do robô 2 não sobrescreve `path_follower` (`perfil.py:59`). A frase
+"não toca o robô 2" na 063 era falsa.
+**R2** — a mudança do `/scan` (não zerar o relógio ao perder a medida) **não foi
+autorizada e não tem teste**, e o racional dela não vale com `res_seguidas > 0`.
+A revisão confirmou o que presta: no mapa real, nas poses (8,582; 3,481) e
+(8,724; 3,475), o portão novo acha a ombreira dentro dos 0,6 m.
+
 ⬜ **Próximo desta frente, na ordem:**
+0. **os dois consertos da revisão (R1 e R2), antes de qualquer corrida**;
 1. **correr a 2ª leva** — a volta pela porta 2, medindo no log o tempo entre
    `STOP:PolygonStop` e a manobra (critério na 063 §4);
 2. **o escalonamento para o giro** depois de duas rés — pedido literal do dono

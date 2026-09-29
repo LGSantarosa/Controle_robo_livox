@@ -10,8 +10,14 @@ cinco parâmetros novos, o aborto do desencalhe), `perfil_robo3.yaml` e
 `test_perfil_robo3.py` (classificação), `test_lei_de_seguimento.py` e
 `test_gatilho_rapido.py` (18 testes novos)
 **Não toca**: o `collision_monitor` e seus polígonos, as manobras em si (ré,
-escape reto, pivô), os tetos `re_max_seguidas`/`re_teto_s`, o robô 2 em
-qualquer borda, Nav2, mux, o freio da 062
+escape reto, pivô), os tetos `re_max_seguidas`/`re_teto_s`, Nav2, mux, o freio
+da 062
+🔴 **ERRATA (revisão da mesma tarde): "não toca o robô 2" era FALSO** e saiu
+desta linha. O `re_parado_s_mapeado` nasceu como default do nó e o perfil do
+robô 2 não sobrescreve `path_follower` — o robô 2 passou a decidir em 2,0 s
+junto. Achado R1 em `docs/ROBO3_REVISAO_CRUZADA.md`, **aberto**, e bloqueador da
+corrida da 2ª leva junto com o R2 (a mudança do `/scan`, sem teste e sem
+autorização).
 
 ---
 
@@ -123,7 +129,10 @@ frente do robô, está do lado dele.**
    defeito de 14-08 de comparar `map` com `odom` sem transformada).
 4. `teto_de_emperramento(x, y, rumo)` — a fronteira do §3.
 5. O aborto do desencalhe deixou de zerar o relógio **quando o que falhou foi a
-   medida**. Os dois abortos tinham a mesma frase de log e causas opostas: vão
+   medida**. 🔴 **ABERTO (achado R2):** esta mudança não foi pedida pelo dono,
+   **nenhum dos 18 testes a cobre**, e o racional "retenta no primeiro quadro
+   fresco" não vale sempre — com `res_seguidas > 0` o teto volta a exigir 4 s.
+   Reverter ou separar. Os dois abortos tinham a mesma frase de log e causas opostas: vão
    que FECHOU é o mundo dizendo que a manobra não existe mais (zerar está
    certo); perder o `/scan` é o sensor falhando, e cobrar 4 s do robô por um
    soluço do sensor foi o que custou 7,73 s na corrida da manhã.
