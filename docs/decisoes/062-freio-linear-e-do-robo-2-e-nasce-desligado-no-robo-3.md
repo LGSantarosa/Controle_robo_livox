@@ -48,12 +48,20 @@ O que a corrida de 29-09 traz é a medida no robô 3 e o número: 9,6 cm.
 
 ## 3. Por que o freio existe (e por que fica no robô 2)
 
-A decisão 038 mediu, em 13-08, que a placa do robô 2 segura o último comando
-por **0,52 s**: o reflexo cortava a 0,30 m da parede e o robô comia 0,10 m
-dela. Sem contra-torque não havia o que parasse a inércia dentro desse tempo.
+A retenção da placa do robô 2 — `atraso_desliga` = **0,52 s** — foi medida **no
+robô, em 04-08**. Em **13-08** veio a consequência: na corrida da porta o
+reflexo cortou o comando a 0,30 m da parede e o robô andou mais 0,10 m com o
+comando em zero, encostando nela. A 038 é a resposta a isso, e a bancada dela
+(Gazebo, 13-08) mostrou que sem freio a sobra ficava em +0,107 e +0,127 m,
+contra −0,084 a +0,018 m com o freio engatado.
 
-No robô 3 o mesmo contra-torque não para — **inverte**. É a mesma lei, com uma
-planta que não tem aquela inércia para cancelar.
+No robô 3 o mesmo contra-torque não para — **inverte**.
+
+⚠️ **Cuidado com a explicação fácil.** É tentador dizer "o robô 3 não tem
+aquela inércia para cancelar", mas isso **não foi demonstrado**: a retenção da
+planta do robô 3 não foi medida, nem no simulador (que roda com a placa do
+robô 2) nem no robô físico. O que está provado é só isto, e é o que sustenta a
+decisão: **nesta simulação, o contra-torque produziu inversão da marcha**.
 
 ## 4. Decisão
 

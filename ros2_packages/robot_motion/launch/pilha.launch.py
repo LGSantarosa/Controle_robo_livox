@@ -377,8 +377,12 @@ def generate_launch_description():
     # 🔴 FREIO LINEAR (decisão 038) — LIGADO no robô 2, DESLIGADO no robô 3.
     #
     # O freio existe porque a placa do robô 2 segura o último comando por
-    # 0,52 s: sem contra-torque o reflexo cortava a 0,30 m da parede e o robô
-    # comia 0,10 m dela (batida de 13-08). No robô 3 ele não para — INVERTE.
+    # 0,52 s (`atraso_desliga`, medido NO ROBÔ em 04-08): sem contra-torque o
+    # reflexo cortava a 0,30 m da parede e o robô comia 0,10 m dela — a batida
+    # de 13-08. No robô 3 ele não para — INVERTE. ⚠️ E não diga que é porque o
+    # robô 3 "não tem inércia": a retenção da planta dele não foi medida, nem
+    # aqui (o sim usa a placa do robô 2) nem no robô físico. O provado é só a
+    # inversão, nesta simulação.
     # Medido na corrida `~/sessao-robo3/20260929_103954` (29-09, Gazebo):
     #
     #     t=-0,105 s  Nav2 chega, `/auto_vel` e a entrada do compensador = 0

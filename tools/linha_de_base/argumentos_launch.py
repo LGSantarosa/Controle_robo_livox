@@ -66,7 +66,7 @@ LAUNCHES = (
 # no 3. A extração roda sem `robo:=` na linha de comando, logo cai no robô 2 e
 # o que a trava vê é 'true' — ou seja, esta linha continua provando que o robô
 # 2 não mudou. Quem prova o 'false' do robô 3 é
-# `test_freio_linear_tem_default_por_robo`, em
+# `test_o_robo3_nasce_com_o_freio_desligado`, em
 # `ros2_packages/robot_motion/test/test_pilha_robo3.py`.
 NOVOS_PERMITIDOS = {
     'ros2_packages/robot_motion/launch/pilha.launch.py': {
