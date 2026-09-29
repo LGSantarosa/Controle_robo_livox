@@ -173,6 +173,64 @@ def passagens_estreitas(caminho, dados, largura_grade, altura_grade,
     return saida
 
 
+def mapa_ocupado(x, y, dados, largura_grade, altura_grade, resolucao,
+                 origem=(0.0, 0.0, 0.0), vizinhanca=0.22, ocupado_min=65):
+    """Há parede JÁ MAPEADA a até `vizinhanca` metros do ponto (x, y)?
+
+    Porte do `map_occupied` do robô 1 (`unstuck_supervisor`, recovery
+    contextual de 2026-06-22), e serve a um fim só: dizer se o bloqueio à
+    frente é coisa que o mapa já conhecia. Bloqueio conhecido autoriza decidir
+    CEDO — não há informação nova por vir esperando.
+
+    🔴 CÉLULA DESCONHECIDA (-1) E FORA DO MAPA CONTAM COMO LIVRES, ao contrário
+    de `passagens_estreitas`, onde contam como ocupadas. A inversão é
+    deliberada e a razão é o que cada resposta AUTORIZA:
+
+        passagens_estreitas   ocupado = "não invento vão aqui"
+                              -> desconhecido tem de contar como ocupado
+        esta função           ocupado = "encurto o relógio da recuperação"
+                              -> desconhecido tem de contar como LIVRE, senão
+                                 robô sem mapa (o `mapa:=nenhum` do robô real)
+                                 ganharia o gatilho rápido em toda parte
+
+    Ou seja: as duas erram para o lado seguro, e o lado seguro é o oposto nas
+    duas. Sem mapa, esta função nunca diz `True` e o teto cheio continua
+    valendo — o comportamento de hoje.
+
+    `ocupado_min` 65 e `vizinhanca` 0,22 m são os do robô 1. A vizinhança
+    existe porque a parede do mapa é rasterizada e o ponto sondado vem de
+    odometria: exigir a célula exata erraria por um pixel.
+    """
+    if (resolucao <= 0.0 or largura_grade <= 0 or altura_grade <= 0
+            or len(dados) != largura_grade * altura_grade
+            or vizinhanca < 0.0):
+        return False
+
+    ox, oy, oyaw = origem
+    co, so = math.cos(oyaw), math.sin(oyaw)
+    dx, dy = x - ox, y - oy
+    # mundo -> referencial da grade (a origem de OccupancyGrid pode girar)
+    gx = co * dx + so * dy
+    gy = -so * dx + co * dy
+    col0 = math.floor(gx / resolucao)
+    lin0 = math.floor(gy / resolucao)
+    raio = int(vizinhanca / resolucao) + 1
+    for dl in range(-raio, raio + 1):
+        for dc in range(-raio, raio + 1):
+            lin, col = lin0 + dl, col0 + dc
+            if not (0 <= col < largura_grade and 0 <= lin < altura_grade):
+                continue
+            valor = dados[lin * largura_grade + col]
+            if valor < 0 or valor < ocupado_min:
+                continue          # desconhecido e livre não encurtam nada
+            # Distância ao CENTRO da célula, no referencial da grade.
+            cx = (col + 0.5) * resolucao
+            cy = (lin + 0.5) * resolucao
+            if math.hypot(cx - gx, cy - gy) <= vizinhanca:
+                return True
+    return False
+
+
 def alvo_estavel_de_passagem(caminho, passagem, x, y, rumo_atual,
                              saida=1.00, meia_largura=0.2275, margem=0.03,
                              tolerancia_lateral=0.08,
@@ -797,6 +855,17 @@ class ProgressoDeAvanco:
     Só acusa depois de `parado_s` CONTÍNUOS sem ganhar `avanco_min` metros. O
     relógio zera a cada avanço real — dois travamentos curtos separados não
     somam para virar um disparo.
+
+    🔴 O TETO PODE SER MENOR NA CHAMADA (29-09), e é o gatilho rápido do robô 1
+    (`stuck_timeout_mapped`, 2,0 s contra os 5,0 s de lá). Medido na salinha em
+    29-09: a primeira recuperação só começou **9,91 s** depois do
+    `STOP:PolygonStop`, com `parado_s` valendo 4,0 — porque o robô avança em
+    soluços de poucos centímetros na porta e cada 5 cm zera o relógio. Quem
+    decide qual teto vale é o chamador, que é o único que sabe se o bloqueio à
+    frente é parede já MAPEADA (decisão conhecida, pode agir cedo) ou novidade
+    do sensor (espera o teto cheio).
+
+    O default continua sendo o teto do construtor: sem argumento, nada muda.
     """
 
     def __init__(self, parado_s=1.5, avanco_min=0.05):
@@ -809,13 +878,20 @@ class ProgressoDeAvanco:
         self.melhor = None
         self.desde = None
 
-    def atualiza(self, t, dist_ao_objetivo):
-        """Devolve True enquanto o robô estiver emperrado."""
+    def atualiza(self, t, dist_ao_objetivo, parado_s=None):
+        """Devolve True enquanto o robô estiver emperrado.
+
+        `parado_s` sobrescreve o teto SÓ nesta chamada — o relógio (`desde`) é
+        o mesmo, então alternar entre os dois tetos não perde tempo já contado
+        nem reinicia nada. Teto ausente, negativo ou zero cai no do
+        construtor: "sem teto" não pode virar "dispara sempre".
+        """
         if self.melhor is None or dist_ao_objetivo <= self.melhor - self.avanco_min:
             self.melhor = dist_ao_objetivo
             self.desde = t
             return False
-        return (t - self.desde) > self.parado_s
+        teto = self.parado_s if not parado_s or parado_s <= 0.0 else parado_s
+        return (t - self.desde) > teto
 
 
 def vao_no_corredor_traseiro(distancias, angulo_min, incremento, largura,

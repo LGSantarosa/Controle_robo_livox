@@ -271,6 +271,13 @@ herdados_provisorios:
 - parametro: path_follower:re_bloqueio_frente_max
   origem: 'robô 2: distâncias de desencalhe sintonizadas no robô 2'
   fecha: etapa 10
+- parametro: path_follower:re_mapeado_raio_perto
+  origem: 'robô 1: mapped_near_radius 0,6 m (2026-06-28, BO "demorou ~15 s pra
+    desencalhar do conhecido"); lá vem de meia-diagonal 0,25 + ~0,2 de registro
+    pose<->mapa do AMCL. Aqui a meia-diagonal é 0,314 e com localizacao:=fixa
+    não há registro a compensar — a folga efetiva é menor e o número precisa
+    ser medido'
+  fecha: etapa 10
 
 # Não depende do robô: fica igual sem precisar de medida.
 independentes_do_robo:
@@ -350,6 +357,16 @@ independentes_do_robo:
   motivo: contagem
 - parametro: path_follower:re_parado_s
   motivo: tempo de supervisão de progresso (política de software)
+- parametro: path_follower:re_parado_s_mapeado
+  motivo: tempo de supervisão de progresso quando o bloqueio já está no mapa
+    (política de software; porte do stuck_timeout_mapped do robô 1)
+- parametro: path_follower:re_mapeado_alcance
+  motivo: distância de DECISÃO à frente do para-choque, não medida do chassi —
+    quem carrega o corpo é o avanco_para_choque, ao qual ela é somada
+- parametro: path_follower:re_mapeado_vizinhanca
+  motivo: tolerância da rasterização do mapa contra o ponto vindo da odometria
+- parametro: path_follower:re_mapeado_limiar
+  motivo: limiar de ocupação do OccupancyGrid (0-100), propriedade do mapa
 - parametro: path_follower:re_teto_s
   motivo: teto de tempo da manobra (política de software)
 - parametro: path_follower:desencalhe_pivo_teto_s

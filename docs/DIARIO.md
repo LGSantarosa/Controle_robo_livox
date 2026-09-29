@@ -4,6 +4,83 @@
 > o que falhou E POR QUÊ. Fracasso documentado é resultado — vai pro artigo.
 > Decisões formais têm registro próprio em `docs/decisoes/`.
 
+## 2026-09-29, tarde (dev, robô e lidar DESLIGADOS) — O GATILHO DA RETOMADA, EM DUAS LEVAS: UMA CORRIDA E UM DEFEITO ACHADO NELA
+
+Pedido do dono: fazer o robô 3 decidir mais rápido depois de ser parado pelo
+`collision_monitor`, *"como o robô 1"*. Decisão formal: **063**.
+
+### O que foi descoberto antes de escrever código
+
+As manobras (ré, escape reto, pivô) já estavam no robô 3, herdadas inteiras. O
+que faltava era a estratégia de DECISÃO em volta delas. E `re_parado_s = 4,0`
+não podia simplesmente cair: os 4,0 s são a medida de 12-08 contra a
+realimentação positiva da ré (ela dura 1,6–2,8 s e recua 0,30 m). A saída foi
+separar *primeira decisão* de *rearme entre rés*, que eram o mesmo número.
+
+Um candidato mais barato foi descartado por DADO: usar o gargalo do mapa
+(`passagem_ativa`) como sinal. O CSV da corrida da manhã não tem uma única
+amostra em modo `gargalo_*` — `passagem_estreita_habilitada` nasce `False`.
+Sinal que não apareceu não vira gatilho.
+
+### 1ª leva: corrida, e o número que reprovou metade dela
+
+Corrida das 15:26, ida e volta pelo RViz, as duas com `Goal succeeded`. **RTF
+medido em 0,99**: o "0,5x" de que o dono reclamou na manhã era carga da máquina,
+não configuração — e o Livox simulado não foi tocado.
+
+O resultado tem duas partes, e a maior delas **não é sobre retomada**:
+
+- **13 das 15 paradas foram o Livox chegando atrasado** (>1 s, acima do
+  `source_timeout`), não o reflexo. Mais 81 avisos de nuvem velha e 33 limpezas
+  inteiras do costmap global. Avaliação do dono: *"meu pc n aguenta ficar
+  simulando direito esse lidar"*. Limite de máquina, e nenhuma lógica de
+  retomada conserta: o robô para porque o sensor parou.
+- Na porta 2, as duas paradas que são do assunto: a 1ª liberou sozinha em
+  4,34 s; a 2ª esperou **6,84 s** pela manobra. Contra 9,91 s da manhã,
+  melhorou; contra os 2,0 s pretendidos, falhou.
+
+### O defeito, e ele estava escrito no próprio log
+
+*"EMPERRADO com frente livre (**4,38 m**)"*. O corredor à frente estava limpo
+por quatro metros porque **quem segura o robô na porta é a ombreira AO LADO** —
+e a sonda que eu tinha portado olhava só para a frente. O robô 1 sempre teve
+dois portões (`obstacle_mapped` e `near_mapped`, este último com o comentário
+*"ex. batente"*), e eu havia portado o fraco. Lá o raio do segundo foi de 0,35
+para 0,6 m em 2026-06-28 pelo BO *"demorou ~15 s pra desencalhar do
+conhecido"*: a mesma queixa, quatro meses antes.
+
+**Fracasso útil, e a lição é geral:** em vão apertado, o que decide não está na
+frente do robô — está do lado dele. Portar "a estratégia do robô 1" olhando um
+gate só é portar metade e achar que acabou.
+
+### 2ª leva: implementada e testada, NÃO corrida
+
+`near_mapped` entrou (parede mapeada a <0,6 m, qualquer lado), e o aborto do
+desencalhe deixou de zerar o relógio quando o que falhou foi a MEDIDA — perder
+o `/scan` é soluço de sensor, não progresso, e cobrar 4 s por isso foi o que
+custou 7,73 s na manhã. 18 testes novos, suíte **1845/0**, quatro mutações
+conferidas.
+
+Ficou de fora, declarado como dívida: **o escalonamento para o giro** depois de
+duas rés — o pedido literal do dono, e o `escalate_after` do robô 1. É o próximo
+item. E o 0,6 m entrou como **herdado provisório** no perfil: aqui a
+meia-diagonal do corpo é 0,314 (contra 0,25 no robô 1) e não há registro de AMCL
+a compensar, então o número precisa ser medido, não adotado.
+
+### Teardown, e um tropeço que vale registrar
+
+O `SIGINT` no `ros2 launch` matou **só o pai**: os 22 filhos ficaram órfãos
+vivos, Gazebo e RViz inclusive. Derrubados por PID, e só então zero processo,
+`exit -2` no Gazebo e **nenhum SIGSEGV** (a dívida 057 não apareceu). Depois
+disso a suíte reprovou 16 testes do wrapper `subidas-robo3` — e a causa **não**
+era resíduo de SHM, como eu disse primeiro: era o **daemon do `ros2cli`** que as
+minhas chamadas de pré-voo deixaram vivo, e que faz o wrapper recusar subir.
+Parado o daemon, 18/18. Sobraram 32 segmentos de SHM sem a trava `_el`, que pela
+regra da 061 §2.3.2 só se removem com inventário ANTES da corrida — inventário
+que esta sessão não tirou.
+
+---
+
 ## 2026-09-24 (dev, lidar desligado) — MÁQUINA E UNIDADE LIVOX DEIXAM DE SER UM PAR FIXO
 
 Continuação offline da bancada registrada abaixo. O dono autorizou o item 1 e

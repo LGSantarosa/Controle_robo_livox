@@ -50,6 +50,7 @@ from robot_motion.lei_de_seguimento import (
     folga_radial,
     indice_mais_proximo,
     lookahead_de,
+    mapa_ocupado,
     orcamento_de_re,
     passagens_estreitas,
     raio_de_chegada_minimo,
@@ -544,6 +545,68 @@ class PathFollower(Node):
             # 4,0 s é maior que a manobra mais longa medida (2,8 s) mais o
             # retorno (~1 s), com folga. Há teste travando o par.
             ('re_parado_s', 4.0),
+            # 🔴 O GATILHO RÁPIDO (29-09), e ele é o `stuck_timeout_mapped` do
+            # robô 1 (2,0 s lá contra os 5,0 s do teto cheio de lá).
+            #
+            # Medido na salinha em 29-09
+            # (`docs/dados/2026-09-29-robo3-sem-freio-salinha/`): o
+            # `PolygonStop` segurou o robô na porta e a primeira recuperação só
+            # começou **9,91 s** depois; a segunda esperou mais **7,73 s**.
+            # Os 4,0 s acima NÃO explicam 9,91 s sozinhos — o que atrasa é o
+            # relógio ZERAR a cada 5 cm (`re_avanco_min`), e na porta o robô
+            # avança justamente em soluços de poucos centímetros.
+            #
+            # ⚠️ E OS 4,0 s NÃO PODEM SIMPLESMENTE CAIR. Eles foram medidos
+            # contra a realimentação positiva descrita no bloco acima: a ré
+            # dura 1,6–2,8 s e recua 0,30 m, então relógio curto rearma a ré
+            # antes de o robô ter tempo físico de aproveitar a anterior. O
+            # conserto é SEPARAR os dois trabalhos que hoje um número só faz:
+            #
+            #   primeira decisão   pode ser rápida, se o bloqueio é CONHECIDO
+            #   rearme entre rés   continua nos 4,0 s, sempre
+            #
+            # A fronteira é `res_seguidas == 0`: enquanto uma ré não tiver
+            # pagado o que gastou (o robô não bateu a distância que tinha antes
+            # dela), o teto cheio volta a valer. Ver `teto_de_emperramento`.
+            ('re_parado_s_mapeado', 2.0),
+            # Até onde à frente do para-choque o bloqueio ainda conta como "o
+            # que está me parando" (o `block_range` do robô 1).
+            ('re_mapeado_alcance', 0.50),
+            # Vizinhança e limiar do robô 1: a parede do mapa é rasterizada e o
+            # ponto sondado vem de odometria, então exigir a célula exata
+            # erraria por um pixel.
+            # 🔴 O SEGUNDO PORTÃO, e é ele que resolve a PORTA (29-09, 2ª leva).
+            #
+            # Medido na corrida das 15:26: na volta o `PolygonStop` segurou o
+            # robô na porta 2 e o log do próprio seguidor diz *"EMPERRADO com
+            # frente livre (4,38 m)"*. O corredor à frente estava limpo por
+            # quatro metros — quem segura o robô na porta é a OMBREIRA AO LADO.
+            # A sonda frontal (`re_mapeado_alcance`) cai no vazio, responde
+            # "não é parede mapeada", e o teto cheio de 4,0 s volta a valer: a
+            # recuperação só veio 6,84 s depois do `STOP`.
+            #
+            # O robô 1 tem DOIS portões e a 1ª leva portou só o fraco:
+            #
+            #   obstacle_mapped   bloqueio à FRENTE está no mapa
+            #   near_mapped       parede mapeada perto do robô, QUALQUER LADO
+            #                     — o comentário dele diz "ex. batente"
+            #
+            # E lá o raio foi de 0,35 para 0,6 em 2026-06-28 exatamente pelo BO
+            # *"demorou ~15 s pra desencalhar do conhecido"*, que é a queixa
+            # desta sessão.
+            #
+            # ⚠️ 0,6 m É NÚMERO HERDADO E AINDA NÃO MEDIDO AQUI. Lá ele vem de
+            # meia-diagonal 0,25 + ~0,2 de registro pose↔mapa do AMCL. Aqui a
+            # meia-diagonal do corpo é 0,314 (maior) e, com
+            # `localizacao:=fixa`, não há registro nenhum a compensar — a folga
+            # efetiva é menor, e é o único lado em que errar deixa o gatilho
+            # rápido LIGADO perto de parede quase sempre. Isso custa decidir em
+            # 2,0 s em vez de 4,0 s onde o mapa já tem parede; o rearme entre
+            # rés continua nos 4,0 s de qualquer jeito. Se provar afobado,
+            # é este número que se mede, não o gatilho que se desliga.
+            ('re_mapeado_raio_perto', 0.6),
+            ('re_mapeado_vizinhanca', 0.22),
+            ('re_mapeado_limiar', 65),
             ('re_avanco_min', 0.05),
             ('re_orcamento_cego', 0.30),
             ('re_teto_s', 8.0),
@@ -1026,6 +1089,98 @@ class PathFollower(Node):
             return None
         return folga_radial(self.scan.ranges, alcance_max=self.scan.range_max)
 
+    def bloqueio_mapeado(self, x, y, rumo):
+        """O que está à frente é parede que o mapa JÁ conhecia?
+
+        Porte do recovery contextual do robô 1 (2026-06-22): bloqueio conhecido
+        autoriza decidir cedo, porque não há informação nova por vir esperando.
+        Novidade só do sensor continua pagando o teto cheio.
+
+        São DOIS portões, e basta um — os mesmos dois do robô 1:
+
+          frente   ponto a `re_mapeado_alcance` do para-choque, na direção do
+                   rumo. Responde por "vou bater no que o mapa já mostrava".
+          perto    o próprio centro do robô, com raio `re_mapeado_raio_perto`.
+                   Responde por OMBREIRA: parede mapeada ao LADO, que é o que
+                   de fato para o robô na porta (medido em 29-09 — frente livre
+                   por 4,38 m e o robô parado pelo `PolygonStop`).
+
+        Sem mapa, sem pose ou sem TF a resposta é `False` — e `False` é o
+        comportamento de hoje, com os 4,0 s inteiros. Este cheque nunca ATRASA
+        nada: ele só pode adiantar.
+        """
+        if self.mapa is None or self.pose is None:
+            return False
+        alcance = (self.par['avanco_para_choque']
+                   + self.par['re_mapeado_alcance'])
+        # (ponto, raio) de cada portão. O do "perto" é a pose crua: ombreira ao
+        # lado não tem direção, então perguntar na direção do rumo é justamente
+        # o erro que a 1ª leva cometeu.
+        sondas = [((x + alcance * math.cos(rumo), y + alcance * math.sin(rumo)),
+                   self.par['re_mapeado_vizinhanca']),
+                  ((x, y), self.par['re_mapeado_raio_perto'])]
+        # 🔴 O PONTO NASCE NO FRAME DA POSE E O MAPA PODE ESTAR EM OUTRO. É o
+        # defeito de 14-08 (docstring do `plano_em_odom`): comparar `map` com
+        # `odom` sem transformada é comparar coisa com coisa diferente. Com
+        # `localizacao:=fixa` a TF é identidade e a conta não muda; com AMCL ela
+        # é a própria correção do filtro, e ignorá-la sondaria a parede errada.
+        origem_pose = self.pose.header.frame_id or 'odom'
+        mapa_frame = self.mapa.header.frame_id or origem_pose
+        if mapa_frame != origem_pose:
+            try:
+                tf = self.tf_buffer.lookup_transform(
+                    mapa_frame, origem_pose, rclpy.time.Time())
+            except TransformException as e:
+                self.get_logger().warn(
+                    f'sem TF {mapa_frame}<-{origem_pose} ({e}); não consulto o '
+                    'mapa para encurtar o relógio — fica o teto cheio',
+                    throttle_duration_sec=10.0)
+                return False
+            dth = yaw_de(tf.transform.rotation)
+            c, sn = math.cos(dth), math.sin(dth)
+            tx, ty = tf.transform.translation.x, tf.transform.translation.y
+            sondas = [((tx + c * px - sn * py, ty + sn * px + c * py), r)
+                      for (px, py), r in sondas]
+        o = self.mapa.info.origin
+        origem_grade = (o.position.x, o.position.y, yaw_de(o.orientation))
+        return any(
+            mapa_ocupado(px, py, self.mapa.data,
+                         self.mapa.info.width, self.mapa.info.height,
+                         self.mapa.info.resolution, origem=origem_grade,
+                         vizinhanca=raio,
+                         ocupado_min=self.par['re_mapeado_limiar'])
+            for (px, py), raio in sondas)
+
+    def teto_de_emperramento(self, x, y, rumo):
+        """Quantos segundos sem progresso até chamar a recuperação [s].
+
+        Os 4,0 s do `re_parado_s` fazem HOJE dois trabalhos diferentes, e é essa
+        sobreposição que custou os 9,91 s medidos em 29-09:
+
+            primeira decisão   quanto o robô espera antes de agir pela 1ª vez
+            rearme             quanto ele espera entre uma ré e a seguinte
+
+        Só o segundo precisa dos 4,0 s — eles vêm da medida de 12-08 (a ré dura
+        1,6–2,8 s e recua 0,30 m, então relógio curto rearma a ré antes de o
+        robô ter tempo físico de aproveitar a anterior). O primeiro pode ser
+        rápido quando o bloqueio é conhecido, e é o `stuck_timeout_mapped` do
+        robô 1.
+
+        A fronteira é `res_seguidas == 0`, e ela é a mesma conta do teto
+        estrutural contra a fuga: `res_seguidas` só volta a zero quando o robô
+        bate a distância que tinha ANTES da ré, isto é, quando aquela ré pagou o
+        que gastou. Enquanto não pagou, o teto cheio vale — o rearme fica
+        intacto, que é o que a medida de 12-08 protege.
+        """
+        if self.res_seguidas > 0:
+            return self.par['re_parado_s']
+        curto = self.par['re_parado_s_mapeado']
+        if curto <= 0.0 or curto >= self.par['re_parado_s']:
+            return self.par['re_parado_s']      # desligado, ou não encurta
+        if not self.bloqueio_mapeado(x, y, rumo):
+            return self.par['re_parado_s']
+        return curto
+
     def publica_desencalhe(self, v, wz=0.0):
         """Ré pelo canal que fura o reflexo. `v` negativo, giro ZERO.
 
@@ -1205,7 +1360,8 @@ class PathFollower(Node):
             # recusou com `Start occupied`, o `bt_navigator` abortou o objetivo
             # e o seguidor parou PARA SEMPRE a 2,49 m do alvo — 87 s de CSV
             # com a pose imóvel na mesma casa decimal.
-            if self.progresso.atualiza(t, dist):
+            if self.progresso.atualiza(t, dist,
+                                       self.teto_de_emperramento(x, y, rumo)):
                 if (self.par['recuperacao_infinita_com_objetivo']
                         or self.res_sem_plano < self.par['re_max_sem_plano']):
                     self.entra_na_re(t, x, y, dist)
@@ -1287,7 +1443,8 @@ class PathFollower(Node):
             self.res_seguidas = 0
             self.dist_antes_da_re = dist
 
-        if self.progresso.atualiza(t, dist):
+        if self.progresso.atualiza(t, dist,
+                                   self.teto_de_emperramento(x, y, rumo)):
             self.entra_na_re(t, x, y, dist)
 
     def aponta(self, rumo):
@@ -1529,7 +1686,24 @@ class PathFollower(Node):
                 ('o vão escolhido fechou' if vao is not None
                  else 'perdi a medida do /scan'))
             self.estado = 'seguindo'
-            self.progresso.reinicia()
+            # 🔴 PERDER O SENSOR NÃO É PROGRESSO, E NÃO PODE CUSTAR UM CICLO
+            # NOVO (29-09). Os dois abortos têm a mesma frase no log e causas
+            # opostas:
+            #
+            #   o vão FECHOU        o mundo respondeu: esta manobra não existe
+            #                       mais. Zerar o relógio está certo — insistir
+            #                       na hora seria ré contra coisa que chegou.
+            #   perdi a MEDIDA      o mundo não disse nada; quem falhou foi o
+            #                       `/scan`. Zerar aqui cobra do robô 4 s por
+            #                       um soluço do sensor.
+            #
+            # Medido na salinha em 29-09: a primeira recuperação foi abortada
+            # por `/scan` velho e o segundo `PolygonStop` esperou mais 7,73 s —
+            # com o robô parado na porta o tempo todo. `entra_na_re` já trata
+            # medida ausente sem recuar às cegas (avisa e volta), então manter o
+            # relógio só faz a tentativa voltar no primeiro quadro fresco.
+            if vao is not None:
+                self.progresso.reinicia()
             return
 
         if sentido < 0:

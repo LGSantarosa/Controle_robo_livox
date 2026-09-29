@@ -387,7 +387,11 @@ HERDADOS = {
         ('passagem_alinha_rumo_deg', 'etapa 10'),
         ('desencalhe_frente_dist', 'etapa 10'),
         ('desencalhe_frente_folga', 'etapa 10'),
-        ('re_bloqueio_frente_max', 'etapa 10'))},
+        ('re_bloqueio_frente_max', 'etapa 10'),
+        # Raio do portão `near_mapped` (29-09). NÃO é independente do robô: é
+        # comparado com a meia-diagonal do corpo (0,314 aqui contra 0,25 no
+        # robô 1 de onde o 0,6 veio), então entra como herdado a re-derivar.
+        ('re_mapeado_raio_perto', 'etapa 10'))},
 }
 
 INDEPENDENTES = {
@@ -422,7 +426,14 @@ INDEPENDENTES = {
     _CM + 'PolygonApproach.simulation_time_step',
     *{_PF + n for n in (
         're_max_sem_plano', 're_parado_s', 're_teto_s', 'desencalhe_pivo_teto_s',
-        're_max_seguidas', 'taxa', 'timeout_plano', 'log_periodo_s')},
+        're_max_seguidas', 'taxa', 'timeout_plano', 'log_periodo_s',
+        # Gatilho rápido (29-09), na mesma gaveta do `re_parado_s` que ele
+        # encurta: nenhum dos quatro mede o robô. `re_parado_s_mapeado` é
+        # tempo; `re_mapeado_alcance` é distância de DECISÃO e entra somada ao
+        # `avanco_para_choque`, que é quem carrega o chassi; `vizinhanca` e
+        # `limiar` descrevem a rasterização e a ocupação do mapa.
+        're_parado_s_mapeado', 're_mapeado_alcance',
+        're_mapeado_vizinhanca', 're_mapeado_limiar')},
 }
 
 

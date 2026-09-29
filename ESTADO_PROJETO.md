@@ -1,8 +1,9 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Atualizado em **2026-09-29** (PC de dev, robô e lidar desligados; Gazebo
-> subido e derrubado limpo na sessão). Esta é a
+> Atualizado em **2026-09-29, tarde** (PC de dev, robô e lidar desligados; duas
+> pilhas de Gazebo subidas e derrubadas na sessão — a 2ª deixou 22 órfãos que
+> foram mortos por PID). Esta é a
 > cópia da branch **`etapa6-pilha-robo3`**, que desde 25-09 reúne três frentes
 > de 24-09 (merge da `main` e cherry-pick da 058; ver tabela abaixo):
 >
@@ -39,6 +40,65 @@
 | `main` (`1851ffb`) | etapa 5, notebook sincronizado, prova parada do Mid-360 | **não** tem etapa 6, 058 nem 059 |
 | `livox-config-maquina-sensor` (`279f408`) | só a 058 | já incorporada aqui por cherry-pick; não é mais base de nada |
 | `backup/etapa6-pre-merge-main` (`d52b5da`, local) | etapa 6 antes do merge | ponto de volta se a integração precisar ser desfeita |
+
+---
+
+## 🟡 29-09, tarde — O GATILHO DA RETOMADA (063): 1ª LEVA CORRIDA E REPROVADA, 2ª LEVA NO AR E NÃO CORRIDA
+
+Pedido do dono: o robô 3 tem de decidir mais rápido depois de ser parado pelo
+reflexo, *"como o robô 1"*. Decisão **063**.
+
+**O que mudou no código** (suíte **1845/0**, 18 testes novos, 4 mutações
+conferidas): `re_parado_s` deixou de fazer dois trabalhos. A **primeira
+decisão** cai para **2,0 s** quando o bloqueio já é parede do `/map`
+(`re_parado_s_mapeado`, porte do `stuck_timeout_mapped` do robô 1), e o
+**rearme entre rés** fica nos 4,0 s de sempre — a fronteira é `res_seguidas
+== 0`, que é a mesma conta do teto contra a fuga. São dois portões de mapa:
+à frente e, desde a 2ª leva, **ao lado** (`near_mapped`, raio 0,6 m). E o
+aborto do desencalhe parou de zerar o relógio quando o que falhou foi a
+MEDIDA do `/scan`.
+
+🔴 **A CORRIDA DA 1ª LEVA (15:26) MEDIU UMA COISA MAIOR QUE O GATILHO.** Ida e
+volta com `Goal succeeded`, **RTF 0,99** (o "0,5x" da manhã era carga da
+máquina, não configuração — o Livox simulado não foi tocado). Mas:
+
+| causa da parada | ida (72,3 s) | volta (86,0 s) |
+|---|---|---|
+| `STOP:PolygonStop` | 0 | 2 |
+| `STOP` por nuvem do Livox VELHA | **6** | **7** |
+
+**13 das 15 paradas foram o Livox chegando >1 s atrasado**, acima do
+`source_timeout: 1.0` — mais 81 avisos de nuvem velha e 33 limpezas inteiras do
+costmap global. Avaliação do dono: *"meu pc n aguenta ficar simulando direito
+esse lidar"*. É limite de máquina e **nenhuma lógica de retomada conserta**: o
+robô para porque o sensor parou. Quem for atacar a lentidão do robô 3 no
+simulador ataca isto, não a recuperação.
+
+**O defeito da 1ª leva**, e estava escrito no log do seguidor: *"EMPERRADO com
+frente livre (4,38 m)"*. Na porta 2 quem segura o robô é a **ombreira ao lado**,
+e a sonda portada olhava só para a frente — a recuperação veio 6,84 s depois do
+`STOP` em vez de 2,0 s. Daí o `near_mapped` da 2ª leva.
+
+⬜ **Próximo desta frente, na ordem:**
+1. **correr a 2ª leva** — a volta pela porta 2, medindo no log o tempo entre
+   `STOP:PolygonStop` e a manobra (critério na 063 §4);
+2. **o escalonamento para o giro** depois de duas rés — pedido literal do dono
+   (*"duas rés, giro no lugar"*), é o `escalate_after` do robô 1, e hoje o robô 3
+   apenas loga *"Parado até o plano mudar"* e fica;
+3. medir o **0,6 m** do `near_mapped`, que entrou como **herdado provisório** (a
+   meia-diagonal daqui é 0,314 contra 0,25 do robô 1, e sem AMCL não há registro
+   a compensar).
+
+⚠️ **Teardown com tropeço:** `SIGINT` no `ros2 launch` matou só o pai e deixou
+**22 órfãos vivos** (Gazebo e RViz inclusive); foram mortos por PID, e só então
+zero processo, `exit -2` no Gazebo e **nenhum SIGSEGV**. Sobraram 32 segmentos de
+SHM sem a trava `_el` — pela 061 §2.3.2 só se removem com inventário tirado
+ANTES da corrida, e esta sessão não o tirou. E o **daemon do `ros2cli`** vivo faz
+os 18 testes do wrapper `subidas-robo3` reprovarem: parar o daemon é
+pré-requisito da suíte depois de mexer em ROS.
+
+Evidência: `~/sessao-robo3/20260929_152605-gatilho-rapido/` e
+`~/logs_robo2/seguidor_2026-09-29_152607.csv` (fora do git).
 
 ---
 
@@ -86,7 +146,10 @@ disco.
 **Combinado para a sequência** (ordem do dono):
 
 1. destrinchar como o robô se moveu nesta ida e volta (bag de 9,5 GB);
-2. **acoplar o web ao robô 3** — aposentar o RViz como forma de mandar objetivo;
+2. **acoplar o web ao robô 3** — aposentar o RViz como forma de mandar objetivo.
+   **Forma pedida pelo dono (29-09):** um launcher como o do robô 1
+   (`launch.sh` de lá, que sobe a pilha e o `controle_web/app.py` no venv por
+   flag), subindo a **web junto**, e **não** o RViz;
 3. gravar uma corrida ida-e-volta dentro da **salinha** daquele mapa;
 4. preparativos do teste no **robô real**, o passo crucial.
 

@@ -994,3 +994,115 @@ def test_gargalo_nao_larga_o_eixo_por_ruido_de_pose():
         caminho, porta, x=1.0, y=0.10, rumo_atual=0.0, saida=1.0,
         eixo_comprometido=False)
     assert fase_sem_latch == 'centro'
+
+
+# ------------------------------------ fatia B2: o gatilho RÁPIDO (29-09)
+#
+# Porte do recovery contextual do robô 1 (`stuck_timeout_mapped`, 2026-06-22).
+# Medido na salinha em 29-09: `STOP:PolygonStop` na porta e a primeira
+# recuperação só 9,91 s depois, com `re_parado_s` valendo 4,0 — porque cada
+# 5 cm de soluço zera o relógio. Bloqueio que o mapa já conhecia não precisa
+# esperar o teto cheio: não há informação nova por vir.
+#
+# O que estes testes travam é a fronteira: o teto curto entra pela CHAMADA, e a
+# ausência dele não pode virar "dispara sempre".
+
+from robot_motion.lei_de_seguimento import mapa_ocupado      # noqa: E402
+
+
+def test_teto_curto_na_chamada_dispara_antes():
+    """Mesmo relógio, dois tetos: 2,0 s dispara onde 4,0 s ainda espera."""
+    p = ProgressoDeAvanco(parado_s=4.0, avanco_min=0.05)
+    t, d = 0.0, 1.0
+    assert not p.atualiza(t, d)
+    while t < 3.0:
+        t += 0.05                 # emperrado: a distância não cai
+        p.atualiza(t, d)
+    assert p.atualiza(t, d, 2.0), 'com 2,0 s de teto já era hora de agir'
+    assert not p.atualiza(t, d), 'o teto do construtor continua sendo 4,0 s'
+
+
+def test_alternar_os_tetos_nao_perde_tempo_contado():
+    """O relógio é UM. Passar o teto curto num ciclo e o cheio no outro não
+    reinicia nada — se reiniciasse, o robô que perde e recupera a parede do
+    mapa nunca fecharia conta nenhuma."""
+    p = ProgressoDeAvanco(parado_s=4.0, avanco_min=0.05)
+    t, d = 0.0, 1.0
+    p.atualiza(t, d)
+    for _ in range(40):           # 2,0 s alternando o teto a cada ciclo
+        t += 0.05
+        p.atualiza(t, d, 2.0 if int(t * 20) % 2 else None)
+    assert p.atualiza(t + 0.05, d, 2.0)
+
+
+def test_teto_ausente_ou_zero_cai_no_do_construtor():
+    """"Sem teto" não pode virar "dispara sempre": é o caminho pelo qual um
+    parâmetro desligado (0.0) armaria a ré em todo ciclo."""
+    p = ProgressoDeAvanco(parado_s=4.0, avanco_min=0.05)
+    t, d = 0.0, 1.0
+    p.atualiza(t, d)
+    t += 2.5
+    for teto in (None, 0.0, -1.0):
+        assert not p.atualiza(t, d, teto), f'teto {teto} não é licença'
+    assert p.atualiza(t + 2.0, d)
+
+
+def _grade(ocupada=(), largura=10, altura=10, resolucao=0.05, desconhecida=()):
+    dados = [0] * (largura * altura)
+    for lin, col in ocupada:
+        dados[lin * largura + col] = 100
+    for lin, col in desconhecida:
+        dados[lin * largura + col] = -1
+    return dados, largura, altura, resolucao
+
+
+def test_mapa_ocupado_acha_parede_na_vizinhanca():
+    """Célula ocupada dentro da vizinhança conta — e é isso que encurta o
+    relógio na porta."""
+    dados, w, h, res = _grade(ocupada=[(5, 5)])
+    # centro da célula (5,5) = (0,275; 0,275)
+    assert mapa_ocupado(0.275, 0.275, dados, w, h, res, vizinhanca=0.02)
+    assert mapa_ocupado(0.20, 0.275, dados, w, h, res, vizinhanca=0.10)
+    assert not mapa_ocupado(0.05, 0.275, dados, w, h, res, vizinhanca=0.10), (
+        'parede a 22 cm não pode contar como vizinha de 10 cm')
+
+
+def test_desconhecido_e_fora_do_mapa_NAO_encurtam_o_relogio():
+    """🔴 A INVERSÃO DELIBERADA contra `passagens_estreitas`.
+
+    Lá, desconhecido conta como ocupado, porque ocupado significa "não invento
+    vão aqui". Aqui ocupado significa "encurto o relógio", então desconhecido
+    tem de contar como LIVRE — senão o robô real, que roda `mapa:=nenhum`,
+    ganharia o gatilho rápido em todo lugar.
+    """
+    dados, w, h, res = _grade(desconhecida=[(5, 5)])
+    assert not mapa_ocupado(0.275, 0.275, dados, w, h, res, vizinhanca=0.22)
+    livre, w, h, res = _grade()
+    assert not mapa_ocupado(99.0, 99.0, livre, w, h, res, vizinhanca=0.22)
+    assert not mapa_ocupado(-5.0, -5.0, livre, w, h, res, vizinhanca=0.22)
+    # Grade incoerente (tamanho que não bate) também não autoriza nada.
+    assert not mapa_ocupado(0.275, 0.275, [100] * 3, w, h, res)
+
+
+def test_mapa_ocupado_respeita_origem_girada():
+    """A origem do OccupancyGrid pode girar, e ignorar isso sondaria a parede
+    errada — o mesmo erro de frame que custou o dia 14-08."""
+    dados, w, h, res = _grade(ocupada=[(0, 9)])
+    # célula (lin 0, col 9): centro da grade em (0,475; 0,025)
+    origem_girada = (1.0, 2.0, math.pi / 2.0)
+    # mundo = origem + R(90°) * grade  ->  (1,0 - 0,025 ; 2,0 + 0,475)
+    assert mapa_ocupado(1.0 - 0.025, 2.0 + 0.475, dados, w, h, res,
+                        origem=origem_girada, vizinhanca=0.03)
+    assert not mapa_ocupado(1.0 + 0.475, 2.0 + 0.025, dados, w, h, res,
+                            origem=origem_girada, vizinhanca=0.03)
+
+
+def test_limiar_de_ocupacao_e_respeitado():
+    """Custo intermediário do costmap não é parede do mapa estático."""
+    dados, w, h, res = _grade()
+    dados[5 * w + 5] = 50
+    assert not mapa_ocupado(0.275, 0.275, dados, w, h, res, vizinhanca=0.05,
+                            ocupado_min=65)
+    dados[5 * w + 5] = 65
+    assert mapa_ocupado(0.275, 0.275, dados, w, h, res, vizinhanca=0.05,
+                        ocupado_min=65)
