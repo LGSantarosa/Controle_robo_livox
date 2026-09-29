@@ -1,0 +1,347 @@
+#!/usr/bin/env bash
+# A/B do freio linear no robô 3 — decisão 062 §7.
+#
+#   bash bin/ab-freio              as seis tentativas, A-B-A
+#   bash bin/ab-freio 3            só a tentativa 3 (para repetir uma inválida)
+#   bash bin/ab-freio --lista      mostra o desenho e sai, sem subir nada
+#
+# ⚠️ ISTO SOBE O GAZEBO SEIS VEZES. Robô e lidar FÍSICOS ficam desligados — é
+# tudo simulação. Cada tentativa leva ~2 min, então a sessão inteira passa de
+# 15 min. O dono acompanha pela tela; NÃO clica nada (os objetivos vão por
+# ação, e clique não se repete).
+#
+# ── O desenho, e por que ele é assim ─────────────────────────────────────────
+#
+#   A-chegada · A-porta · B-chegada · B-porta · A'-chegada · A'-porta
+#
+# `A` é `freio_linear:=true`, `B` é `false`. O A' no fim é controle temporal:
+# sem ele, uma diferença entre as metades poderia ser da máquina, não do freio.
+#
+# 🔴 NADA DE TELETRANSPORTE. Cada tentativa nasce com Gazebo e pilha NOVOS.
+# Reposicionar a entidade deixaria fila da placa, integradores do compensador,
+# costmaps e estados de controlador contaminados pela tentativa anterior.
+#
+# As poses e os objetivos estão em `tools/ab_freio/provas.py`, com teste. A
+# prova da chegada nasce em (2,0; 5,0); a da porta nasce onde a ida de 29-09
+# terminou, para que a pose de ENTRADA no aperto de 0,80 m seja idêntica nas
+# três tentativas.
+#
+# ── O que ele se recusa a fazer ──────────────────────────────────────────────
+#
+# Aborta a tentativa, preservando o que já gravou, quando: a pilha não fica
+# pronta no prazo; a pose na largada sai da tolerância declarada; o
+# `freio_linear` VIVO não é o que a linha de comando pediu; a tolerância do
+# `goal_checker` não é a que o juiz usa; ou o bag fecha sem `metadata.yaml` ou
+# sem os tópicos do veredito. Tentativa abortada NÃO é apagada e NÃO é
+# repetida automaticamente — ela fica, com o motivo, e a repetição ganha outro
+# identificador.
+#
+# Leitura depois: `docs/decisoes/062-*.md` §7.
+set -uo pipefail
+
+R="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+AB="$R/tools/ab_freio"
+CARIMBO="$(date +%Y%m%d_%H%M%S)"
+BASE="$HOME/ab_freio/$CARIMBO"
+DOMINIO="${ROS_DOMAIN_ID:-51}"
+PRAZO_PRONTO=180        # [s] de parede para a pilha ativar
+PRAZO_GOAL=240          # [s] watchdog de parede do objetivo
+PRAZO_REPOUSO=20        # [s] esperando o robô assentar depois do terminal
+
+TOPICOS_BAG="/Odometry /scan /tf /tf_static /goal_pose /plan /auto_vel \
+/auto_vel_raw /compensador_rumo/cmd_vel /cmd_vel_bruto /unstuck_vel \
+/collision_monitor_state /navigate_to_pose/_action/status /clock"
+
+[ "${1:-}" = "--lista" ] && { python3 "$AB/provas.py"; exit 0; }
+SO_ESTA="${1:-}"
+
+export ROS_DOMAIN_ID="$DOMINIO"
+# shellcheck disable=SC1091
+source /opt/ros/jazzy/setup.bash
+# shellcheck disable=SC1091
+source "$R/install/setup.bash"
+
+mkdir -p "$BASE"
+echo "A/B do freio linear — $CARIMBO"
+echo "  pasta: $BASE   ROS_DOMAIN_ID=$DOMINIO"
+echo "  ⚠️ robô e lidar FÍSICOS desligados; isto é Gazebo."
+echo
+
+# ── limpeza, a da 061 ────────────────────────────────────────────────────────
+nada_vivo() {
+  local vivos
+  vivos="$(ps -eo pid,args | grep -E "Controle_robo_livox/install|gz sim|\
+parameter_bridge|ros2 launch|nav2_|lifecycle_manager|\
+static_transform_publisher|rviz2|ros2 bag" | grep -v grep || true)"
+  [ -z "$vivos" ] || { echo "$vivos"; return 1; }
+  return 0
+}
+
+limpa_shm() {
+  python3 "$R/tools/subidas_robo3/shm_recupera.py" confere /dev/shm \
+    > "$1/shm_confere.txt" 2>&1 || return 1
+  fastdds shm clean > "$1/shm_clean.txt" 2>&1 || true
+  return 0
+}
+
+derruba() {   # derruba TODOS os grupos da pilha, e confere
+  local pgids
+  pgids="$(ps -eo pgid,args | grep -E "pilha.launch.py|gz sim|rviz2|ros2 bag" \
+           | grep -v grep | awk '{print $1}' | sort -u)"
+  for g in $pgids; do kill -INT -- "-$g" 2>/dev/null || true; done
+  for _ in $(seq 1 60); do nada_vivo >/dev/null 2>&1 && return 0; sleep 1; done
+  for g in $pgids; do kill -KILL -- "-$g" 2>/dev/null || true; done
+  sleep 2
+  nada_vivo >/dev/null 2>&1
+}
+
+# ── uma tentativa ────────────────────────────────────────────────────────────
+tentativa() {
+  local n="$1" id="$2" freio="$3" prova="$4"
+  local px py pyaw gx gy gz gw gyaw
+  eval "$(python3 - "$n" <<'PY'
+import json, sys, os
+sys.path.insert(0, os.environ['AB'])
+import provas
+t = provas.tentativas()[int(sys.argv[1]) - 1]
+p, g = t['pose'], t['goal']
+print(f"px={p['x']!r}; py={p['y']!r}; pyaw={p['yaw']!r}")
+print(f"gx={g['x']!r}; gy={g['y']!r}; gz={g['qz']!r}; gw={g['qw']!r}; "
+      f"gyaw={g['yaw']!r}")
+PY
+)"
+
+  local S="$BASE/$id"
+  mkdir -p "$S"
+  local VEREDITO=EM_CURSO
+  : > "$S/motivos.txt"
+  reprova() { VEREDITO=ABORTADA; echo "$1" >> "$S/motivos.txt"; echo "   ✗ $1"; }
+
+  echo "── tentativa $n/6: $id (freio_linear=$freio, prova=$prova)"
+
+  # o protocolo desta tentativa, gravado ANTES de qualquer coisa
+  cat > "$S/protocolo.yaml" <<YAML
+tentativa: $n
+id: "$id"
+freio_linear_pedido: $freio
+prova: "$prova"
+pose_pedida: {x: $px, y: $py, yaw: $pyaw}
+goal: {x: $gx, y: $gy, yaw: $gyaw, qz: $gz, qw: $gw}
+dominio_ros: $DOMINIO
+carimbo_sessao: "$CARIMBO"
+commit: "$(cd "$R" && git rev-parse HEAD)"
+arvore_limpa: $(cd "$R" && git diff --quiet && echo true || echo false)
+YAML
+
+  # ── limpeza antes ──────────────────────────────────────────────────────────
+  if ! nada_vivo > "$S/vivos_antes.txt" 2>&1; then
+    reprova "havia processo vivo antes de subir (ver vivos_antes.txt)"
+    echo "$VEREDITO" > "$S/veredito.txt"; return 1
+  fi
+  limpa_shm "$S" || reprova "shm_recupera reclamou antes de subir"
+  python3 "$R/tools/subidas_robo3/shm_recupera.py" inventaria /dev/shm \
+    "$S/shm_antes.tsv" >/dev/null 2>&1 || true
+
+  # ── sobe ───────────────────────────────────────────────────────────────────
+  export GZ_PARTITION="ab_freio_${CARIMBO}_$n"
+  setsid ros2 launch robot_motion pilha.launch.py \
+      robo:=3 sim:=true gui:=true rviz:=false localizacao:=fixa bag:=false \
+      freio_linear:="$freio" \
+      pose_x:="$px" pose_y:="$py" pose_yaw:="$pyaw" \
+      log_dir:="$S" > "$S/launch.log" 2>&1 < /dev/null &
+  sleep 3
+
+  # ── prontidão ──────────────────────────────────────────────────────────────
+  local pronto=0 t0; t0=$(date +%s)
+  while [ $(( $(date +%s) - t0 )) -lt "$PRAZO_PRONTO" ]; do
+    if grep -q "Managed nodes are active" "$S/launch.log" 2>/dev/null \
+       && timeout 8 ros2 action list 2>/dev/null | grep -qx '/navigate_to_pose' \
+       && timeout 8 ros2 run tf2_ros tf2_echo map base_link 2>&1 \
+            | grep -q Translation; then
+      pronto=1; break
+    fi
+    sleep 2
+  done
+  [ "$pronto" -eq 1 ] || reprova "pilha não ficou pronta em ${PRAZO_PRONTO}s"
+
+  if [ "$VEREDITO" = ABORTADA ]; then
+    derruba; echo "$VEREDITO" > "$S/veredito.txt"; return 1
+  fi
+
+  # ── as conferências que o protocolo exige ANTES do goal ────────────────────
+  timeout 10 ros2 param get /compensador_rumo freio_linear \
+    > "$S/freio_vivo.txt" 2>&1 || true
+  timeout 10 ros2 param get /controller_server goal_checker.xy_goal_tolerance \
+    > "$S/tolerancia_viva.txt" 2>&1 || true
+  timeout 15 ros2 topic echo --once /Odometry \
+    > "$S/pose_largada.yaml" 2>&1 || true
+
+  local CONF
+  CONF="$(AB="$AB" python3 - "$S" "$freio" "$px" "$py" "$pyaw" <<'PY'
+import os, re, sys
+sys.path.insert(0, os.environ['AB'])
+import prontidao as pr
+S, freio, px, py, pyaw = sys.argv[1], sys.argv[2] == 'true', *map(float, sys.argv[3:6])
+
+def le(nome):
+    try:
+        return open(os.path.join(S, nome)).read()
+    except OSError:
+        return None
+
+problemas, notas = [], []
+for ok, motivo in (
+        pr.freio_vivo_confere(le('freio_vivo.txt'), freio),
+        pr.tolerancia_confere(
+            (re.search(r'([0-9.]+)', le('tolerancia_viva.txt') or '') or
+             [None, None])[1] if re.search(r'([0-9.]+)', le('tolerancia_viva.txt') or '')
+            else None)):
+    (notas if ok else problemas).append(motivo)
+
+bruto = le('pose_largada.yaml') or ''
+m = {k: float(v) for k, v in re.findall(r'^\s*([xyzw]):\s*(-?[\d.e+-]+)',
+                                        bruto, re.M)[:4]}
+obs = None
+if 'x' in m and 'y' in m:
+    import math
+    qs = re.findall(r'^\s*([xyzw]):\s*(-?[\d.e+-]+)', bruto, re.M)
+    d = dict((k, float(v)) for k, v in qs)
+    obs = {'x': m['x'], 'y': m['y'],
+           'yaw': 2 * math.atan2(d.get('z', 0.0), d.get('w', 1.0))}
+ok, motivo = pr.pose_na_largada(obs, {'x': px, 'y': py, 'yaw': pyaw})
+(notas if ok else problemas).append(motivo)
+
+for n in notas:
+    print('NOTA ' + n)
+for p in problemas:
+    print('FALHA ' + p)
+PY
+)"
+  echo "$CONF" > "$S/conferencias.txt"
+  while IFS= read -r linha; do
+    case "$linha" in
+      FALHA*) reprova "${linha#FALHA }" ;;
+      NOTA*)  echo "   · ${linha#NOTA }" ;;
+    esac
+  done <<< "$CONF"
+
+  if [ "$VEREDITO" = ABORTADA ]; then
+    derruba; echo "$VEREDITO" > "$S/veredito.txt"; return 1
+  fi
+
+  # ── bag ANTES do goal ──────────────────────────────────────────────────────
+  # shellcheck disable=SC2086
+  setsid ros2 bag record -o "$S/bag" --use-sim-time \
+      --storage-preset-profile fastwrite $TOPICOS_BAG \
+      > "$S/bag.log" 2>&1 < /dev/null &
+  local PID_BAG=$!
+  sleep 4
+
+  # ── o objetivo, por AÇÃO ───────────────────────────────────────────────────
+  setsid ros2 action send_goal -f /navigate_to_pose \
+    nav2_msgs/action/NavigateToPose \
+    "{pose: {header: {frame_id: map}, pose: {position: {x: $gx, y: $gy, z: 0.0}, orientation: {x: 0.0, y: 0.0, z: $gz, w: $gw}}}}" \
+    > "$S/objetivo.log" 2>&1 < /dev/null &
+  local PID_GOAL=$!
+  local tg; tg=$(date +%s)
+  while kill -0 "$PID_GOAL" 2>/dev/null; do
+    [ $(( $(date +%s) - tg )) -ge "$PRAZO_GOAL" ] && {
+      reprova "watchdog: objetivo não fechou em ${PRAZO_GOAL}s"
+      kill -INT "$PID_GOAL" 2>/dev/null; break; }
+    sleep 1
+  done
+  wait "$PID_GOAL" 2>/dev/null
+  grep -oE "Goal finished with status: [A-Z]+|goal_id=.*" "$S/objetivo.log" \
+    > "$S/estado_terminal.txt" 2>/dev/null || true
+
+  # ── DEPOIS do terminal, seguir gravando até o repouso ──────────────────────
+  local tr; tr=$(date +%s)
+  while [ $(( $(date +%s) - tr )) -lt "$PRAZO_REPOUSO" ]; do
+    timeout 6 ros2 topic echo --once --field twist.twist.linear.x /Odometry \
+      >> "$S/repouso_amostras.txt" 2>/dev/null || true
+    local ult
+    ult="$(tail -4 "$S/repouso_amostras.txt" 2>/dev/null \
+           | tr -d ' -' | grep -cE '^0\.00|^0$' || true)"
+    [ "${ult:-0}" -ge 4 ] && break
+    sleep 0.5
+  done
+  sleep 2   # margem para o gravador drenar
+
+  # ── fecha o gravador por SIGTERM e exige o metadata ────────────────────────
+  local PG_BAG; PG_BAG="$(ps -o pgid= -p "$PID_BAG" 2>/dev/null | tr -d ' ')"
+  [ -n "$PG_BAG" ] && kill -TERM -- "-$PG_BAG" 2>/dev/null
+  for _ in $(seq 1 60); do
+    [ -f "$S/bag/metadata.yaml" ] && break
+    sleep 1
+  done
+
+  local BAGOK
+  BAGOK="$(AB="$AB" python3 - "$S" <<'PY'
+import os, sys, re
+sys.path.insert(0, os.environ['AB'])
+import prontidao as pr
+S = sys.argv[1]
+meta = os.path.join(S, 'bag', 'metadata.yaml')
+existe = os.path.exists(meta)
+topicos = []
+if existe:
+    topicos = re.findall(r'name:\s*(/\S+)', open(meta).read())
+exigidos = ['/Odometry', '/scan', '/goal_pose', '/plan', '/auto_vel',
+            '/compensador_rumo/cmd_vel', '/cmd_vel_bruto', '/unstuck_vel',
+            '/collision_monitor_state']
+ok, motivo = pr.bag_confere(existe, topicos, exigidos)
+print(('NOTA ' if ok else 'FALHA ') + motivo)
+PY
+)"
+  echo "$BAGOK" >> "$S/conferencias.txt"
+  case "$BAGOK" in
+    FALHA*) reprova "${BAGOK#FALHA }" ;;
+    NOTA*)  echo "   · ${BAGOK#NOTA }" ;;
+  esac
+
+  # ── derruba e confere a limpeza ────────────────────────────────────────────
+  derruba || reprova "sobrou processo depois do teardown"
+  python3 "$R/tools/subidas_robo3/shm_recupera.py" inventaria /dev/shm \
+    "$S/shm_depois.tsv" >/dev/null 2>&1 || true
+  fastdds shm clean >> "$S/shm_clean.txt" 2>&1 || true
+
+  # ── o juiz, e o manifesto POR ÚLTIMO ───────────────────────────────────────
+  if [ -f "$S/freeze_capture.csv" ]; then
+    timeout 300 python3 "$R/tools/analise_corrida/freio_e_porta.py" \
+      "$S/freeze_capture.csv" --log "$S/launch.log" --goal "$gx,$gy" \
+      > "$S/analise.json" 2>"$S/analise.err" \
+      || reprova "o juiz falhou (ver analise.err)"
+  else
+    reprova "sem freeze_capture.csv: não há o que julgar"
+  fi
+
+  [ "$VEREDITO" = EM_CURSO ] && VEREDITO=VALIDA
+  echo "$VEREDITO" > "$S/veredito.txt"
+  ( cd "$S" && sha256sum protocolo.yaml veredito.txt conferencias.txt \
+      analise.json launch.log freeze_capture.csv bag/metadata.yaml \
+      2>/dev/null > SHA256SUMS ) || true
+  echo "   → $VEREDITO"
+  [ "$VEREDITO" = VALIDA ]
+}
+
+# ── a sessão ─────────────────────────────────────────────────────────────────
+python3 "$AB/provas.py" > "$BASE/desenho.json"
+VALIDAS=0
+export AB
+while IFS='|' read -r n id freio prova; do
+  [ -n "$SO_ESTA" ] && [ "$SO_ESTA" != "$n" ] && continue
+  tentativa "$n" "$id" "$freio" "$prova" && VALIDAS=$((VALIDAS + 1))
+  echo
+done < <(python3 - <<'PY'
+import json, os, sys
+sys.path.insert(0, os.environ['AB'])
+import provas
+for t in provas.tentativas():
+    print(f"{t['n']}|{t['id']}|{str(t['freio_linear']).lower()}|{t['prova']}")
+PY
+)
+
+echo "=== fim: $VALIDAS tentativa(s) VÁLIDA(s) ==="
+echo "    $BASE"
+echo "    tentativa ABORTADA fica preservada; repetir com outro identificador:"
+echo "      bash bin/ab-freio <n>"
