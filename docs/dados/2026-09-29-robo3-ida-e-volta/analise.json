@@ -5,6 +5,8 @@
     "T_REPOUSO": 0.3,
     "GAP_EPISODIO": 0.3,
     "JANELA_FIM": 6.0,
+    "CASAMENTO_MAX": 0.1,
+    "TOLERANCIA_GOAL": 0.25,
     "cmd_saida": "/cmd_vel_bruto",
     "cmd_entrada": "/compensador_rumo/cmd_vel"
   },
@@ -62,7 +64,15 @@
       "dist_ate_o_repouso_m": 13.484,
       "recuo_cm": 9.6,
       "t_cruza_zero_apos_goal_s": 0.642,
-      "pico_de_re_m_s": -0.245
+      "pico_de_re_m_s": -0.245,
+      "goal": [
+        11.019571304321289,
+        1.4171677827835083
+      ],
+      "erro_no_repouso_m": 0.144,
+      "dentro_da_tolerancia": true,
+      "erro_no_succeeded_m": 0.172,
+      "freio_apos_o_succeeded": []
     },
     {
       "corrida": 2,
@@ -85,31 +95,44 @@
       "dist_ate_o_repouso_m": 13.51,
       "recuo_cm": 8.7,
       "t_cruza_zero_apos_goal_s": 0.798,
-      "pico_de_re_m_s": -0.219
+      "pico_de_re_m_s": -0.219,
+      "goal": [
+        1.9895908832550049,
+        4.9765424728393555
+      ],
+      "erro_no_repouso_m": 0.166,
+      "dentro_da_tolerancia": true,
+      "erro_no_succeeded_m": 0.233,
+      "freio_apos_o_succeeded": [
+        0.0
+      ]
     }
   ],
   "monitor": [
     {
-      "t": 1790689728.0504436,
-      "evento": "Robot to stop due to invalid"
+      "t": 1790689728.074,
+      "evento": "STOP:invalid source"
     },
     {
-      "t": 1790689728.1785808,
-      "evento": "Robot to continue normal operation"
+      "t": 1790689728.179,
+      "evento": "DO_NOTHING:-"
     },
     {
-      "t": 1790689958.0726187,
-      "evento": "Robot to stop due to PolygonStop"
+      "t": 1790689958.073,
+      "evento": "STOP:PolygonStop"
     },
     {
-      "t": 1790689965.0547652,
-      "evento": "Robot to continue normal operation"
+      "t": 1790689965.057,
+      "evento": "DO_NOTHING:-"
     }
   ],
+  "escapes": null,
+  "escapes_medidos": false,
+  "fonte_das_transicoes": "collision_state",
   "paradas_de_protecao": [
     {
-      "t_stop": 1790689958.0726187,
-      "duracao_total_do_stop_s": 6.982,
+      "t_stop": 1790689958.073,
+      "duracao_total_do_stop_s": 6.984,
       "avanco_residual_cm": 14.1,
       "t_fim_do_avanco_s": 0.728,
       "recuo_do_freio_cm": 8.2,

@@ -34,6 +34,24 @@ que a percorrida até o `SUCCEEDED`. "Repouso" aqui tem definição: parado
 As duas fecharam. Avaliação do dono: *"se ele se mover assim na vida real é o
 melhor q tivemos até hoje"*, com a ressalva de que dá para ficar mais "clean".
 
+### Os objetivos e o veredito da chegada
+
+Objetivos exatos, lidos do `/goal_pose` do bag (o `bt_navigator` só registra
+duas casas no log):
+
+| | corrida 1 | corrida 2 |
+|---|---|---|
+| goal `(x; y)` | (11,019571304; 1,417167783) | (1,989590883; 4,976542473) |
+| erro no `SUCCEEDED` | 0,172 m | 0,233 m |
+| **erro no repouso** | **0,144 m** | **0,166 m** |
+| dentro da tolerância de 0,25 m | ✅ | ✅ |
+
+⚠️ Na ida, o recuo de 9,6 cm **aproximou** o robô do alvo (0,172 → 0,144 m).
+Isso é acaso da geometria, não virtude do freio: o contra-torque não sabe para
+onde é o objetivo. Serve de aviso para o A/B — "erro final menor" não é
+evidência a favor do freio, e por isso o critério 1 da 062 §7 é *zero episódio
+de freio*, não *erro menor*.
+
 ## 1. O rebote na parada — reprodutível nas duas
 
 Tomando como zero o instante em que `goal_active` cai:
@@ -99,6 +117,12 @@ que o A/B tem de repetir esta passagem, e não só uma parada em área livre.
 
 Houve **dois escapes retos** do `path_follower` na sessão (0,21 m em 0,8 s e
 0,21 m em 1,3 s); o segundo é a fase 3 acima.
+
+⚠️ **Os escapes aqui foram lidos do texto do `launch.log`, não medidos.** O
+`freeze_capture` não assina `/unstuck_vel`, então o juiz marca
+`escapes_medidos: false` — que é diferente de "não houve escape". No A/B o
+`/unstuck_vel` **tem** de entrar na lista do bag, senão o critério 6 da 062 §7
+não pode ser julgado.
 
 ⚠️ **Limite deste dado para inferir causa**: a volta começou onde a ida
 terminou, então **o próprio freio da ida escolheu a pose de entrada na porta**.

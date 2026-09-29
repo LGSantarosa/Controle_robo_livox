@@ -192,3 +192,100 @@ def test_um_pisca_de_parado_nao_conta_como_repouso(tmp_path):
         perfil, saida=lambda u: 0.0, entrada=lambda u: 0.0))
     rep = fp.repouso(fp.carrega(caminho), T0)
     assert rep is None or rep[0] - T0 > 1.0, rep
+
+
+# ─── os cinco defeitos apontados na revisão de 29-09 ─────────────────────────
+
+def test_zero_isolado_no_meio_da_re_nao_encerra_o_recuo(tmp_path):
+    """🔴 Defeito 3: o fim da ré era a primeira amostra zerada.
+
+    A odometria passa por zero ao inverter o sentido, e um zero isolado no MEIO
+    da ré terminava o recuo cedo — o número saía menor do que é.
+    """
+    perfil, t = [], 0.0
+    while t < 3.0:
+        if t < 0.3:
+            vx = 0.30
+        elif t < 1.2:
+            # a ré, com UMA amostra zerada no meio, em ~0,7 s
+            vx = 0.0 if abs(t - 0.70) < DT else -0.20
+        else:
+            vx = 0.0
+        perfil.append(vx)
+        t += DT
+    caminho = escreve(tmp_path, corrida(
+        perfil, saida=lambda u: -0.5 if u < 0.3 else 0.0,
+        entrada=lambda u: 0.0))
+    dados = fp.carrega(caminho)
+    f = fp.fases_do_stop(dados, T0, T0 + 3.0, fp.episodios_de_freio(dados))
+    # a ré vai de ~0,3 a ~1,2 s a 0,20 m/s => ~18 cm. Parar no zero de 0,70 s
+    # devolveria ~8 cm.
+    assert f['recuo_do_freio_cm'] > 12, f
+    assert f['t_fim_do_recuo_s'] > 1.1, f
+
+
+def test_entrada_distante_no_tempo_nao_classifica_como_freio(tmp_path):
+    """🔴 Defeito 4: o casamento entrada/saída não tinha limite temporal.
+
+    Uma entrada zerada dez segundos longe classificava uma ré PEDIDA como
+    freio — e o A/B reprovaria a condição errada.
+    """
+    linhas = [['1000.000000', fp.CMD_ENTRADA, '0.0', '0', '', '', '']]
+    for i in range(50):
+        t = 1010.0 + i * DT          # dez segundos depois
+        linhas.append([f'{t:.6f}', fp.CMD_SAIDA, '-0.5', '0', '', '', ''])
+        linhas.append([f'{t:.6f}', 'odom', '-0.2', '0', '0.0', '0.0', ''])
+    caminho = tmp_path / 'c.csv'
+    with open(caminho, 'w', newline='') as f:
+        w = csv.writer(f)
+        w.writerow(['t_wall', 'topic', 'vx', 'wz', 'px', 'py', 'extra'])
+        w.writerows(linhas)
+    assert fp.episodios_de_freio(fp.carrega(str(caminho))) == []
+
+
+def test_transicoes_saem_do_csv_e_nao_do_log(tmp_path):
+    """🔴 Defeito 5: o juiz lia o texto em inglês do log tendo o CSV.
+
+    `collision_state` já traz `AÇÃO:polígono` estruturado. Depender do texto do
+    Nav2 é depender de formatação que muda com a versão.
+    """
+    linhas = corrida([0.3] * 50, saida=lambda u: 0.0, entrada=lambda u: 0.0)
+    linhas.append([f'{T0 + 0.2:.6f}', fp.COLISAO, '', '', '', '',
+                   'STOP:PolygonStop'])
+    linhas.append([f'{T0 + 0.8:.6f}', fp.COLISAO, '', '', '', '',
+                   'DO_NOTHING:-'])
+    caminho = escreve(tmp_path, linhas)
+    r = fp.relatorio(caminho, log_path=None)
+    assert r['fonte_das_transicoes'] == fp.COLISAO, r['fonte_das_transicoes']
+    assert len(r['monitor']) == 2, r['monitor']
+    assert len(r['paradas_de_protecao']) == 1, r['paradas_de_protecao']
+
+
+def test_sem_goal_nao_ha_veredito_de_tolerancia(tmp_path):
+    """🔴 Defeito 1: sem o objetivo, o juiz não pode dizer "passou".
+
+    E o silêncio tem de ser explícito: a chave não aparece, em vez de aparecer
+    com um valor otimista.
+    """
+    perfil = [max(0.0, 0.3 - 0.3 * (i * DT)) for i in range(200)]
+    caminho = escreve(tmp_path, corrida(
+        perfil, saida=lambda u: 0.0, entrada=lambda u: 0.0, goal=(0.1, 0.5)))
+    sem = fp.relatorio(caminho)['corridas'][0]
+    assert 'dentro_da_tolerancia' not in sem, sem
+    com = fp.relatorio(caminho, goals=[(0.10, 0.0)])['corridas'][0]
+    assert 'dentro_da_tolerancia' in com and 'erro_no_repouso_m' in com, com
+
+
+def test_escape_nao_medido_e_diferente_de_zero_escape(tmp_path):
+    """🔴 Defeito 2: `/unstuck_vel` ausente não é "não houve escape"."""
+    caminho = escreve(tmp_path, corrida(
+        [0.3] * 50, saida=lambda u: 0.0, entrada=lambda u: 0.0))
+    r = fp.relatorio(caminho)
+    assert r['escapes_medidos'] is False and r['escapes'] is None, r
+
+    linhas = corrida([0.3] * 100, saida=lambda u: 0.0, entrada=lambda u: 0.0)
+    for i in range(20):
+        linhas.append([f'{T0 + 0.5 + i * DT:.6f}', fp.ESCAPE, '0.2', '0',
+                       '', '', ''])
+    r2 = fp.relatorio(escreve(tmp_path, linhas))
+    assert r2['escapes_medidos'] is True and len(r2['escapes']) == 1, r2
