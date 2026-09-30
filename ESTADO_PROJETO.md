@@ -1,8 +1,8 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-09-30** (ajuste experimental do
-> giro manual para a roda omni; o agente não acionou o hardware). O estado
+> Versionado na `main`. Atualizado em **2026-09-30** (aumento experimental do
+> giro manual e autônomo na pilha real do robô 2; hardware ainda não testado). O estado
 > anterior continua sendo o de 24-09: Mid-360, FAST-LIO, `/scan` e TF do robô 3
 > provados com placa/motores desligados; a configuração que funcionou está só
 > no clone ignorado pelo git e ainda precisa virar solução por máquina.
@@ -14,17 +14,23 @@
 
 ---
 
-## 🟡 30-09 — MAIS AUTORIDADE NO GIRO MANUAL PARA TESTAR A RODA OMNI
+## 🟡 30-09 — GIRO REAL 1,0 → 1,25 PARA TESTAR A RODA OMNI
 
-No controle manual do robô 3 (`bin/sobe-robo3`) não existe
-`compensador_rumo`. Depois da troca da roda boba por uma omni, o dono relatou
-que o robô andou reto, mas fez a curva errado e aparentou faltar força no giro.
-A pedido dele, somente o `scale_angular.yaw` normal subiu de **4,0 para 5,0**
-(aproximadamente ±256 → ±320 unidades num pivô). O turbo continua em **7,5**;
-reta, firmware e demais parâmetros não mudaram.
+O primeiro ajuste desta sessão atingiu por engano o perfil do robô 3 e foi
+revertido. A pilha que estava viva no NUC é a do robô 2: `robot_base` +
+`robot_motion/pilha.launch.py` + `robot_motion/joystick.launch.py`.
 
-É ajuste experimental, ainda sem resultado no chão. Testes focados da launch e
-do contrato: **20 passaram**; validadores das etapas 4 e 5: **115 passaram**.
+Para o aumento chegar de fato às rodas, o mesmo teto angular foi alinhado em
+**1,25 rad/s** no `diff_drive_controller`, no `heading_controller` e no
+`path_follower` do Nav2. No Xbox, o giro normal passou de **0,80 para 1,00** e
+o turbo de **1,00 para 1,25**. A velocidade linear e o compensador não foram
+alterados. O piso derivado do seguidor acompanhou a conta: **0,203 → 0,23655
+m/s**.
+
+Ainda falta testar no chão. A falta de resposta do controle antes desta
+correção coincidiu com a ausência de `/dev/input/js*` e erros HID no Bluetooth,
+não com mudança de tópico ou botão. Validação offline: **220 testes** da
+movimentação e **115 validadores** das etapas 4/5 passaram.
 
 ---
 

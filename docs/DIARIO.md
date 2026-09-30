@@ -10448,3 +10448,27 @@ e nenhum outro parâmetro mudou. É experimental e ainda falta testar no chão.
 Validação offline, sem acionar o robô: testes focados da launch e do contrato
 **20/20**; validadores das etapas 4 e 5, com as expectativas vivas atualizadas
 de `steer -256` para `-320`, **115/115**. Os dados históricos ficaram intactos.
+
+## 🟡 2026-09-30 — CORREÇÃO: O PERFIL ACIMA ERA O ROBÔ ERRADO
+
+O robô ligado no NUC não usava `bin/sobe-robo3`; os processos mostraram a
+pilha real do robô 2 (`robot_base`, `robot_motion/pilha.launch.py` e
+`robot_motion/joystick.launch.py`). Portanto, o ajuste 4,0 → 5,0 acima foi
+revertido por inteiro.
+
+Para testar um aumento pequeno e coerente no robô certo, o giro foi elevado em
+25% por toda a cadeia real: Xbox normal **0,80 → 1,00**, Xbox turbo **1,00 →
+1,25**, teto do `heading_controller`, `path_follower` e
+`diff_drive_controller` **1,00 → 1,25 rad/s**. O `v_piso` derivado do seguidor
+passou de **0,203 para 0,23655 m/s**. Linear, compensador e demais parâmetros
+ficaram iguais.
+
+A parada de resposta do Xbox foi diagnosticada separadamente: o controle
+aparecia conectado no Bluetooth, mas não existia `/dev/input/js*`, e o journal
+registrava falhas de leitura HID. As configurações de teleop, mux e botões não
+tinham mudado entre o estado anterior e o atual. Antes do deploy, a pilha de
+movimento já estava encerrada. Os TFs órfãos foram fechados; dois bags não
+responderam ao `SIGINT`, e o NUC saiu da rede antes da confirmação do `SIGTERM`.
+
+Validação sem acionar a tração: **220/220** testes da cadeia de movimento e
+**115/115** validadores das etapas 4 e 5.

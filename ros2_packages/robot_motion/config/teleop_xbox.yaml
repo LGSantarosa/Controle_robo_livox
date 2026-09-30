@@ -24,7 +24,7 @@
 # a máquina. O `CLAUDE.md` proíbe herdar isso por escrito — o diferencial gira
 # fácil, e aqui se calibra do zero.
 #
-# Os tetos deste robô estão em `movimentacao.yaml` e são `wz_max: 1.0` e
+# Os tetos deste robô estão em `movimentacao.yaml` e são `wz_max: 1.25` e
 # `v_max: 0.5`. O teleop fica DENTRO deles: mão humana não é o lugar de
 # estrear velocidade que a autonomia não usa.
 #
@@ -62,9 +62,9 @@ teleop_twist_joy_node:
     axis_angular:
       yaw: 0
     scale_angular:
-      yaw: 0.80
+      yaw: 1.00
     scale_angular_turbo:
-      yaw: 1.00        # = wz_max de movimentacao.yaml
+      yaw: 1.25        # = wz_max de movimentacao.yaml
 
     enable_button: 6        # LB = homem-morto (só anda enquanto segurado)
     enable_turbo_button: 7  # RB = turbo

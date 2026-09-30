@@ -606,7 +606,7 @@ class CorrecaoDeDesvio:
     `taxa_max` por segundo, então ela se completa em ~2 s no pior caso (teto de
     30°). Isso é 4× o tempo morto da placa — a malha enxerga a correção como
     movimento lento, que é a condição para não oscilar — e fica bem abaixo dos
-    ~57°/s que a máquina fecha com `wz_max` de 1,0 rad/s.
+    ~72°/s que a máquina fecha com `wz_max` de 1,25 rad/s.
 
     ⚠️ O limite é sobre a CORREÇÃO, não sobre o rumo alvo inteiro. O rumo do
     carrot também dá degrau no replanejamento (57% dos degraus grandes da

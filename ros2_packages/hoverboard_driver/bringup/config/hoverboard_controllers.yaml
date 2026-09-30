@@ -53,12 +53,12 @@ hoverboard_base_controller:
     linear.x.max_jerk: 0.0
     linear.x.min_jerk: 0.0
 
-    # angular estava SEM limite; ligado e capado em ~1.0 rad/s pra nao girar louco.
+    # angular estava SEM limite; ligado e capado para nao girar louco.
     angular.z.has_velocity_limits: true
     angular.z.has_acceleration_limits: true
     angular.z.has_jerk_limits: false
-    angular.z.max_velocity: 1.0
-    angular.z.min_velocity: -1.0
+    angular.z.max_velocity: 1.25
+    angular.z.min_velocity: -1.25
     angular.z.max_acceleration: 1.5
     angular.z.min_acceleration: -1.5
     angular.z.max_jerk: 0.0

@@ -36,8 +36,8 @@ heading_controller:
                       # teto (o teto a placa ignora; em arco ela preserva a
                       # razão). Com 0,1 os mesmos 18° pedem 0,25 rad/s.
 
-    # Tetos. Iguais aos do diff_drive_controller — limite num lugar só.
-    wz_max: 1.0
+    # Tetos. Iguais aos do diff_drive_controller.
+    wz_max: 1.25
     v_max: 0.5
 
     # Zona morta da RODA [m/s]: abaixo disso a placa ignora o comando.
@@ -45,7 +45,7 @@ heading_controller:
     #   MEDIDO NO ROBÔ 2026-07-31 (decisão 020): 0,0178 de frente, 0,0148 de ré
     #   — fica o maior dos dois, que cobre os dois sentidos. Era 0.15, um chute
     #   conservador de antes da bancada, e o erro de 8x NÃO ficava parado aqui:
-    #   proibia o pivô por aritmética (exigia 1,48 rad/s contra teto de 1,00,
+    #   proibia o pivô por aritmética (exigia 1,48 rad/s contra teto de 1,25,
     #   e a máquina gira 147° com wz=0,30) e ABRIA AS CURVAS — o pedido
     #   (v=0,10 · wz=0,30), que o robô entregou em raio 0,333 m, saía desta lei
     #   como 0,802 m. Acelerar para escapar da banda muda a razão entre as
@@ -64,7 +64,7 @@ heading_controller:
     #   225 mm → (315+225)/2 = 270 mm. Era 0.32, herdada e nunca medida.
     #   Entra na conversão de comando em rad/s de roda: errar aqui erra tudo.
     #   ⚠️ Bitola MENOR exige MAIS wz para pivotar. Com a zona morta MEDIDA
-    #   (0,0178) o pivô pede 0,50 rad/s contra teto de 1,0 e existe com folga;
+    #   (0,0178) o pivô pede 0,50 rad/s contra teto de 1,25 e existe com folga;
     #   com o chute de 0,15 que estava aqui até 12-08 ele pedia 1,48 e era
     #   declarado impossível. Ver decisão 020.
     bitola: 0.270

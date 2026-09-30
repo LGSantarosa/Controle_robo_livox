@@ -304,11 +304,11 @@ class PathFollower(Node):
             #
             # 15°/s: o teto de 30° se completa em 2 s = 4× o tempo morto (a
             # malha vê movimento lento, que é a condição de não oscilar), e
-            # fica 3,8× abaixo dos ~57°/s que a máquina fecha com `wz_max` 1,0.
+            # fica 4,8× abaixo dos ~72°/s que a máquina fecha com `wz_max` 1,25.
             ('desvio_taxa_deg_s', 15.0),
             ('v_max', 0.5),
             ('a_lin', 0.3),
-            ('wz_max', 1.0),
+            ('wz_max', 1.25),
             # --- travessia DETERMINÍSTICA de gargalo (20-08) ---
             #
             # O mesmo /plan_smoothed nas corridas de 11:34 e 11:39 passou no
@@ -414,12 +414,12 @@ class PathFollower(Node):
             # chegada pedido é possível. TEM QUE BATER com o que a movimentação
             # calcula: zona_morta + wz_max·bitola/2 + margem.
             #
-            # 0,0178 + 1,0·0,270/2 + 0,05 = 0,203, com a zona morta MEDIDA
+            # 0,0178 + 1,25·0,270/2 + 0,05 = 0,23655, com a zona morta MEDIDA
             # (decisão 020). Era 0,335, que vinha do chute de 0,15 — e o "tem
             # que bater" acima era só comentário: os dois arquivos andaram
             # separados por doze dias porque nada conferia. Agora confere
             # (`test_o_piso_do_seguidor_sai_da_movimentacao`).
-            ('v_piso', 0.203),
+            ('v_piso', 0.23655),
             ('raio_chegada', 0.25),
             # --- chegada em DUAS FASES (05-08) ---
             # A decisão 006 tirou o rumo de chegada com esta razão: "girar
