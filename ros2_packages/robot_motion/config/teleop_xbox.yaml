@@ -62,7 +62,7 @@ teleop_twist_joy_node:
     axis_angular:
       yaw: 0
     scale_angular:
-      yaw: 1.00
+      yaw: 1.25
     scale_angular_turbo:
       yaw: 1.25        # = wz_max de movimentacao.yaml
 

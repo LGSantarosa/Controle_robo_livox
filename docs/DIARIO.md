@@ -10472,3 +10472,21 @@ responderam ao `SIGINT`, e o NUC saiu da rede antes da confirmação do `SIGTERM
 
 Validação sem acionar a tração: **220/220** testes da cadeia de movimento e
 **115/115** validadores das etapas 4 e 5.
+
+## 🟡 2026-09-30 — CURVA ABERTA: O TETO NÃO ERA O GARGALO
+
+O teste no chão com a roda omni mostrou curva pesada tanto no Xbox quanto no
+Nav2. A corrida `seguidor_2026-09-30_175342.csv` e o `freeze_capture.csv` do
+NUC tiraram a dúvida: durante 98 s de objetivo, o Nav2 pediu em movimento
+`|wz|` mediano **0,35**, p90 **0,47** e máximo **0,53 rad/s**. Portanto, subir
+o teto de 1,00 para 1,25 quase não podia mudar as curvas abertas; a lei nunca
+encostou nele.
+
+A correção pequena foi no ganho efetivo da lei: `a_dec` **0,10 → 0,20**.
+Como `wz = sqrt(2·a_dec·|erro|)`, os pedidos sobem ~41%. O valor ainda fica
+abaixo do **0,30** que oscilou 38° em 12-08. Para o teste manual sem depender
+do RB, o Xbox normal passou de **1,00 para 1,25**, igual ao turbo. Nenhum teto,
+velocidade linear ou parâmetro do compensador mudou nesta segunda correção.
+
+Antes do deploy a pilha foi encerrada e o bag fechado. Validação offline:
+**220/220** testes da cadeia de movimento.

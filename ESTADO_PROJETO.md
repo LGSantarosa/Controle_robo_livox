@@ -1,8 +1,8 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-09-30** (aumento experimental do
-> giro manual e autônomo na pilha real do robô 2; hardware ainda não testado). O estado
+> Versionado na `main`. Atualizado em **2026-09-30** (segunda correção do giro
+> para a roda omni, agora baseada na corrida real do Nav2). O estado
 > anterior continua sendo o de 24-09: Mid-360, FAST-LIO, `/scan` e TF do robô 3
 > provados com placa/motores desligados; a configuração que funcionou está só
 > no clone ignorado pelo git e ainda precisa virar solução por máquina.
@@ -14,7 +14,7 @@
 
 ---
 
-## 🟡 30-09 — GIRO REAL 1,0 → 1,25 PARA TESTAR A RODA OMNI
+## 🟡 30-09 — MAIS AUTORIDADE DE CURVA PARA A RODA OMNI
 
 O primeiro ajuste desta sessão atingiu por engano o perfil do robô 3 e foi
 revertido. A pilha que estava viva no NUC é a do robô 2: `robot_base` +
@@ -27,9 +27,17 @@ o turbo de **1,00 para 1,25**. A velocidade linear e o compensador não foram
 alterados. O piso derivado do seguidor acompanhou a conta: **0,203 → 0,23655
 m/s**.
 
-Ainda falta testar no chão. A falta de resposta do controle antes desta
-correção coincidiu com a ausência de `/dev/input/js*` e erros HID no Bluetooth,
-não com mudança de tópico ou botão. Validação offline: **220 testes** da
+O primeiro teste no chão mostrou que isso mexeu no teto errado para as curvas
+abertas. Em 98 s de objetivo, o `/auto_vel_raw` em movimento pediu `|wz|`
+mediano **0,35**, p90 **0,47** e máximo **0,53 rad/s**: nunca chegou perto do
+teto 1,25. A roda omni arrasta lateralmente e esses pedidos ficaram fracos.
+
+Segunda correção experimental: `a_dec` **0,10 → 0,20**, que aumenta o pedido
+angular da lei em `sqrt(2)` (~41%) e continua abaixo do **0,30** reprovado por
+oscilação em 12-08. No Xbox, o normal passou de **1,00 para 1,25**, igual ao
+turbo, para usar o teto sem RB. Linear, compensador e tetos permanecem iguais.
+A falta de resposta anterior do Xbox era Bluetooth sem `/dev/input/js*`; ele
+foi reconectado e o `js0` reapareceu. Validação offline: **220 testes** da
 movimentação e **115 validadores** das etapas 4/5 passaram.
 
 ---
