@@ -49,6 +49,11 @@
   let wpActiveIdx = 0;     // índice do waypoint atual
   let wpDrag     = null;   // {worldX, worldY, canvasX, canvasY} durante drag de orientação
   let wpMouseDown = null;  // posição do mousedown para detectar drag vs click
+  // 2026-09-05: arrastar um waypoint que JÁ existe muda ele de lugar, em vez de
+  // criar mais um em cima. Antes, corrigir um ponto exigia Limpar e reclicar a
+  // rota inteira (campo da arena: 3 rotas redesenhadas em 2 min por causa de um
+  // ponto só). {idx, x0, y0} — x0/y0 pra desfazer se o arrasto for abortado.
+  let wpMoveDrag = null;
   let setPoseMode = false; // armado: próximo click-arrasta define a pose real (relocaliza)
   let setPoseDrag = null;  // {canvasX, canvasY, curX, curY, world} durante o drag
 
@@ -113,7 +118,7 @@
     }
     canvas.style.cursor = on ? 'crosshair' : '';
     if (clickHint) clickHint.textContent = on
-      ? 'clique = waypoint | clique+arraste = define direção'
+      ? 'clique = waypoint | clique+arraste = direção | arraste um ponto existente = move ele'
       : (currentMode === 'nav2' ? HINT_NAV2 : '');
   }
 
@@ -406,6 +411,27 @@
 
     // --- Interação com o canvas (goal único + waypoints) ---
     const DRAG_THRESHOLD = 8; // pixels para considerar drag
+    const WP_HIT_PX = 14;     // raio de acerto num waypoint (círculo é 10; sobra pro dedo)
+
+    // Qual waypoint está debaixo do ponto (cx,cy)? -1 = nenhum. De trás pra
+    // frente: se dois se sobrepõem, pega o desenhado por cima.
+    const wpHitTest = (cx, cy) => {
+      for (let i = waypoints.length - 1; i >= 0; i--) {
+        const c = worldToCanvas(waypoints[i].x, waypoints[i].y);
+        if (!c) continue;
+        if (Math.hypot(cx - c.x, cy - c.y) <= WP_HIT_PX) return i;
+      }
+      return -1;
+    };
+
+    // Aborta um arrasto de waypoint em curso e devolve ele pro lugar de origem
+    // (saiu do canvas, entrou pinça de 2 dedos, ...).
+    const cancelWpMove = () => {
+      if (!wpMoveDrag) return;
+      const wp = waypoints[wpMoveDrag.idx];
+      if (wp) { wp.x = wpMoveDrag.x0; wp.y = wpMoveDrag.y0; }
+      wpMoveDrag = null;
+    };
 
     canvas.addEventListener('mousedown', (ev) => {
       if (!mapInfo || !mapImage) return;
@@ -429,7 +455,13 @@
       }
       wpMouseDown = { cx, cy, world };
       if (wpMode) {
-        wpDrag = { worldX: world.x, worldY: world.y, canvasX: cx, canvasY: cy, curX: cx, curY: cy };
+        const hit = wpHitTest(cx, cy);
+        if (hit >= 0) {
+          // Pegou um ponto que já existe: arrastar MOVE ele (o yaw fica como está).
+          wpMoveDrag = { idx: hit, x0: waypoints[hit].x, y0: waypoints[hit].y };
+        } else {
+          wpDrag = { worldX: world.x, worldY: world.y, canvasX: cx, canvasY: cy, curX: cx, curY: cy };
+        }
       }
     });
 
@@ -447,6 +479,16 @@
         setPoseDrag.curX = p.cx;
         setPoseDrag.curY = p.cy;
         render();
+        return;
+      }
+      if (wpMode && wpMoveDrag) {
+        const { cx, cy } = eventToCanvasPx(ev);
+        const w = canvasToWorld(cx, cy);
+        if (w) {                       // fora do mapa: segura na última posição válida
+          waypoints[wpMoveDrag.idx].x = w.x;
+          waypoints[wpMoveDrag.idx].y = w.y;
+          render();
+        }
         return;
       }
       if (!wpDrag || !wpMode) return;
@@ -472,6 +514,19 @@
         if (statusEl) statusEl.textContent = `pose definida: (${w.x.toFixed(2)}, ${w.y.toFixed(2)})`;
         setPoseDrag = null;
         setSetPoseMode(false);
+        render();
+        return;
+      }
+
+      if (wpMode && wpMoveDrag) {
+        const wp = waypoints[wpMoveDrag.idx];
+        const n = wpMoveDrag.idx + 1;
+        if (wp) {
+          statusEl.textContent =
+            `waypoint ${n} → (${wp.x.toFixed(2)}, ${wp.y.toFixed(2)})` +
+            (wpActive ? ' — a rota em curso não muda; vale no próximo ▶' : '');
+        }
+        wpMoveDrag = null; wpDrag = null; wpMouseDown = null;
         render();
         return;
       }
@@ -514,8 +569,10 @@
     });
 
     canvas.addEventListener('mouseleave', () => {
+      cancelWpMove();
       wpDrag = null;
       wpMouseDown = null;
+      render();
     });
 
     // Touch → encaminha pros mesmos handlers de mouse (preventDefault evita rolar a página)
@@ -531,6 +588,7 @@
       if (ev.touches.length === 2) {
         ev.preventDefault();
         // aborta interações de 1 dedo que já tinham começado
+        cancelWpMove();
         wpDrag = null; wpMouseDown = null; setPoseDrag = null;
         suppressTouchClick = true;
         const a = touchToCanvas(ev.touches[0]), b = touchToCanvas(ev.touches[1]);
@@ -800,7 +858,17 @@
       if (!c) return;
       const isActive = wpActive && i === wpActiveIdx;
       const isDone   = wpActive && i < wpActiveIdx;
+      const isMoving = !!wpMoveDrag && wpMoveDrag.idx === i;
       const r = 10;
+
+      // Halo no ponto que está sendo arrastado — no celular o dedo tapa o marcador.
+      if (isMoving) {
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, r + 8, 0, Math.PI * 2);
+        ctx.strokeStyle = '#facc15';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
 
       // Seta de orientação
       ctx.save();
