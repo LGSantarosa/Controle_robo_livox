@@ -1,16 +1,30 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-09-24** (lab; Mid-360, FAST-LIO,
-> `/scan` e TF do robô 3 provados com placa/motores desligados. O lidar foi
-> encerrado limpo e **desligado novamente pelo dono**; nenhum objetivo foi
-> enviado e o robô não se moveu. A configuração que funcionou está só no clone
-> ignorado pelo git e ainda precisa virar solução por máquina).
+> Versionado na `main`. Atualizado em **2026-09-30** (ajuste experimental do
+> giro manual para a roda omni; o agente não acionou o hardware). O estado
+> anterior continua sendo o de 24-09: Mid-360, FAST-LIO, `/scan` e TF do robô 3
+> provados com placa/motores desligados; a configuração que funcionou está só
+> no clone ignorado pelo git e ainda precisa virar solução por máquina.
 >
 > **Este projeto é um PIBIT** — vai virar artigo. Toda decisão técnica tem um
 > registro em `docs/decisoes/`, todo dia de trabalho entra no `docs/DIARIO.md`,
 > e escolhas de abordagem são embasadas em literatura (`docs/REFERENCIAS.md`).
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
+
+---
+
+## 🟡 30-09 — MAIS AUTORIDADE NO GIRO MANUAL PARA TESTAR A RODA OMNI
+
+No controle manual do robô 3 (`bin/sobe-robo3`) não existe
+`compensador_rumo`. Depois da troca da roda boba por uma omni, o dono relatou
+que o robô andou reto, mas fez a curva errado e aparentou faltar força no giro.
+A pedido dele, somente o `scale_angular.yaw` normal subiu de **4,0 para 5,0**
+(aproximadamente ±256 → ±320 unidades num pivô). O turbo continua em **7,5**;
+reta, firmware e demais parâmetros não mudaram.
+
+É ajuste experimental, ainda sem resultado no chão. Testes focados da launch e
+do contrato: **20 passaram**; validadores das etapas 4 e 5: **115 passaram**.
 
 ---
 

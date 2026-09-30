@@ -10434,3 +10434,17 @@ E conflita com o relato da troca de cabos (a frente puxando igual nas duas
 montagens), que nunca foi medido antes da troca. Repetir limpo antes de mexer em
 qualquer explicação. Roteiro de 16-09 no `ESTADO_PROJETO.md`; gravador
 versionado em `tools/grava_pivo.py` (com bateria).
+
+## 🟡 2026-09-30 — GIRO MANUAL 4,0 → 5,0 PARA TESTAR A RODA OMNI
+
+O dono substituiu a roda boba por uma omni e relatou que o robô agora anda
+reto, mas fez a curva errado e pareceu faltar força no giro. Conferida a cadeia
+de `bin/sobe-robo3`: ela não usa `compensador_rumo`.
+
+A pedido do dono, somente `scale_angular.yaw` normal mudou de **4,0 para 5,0**,
+aproximadamente ±256 → ±320 unidades por roda no pivô. O turbo ficou em **7,5**
+e nenhum outro parâmetro mudou. É experimental e ainda falta testar no chão.
+
+Validação offline, sem acionar o robô: testes focados da launch e do contrato
+**20/20**; validadores das etapas 4 e 5, com as expectativas vivas atualizadas
+de `steer -256` para `-320`, **115/115**. Os dados históricos ficaram intactos.

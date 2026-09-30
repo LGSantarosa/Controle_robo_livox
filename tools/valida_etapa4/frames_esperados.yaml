@@ -7,11 +7,11 @@
 # steer 97, LB solto 0) foram medidos no commit 6dfcdd0 (14-09 10:27), com
 # sinal −1, bitola 0,3225, giro do teleop 1,5 rad/s e sem `frente`. Desde
 # então mudaram, por decisão registrada: giro 1,5 → 4,0 (b9dcbeb, 14-09
-# 20:37), sinal −1 → 1 (b4d2c39), `frente:=-1.0` padrão (3f64638, 16-09) e
-# bitola 0,3225 → 0,320 (cbb0e86, 17-09). Com o padrão de hoje a esquerda NÃO
-# dá 97. Por isso dois casos:
+# 20:37) → 5,0 (30-09), sinal −1 → 1 (b4d2c39), `frente:=-1.0` padrão
+# (3f64638, 16-09) e bitola 0,3225 → 0,320 (cbb0e86, 17-09). Com o padrão de
+# hoje a esquerda NÃO dá 97. Por isso dois casos:
 #
-#   reproducao_14_09  os argumentos daquele dia + eixo de giro 0,375 (× 4,0 de
+#   reproducao_14_09  os argumentos daquele dia + eixo de giro 0,300 (× 5,0 de
 #                     hoje = 1,5, o giro de 14-09): tem de sair IGUAL à tabela
 #                     de 14-09. Prova que a cadeia ATUAL reproduz os frames
 #                     históricos sob condições efetivas equivalentes — NÃO que
@@ -26,7 +26,7 @@ cenarios:
   reproducao_14_09:
     argumentos: ['sinal:=-1.0', 'frente:=1.0', 'bitola:=0.3225']
     eixo_frente: 1.0
-    eixo_giro: 0.375
+    eixo_giro: 0.300
     fases:
       lb_frente:   {steer: 0,   speed: -120}   # 0,30 × 400 × (−1)
       lb_esquerda: {steer: 97,  speed: 0}      # 1,5 × 0,16125 × 400 = 96,75
@@ -37,7 +37,7 @@ cenarios:
     eixo_giro: 1.0
     fases:
       lb_frente:   {steer: 0,    speed: -120}  # 0,30 × (frente −1) × 400
-      lb_esquerda: {steer: -256, speed: 0}     # 4,0 × 0,160 × 400, sinal +1
+      lb_esquerda: {steer: -320, speed: 0}     # 5,0 × 0,160 × 400, sinal +1
       lb_solto:    {steer: 0,    speed: 0}
 
 # A coreografia do /joy (20 Hz). LB = botão 6; eixo 1 = frente, eixo 0 = giro
