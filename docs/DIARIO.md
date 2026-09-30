@@ -11592,3 +11592,24 @@ não só uma parada em área livre. Nada de hardware.
 3. gravar uma corrida ida-e-volta dentro da salinha daquele mapa;
 4. começar os preparativos do teste no robô real — o passo crucial, sabendo
    que o robô real se move diferente da simulação.
+
+## 🟡 2026-09-30 — GIRO MANUAL 4,0 → 5,0 PARA O PRIMEIRO TESTE COM RODA OMNI
+
+O dono substituiu a roda boba por uma omni e, no primeiro teste no chão,
+relatou que o robô agora anda reto, mas fez a curva errado e pareceu faltar
+força no giro. Antes de alterar, foi conferida a cadeia de `bin/sobe-robo3`:
+ela **não tem** `compensador_rumo`; o comando vai de `twist_mux` direto para
+`cmd_vel_to_wheels` e a MEGA.
+
+A pedido do dono, uma mudança só: `scale_angular.yaw` normal de **4,0 para
+5,0** em `teleop_xbox_robo3.yaml`, aproximadamente ±256 → ±320 unidades por
+roda no pivô. O turbo ficou em **7,5** e nenhum outro parâmetro mudou. É ajuste
+experimental; falta o dono testar no chão antes de adotar ou mexer de novo.
+
+Validação offline, sem acionar o robô: a primeira chamada dos testes encontrou
+o ambiente apontando para `Controle_robo_web` e não achou o pacote local
+`robot_base` (7 passaram, 2 falharam e 11 deram erro de ambiente). Depois de
+carregar o `install/setup.bash` desta árvore, os mesmos testes focados passaram:
+**20/20**. Os validadores das etapas 4 e 5 inicialmente recusaram a expectativa
+antiga de `steer -256`; atualizadas apenas as tabelas vivas para `-320` (os
+dados históricos ficaram intactos), passaram **115/115**.

@@ -1,9 +1,9 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Atualizado em **2026-09-29, tarde** (PC de dev, robô e lidar desligados; duas
-> pilhas de Gazebo subidas e derrubadas na sessão — a 2ª deixou 22 órfãos que
-> foram mortos por PID). Esta é a
+> Atualizado em **2026-09-30** (ajuste pequeno pedido pelo dono depois do
+> primeiro teste no chão com a roda boba substituída por uma omni; o agente não
+> acionou o hardware). Esta é a
 > cópia da branch **`etapa6-pilha-robo3`**, que desde 25-09 reúne três frentes
 > de 24-09 (merge da `main` e cherry-pick da 058; ver tabela abaixo):
 >
@@ -40,6 +40,22 @@
 | `main` (`1851ffb`) | etapa 5, notebook sincronizado, prova parada do Mid-360 | **não** tem etapa 6, 058 nem 059 |
 | `livox-config-maquina-sensor` (`279f408`) | só a 058 | já incorporada aqui por cherry-pick; não é mais base de nada |
 | `backup/etapa6-pre-merge-main` (`d52b5da`, local) | etapa 6 antes do merge | ponto de volta se a integração precisar ser desfeita |
+
+---
+
+## 🟡 30-09 — MAIS AUTORIDADE NO GIRO MANUAL PARA TESTAR A RODA OMNI
+
+No controle manual do robô 3 (`bin/sobe-robo3`) não existe
+`compensador_rumo`: a cadeia é `joy → mux → cmd_vel_to_wheels → MEGA`. Depois
+da troca da roda boba por uma omni, o dono relatou que o robô andou reto, mas
+fez a curva errado e aparentou faltar força no giro. A pedido dele, somente o
+`scale_angular.yaw` normal subiu de **4,0 para 5,0** (com bitola 0,320 m e
+escala 400, aproximadamente ±256 → ±320 unidades num pivô). O turbo continua
+em **7,5**; reta, firmware e demais parâmetros não mudaram.
+
+É ajuste **experimental**, ainda sem resultado no chão e sem nova decisão de
+projeto. Testes focados da launch e do contrato do robô 3: **20 passaram**;
+validadores das etapas 4 e 5, com os novos frames esperados: **115 passaram**.
 
 ---
 

@@ -16,7 +16,7 @@
 cenarios:
   reproducao_14_09:
     argumentos: ['sinal:=-1.0', 'frente:=1.0', 'bitola:=0.3225']
-    eixo_giro: 0.375
+    eixo_giro: 0.300
     sequencia: basica
     frames:
       lb_frente:   {steer: 0,  speed: -120}
@@ -27,7 +27,7 @@ cenarios:
     sequencia: completa
     frames:
       lb_frente:   {steer: 0,    speed: -120}
-      lb_esquerda: {steer: -256, speed: 0}
+      lb_esquerda: {steer: -320, speed: 0}
       dpad:        {steer: 0,    speed: -120}   # 0,30 (vel do dpad_reto) × frente −1 × 400
   frente_mais_1:
     argumentos: ['frente:=1.0']
@@ -35,7 +35,7 @@ cenarios:
     sequencia: basica
     frames:
       lb_frente:   {steer: 0,    speed: 120}
-      lb_esquerda: {steer: -256, speed: 0}
+      lb_esquerda: {steer: -320, speed: 0}
 
 # Cada fase: o que o /joy fingido publica (LB = botão 6; eixo 1 = frente,
 # eixo 0 = giro, eixo 7 = direcional cima) e a conferência:
