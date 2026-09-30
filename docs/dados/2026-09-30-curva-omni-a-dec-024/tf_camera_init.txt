@@ -1,0 +1,5 @@
+[INFO] [1790803491.740933499] [static_transform_publisher_vwWQyb7z3HuuSqsm]: Spinning until stopped - publishing transform
+translation: ('0.000000', '0.000000', '0.000000')
+rotation: ('0.000000', '0.000000', '0.000000', '1.000000')
+from 'odom' to 'camera_init'
+[INFO] [1790803913.535444683] [rclcpp]: signal_handler(signum=2)

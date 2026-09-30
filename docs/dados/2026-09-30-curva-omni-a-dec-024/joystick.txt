@@ -1,0 +1,16 @@
+[INFO] [launch]: All log files can be found below /home/bara/.ros/log/2026-09-30-18-24-55-799912-bara-9386
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [launch.user]: [joystick] usando js0 — nenhum /dev/input/js* agora — joy_node vai esperar o controle
+[INFO] [launch.user]: [joystick] LB = homem-morto (segure para andar) · RB = turbo · analógico esquerdo dirige
+[INFO] [joy_node-1]: process started with pid [9390]
+[INFO] [teleop_node-2]: process started with pid [9391]
+[teleop_node-2] [INFO] [1790803495.951825365] [TeleopTwistJoy]: Teleop enable button 6.
+[teleop_node-2] [INFO] [1790803495.951866058] [TeleopTwistJoy]: Turbo on button 7.
+[teleop_node-2] [INFO] [1790803495.951871472] [TeleopTwistJoy]: Linear axis x on 1 at scale 0.300000.
+[teleop_node-2] [INFO] [1790803495.951878556] [TeleopTwistJoy]: Turbo for linear axis x is scale 0.500000.
+[teleop_node-2] [INFO] [1790803495.951882910] [TeleopTwistJoy]: Angular axis yaw on 0 at scale 1.250000.
+[teleop_node-2] [INFO] [1790803495.951886865] [TeleopTwistJoy]: Turbo for angular axis yaw is scale 1.250000.
+[joy_node-1] [INFO] [1790803913.444951194] [rclcpp]: signal_handler(signum=2)
+[teleop_node-2] [INFO] [1790803913.444978279] [rclcpp]: signal_handler(signum=2)
+[INFO] [joy_node-1]: process has finished cleanly [pid 9390]
+[INFO] [teleop_node-2]: process has finished cleanly [pid 9391]

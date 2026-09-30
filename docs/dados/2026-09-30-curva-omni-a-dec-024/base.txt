@@ -1,0 +1,275 @@
+[INFO] [launch]: All log files can be found below /home/bara/.ros/log/2026-09-30-18-24-08-216092-bara-8884
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [launch.user]: [livox]    /home/bara/Controle_robo_livox/install/livox_ros_driver2/share/livox_ros_driver2/launch_ROS2/msg_MID360_launch.py
+[INFO] [launch.user]: [fast_lio] /home/bara/Controle_robo_livox/install/fast_lio/share/fast_lio/launch/mapping.launch.py (cfg: /home/bara/Controle_robo_livox/install/fast_lio/share/fast_lio/config/mid360.yaml)
+[INFO] [ros2_control_node-1]: process started with pid [8889]
+[INFO] [robot_state_publisher-2]: process started with pid [8890]
+[INFO] [spawner-3]: process started with pid [8891]
+[INFO] [livox_ros_driver2_node-4]: process started with pid [8892]
+[INFO] [fastlio_mapping-5]: process started with pid [8893]
+[INFO] [rviz2-6]: process started with pid [8894]
+[INFO] [tf_odom-7]: process started with pid [8895]
+[INFO] [nuvem_pontos-8]: process started with pid [8896]
+[INFO] [pointcloud_to_laserscan_node-9]: process started with pid [8897]
+[livox_ros_driver2_node-4] [INFO] [1790803448.461780343] [livox_lidar_publisher]: Livox Ros Driver2 Version: 1.2.4
+[livox_ros_driver2_node-4] [INFO] [1790803448.462343904] [livox_lidar_publisher]: Data Source is raw lidar.
+[livox_ros_driver2_node-4] [INFO] [1790803448.462372444] [livox_lidar_publisher]: Config file : /home/bara/Controle_robo_livox/ros2_packages/livox_ros_driver2/launch_ROS2/../config/MID360_config.json
+[livox_ros_driver2_node-4] LdsLidar *GetInstance
+[livox_ros_driver2_node-4] config lidar type: 8
+[livox_ros_driver2_node-4] successfully parse base config, counts: 1
+[livox_ros_driver2_node-4] [INFO] [1790803448.465838686] [livox_lidar_publisher]: Init lds lidar success!
+[rviz2-6] qt.qpa.xcb: could not connect to display 
+[rviz2-6] qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it was found.
+[rviz2-6] This application failed to start because no Qt platform plugin could be initialized. Reinstalling the application may fix this problem.
+[rviz2-6] 
+[rviz2-6] Available platform plugins are: eglfs, linuxfb, minimal, minimalegl, offscreen, vnc, wayland-egl, wayland, wayland-xcomposite-egl, wayland-xcomposite-glx, xcb.
+[rviz2-6] 
+[robot_state_publisher-2] [WARN] [1790803448.484017076] [kdl_parser]: The root link base_link has an inertia specified in the URDF, but KDL does not support a root link with an inertia.  As a workaround, you can add an extra dummy link to your URDF.
+[robot_state_publisher-2] [INFO] [1790803448.484156203] [robot_state_publisher]: Robot initialized
+[ros2_control_node-1] [INFO] [1790803448.498829366] [controller_manager]: Using Steady (Monotonic) clock for triggering controller manager cycles.
+[ros2_control_node-1] [INFO] [1790803448.502338828] [controller_manager]: Subscribing to '/robot_description' topic for robot description.
+[fastlio_mapping-5] [INFO] [1790803448.599973558] [laser_mapping]: p_pre->lidar_type 1
+[fastlio_mapping-5] Multi thread started 
+[fastlio_mapping-5] ~~~~/home/bara/Controle_robo_livox/ros2_packages/FAST_LIO/ file opened
+[ros2_control_node-1] [INFO] [1790803448.604936318] [controller_manager]: update rate is 10 Hz
+[ros2_control_node-1] [INFO] [1790803448.604999567] [controller_manager]: Overruns handling is : enabled
+[ros2_control_node-1] [INFO] [1790803448.605012241] [controller_manager]: Spawning controller_manager RT thread with scheduler priority: 50
+[ros2_control_node-1] [WARN] [1790803448.605106873] [controller_manager]: Could not enable FIFO RT scheduling policy: with error number <1>(Operation not permitted). See [https://control.ros.org/master/doc/ros2_control/controller_manager/doc/userdoc.html] for details on how to enable realtime scheduling.
+[fastlio_mapping-5] [INFO] [1790803448.613154175] [laser_mapping]: Node init finished.
+[nuvem_pontos-8] [WARN] [1790803448.994327797] [nuvem_pontos]: raio cego do proprio robo: 0.150 m (decisão 027 — pontos mais perto que isto do EIXO do sensor são peça do robô e saem da nuvem). Com 0,000 o reflexo volta a poder disparar contra o próprio robô, que foi o defeito de 12-08.
+[nuvem_pontos-8] [WARN] [1790803448.995204317] [nuvem_pontos]: nuvem_pontos: /livox/lidar (CustomMsg) -> /livox/pontos (PointCloud2). Sem esta ponte os costmaps e o collision_monitor não recebem nuvem nenhuma no robô — medido em 10-08, com os dois costmaps em 0 células letais.
+[spawner-3] [INFO] [1790803449.052483280] [spawner_joint_state_broadcaster]: waiting for service /controller_manager/list_controllers to become available...
+[ros2_control_node-1] [INFO] [1790803449.086881432] [controller_manager]: Received robot description from topic.
+[ros2_control_node-1] [INFO] [1790803449.089393967] [controller_manager]: Loading hardware 'HoverboardSystem' 
+[ros2_control_node-1] [INFO] [1790803449.092966332] [controller_manager]: Loaded hardware 'HoverboardSystem' from plugin 'hoverboard_driver/hoverboard_driver'
+[ros2_control_node-1] [INFO] [1790803449.093036614] [controller_manager]: Initialize hardware 'HoverboardSystem' 
+[ros2_control_node-1] [INFO] [1790803449.101341378] [hoverboard_driver]: sinal da realimentacao: esq +1  dir -1 | zona morta: LIGADA (100)
+[ros2_control_node-1] [INFO] [1790803449.114929017] [controller_manager]: Successful initialization of hardware 'HoverboardSystem'
+[ros2_control_node-1] [INFO] [1790803449.115352612] [resource_manager]: 'configure' hardware 'HoverboardSystem' 
+[ros2_control_node-1] [INFO] [1790803449.115363382] [resource_manager]: Successful 'configure' of hardware 'HoverboardSystem'
+[ros2_control_node-1] [INFO] [1790803449.115371025] [resource_manager]: 'activate' hardware 'HoverboardSystem' 
+[ros2_control_node-1] [INFO] [1790803449.115380029] [hoverboard_driver]: Using port /dev/ttyUSB0
+[ros2_control_node-1] [INFO] [1790803449.115392733] [hoverboard_driver]: Initialize PID
+[ros2_control_node-1] [INFO] [1790803449.115429607] [hoverboard_driver]: Initialize PID
+[ros2_control_node-1] [INFO] [1790803449.116016500] [hoverboard_driver]: Successfully activated!
+[ros2_control_node-1] [INFO] [1790803449.116028245] [resource_manager]: Successful 'activate' of hardware 'HoverboardSystem'
+[ros2_control_node-1] [INFO] [1790803449.116082768] [controller_manager]: Registering statistics for : HoverboardSystem
+[ros2_control_node-1] [INFO] [1790803449.116270916] [controller_manager]: Resource Manager has been successfully initialized. Starting Controller Manager services...
+[tf_odom-7] [WARN] [1790803449.170258064] [tf_odom]: tf_odom: /Odometry -> TF odom -> base_link. A pose do LIO é do SENSOR; a composição com o URDF é o que impede os 42 cm do Mid-360 de virarem erro silencioso de navegação.
+[ros2_control_node-1] [INFO] [1790803449.308481412] [controller_manager]: Loading controller : 'joint_state_broadcaster' of type 'joint_state_broadcaster/JointStateBroadcaster'
+[ros2_control_node-1] [INFO] [1790803449.308597401] [controller_manager]: Loading controller 'joint_state_broadcaster'
+[ros2_control_node-1] [INFO] [1790803449.314653064] [controller_manager]: Controller 'joint_state_broadcaster' node arguments: --ros-args --params-file /tmp/launch_params_arxhfjfw --params-file /home/bara/Controle_robo_livox/install/hoverboard_driver/share/hoverboard_driver/config/hoverboard_controllers.yaml 
+[spawner-3] [INFO] [1790803449.412131420] [spawner_joint_state_broadcaster]: [94mLoaded [1mjoint_state_broadcaster[0m
+[ros2_control_node-1] [INFO] [1790803449.415644016] [controller_manager]: Configuring controller: 'joint_state_broadcaster'
+[ros2_control_node-1] [INFO] [1790803449.416020532] [joint_state_broadcaster]: 'joints' or 'interfaces' parameter is empty. All available state interfaces will be published
+[ros2_control_node-1] [INFO] [1790803449.509198631] [controller_manager]: Activating controllers: [ joint_state_broadcaster ]
+[ros2_control_node-1] [INFO] [1790803449.607148342] [controller_manager]: Successfully switched controllers!
+[spawner-3] [INFO] [1790803449.707809612] [spawner_joint_state_broadcaster]: [92mConfigured and activated [1mjoint_state_broadcaster[0m
+[ERROR] [rviz2-6]: process has died [pid 8894, exit code -6, cmd '/opt/ros/jazzy/lib/rviz2/rviz2 -d /home/bara/Controle_robo_livox/install/fast_lio/share/fast_lio/rviz/fastlio.rviz --ros-args'].
+[INFO] [spawner-3]: process has finished cleanly [pid 8891]
+[INFO] [spawner-10]: process started with pid [9047]
+[spawner-10] [INFO] [1790803450.314635227] [spawner_hoverboard_base_controller]: waiting for service /controller_manager/list_controllers to become available...
+[livox_ros_driver2_node-4] GetFreeIndex key:livox_lidar_2650908864.
+[livox_ros_driver2_node-4] Init queue, real query size:16.
+[livox_ros_driver2_node-4] Lidar[0] storage queue size: 10
+[livox_ros_driver2_node-4] set pcl data type, handle: 2650908864, data type: 1
+[livox_ros_driver2_node-4] set scan pattern, handle: 2650908864, scan pattern: 0
+[livox_ros_driver2_node-4] begin to change work mode to 'Normal', handle: 2650908864
+[livox_ros_driver2_node-4] successfully set data type, handle: 2650908864, set_bit: 2
+[livox_ros_driver2_node-4] successfully set pattern mode, handle: 2650908864, set_bit: 0
+[livox_ros_driver2_node-4] successfully set lidar attitude, ip: 192.168.1.158
+[livox_ros_driver2_node-4] successfully change work mode, handle: 2650908864
+[livox_ros_driver2_node-4] successfully enable Livox Lidar imu, ip: 192.168.1.158
+[ros2_control_node-1] [INFO] [1790803450.820669836] [controller_manager]: Loading controller : 'hoverboard_base_controller' of type 'diff_drive_controller/DiffDriveController'
+[ros2_control_node-1] [INFO] [1790803450.820790037] [controller_manager]: Loading controller 'hoverboard_base_controller'
+[ros2_control_node-1] [INFO] [1790803450.830301703] [controller_manager]: Controller 'hoverboard_base_controller' node arguments: --ros-args --params-file /tmp/launch_params_arxhfjfw --params-file /home/bara/Controle_robo_livox/install/hoverboard_driver/share/hoverboard_driver/config/hoverboard_controllers.yaml 
+[spawner-10] [INFO] [1790803450.907771249] [spawner_hoverboard_base_controller]: [94mLoaded [1mhoverboard_base_controller[0m
+[ros2_control_node-1] [INFO] [1790803450.909190834] [controller_manager]: Configuring controller: 'hoverboard_base_controller'
+[ros2_control_node-1] [WARN] [1790803450.909296560] [hoverboard_base_controller]: [deprecated] has_jerk_limits parameter is deprecated, instead set the respective limits to NAN
+[ros2_control_node-1] [WARN] [1790803450.909354222] [hoverboard_base_controller]: [deprecated] has_jerk_limits parameter is deprecated, instead set the respective limits to NAN
+[ros2_control_node-1] [INFO] [1790803451.007415236] [controller_manager]: Activating controllers: [ hoverboard_base_controller ]
+[ros2_control_node-1] [INFO] [1790803451.105687373] [controller_manager]: Successfully switched controllers!
+[spawner-10] [INFO] [1790803451.206987750] [spawner_hoverboard_base_controller]: [92mConfigured and activated [1mhoverboard_base_controller[0m
+[INFO] [spawner-10]: process has finished cleanly [pid 9047]
+[livox_ros_driver2_node-4] [INFO] [1790803451.466442327] [livox_lidar_publisher]: livox/imu publish use imu format
+[livox_ros_driver2_node-4] [INFO] [1790803451.479377156] [livox_lidar_publisher]: livox/lidar publish use livox custom format
+[fastlio_mapping-5] IMU Initial Done
+[fastlio_mapping-5] [WARN] [1790803451.515262359] [laser_mapping]: No point, skip this scan!
+[fastlio_mapping-5] 
+[fastlio_mapping-5] [INFO] [1790803451.527168466] [laser_mapping]: Initialize the map kdtree
+[tf_odom-7] [WARN] [1790803451.538776544] [tf_odom]: primeira TF publicada (pose vinha de 'livox_frame', composta com o URDF)
+[nuvem_pontos-8] [WARN] [1790803451.633967640] [nuvem_pontos]: primeira nuvem convertida: 19213 pontos (1139 inválidos descartados), frame "livox_frame". Se o frame não for `livox_frame`, a nuvem inteira sai deslocada e a TF não conserta.
+[nuvem_pontos-8] [INFO] [1790803451.634740616] [nuvem_pontos]: 19213 pontos, 1139 inválidos
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[ros2_control_node-1] Received a non-finite error value
+[nuvem_pontos-8] [INFO] [1790803461.660668065] [nuvem_pontos]: 18850 pontos, 1214 inválidos
+[pointcloud_to_laserscan_node-9] [INFO] [1790803469.071258338] [scan_2d]: Got a subscriber to laserscan, starting pointcloud subscriber
+[nuvem_pontos-8] [INFO] [1790803471.758995786] [nuvem_pontos]: 18918 pontos, 1146 inválidos
+[pointcloud_to_laserscan_node-9] [INFO] [1790803479.980746190] [scan_2d]: No subscribers to laserscan, shutting down pointcloud subscriber
+[nuvem_pontos-8] [INFO] [1790803481.762646375] [nuvem_pontos]: 18825 pontos, 1143 inválidos
+[pointcloud_to_laserscan_node-9] [INFO] [1790803485.487375510] [scan_2d]: Got a subscriber to laserscan, starting pointcloud subscriber
+[nuvem_pontos-8] [INFO] [1790803491.792935125] [nuvem_pontos]: 18905 pontos, 1063 inválidos
+[nuvem_pontos-8] [INFO] [1790803501.831450052] [nuvem_pontos]: 18959 pontos, 1009 inválidos
+[nuvem_pontos-8] [INFO] [1790803511.909665292] [nuvem_pontos]: 18870 pontos, 1194 inválidos
+[nuvem_pontos-8] [INFO] [1790803521.995778786] [nuvem_pontos]: 18910 pontos, 1154 inválidos
+[nuvem_pontos-8] [INFO] [1790803532.043066566] [nuvem_pontos]: 18584 pontos, 1384 inválidos
+[nuvem_pontos-8] [INFO] [1790803542.058055717] [nuvem_pontos]: 18834 pontos, 1134 inválidos
+[nuvem_pontos-8] [INFO] [1790803552.082870826] [nuvem_pontos]: 18838 pontos, 1226 inválidos
+[nuvem_pontos-8] [INFO] [1790803562.084847375] [nuvem_pontos]: 18858 pontos, 1110 inválidos
+[nuvem_pontos-8] [INFO] [1790803572.152321419] [nuvem_pontos]: 18786 pontos, 1278 inválidos
+[nuvem_pontos-8] [INFO] [1790803582.207033661] [nuvem_pontos]: 18839 pontos, 1129 inválidos
+[nuvem_pontos-8] [INFO] [1790803592.231861098] [nuvem_pontos]: 18957 pontos, 1011 inválidos
+[nuvem_pontos-8] [INFO] [1790803602.272789864] [nuvem_pontos]: 18939 pontos, 1125 inválidos
+[nuvem_pontos-8] [INFO] [1790803612.307041415] [nuvem_pontos]: 18848 pontos, 1120 inválidos
+[nuvem_pontos-8] [INFO] [1790803622.320349396] [nuvem_pontos]: 19524 pontos, 540 inválidos
+[nuvem_pontos-8] [INFO] [1790803632.417065639] [nuvem_pontos]: 17778 pontos, 2190 inválidos
+[nuvem_pontos-8] [INFO] [1790803642.451827371] [nuvem_pontos]: 15854 pontos, 4114 inválidos
+[nuvem_pontos-8] [INFO] [1790803652.468517244] [nuvem_pontos]: 17412 pontos, 2652 inválidos
+[nuvem_pontos-8] [INFO] [1790803662.555371414] [nuvem_pontos]: 17665 pontos, 2303 inválidos
+[nuvem_pontos-8] [INFO] [1790803672.636419897] [nuvem_pontos]: 18048 pontos, 2016 inválidos
+[nuvem_pontos-8] [INFO] [1790803682.744090398] [nuvem_pontos]: 18122 pontos, 1750 inválidos
+[nuvem_pontos-8] [INFO] [1790803692.800758769] [nuvem_pontos]: 18013 pontos, 1955 inválidos
+[nuvem_pontos-8] [INFO] [1790803702.862567373] [nuvem_pontos]: 17999 pontos, 1969 inválidos
+[nuvem_pontos-8] [INFO] [1790803712.867078648] [nuvem_pontos]: 18004 pontos, 2060 inválidos
+[nuvem_pontos-8] [INFO] [1790803722.887646834] [nuvem_pontos]: 17461 pontos, 2603 inválidos
+[nuvem_pontos-8] [INFO] [1790803732.907066313] [nuvem_pontos]: 17736 pontos, 2232 inválidos
+[nuvem_pontos-8] [INFO] [1790803742.957534022] [nuvem_pontos]: 17964 pontos, 2100 inválidos
+[nuvem_pontos-8] [INFO] [1790803753.026726836] [nuvem_pontos]: 19568 pontos, 400 inválidos
+[nuvem_pontos-8] [INFO] [1790803763.047023299] [nuvem_pontos]: 19453 pontos, 515 inválidos
+[nuvem_pontos-8] [INFO] [1790803773.062115928] [nuvem_pontos]: 17988 pontos, 2076 inválidos
+[nuvem_pontos-8] [INFO] [1790803783.132436342] [nuvem_pontos]: 19278 pontos, 786 inválidos
+[nuvem_pontos-8] [INFO] [1790803793.160598423] [nuvem_pontos]: 19116 pontos, 852 inválidos
+[nuvem_pontos-8] [INFO] [1790803803.173736639] [nuvem_pontos]: 19141 pontos, 827 inválidos
+[nuvem_pontos-8] [INFO] [1790803813.203656768] [nuvem_pontos]: 19253 pontos, 811 inválidos
+[nuvem_pontos-8] [INFO] [1790803823.291339601] [nuvem_pontos]: 19273 pontos, 791 inválidos
+[nuvem_pontos-8] [INFO] [1790803833.332152874] [nuvem_pontos]: 19204 pontos, 764 inválidos
+[nuvem_pontos-8] [INFO] [1790803843.427752740] [nuvem_pontos]: 19306 pontos, 758 inválidos
+[nuvem_pontos-8] [INFO] [1790803853.465205244] [nuvem_pontos]: 19257 pontos, 711 inválidos
+[nuvem_pontos-8] [INFO] [1790803863.512979208] [nuvem_pontos]: 18924 pontos, 1140 inválidos
+[nuvem_pontos-8] [INFO] [1790803873.628527582] [nuvem_pontos]: 17331 pontos, 2637 inválidos
+[nuvem_pontos-8] [INFO] [1790803883.674272605] [nuvem_pontos]: 18961 pontos, 1007 inválidos
+[nuvem_pontos-8] [INFO] [1790803893.703805205] [nuvem_pontos]: 18830 pontos, 1138 inválidos
+[nuvem_pontos-8] [INFO] [1790803903.719647477] [nuvem_pontos]: 18800 pontos, 1168 inválidos
+[robot_state_publisher-2] [INFO] [1790803913.508758230] [rclcpp]: signal_handler(signum=2)
+[fastlio_mapping-5] catch sig %d2
+[pointcloud_to_laserscan_node-9] [INFO] [1790803913.511113087] [rclcpp]: signal_handler(signum=2)
+[livox_ros_driver2_node-4] [INFO] [1790803913.511465985] [rclcpp]: signal_handler(signum=2)
+[ros2_control_node-1] [INFO] [1790803913.511647931] [rclcpp]: signal_handler(signum=2)
+[ros2_control_node-1] [INFO] [1790803913.513051546] [controller_manager]: Shutdown request received....
+[ros2_control_node-1] [INFO] [1790803913.513197627] [controller_manager]: Shutting down all controllers in the controller manager.
+[ros2_control_node-1] [INFO] [1790803913.513267604] [controller_manager]: Deactivating controller 'hoverboard_base_controller'
+[ros2_control_node-1] [INFO] [1790803913.513411815] [controller_manager]: Shutting down controller 'hoverboard_base_controller'
+[ros2_control_node-1] [INFO] [1790803913.513589872] [controller_manager]: Deactivating controller 'joint_state_broadcaster'
+[ros2_control_node-1] [INFO] [1790803913.513654592] [controller_manager]: Shutting down controller 'joint_state_broadcaster'
+[ros2_control_node-1] [INFO] [1790803913.513738712] [resource_manager]: 'deactivate' hardware 'HoverboardSystem' 
+[ros2_control_node-1] [INFO] [1790803913.616380949] [hoverboard_driver]: Successfully deactivated!
+[ros2_control_node-1] [INFO] [1790803913.616440735] [resource_manager]: Successful 'deactivate' of hardware 'HoverboardSystem'
+[ros2_control_node-1] [INFO] [1790803913.616455906] [resource_manager]: 'shutdown' hardware 'HoverboardSystem' 
+[ros2_control_node-1] [INFO] [1790803913.616464129] [resource_manager]: Successful 'shutdown' of hardware 'HoverboardSystem'
+[ros2_control_node-1] [INFO] [1790803913.616583997] [controller_manager]: Shutting down the controller manager.
+[ros2_control_node-1] [ERROR] [1790803913.616717171] [controller_manager.pal_statistics]: Exception in publisher thread: context cannot be slept with because it's invalid!. Aborting!
+[ros2_control_node-1] [ERROR] [1790803913.616717187] [controller_manager.pal_statistics]: Exception in publisher thread: context cannot be slept with because it's invalid!. Aborting!
+[ros2_control_node-1] [INFO] [1790803913.731566793] [controller_manager.pal_statistics]: Async messages lost 0
+[ros2_control_node-1] [INFO] [1790803913.731604529] [controller_manager.pal_statistics]: publish_async_failures_ 0
+[ros2_control_node-1] [INFO] [1790803913.748280445] [controller_manager.pal_statistics]: Async messages lost 0
+[ros2_control_node-1] [INFO] [1790803913.748318700] [controller_manager.pal_statistics]: publish_async_failures_ 0
+[tf_odom-7] Traceback (most recent call last):
+[tf_odom-7]   File "/home/bara/Controle_robo_livox/install/robot_base/lib/robot_base/tf_odom", line 33, in <module>
+[tf_odom-7]     sys.exit(load_entry_point('robot-base', 'console_scripts', 'tf_odom')())
+[tf_odom-7]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[tf_odom-7]   File "/home/bara/Controle_robo_livox/build/robot_base/robot_base/tf_odom.py", line 207, in main
+[tf_odom-7]     rclpy.spin(no)
+[tf_odom-7]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/__init__.py", line 247, in spin
+[tf_odom-7]     executor.spin_once()
+[tf_odom-7]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 839, in spin_once
+[tf_odom-7]     self._spin_once_impl(timeout_sec)
+[tf_odom-7]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 823, in _spin_once_impl
+[tf_odom-7]     handler, entity, node = self.wait_for_ready_callbacks(
+[tf_odom-7]                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[tf_odom-7]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 793, in wait_for_ready_callbacks
+[tf_odom-7]     return next(self._cb_iter)
+[tf_odom-7]            ^^^^^^^^^^^^^^^^^^^
+[tf_odom-7]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 701, in _wait_for_ready_callbacks
+[tf_odom-7]     raise ExternalShutdownException()
+[tf_odom-7] rclpy.executors.ExternalShutdownException
+[INFO] [robot_state_publisher-2]: process has finished cleanly [pid 8890]
+[INFO] [pointcloud_to_laserscan_node-9]: process has finished cleanly [pid 8897]
+[nuvem_pontos-8] Traceback (most recent call last):
+[nuvem_pontos-8]   File "/home/bara/Controle_robo_livox/install/robot_base/lib/robot_base/nuvem_pontos", line 33, in <module>
+[nuvem_pontos-8]     sys.exit(load_entry_point('robot-base', 'console_scripts', 'nuvem_pontos')())
+[nuvem_pontos-8]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[nuvem_pontos-8]   File "/home/bara/Controle_robo_livox/build/robot_base/robot_base/nuvem_pontos.py", line 133, in main
+[nuvem_pontos-8]     rclpy.spin(no)
+[nuvem_pontos-8]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/__init__.py", line 247, in spin
+[nuvem_pontos-8]     executor.spin_once()
+[nuvem_pontos-8]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 839, in spin_once
+[nuvem_pontos-8]     self._spin_once_impl(timeout_sec)
+[nuvem_pontos-8]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 834, in _spin_once_impl
+[nuvem_pontos-8]     raise handler.exception()
+[nuvem_pontos-8]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/task.py", line 269, in __call__
+[nuvem_pontos-8]     self._handler.send(None)
+[nuvem_pontos-8]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 518, in handler
+[nuvem_pontos-8]     await call_coroutine()
+[nuvem_pontos-8]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 406, in _execute
+[nuvem_pontos-8]     await await_or_execute(sub.callback, *msg_tuple)
+[nuvem_pontos-8]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/executors.py", line 111, in await_or_execute
+[nuvem_pontos-8]     return callback(*args)
+[nuvem_pontos-8]            ^^^^^^^^^^^^^^^
+[nuvem_pontos-8]   File "/home/bara/Controle_robo_livox/build/robot_base/robot_base/nuvem_pontos.py", line 114, in passo
+[nuvem_pontos-8]     self.pub.publish(fora_msg)
+[nuvem_pontos-8]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/publisher.py", line 70, in publish
+[nuvem_pontos-8]     self.__publisher.publish(msg)
+[nuvem_pontos-8] rclpy._rclpy_pybind11.RCLError: Failed to publish: publisher's context is invalid, at ./src/rcl/publisher.c:423
+[fastlio_mapping-5] Rebuild thread terminated normally
+[INFO] [fastlio_mapping-5]: process has finished cleanly [pid 8893]
+[INFO] [ros2_control_node-1]: process has finished cleanly [pid 8889]
+[ERROR] [tf_odom-7]: process has died [pid 8895, exit code 1, cmd '/home/bara/Controle_robo_livox/install/robot_base/lib/robot_base/tf_odom --ros-args -r __node:=tf_odom --params-file /tmp/launch_params_a0iw_ftr'].
+[ERROR] [nuvem_pontos-8]: process has died [pid 8896, exit code 1, cmd '/home/bara/Controle_robo_livox/install/robot_base/lib/robot_base/nuvem_pontos --ros-args -r __node:=nuvem_pontos'].
+[livox_ros_driver2_node-4] Livox Lidar SDK Deinit completely!
+[livox_ros_driver2_node-4] lddc destory!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+[livox_ros_driver2_node-4] lds destory!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+[INFO] [livox_ros_driver2_node-4]: process has finished cleanly [pid 8892]

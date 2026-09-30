@@ -10495,3 +10495,21 @@ No teste no chão, o dono relatou que `a_dec: 0,20` **melhorou muito** e pediu
 mais 20%. Foi feito um único ajuste incremental: `a_dec` **0,20 → 0,24**. Isso
 representa ~9,5% a mais no pedido angular para o mesmo erro, pela raiz quadrada
 da lei, e continua abaixo do 0,30 que oscilou. Nenhum outro parâmetro mudou.
+
+### Fechamento da sessão com `a_dec: 0,24`
+
+O teste seguinte também foi aprovado pelo dono: *"o bicho foi ótimo,
+melhorou"*. O pivô está girando muito bem. O comportamento restante é
+específico das diagonais e curvas abertas: a roda omni arrasta lateralmente, a
+curva fica pesada e o Nav2 ainda perde força para seguir o plano.
+
+Por causa do fim da sessão, o pedido de mais 15% **não foi aplicado**. A pilha
+foi encerrada, o bag fechado e a evidência foi salva em
+`docs/dados/2026-09-30-curva-omni-a-dec-024/`. O MCAP completo tem
+8.200.572.569 bytes e permaneceu no NUC em
+`~/logs_robo2/corrida_2026-09-30_182443/`; seu SHA-256 está registrado junto
+dos arquivos trazidos.
+
+**Primeira ação da próxima sessão:** mudar apenas `a_dec` **0,24 → 0,276**
+(+15% no parâmetro, ~7,2% no pedido angular para o mesmo erro). Não mexer no
+pivô, na velocidade linear, no compensador nem nos tetos.

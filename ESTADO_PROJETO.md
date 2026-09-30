@@ -45,6 +45,15 @@ Terceiro ajuste experimental: `a_dec` **0,20 → 0,24**. Pela raiz quadrada da
 lei, isso eleva o pedido angular em ~9,5% para o mesmo erro e segue abaixo do
 0,30 já reprovado. Nenhum outro parâmetro foi alterado.
 
+O teste de `a_dec: 0,24` também foi aprovado: *"o bicho foi ótimo, melhorou"*.
+O pivô gira muito bem; o que ainda pesa são diagonais e curvas abertas, nas
+quais a omni arrasta lateralmente e o Nav2 perde autoridade para seguir o
+plano. A sessão foi encerrada sem nova mudança e seus CSVs, metadados e logs
+estão em `docs/dados/2026-09-30-curva-omni-a-dec-024/`; o MCAP de 8,2 GB ficou
+preservado no NUC com SHA-256 registrado. **Próximo passo:** testar somente
+`a_dec` **0,24 → 0,276** (+15% no parâmetro, ~7,2% no pedido angular), mantendo
+pivô, linear, compensador e tetos iguais.
+
 ---
 
 ## 🔌 24-09 (lab, robô 3; lidar DESLIGADO ao fim) — MID-360 + LIO + SCAN + TF PROVADOS PARADOS
