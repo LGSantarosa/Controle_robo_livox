@@ -10490,3 +10490,8 @@ velocidade linear ou parâmetro do compensador mudou nesta segunda correção.
 
 Antes do deploy a pilha foi encerrada e o bag fechado. Validação offline:
 **220/220** testes da cadeia de movimento.
+
+No teste no chão, o dono relatou que `a_dec: 0,20` **melhorou muito** e pediu
+mais 20%. Foi feito um único ajuste incremental: `a_dec` **0,20 → 0,24**. Isso
+representa ~9,5% a mais no pedido angular para o mesmo erro, pela raiz quadrada
+da lei, e continua abaixo do 0,30 que oscilou. Nenhum outro parâmetro mudou.

@@ -1,8 +1,8 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-09-30** (segunda correção do giro
-> para a roda omni, agora baseada na corrida real do Nav2). O estado
+> Versionado na `main`. Atualizado em **2026-09-30** (terceiro ajuste incremental
+> do giro para a roda omni, após teste no chão). O estado
 > anterior continua sendo o de 24-09: Mid-360, FAST-LIO, `/scan` e TF do robô 3
 > provados com placa/motores desligados; a configuração que funcionou está só
 > no clone ignorado pelo git e ainda precisa virar solução por máquina.
@@ -39,6 +39,11 @@ turbo, para usar o teto sem RB. Linear, compensador e tetos permanecem iguais.
 A falta de resposta anterior do Xbox era Bluetooth sem `/dev/input/js*`; ele
 foi reconectado e o `js0` reapareceu. Validação offline: **220 testes** da
 movimentação e **115 validadores** das etapas 4/5 passaram.
+
+O dono relatou que `a_dec: 0,20` **melhorou muito** no chão e pediu mais 20%.
+Terceiro ajuste experimental: `a_dec` **0,20 → 0,24**. Pela raiz quadrada da
+lei, isso eleva o pedido angular em ~9,5% para o mesmo erro e segue abaixo do
+0,30 já reprovado. Nenhum outro parâmetro foi alterado.
 
 ---
 

@@ -18,7 +18,7 @@ heading_controller:
     # wz²/(2·a_dec), e é dele que vinha o S.
     #   medir com: ensaio `degrau_giro`
     #   estimativa a partir do S relatado pelo dono: ~0,5
-    #   valor aqui: 0,2 — abaixo da estimativa, de propósito.
+    #   valor aqui: 0,24 — abaixo da estimativa, de propósito.
     #   Medido: errar pra baixo custa 0,3 s a mais e zero sobrepasso;
     #           errar pra cima traz o S de volta.
     #
@@ -27,13 +27,14 @@ heading_controller:
     #   subir a frenagem mexe direto no S que só assentou em 11-08, e isso
     #   merece leva própria, com corrida de controle. Não é esquecimento;
     #   é a diferença entre o que a máquina faz e o que pedimos dela.
-    a_dec: 0.2        # 12-08 no robô: 0,3 fez o rumo oscilar 38° seguindo o
+    a_dec: 0.24       # 12-08 no robô: 0,3 fez o rumo oscilar 38° seguindo o
                       # Nav2; 0,1 assentou, mas ficou fraco depois da troca da
                       # roda boba pela omni. Em 30-09, com 0,1, uma corrida
                       # real pediu |wz| mediano 0,35 e p90 0,47 rad/s nas
-                      # curvas, muito abaixo do teto 1,25. Subir a_dec para
-                      # 0,2 aumenta esses pedidos em sqrt(2), cerca de 41%,
-                      # e ainda fica abaixo do 0,3 que oscilou.
+                      # curvas, muito abaixo do teto 1,25. O teste com 0,2
+                      # melhorou muito; 0,24 é mais 20% no parâmetro (~9,5%
+                      # no pedido angular) e ainda fica abaixo do 0,3 que
+                      # oscilou.
 
     # Tetos. Iguais aos do diff_drive_controller.
     wz_max: 1.25
