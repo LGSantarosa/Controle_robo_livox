@@ -47,6 +47,7 @@
   let wpMode     = false;  // modo de adição de waypoints ativo
   let wpActive   = false;  // navegação rodando
   let wpActiveIdx = 0;     // índice do waypoint atual
+  let wpSelectedIdx = -1;  // ponto selecionado para alterar a ordem da rota
   let wpDrag     = null;   // {worldX, worldY, canvasX, canvasY} durante drag de orientação
   let wpMouseDown = null;  // posição do mousedown para detectar drag vs click
   // 2026-09-05: arrastar um waypoint que JÁ existe muda ele de lugar, em vez de
@@ -97,6 +98,8 @@
   // Elementos da toolbar de waypoints
   const wpToolbar   = document.getElementById('wp-toolbar');
   const btnWpMode   = document.getElementById('btn-wp-mode');
+  const btnWpEarlier = document.getElementById('btn-wp-earlier');
+  const btnWpLater   = document.getElementById('btn-wp-later');
   const btnWpClear  = document.getElementById('btn-wp-clear');
   const btnWpStart  = document.getElementById('btn-wp-start');
   const btnWpStop   = document.getElementById('btn-wp-stop');
@@ -107,7 +110,34 @@
   const wpLoopChk   = document.getElementById('wp-loop');
   const wpStatusEl  = document.getElementById('wp-status');
 
-  const HINT_NAV2 = '(arraste = mover o mapa · 🎯 Ir para = mandar o robô)';
+  const HINT_NAV2 = '(clique num ponto = selecionar/ordenar · arraste = mover o mapa · 🎯 Ir para = mandar o robô)';
+
+  function selectWaypoint(idx, announce = true) {
+    wpSelectedIdx = Number.isInteger(idx) && idx >= 0 && idx < waypoints.length
+      ? idx
+      : -1;
+    updateWpButtons();
+    if (announce && wpStatusEl && wpSelectedIdx >= 0) {
+      wpStatusEl.textContent =
+        `selecionado ${wpSelectedIdx + 1}/${waypoints.length} — use ← Antes / Depois →`;
+    }
+    render();
+  }
+
+  function moveSelectedWaypoint(delta) {
+    if (wpActive || !Number.isInteger(delta) || Math.abs(delta) !== 1) return;
+    const from = wpSelectedIdx;
+    const to = from + delta;
+    if (from < 0 || from >= waypoints.length || to < 0 || to >= waypoints.length) return;
+    [waypoints[from], waypoints[to]] = [waypoints[to], waypoints[from]];
+    wpSelectedIdx = to;
+    updateWpButtons();
+    if (wpStatusEl) {
+      wpStatusEl.textContent =
+        `ordem alterada: agora é o ponto ${to + 1}/${waypoints.length}`;
+    }
+    render();
+  }
 
   function setWpMode(on) {
     wpMode = on;
@@ -149,10 +179,15 @@
 
   function updateWpButtons() {
     if (!btnWpStart || !btnWpStop) return;
+    if (wpSelectedIdx >= waypoints.length) wpSelectedIdx = -1;
+    const selected = wpSelectedIdx >= 0;
     btnWpStart.disabled = waypoints.length === 0 || wpActive;
     btnWpStop.disabled  = !wpActive;
     if (btnWpClear) btnWpClear.disabled = wpActive;
     if (btnWpMode)  btnWpMode.disabled  = wpActive;
+    if (btnWpEarlier) btnWpEarlier.disabled = wpActive || !selected || wpSelectedIdx === 0;
+    if (btnWpLater) btnWpLater.disabled =
+      wpActive || !selected || wpSelectedIdx === waypoints.length - 1;
   }
 
   waitForSocket((socket) => {
@@ -295,6 +330,8 @@
       render();
     });
     if (btnWpMode) btnWpMode.addEventListener('click', () => setWpMode(!wpMode));
+    if (btnWpEarlier) btnWpEarlier.addEventListener('click', () => moveSelectedWaypoint(-1));
+    if (btnWpLater) btnWpLater.addEventListener('click', () => moveSelectedWaypoint(+1));
     if (btnGoal) btnGoal.addEventListener('click', () => setGoalMode(!goalMode));
     if (btnSetPose) btnSetPose.addEventListener('click', () => setSetPoseMode(!setPoseMode));
     socket.on('set_pose_ack', (data) => {
@@ -305,6 +342,7 @@
 
     if (btnWpClear) btnWpClear.addEventListener('click', () => {
       waypoints = [];
+      wpSelectedIdx = -1;
       lastGoal = null;
       setWpMode(false);
       updateWpButtons();
@@ -370,6 +408,7 @@
         return;
       }
       waypoints = data.waypoints || [];
+      wpSelectedIdx = -1;
       if (wpLoopChk) wpLoopChk.checked = false;
       setWpMode(false);
       updateWpButtons();
@@ -381,6 +420,7 @@
     socket.on('waypoints_restored', (data) => {
       if (!data || !data.waypoints || data.waypoints.length === 0) return;
       waypoints    = data.waypoints;
+      wpSelectedIdx = -1;
       wpActive     = !!data.active;
       wpActiveIdx  = data.index || 0;
       if (wpLoopChk) wpLoopChk.checked = !!data.loop;
@@ -435,18 +475,22 @@
 
     canvas.addEventListener('mousedown', (ev) => {
       if (!mapInfo || !mapImage) return;
+      const { cx, cy } = eventToCanvasPx(ev);
+      const selectableWp = currentMode === 'nav2' && ev.button === 0
+        ? wpHitTest(cx, cy)
+        : -1;
       // Sem nenhum modo armado, QUALQUER arrasto (esquerdo, meio ou dedo)
-      // move o mapa. Goal/waypoint/porta/pose só com o botão respectivo.
+      // move o mapa. Um clique curto em um waypoint, porém, seleciona-o para
+      // reordenação; arrastar a partir dele continua movendo o mapa.
       const armed = setPoseMode ||
         (currentMode === 'nav2' && (wpMode || goalMode));
       if (ev.button === 1 || !armed) {
         ev.preventDefault();
-        const p = eventToCanvasPx(ev);
-        panDrag = { x0: p.cx, y0: p.cy, panX0: view.panX, panY0: view.panY };
+        panDrag = { x0: cx, y0: cy, panX0: view.panX, panY0: view.panY,
+                    selectableWp };
         canvas.style.cursor = 'grabbing';
         return;
       }
-      const { cx, cy } = eventToCanvasPx(ev);
       const world = canvasToWorld(cx, cy);
       if (!world) return;
       if (setPoseMode) {
@@ -458,6 +502,7 @@
         const hit = wpHitTest(cx, cy);
         if (hit >= 0) {
           // Pegou um ponto que já existe: arrastar MOVE ele (o yaw fica como está).
+          selectWaypoint(hit, false);
           wpMoveDrag = { idx: hit, x0: waypoints[hit].x, y0: waypoints[hit].y };
         } else {
           wpDrag = { worldX: world.x, worldY: world.y, canvasX: cx, canvasY: cy, curX: cx, curY: cy };
@@ -499,7 +544,15 @@
     });
 
     canvas.addEventListener('mouseup', (ev) => {
-      if (panDrag) { panDrag = null; canvas.style.cursor = ''; return; }
+      if (panDrag) {
+        const p = eventToCanvasPx(ev);
+        const movedPx = Math.hypot(p.cx - panDrag.x0, p.cy - panDrag.y0);
+        const selected = panDrag.selectableWp;
+        panDrag = null;
+        canvas.style.cursor = '';
+        if (selected >= 0 && movedPx <= DRAG_THRESHOLD) selectWaypoint(selected);
+        return;
+      }
       if (!mapInfo || !mapImage) return;
       if (currentMode !== 'nav2' && !setPoseMode) return;
       const { cx, cy } = eventToCanvasPx(ev);
@@ -539,6 +592,7 @@
         // yaw: canvas y cresce pra baixo, ROS y cresce pra cima — inverte dy
         const yaw = dragged ? Math.atan2(-dy, dx) : 0.0;
         waypoints.push({ x: world.x, y: world.y, yaw });
+        wpSelectedIdx = waypoints.length - 1;
         updateWpButtons();
         wpDrag = null;
         wpMouseDown = null;
@@ -859,14 +913,15 @@
       const isActive = wpActive && i === wpActiveIdx;
       const isDone   = wpActive && i < wpActiveIdx;
       const isMoving = !!wpMoveDrag && wpMoveDrag.idx === i;
+      const isSelected = i === wpSelectedIdx;
       const r = 10;
 
-      // Halo no ponto que está sendo arrastado — no celular o dedo tapa o marcador.
-      if (isMoving) {
+      // Halo no ponto selecionado/arrastado — no celular o dedo tapa o marcador.
+      if (isMoving || isSelected) {
         ctx.beginPath();
         ctx.arc(c.x, c.y, r + 8, 0, Math.PI * 2);
-        ctx.strokeStyle = '#facc15';
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = isMoving ? '#facc15' : '#22d3ee';
+        ctx.lineWidth = isSelected ? 3 : 2;
         ctx.stroke();
       }
 
