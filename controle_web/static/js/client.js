@@ -34,20 +34,23 @@
   const speedMultDisplay = document.getElementById('speed-mult-display');
   const speedLinearVal = document.getElementById('speed-linear-val');
   const speedAngularVal = document.getElementById('speed-angular-val');
-  // Valores em "unidades internas" exibidos na UI (não SI). O servidor
-  // converte a velocidade SI real (m/s, rad/s) via BASE_LINEAR_SPEED e
-  // BASE_ANGULAR_SPEED em robot_controller.py; estes aqui só dão um número
-  // estável pro slider mostrar enquanto o ack do servidor não chega.
-  const BASE_LINEAR = 100;
-  const BASE_ANGULAR = 65;
+  // Espelho, em SI, de BASE_*_SPEED e *_SPEED_MAX de robot_controller.py: só
+  // dão um número estável pro slider enquanto o ack do servidor não chega.
+  // Tetos separados: linear até 0,50 m/s; angular nunca passa de 1,25 rad/s.
+  const BASE_LINEAR = 0.30;
+  const BASE_ANGULAR = 1.25;
+  const LINEAR_MAX = 0.50;
+  const ANGULAR_MAX = 1.25;
   let currentMultiplier = 1.0;
 
   function updateSpeedUI(mult, linearSpeed, angularSpeed) {
     currentMultiplier = mult;
     if (speedSlider) speedSlider.value = mult;
     if (speedMultDisplay) speedMultDisplay.textContent = mult.toFixed(1) + 'x';
-    if (speedLinearVal) speedLinearVal.textContent = Math.round(linearSpeed || BASE_LINEAR * mult);
-    if (speedAngularVal) speedAngularVal.textContent = Math.round(angularSpeed || BASE_ANGULAR * mult);
+    const lin = linearSpeed != null ? linearSpeed : Math.min(BASE_LINEAR * mult, LINEAR_MAX);
+    const ang = angularSpeed != null ? angularSpeed : Math.min(BASE_ANGULAR * mult, ANGULAR_MAX);
+    if (speedLinearVal) speedLinearVal.textContent = lin.toFixed(2);
+    if (speedAngularVal) speedAngularVal.textContent = ang.toFixed(2);
     // Destaca o preset ativo
     document.querySelectorAll('.speed-preset-btn').forEach(b => {
       const bm = parseFloat(b.getAttribute('data-mult'));
@@ -78,7 +81,7 @@
   socket.on('speed_update', (data) => {
     if (data && data.ok) {
       updateSpeedUI(data.multiplier, data.linear_speed, data.angular_speed);
-      appendLog('vel', `Velocidade: ${data.multiplier.toFixed(1)}x (L=${Math.round(data.linear_speed)} A=${Math.round(data.angular_speed)})`);
+      appendLog('vel', `Velocidade: ${data.multiplier.toFixed(2)}x (L=${data.linear_speed.toFixed(2)} m/s A=${data.angular_speed.toFixed(2)} rad/s)`);
     }
   });
 

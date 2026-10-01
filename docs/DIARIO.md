@@ -10692,3 +10692,22 @@ o gamepad e o "Space = stop" da web morriam sem erro visível.
 Restrição combinada com o Codex: este commit **não** roda isolado no Gazebo
 nem no NUC, porque passaria a valer o giro herdado de 6,0 rad/s. A calibração
 (passo 2) entra antes.
+
+## 2026-10-01 (dev, sem robô) — A3, PASSO 2: A VELOCIDADE DA WEB É A DO ROBÔ 2
+
+O passo 1 deixava valer o giro base de **6,0 rad/s** (autoridade anti-skid do
+robô 1) com multiplicador até 4×: até 24 rad/s e 1,2 m/s pedidos, cortados só
+pelo `diff_drive_controller`. A calibração, nos números combinados com o
+Codex:
+
+- base = o normal do Xbox: 0,30 m/s e 1,25 rad/s;
+- `SPEED_MULT_MAX = 0,5/0,3`; `linear = min(0,30·m; 0,50)`;
+  `angular = min(1,25·m; 1,25)`. Tetos separados: um multiplicador comum
+  limitado a 1× não deixaria o linear chegar a 0,5;
+- slider até 1,6667×; Boost (□) e Max = o máximo; a UI mostra m/s e rad/s (os
+  números "100" e "65" eram unidades internas do robô 1).
+
+`test_web_velocidade.py` trava os tetos com multiplicador excessivo, o caso
+abaixo de 1×, teclado e gamepad, e o casamento entre o slider/presets e o
+`SPEED_MULT_MAX`. Suíte **1285 passed**. Os passos 1 e 2 sobem juntos ao remoto;
+nada roda no Gazebo nem no NUC antes do passo 3 e da validação com o dono.

@@ -43,6 +43,8 @@
   let lastAngular = 0;
   let lastButtonState = {};
   let emergencyActive = false;
+  // = SPEED_MULT_MAX de robot_controller.py (0,5 / 0,3)
+  const BOOST_MULT = 0.5 / 0.3;
   let savedMultiplier = null; // salva multiplicador original ao segurar □ ou ○
 
   // Dead zone para os eixos analógicos
@@ -192,11 +194,11 @@
             appendLog('gamepad', 'Trava de emergência desativada');
           }
         } else if (name === 'square') {
-          // □ segurado = boost (2.0x)
+          // □ segurado = boost: o máximo da web (0,50 m/s; giro segue 1,25)
           if (isPressed) {
             savedMultiplier = getMultiplier();
-            sendSpeed(2.0);
-            updateSpeedUI(2.0);
+            sendSpeed(BOOST_MULT);
+            updateSpeedUI(BOOST_MULT);
             appendLog('gamepad', 'Boost ativado (□)');
           } else {
             sendSpeed(savedMultiplier || 1.0);
@@ -256,8 +258,8 @@
     stickDot.style.top = py + 'px';
   }
 
-  // BASE_LINEAR (100, em client.js) × SPEED_MULT_MAX (4.0, robot_controller.py)
-  const MAX_LINEAR_SCALED = 100 * 4;
+  // Teto linear da web em SI (LINEAR_SPEED_MAX de robot_controller.py).
+  const MAX_LINEAR_SCALED = 0.50;
 
   function updateSpeedBars(left, right) {
     const maxSpeed = MAX_LINEAR_SCALED;

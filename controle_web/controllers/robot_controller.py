@@ -180,15 +180,22 @@ class ROS2Controller(RobotController):
     # (cabos L/R trocados) corrigido em 2026-05-30 (commit 7115b09 / mega_bridge
     # _fb_map). Aquele era de feedback/odometria; este é tração por falta de
     # suspensão. Não confundir os dois ao mexer aqui.
-    BASE_LINEAR_SPEED: float = 0.3   # m/s
-    BASE_ANGULAR_SPEED: float = 6.0  # rad/s
+    # Calibrados para o robô 2 (A3 passo 2, revisão de 01-10). O 6,0 rad/s
+    # antigo era a autoridade de giro anti-skid do robô 1, que o CLAUDE.md
+    # manda não herdar. Base = o normal do Xbox (teleop_xbox.yaml).
+    BASE_LINEAR_SPEED: float = 0.30   # m/s
+    BASE_ANGULAR_SPEED: float = 1.25  # rad/s
+    # Tetos SEPARADOS: o linear sobe com o multiplicador até o v_max do
+    # movimentacao.yaml; o angular já nasce no wz_max e só pode diminuir.
+    LINEAR_SPEED_MAX: float = 0.50    # m/s
+    ANGULAR_SPEED_MAX: float = 1.25   # rad/s
 
     # Limites do multiplicador de velocidade.
     # MIN bate com o `min` do slider em index.html (0.5) e permite que o
     # preset "Ajuste fino" do gamepad (0.75×) e do botão (○) passem sem
     # clipagem silenciosa.
     SPEED_MULT_MIN: float = 0.5
-    SPEED_MULT_MAX: float = 4.0
+    SPEED_MULT_MAX: float = 0.5 / 0.3   # = LINEAR_SPEED_MAX / BASE_LINEAR_SPEED
 
     # Mapeamento tecla → direção semântica
     _KEY_MAP: Dict[str, str] = {
@@ -338,17 +345,19 @@ class ROS2Controller(RobotController):
 
     @property
     def linear_speed(self) -> float:
-        return self.BASE_LINEAR_SPEED * self._speed_multiplier
+        return min(self.BASE_LINEAR_SPEED * self._speed_multiplier,
+                   self.LINEAR_SPEED_MAX)
 
     @property
     def angular_speed(self) -> float:
-        return self.BASE_ANGULAR_SPEED * self._speed_multiplier
+        return min(self.BASE_ANGULAR_SPEED * self._speed_multiplier,
+                   self.ANGULAR_SPEED_MAX)
 
     def set_speed_multiplier(self, mult: float) -> float:
         """Define o multiplicador de velocidade e republica imediatamente."""
         self._speed_multiplier = max(self.SPEED_MULT_MIN, min(self.SPEED_MULT_MAX, mult))
         print(f"[ROS2Controller] Multiplicador de velocidade: {self._speed_multiplier:.2f}x "
-              f"(linear={self.linear_speed:.0f}, angular={self.angular_speed:.0f})")
+              f"(linear={self.linear_speed:.2f} m/s, angular={self.angular_speed:.2f} rad/s)")
 
         # Republica com a velocidade nova se estiver em movimento
         if not self._emergency_stop:

@@ -14,15 +14,22 @@
 
 ---
 
-## 🔴 01-10 — A3 PASSO 1: `/web_vel` VIROU `TwistStamped` — NÃO RODAR SOZINHO
+## 🟡 01-10 — A3 (TELEOP DA WEB) CORRIGIDO NO DEV, PASSOS 1 E 2
 
-A web publicava `Twist` num mux `TwistStamped`: nada da web chegava à roda.
-Agora publica `TwistStamped` (stamp atual, `base_link`), com teste de contrato.
+1. A web publicava `Twist` num mux `TwistStamped`, e nada da web chegava à
+   roda. Agora publica `TwistStamped` (stamp atual, `base_link`), com teste de
+   contrato dos dois lados.
+2. A velocidade manual foi calibrada para o robô 2. A base é o normal do Xbox
+   (0,30 m/s e 1,25 rad/s), no lugar do giro de 6,0 rad/s do robô 1. Os tetos
+   são separados: o linear vai até **0,50 m/s** (multiplicador máximo
+   0,5/0,3), e o angular **nunca passa de 1,25** (abaixo de 1× ele reduz). O
+   slider, os presets Boost/Max e a escala do gamepad acompanham. Testes
+   travam os tetos mesmo com multiplicador absurdo.
 
-🔴 **Este commit isolado NÃO vai ao Gazebo nem ao NUC.** Ele torna efetivo o
-giro herdado do robô 1 (`BASE_ANGULAR_SPEED = 6,0` rad/s, até 4× no
-multiplicador). O passo 2 (calibração: linear até 0,5 m/s e angular saturado
-em 1,25, com limites separados) tem de entrar antes de qualquer execução.
+Suíte: **1285 passed**. 🔴 Ainda sem Gazebo e sem NUC. O passo 3 (STOP com
+zero no `/web_vel`, mesmo com `WEB_TELEOP=off`, e o seguidor parando no
+`CANCELING`) continua pendente. Lembrete: prioridade 50 vence a autonomia e o
+desencalhe, mas **não** vence o Xbox nem o teclado. Não é E-STOP global.
 
 ## 🟡 01-10 — FASE 2 DA REVISÃO: A1/A7 (STOP DA WEB) CORRIGIDOS NO DEV
 
