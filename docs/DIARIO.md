@@ -10601,4 +10601,6 @@ criar outro (`8bd414c`), **reordenar** os pontos da rota (`c0430b0`) e
 (`map.js`, `index.html`, `styles.css`) mais o teste `test_ui_route_edit.py`.
 Validação: `node --check` no `map.js` e 16 testes passando
 (`test_ui_route_edit.py` + `test_nav_tuning.py`); o card de ajuste ao vivo do
-Nav2 continua no `index.html`. Ainda não exercitado no Gazebo nem no robô.
+Nav2 continua no `index.html`. Exercitado pelo dono no Gazebo (web reiniciado
+para servir a página nova): **aprovado — "é assim que a web deve ficar"**.
+Ainda não testado no robô físico.
