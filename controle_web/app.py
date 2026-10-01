@@ -337,6 +337,8 @@ def handle_connect():
         'has_map': map_bridge is not None,
         'web_teleop': WEB_TELEOP,
         'has_camera': camera_service is not None,
+        'nav_tuning': (controller.nav_tuning_state()
+                       if ROBOT_MODE == 'nav2' else None),
     })
     if camera_service is not None:
         emit('camera_status', camera_service.status())
@@ -713,6 +715,29 @@ def handle_set_speed(data):
         # Erro: responde só ao cliente que mandou — broadcast aqui mostraria
         # "Não recebido" pra todo mundo só porque um cliente mandou lixo.
         emit('speed_update', {'ok': False, 'error': str(e)}, room=request.sid)
+
+
+@socketio.on('set_nav_tuning')
+def handle_set_nav_tuning(data):
+    """Ajusta o pedido do Nav2 ao vivo; não altera YAML nem o teleop manual."""
+    if ROBOT_MODE != 'nav2':
+        emit('nav_tuning_update', {
+            'ok': False, 'error': 'ajuste ao vivo disponível apenas no modo NAV2',
+        }, room=request.sid)
+        return
+    try:
+        atual = controller.nav_tuning_state()
+        dados = data or {}
+        estado = controller.set_nav_tuning(
+            dados.get('linear_scale', atual['linear_scale']),
+            dados.get('curve_scale', atual['curve_scale']))
+        app.logger.warning(
+            'Nav2 tuning from %s: linear=%.2fx curva=%.2fx',
+            request.remote_addr, estado['linear_scale'], estado['curve_scale'])
+        emit('nav_tuning_update', {'ok': True, **estado}, broadcast=True)
+    except Exception as e:
+        emit('nav_tuning_update', {'ok': False, 'error': str(e)},
+             room=request.sid)
 
 @socketio.on('client_hello')
 def handle_client_hello(payload):

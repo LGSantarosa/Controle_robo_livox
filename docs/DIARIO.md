@@ -10522,7 +10522,30 @@ omni arrasta; o pivô, em contraste, está funcionando muito bem.
 
 Foi alterado somente o ganho da lei de rumo usada pelo Nav2: `a_dec` **0,24 →
 0,288**. É +20% no parâmetro e, pela raiz quadrada da lei, ~9,5% a mais de
-pedido angular para o mesmo erro. O valor permanece abaixo de 0,30, mas por
-apenas 0,012; 0,30 já produziu oscilação de 38° em 12-08. Pivô, velocidade
-linear, compensador e tetos não mudaram. Esta alteração ainda não foi instalada
-nem testada no robô.
+pedido angular para o mesmo erro. O dono corrigiu o critério: os 38° de
+oscilação com 0,30 foram medidos em 12-08 com a roda boba antiga e não limitam
+a planta que agora usa omni. Pivô, velocidade linear, compensador e tetos não
+mudaram. Esta alteração ainda não foi instalada nem testada no robô.
+
+### Ajuste do pedido do Nav2 pela web
+
+A barra antiga da web não servia: ela só escalava o teleop `/web_vel`. E mudar
+`v_max`/`wz_max` seria repetir o erro do teto — na corrida de 30-09 o giro
+pedido nem se aproximou de `wz_max`.
+
+Foram criados dois controles independentes, visíveis apenas em modo Nav2:
+
+- **velocidade pedida** (`0,50×–1,40×`): multiplica o `v` depois de o seguidor
+  calcular curva e frenagem, limitado a 0,70 m/s;
+- **força de curva** (`0,50×–3,00×`): multiplica o `a_dec` usado pela lei
+  contínua; não altera `wz_max`, `pivo_a_dec` nem a manobra de pivô.
+
+A web publica `/nav_tuning/linear_scale` e `/nav_tuning/curve_scale` com QoS
+retido. `path_follower` e `heading_controller` aplicam os valores no ciclo
+seguinte; cada linha nova do CSV guarda as duas escalas. Reiniciar a web repõe
+`1,00×`, portanto um ensaio não vira configuração permanente por acidente.
+
+Validação de desenvolvimento: build dos três pacotes concluído; **527 testes**
+focados passaram; num domínio ROS isolado, a web publicou linear `1,20×` e
+curva `1,55×`, e ambos os nós receberam exatamente os dois valores. Ainda não
+foi instalado nem testado no robô.

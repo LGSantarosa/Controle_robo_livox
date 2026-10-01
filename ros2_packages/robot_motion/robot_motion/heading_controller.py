@@ -14,6 +14,8 @@ números que o justificam, está em
 Tópicos:
     entra  ~/rumo_alvo        std_msgs/Float64      [rad]
            ~/velocidade_alvo  std_msgs/Float64      [m/s]  (opcional)
+           /nav_tuning/linear_scale  std_msgs/Float64      multiplicador ao vivo
+           /nav_tuning/curve_scale   std_msgs/Float64      multiplicador de a_dec
            /Odometry          nav_msgs/Odometry     pose (FAST-LIO ou Gazebo)
     sai    /hoverboard_base_controller/cmd_vel   geometry_msgs/TwistStamped
 
@@ -26,7 +28,7 @@ import rclpy
 from geometry_msgs.msg import TwistStamped
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
-from rclpy.qos import QoSProfile, ReliabilityPolicy
+from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from std_msgs.msg import Float64
 
 from robot_motion.lei_de_freio import FreioDeGiro
@@ -48,6 +50,12 @@ def yaw_de(q):
 
 
 class HeadingController(Node):
+    ESCALA_LINEAR_MIN = 0.5
+    ESCALA_LINEAR_MAX = 1.4
+    ESCALA_CURVA_MIN = 0.5
+    ESCALA_CURVA_MAX = 3.0
+    VELOCIDADE_LINEAR_ABS_MAX = 0.7
+
     def __init__(self):
         super().__init__('heading_controller')
 
@@ -179,6 +187,8 @@ class HeadingController(Node):
             ('freio_teto_s', 1.5),
         ])
         self.par = {x.name: x.value for x in p}
+        self.escala_linear_nav = 1.0
+        self.escala_curva_nav = 1.0
 
         qos = QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE)
         self.pub = self.create_publisher(
@@ -187,6 +197,15 @@ class HeadingController(Node):
         self.create_subscription(Float64, '~/rumo_alvo', self.cb_rumo, qos)
         self.create_subscription(
             Float64, '~/velocidade_alvo', self.cb_velocidade, qos)
+        tuning_qos = QoSProfile(
+            depth=1, reliability=ReliabilityPolicy.RELIABLE,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL)
+        self.create_subscription(
+            Float64, '/nav_tuning/linear_scale',
+            self.cb_escala_linear_nav, tuning_qos)
+        self.create_subscription(
+            Float64, '/nav_tuning/curve_scale',
+            self.cb_escala_curva_nav, tuning_qos)
 
         self.pose = None
         self.t_pose = None
@@ -302,12 +321,42 @@ class HeadingController(Node):
         self.rumo_alvo = float(msg.data)
         self.t_alvo = self.get_clock().now().nanoseconds * 1e-9
 
+    def cb_escala_linear_nav(self, msg):
+        valor = float(msg.data)
+        if (not math.isfinite(valor)
+                or not self.ESCALA_LINEAR_MIN <= valor <= self.ESCALA_LINEAR_MAX):
+            self.get_logger().error(
+                f'escala linear Nav2 recusada: {valor!r}; faixa '
+                f'{self.ESCALA_LINEAR_MIN:.2f}–{self.ESCALA_LINEAR_MAX:.2f}')
+            return
+        self.escala_linear_nav = valor
+        teto = min(self.VELOCIDADE_LINEAR_ABS_MAX,
+                   self.par['v_max'] * self.escala_linear_nav)
+        self.v_alvo = max(-teto, min(self.v_alvo, teto))
+        self.get_logger().warn(
+            f'AJUSTE AO VIVO: pedido linear do Nav2 em {valor:.2f}x '
+            f'(teto {teto:.2f} m/s)')
+
+    def cb_escala_curva_nav(self, msg):
+        valor = float(msg.data)
+        if (not math.isfinite(valor)
+                or not self.ESCALA_CURVA_MIN <= valor <= self.ESCALA_CURVA_MAX):
+            self.get_logger().error(
+                f'escala de curva Nav2 recusada: {valor!r}; faixa '
+                f'{self.ESCALA_CURVA_MIN:.2f}–{self.ESCALA_CURVA_MAX:.2f}')
+            return
+        self.escala_curva_nav = valor
+        self.get_logger().warn(
+            f'AJUSTE AO VIVO: força de curva do Nav2 em {valor:.2f}x '
+            f'(a_dec efetivo {self.par["a_dec"] * valor:.3f} rad/s²)')
+
     def cb_velocidade(self, msg):
         # Velocidade NEGATIVA é o pedido de ré, e é assim que a navegação
         # pede a manobra — sem tópico novo, sem modo escondido. O sinal já
         # diz tudo: quem manda -0,2 quer recuar a 0,2 m/s.
-        self.v_alvo = max(-self.par['v_max'],
-                          min(float(msg.data), self.par['v_max']))
+        teto = min(self.VELOCIDADE_LINEAR_ABS_MAX,
+                   self.par['v_max'] * self.escala_linear_nav)
+        self.v_alvo = max(-teto, min(float(msg.data), teto))
 
     def passo(self):
         agora = self.get_clock().now().nanoseconds * 1e-9
@@ -448,7 +497,7 @@ class HeadingController(Node):
             v, wz = comando(
                 erro,
                 v_max=self.v_alvo,
-                a_dec=self.par['a_dec'],
+                a_dec=self.par['a_dec'] * self.escala_curva_nav,
                 wz_max=self.par['wz_max'],
                 zona_morta=self.par['zona_morta'],
                 bitola=self.par['bitola'],

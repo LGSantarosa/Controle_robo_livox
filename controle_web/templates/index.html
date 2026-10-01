@@ -7,7 +7,7 @@
     <meta http-equiv="Cache-Control" content="no-store" />
     <title>Controle do Robô</title>
     <!-- CSS básico da interface -->
-    <link rel="stylesheet" href="/static/css/styles.css?v=10" />
+    <link rel="stylesheet" href="/static/css/styles.css?v=11" />
   </head>
   <body>
     <!-- Topbar fixa: identidade + telemetria vital + E-STOP sempre à mão -->
@@ -40,10 +40,10 @@
         Controle manual: <strong>PS4/WASD no robô</strong> — o web é só visualização.
       </section>
 
-      <!-- Barra de velocidade (compartilhada entre os modos) -->
-      <section class="speed-control card">
+      <!-- Barra de velocidade do teleop manual -->
+      <section class="speed-control card" id="manual-speed-control">
         <div class="speed-control-row">
-          <label for="speed-slider">Velocidade:</label>
+          <label for="speed-slider">Velocidade manual:</label>
           <input type="range" id="speed-slider" min="0.5" max="4.0" step="0.05" value="1.0" />
           <span id="speed-mult-display">1.0x</span>
         </div>
@@ -57,6 +57,27 @@
           <button class="speed-preset-btn" data-mult="2.0" id="preset-boost">Boost (□)</button>
           <button class="speed-preset-btn" data-mult="4.0" id="preset-max">Max</button>
         </div>
+      </section>
+
+      <!-- Ajustes de ensaio que atuam no pedido do Nav2, não no teleop. -->
+      <section class="nav-tuning card" id="nav-tuning-card" style="display:none">
+        <h2>Ajuste ao vivo do Nav2</h2>
+        <p class="hint">Vale nesta sessão e fica registrado no CSV da corrida.</p>
+        <div class="speed-control-row">
+          <label for="nav-linear-scale">Velocidade pedida:</label>
+          <input type="range" id="nav-linear-scale" min="0.5" max="1.4" step="0.05" value="1.0" />
+          <span class="nav-tuning-value" id="nav-linear-value">1.00x</span>
+        </div>
+        <div class="speed-control-row">
+          <label for="nav-curve-scale">Força de curva:</label>
+          <input type="range" id="nav-curve-scale" min="0.5" max="3.0" step="0.05" value="1.0" />
+          <span class="nav-tuning-value" id="nav-curve-value">1.00x</span>
+        </div>
+        <div class="nav-tuning-footer">
+          <span id="nav-tuning-status">linear e curva em 1.00x</span>
+          <button id="nav-tuning-reset" class="speed-preset-btn" type="button">Voltar a 1.00x</button>
+        </div>
+        <p class="hint nav-tuning-note">Linear multiplica o pedido já calculado, até 0,70 m/s. Curva multiplica <code>a_dec</code>; o pivô e <code>wz_max</code> não mudam.</p>
       </section>
 
       <!-- Status de teclas/gamepad (socket/energia/modo moraram aqui; agora na topbar) -->
@@ -246,7 +267,7 @@
 
     <!-- Bibliotecas cliente Socket.IO e scripts do cliente -->
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-    <script src="/static/js/client.js?v=11"></script>
+    <script src="/static/js/client.js?v=12"></script>
     <script src="/static/js/gamepad.js?v=3"></script>
     <script src="/static/js/map.js?v=8"></script>
   </body>

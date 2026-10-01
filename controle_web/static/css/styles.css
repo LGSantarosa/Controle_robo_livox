@@ -146,6 +146,12 @@ body.layout-wide .layout { max-width: 1280px; grid-template-columns: 400px minma
 .speed-preset-btn:hover { border-color: var(--zone-speed); color: var(--text); }
 .speed-preset-btn.active { border-color: var(--zone-speed); background: rgba(251,191,36,0.15); color: var(--zone-speed); font-weight: 700; }
 
+.nav-tuning h2 { margin: 0 0 4px; color: var(--zone-speed); font-size: 17px; }
+.nav-tuning-value { font-family: var(--mono); font-size: 16px; font-weight: 700; min-width: 58px; text-align: center; color: var(--zone-speed); background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.3); border-radius: 6px; padding: 2px 4px; }
+.nav-tuning-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; color: var(--muted); font-size: 12px; }
+.nav-tuning-note { margin-top: 10px; margin-bottom: 0; }
+.nav-tuning-note code { color: var(--text); }
+
 /* Bloco de status (teclas/gamepad) */
 .status { font-size: 14px; }
 .status div { margin-bottom: 4px; }

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import math
 from typing import Dict, Any, Optional
 
 # Este módulo define a interface do controlador do robô,
@@ -6,6 +7,11 @@ from typing import Dict, Any, Optional
 # e o controlador real (ROS2Controller) que publica no tópico ROS2.
 
 class RobotController(ABC):
+    ESCALA_LINEAR_MIN: float = 0.5
+    ESCALA_LINEAR_MAX: float = 1.4
+    ESCALA_CURVA_MIN: float = 0.5
+    ESCALA_CURVA_MAX: float = 3.0
+
     @abstractmethod
     def handle_key_event(self, event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
@@ -45,11 +51,46 @@ class RobotController(ABC):
         """
         return None
 
+    def nav_tuning_state(self) -> Dict[str, float]:
+        return {
+            'linear_scale': self._nav_linear_scale,
+            'curve_scale': self._nav_curve_scale,
+            'linear_min': self.ESCALA_LINEAR_MIN,
+            'linear_max': self.ESCALA_LINEAR_MAX,
+            'curve_min': self.ESCALA_CURVA_MIN,
+            'curve_max': self.ESCALA_CURVA_MAX,
+        }
+
+    def set_nav_tuning(self, linear_scale: float,
+                       curve_scale: float) -> Dict[str, float]:
+        linear_scale = float(linear_scale)
+        curve_scale = float(curve_scale)
+        if not math.isfinite(linear_scale) or not math.isfinite(curve_scale):
+            raise ValueError('as escalas do Nav2 precisam ser finitas')
+        if not self.ESCALA_LINEAR_MIN <= linear_scale <= self.ESCALA_LINEAR_MAX:
+            raise ValueError(
+                f'escala linear fora da faixa {self.ESCALA_LINEAR_MIN:.2f}–'
+                f'{self.ESCALA_LINEAR_MAX:.2f}')
+        if not self.ESCALA_CURVA_MIN <= curve_scale <= self.ESCALA_CURVA_MAX:
+            raise ValueError(
+                f'escala de curva fora da faixa {self.ESCALA_CURVA_MIN:.2f}–'
+                f'{self.ESCALA_CURVA_MAX:.2f}')
+        self._nav_linear_scale = linear_scale
+        self._nav_curve_scale = curve_scale
+        self._nav_tuning_changed()
+        return self.nav_tuning_state()
+
+    def _nav_tuning_changed(self) -> None:
+        """Hook do controlador real; o Echo só guarda o estado para a UI."""
+        return None
+
 
 class EchoController(RobotController):
     def __init__(self) -> None:
         # Conjunto de teclas atualmente pressionadas (controle simples de estado)
         self.pressed = set()
+        self._nav_linear_scale = 1.0
+        self._nav_curve_scale = 1.0
 
     def handle_key_event(self, event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         etype = event.get('type')
@@ -171,6 +212,8 @@ class ROS2Controller(RobotController):
         self.pressed: set = set()
         self._emergency_stop: bool = False
         self._speed_multiplier: float = 1.0
+        self._nav_linear_scale: float = 1.0
+        self._nav_curve_scale: float = 1.0
         self._last_gamepad_linear: float = 0.0
         self._last_gamepad_angular: float = 0.0
         self._last_printed: tuple = (None, None)
@@ -184,13 +227,24 @@ class ROS2Controller(RobotController):
 
         # Publica geometry_msgs/Twist para integração com Nav2
         from geometry_msgs.msg import Twist
+        from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
+        from std_msgs.msg import Float64
         self._Twist = Twist
+        self._Float64 = Float64
 
         self._publisher = self._node.create_publisher(
             Twist,
             '/web_vel',
             qos_profile=10,
         )
+        tuning_qos = QoSProfile(
+            depth=1, reliability=ReliabilityPolicy.RELIABLE,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL)
+        self._nav_linear_pub = self._node.create_publisher(
+            Float64, '/nav_tuning/linear_scale', tuning_qos)
+        self._nav_curve_pub = self._node.create_publisher(
+            Float64, '/nav_tuning/curve_scale', tuning_qos)
+        self._nav_tuning_changed()
 
         # Republicador a 50 Hz. O firmware da MEGA tem watchdog de 500 ms
         # (SETPOINT_TIMEOUT_MS em firmware/mega_bridge/src/main.cpp): sem
@@ -301,6 +355,17 @@ class ROS2Controller(RobotController):
                 self._publish(linear, angular)
 
         return self._speed_multiplier
+
+    def _nav_tuning_changed(self) -> None:
+        linear = self._Float64()
+        linear.data = float(self._nav_linear_scale)
+        curva = self._Float64()
+        curva.data = float(self._nav_curve_scale)
+        self._nav_linear_pub.publish(linear)
+        self._nav_curve_pub.publish(curva)
+        print('[ROS2Controller] Nav2 ao vivo: '
+              f'linear={self._nav_linear_scale:.2f}x, '
+              f'curva={self._nav_curve_scale:.2f}x')
 
     def _compute_cmd_vel(self) -> tuple:
         """

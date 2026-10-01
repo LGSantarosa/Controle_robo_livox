@@ -772,6 +772,23 @@ def velocidade_de_seguimento(dist_ao_fim, raio_da_curva, v_max, a_lin, wz_max):
     return v
 
 
+def escala_velocidade_pedida(v, escala, teto_absoluto):
+    """Escala o pedido já calculado, preservando sinal e teto físico.
+
+    Diferente de aumentar apenas ``v_max``, isto também atua quando quem limita
+    a velocidade é a frenagem até o objetivo ou a curvatura do plano. É um
+    ajuste de ensaio: as proteções posteriores continuam podendo reduzir ou
+    zerar o comando.
+    """
+    if not all(math.isfinite(x) for x in (v, escala, teto_absoluto)):
+        raise ValueError('velocidade, escala e teto precisam ser finitos')
+    if escala <= 0.0:
+        raise ValueError('escala de velocidade precisa ser positiva')
+    if teto_absoluto <= 0.0:
+        raise ValueError('teto absoluto precisa ser positivo')
+    return max(-teto_absoluto, min(teto_absoluto, v * escala))
+
+
 # --------------------------------------------------------- a ré por gatilho
 #
 # Decisão 009. O plano não dá ré (o planner roda em Dubins), então quem recua é

@@ -15,6 +15,8 @@ Tópicos:
                                                  bt_navigator; o replanejamento
                                                  vem dele, não daqui
            /Odometry          nav_msgs/Odometry  pose (FAST-LIO ou Gazebo)
+           /nav_tuning/linear_scale  std_msgs/Float64  escala do pedido linear
+           /nav_tuning/curve_scale   std_msgs/Float64  só para registrar no CSV
     sai    ~/rumo_alvo        std_msgs/Float64   [rad]
            ~/velocidade_alvo  std_msgs/Float64   [m/s] — NEGATIVA aciona a ré na
                                                  movimentação, sem tópico novo
@@ -54,6 +56,7 @@ from robot_motion.lei_de_seguimento import (
     passagens_estreitas,
     raio_de_chegada_minimo,
     re_esgotada,
+    escala_velocidade_pedida,
     rumo_para,
     alvo_estavel_de_passagem,
     vao_no_corredor_frontal,
@@ -68,6 +71,12 @@ def yaw_de(q):
 
 
 class PathFollower(Node):
+    ESCALA_LINEAR_MIN = 0.5
+    ESCALA_LINEAR_MAX = 1.4
+    ESCALA_CURVA_MIN = 0.5
+    ESCALA_CURVA_MAX = 3.0
+    VELOCIDADE_LINEAR_ABS_MAX = 0.7
+
     def __init__(self):
         super().__init__('path_follower')
 
@@ -672,11 +681,24 @@ class PathFollower(Node):
             ('log_periodo_s', 5.0),
         ])
         self.par = {x.name: x.value for x in p}
+        self.escala_linear_nav = 1.0
+        # Este nó não aplica a escala de curva; guarda-a para que cada linha do
+        # CSV diga com quais dois ajustes ao vivo a corrida foi feita.
+        self.escala_curva_nav = 1.0
 
         qos = QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE)
         self.pub_rumo = self.create_publisher(Float64, '~/rumo_alvo', qos)
         self.pub_vel = self.create_publisher(Float64, '~/velocidade_alvo', qos)
         self.create_subscription(Odometry, '/Odometry', self.cb_odom, qos)
+        tuning_qos = QoSProfile(
+            depth=1, reliability=ReliabilityPolicy.RELIABLE,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL)
+        self.create_subscription(
+            Float64, '/nav_tuning/linear_scale',
+            self.cb_escala_linear_nav, tuning_qos)
+        self.create_subscription(
+            Float64, '/nav_tuning/curve_scale',
+            self.cb_escala_curva_nav, tuning_qos)
         # ══════════════════════════════════════════════════════════════════
         # 🔴 O SEGUIDOR SEGUE O PLANO SUAVIZADO (decisão 042). Até 14-08 ele
         # assinava `/plan` — o Theta* CRU — e a suavização da 026 nunca chegou
@@ -858,6 +880,28 @@ class PathFollower(Node):
                 f'(mínimo viável {minimo:.2f} m)')
 
     # --------------------------------------------------------- callbacks
+    def cb_escala_linear_nav(self, msg):
+        valor = float(msg.data)
+        if (not math.isfinite(valor)
+                or not self.ESCALA_LINEAR_MIN <= valor <= self.ESCALA_LINEAR_MAX):
+            self.get_logger().error(
+                f'escala linear Nav2 recusada: {valor!r}; faixa '
+                f'{self.ESCALA_LINEAR_MIN:.2f}–{self.ESCALA_LINEAR_MAX:.2f}')
+            return
+        self.escala_linear_nav = valor
+        self.get_logger().warn(
+            f'AJUSTE AO VIVO: pedido linear do Nav2 em {valor:.2f}x')
+
+    def cb_escala_curva_nav(self, msg):
+        valor = float(msg.data)
+        if (not math.isfinite(valor)
+                or not self.ESCALA_CURVA_MIN <= valor <= self.ESCALA_CURVA_MAX):
+            self.get_logger().error(
+                f'escala de curva Nav2 recusada: {valor!r}; faixa '
+                f'{self.ESCALA_CURVA_MIN:.2f}–{self.ESCALA_CURVA_MAX:.2f}')
+            return
+        self.escala_curva_nav = valor
+
     def cb_odom(self, msg):
         self.pose = msg
 
@@ -1260,6 +1304,11 @@ class PathFollower(Node):
             plano, i0, janela=max(self.mira.curto, min(la, self.mira.longo)))
         v = velocidade_de_seguimento(dist, raio, self.par['v_max'],
                                      self.par['a_lin'], self.par['wz_max'])
+        # O controle web escala o pedido FINAL, não só `v_max`: assim 1,20x
+        # aumenta também a velocidade escolhida por curva/frenagem. O teto
+        # absoluto continua sendo o do diff_drive_controller.
+        v = escala_velocidade_pedida(
+            v, self.escala_linear_nav, self.VELOCIDADE_LINEAR_ABS_MAX)
         if passagem is not None:
             v = min(v, self.par['passagem_v_max'])
         # Decisão 039: o rumo do carrot MAIS a realimentação do desvio lateral.
@@ -1599,6 +1648,8 @@ class PathFollower(Node):
             'erro_rumo': round(math.atan2(math.sin(rumo_alvo - rumo),
                                           math.cos(rumo_alvo - rumo)), 4),
             'v_alvo': round(v, 4), 'dist': round(dist, 4),
+            'escala_linear_nav': round(self.escala_linear_nav, 3),
+            'escala_curva_nav': round(self.escala_curva_nav, 3),
             'raio_curva': ('inf' if math.isinf(raio) else round(raio, 4)),
             # 19-08: prova se a mira ficou curta diante de uma curva futura.
             'mira': '' if mira is None else round(mira, 4),

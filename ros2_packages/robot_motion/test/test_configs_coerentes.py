@@ -155,6 +155,44 @@ def test_a_cadeia_da_launch_bate_com_a_config():
         'a saída do mux tem de entrar no compensador'
 
 
+def test_ajuste_web_nav2_tem_mesmas_faixas_nos_tres_consumidores():
+    """Web, seguidor e rumo não podem aceitar faixas diferentes em silêncio."""
+    arquivos = [
+        os.path.join(RAIZ, 'controle_web', 'controllers', 'robot_controller.py'),
+        os.path.join(RAIZ, 'ros2_packages', 'robot_motion', 'robot_motion',
+                     'path_follower.py'),
+        os.path.join(RAIZ, 'ros2_packages', 'robot_motion', 'robot_motion',
+                     'heading_controller.py'),
+    ]
+    nomes = ('ESCALA_LINEAR_MIN', 'ESCALA_LINEAR_MAX',
+             'ESCALA_CURVA_MIN', 'ESCALA_CURVA_MAX')
+    valores = {}
+    for caminho in arquivos:
+        fonte = open(caminho).read()
+        valores[caminho] = {
+            nome: float(re.search(rf'{nome}(?:\s*:\s*float)?\s*=\s*([\d.]+)',
+                                  fonte).group(1))
+            for nome in nomes
+        }
+        assert "'/nav_tuning/linear_scale'" in fonte
+        assert "'/nav_tuning/curve_scale'" in fonte
+    assert len({tuple(v.items()) for v in valores.values()}) == 1, valores
+
+
+def test_ajuste_linear_web_nao_passa_do_teto_da_base():
+    driver = os.path.join(
+        RAIZ, 'ros2_packages', 'hoverboard_driver', 'bringup', 'config',
+        'hoverboard_controllers.yaml')
+    teto_base = valor(driver, 'linear.x.max_velocity')
+    for nome in ('path_follower.py', 'heading_controller.py'):
+        caminho = os.path.join(
+            RAIZ, 'ros2_packages', 'robot_motion', 'robot_motion', nome)
+        fonte = open(caminho).read()
+        m = re.search(r'VELOCIDADE_LINEAR_ABS_MAX\s*=\s*([\d.]+)', fonte)
+        assert m and float(m.group(1)) == teto_base, (
+            f'{nome} deixa o ajuste web passar de {teto_base:.2f} m/s')
+
+
 # ---------------------------------- o reflexo de colisão (levantamento da 010)
 
 def _cm():

@@ -20,6 +20,7 @@ from robot_motion.lei_de_seguimento import (
     curvatura_adiante,
     desvio_da_corda,
     desvio_lateral,
+    escala_velocidade_pedida,
     folga_radial,
     indice_mais_proximo,
     lookahead_de,
@@ -608,6 +609,31 @@ def test_freia_pela_distancia_ate_o_fim():
         dist_ao_fim=0.10, raio_da_curva=float('inf'),
         v_max=V_MAX, a_lin=A_LIN, wz_max=WZ_MAX)
     assert v == pytest.approx(math.sqrt(2 * A_LIN * 0.10))
+
+
+def test_ajuste_ao_vivo_escala_o_pedido_e_nao_so_o_teto():
+    # Pedido limitado pela CURVA, abaixo de v_max: aumentar só v_max não faria
+    # nada. O ajuste web tem de mudar este valor já calculado.
+    v_curva = velocidade_de_seguimento(
+        dist_ao_fim=10.0, raio_da_curva=0.30,
+        v_max=0.5, a_lin=0.3, wz_max=1.0)
+    assert v_curva == pytest.approx(0.30)
+    assert escala_velocidade_pedida(v_curva, 1.20, 0.70) == pytest.approx(0.36)
+
+
+def test_ajuste_ao_vivo_respeita_teto_fisico_e_sinal():
+    assert escala_velocidade_pedida(0.60, 1.40, 0.70) == pytest.approx(0.70)
+    assert escala_velocidade_pedida(-0.40, 1.20, 0.70) == pytest.approx(-0.48)
+
+
+@pytest.mark.parametrize('v, escala, teto', [
+    (float('nan'), 1.0, 0.7),
+    (0.3, 0.0, 0.7),
+    (0.3, 1.0, 0.0),
+])
+def test_ajuste_ao_vivo_recusa_valor_invalido(v, escala, teto):
+    with pytest.raises(ValueError):
+        escala_velocidade_pedida(v, escala, teto)
 
 
 def test_curvatura_adiante_ve_a_curva_ANTES_de_entrar_nela():

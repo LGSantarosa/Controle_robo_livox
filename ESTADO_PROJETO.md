@@ -2,7 +2,7 @@
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
 > Versionado na `main`. Atualizado em **2026-10-01** (quarto ajuste incremental
-> do giro para a roda omni, ainda sem teste no chão). O estado
+> e controles ao vivo do Nav2, ainda sem teste no chão). O estado
 > anterior continua sendo o de 24-09: Mid-360, FAST-LIO, `/scan` e TF do robô 3
 > provados com placa/motores desligados; a configuração que funcionou está só
 > no clone ignorado pelo git e ainda precisa virar solução por máquina.
@@ -55,9 +55,18 @@ preservado no NUC com SHA-256 registrado.
 Em 01-10, antes de aplicar o passo planejado de 15%, o dono revisou o pedido
 para **mais 20%**, porque a diagonal e a curva aberta ainda ficaram fracas.
 Quarto ajuste no código: `a_dec` **0,24 → 0,288** (+20% no parâmetro, ~9,5% no
-pedido angular). O valor fica só 0,012 abaixo do 0,30 que oscilou, portanto o
-próximo passo é exclusivamente testar esse valor no chão. Pivô, linear,
-compensador e tetos continuam iguais.
+pedido angular). O ensaio de 0,30 que oscilou foi feito com a roda boba antiga;
+o dono determinou que ele não deve limitar a planta nova com omni. Pivô,
+linear, compensador e tetos continuam iguais.
+
+Para não editar código a cada tentativa, a interface web ganhou dois ajustes
+exclusivos do modo Nav2. **Velocidade pedida** (`0,50×–1,40×`) multiplica o
+pedido linear já calculado pelo seguidor — inclusive quando curva/frenagem, e
+não apenas `v_max` — com teto físico final de 0,70 m/s. **Força de curva**
+(`0,50×–3,00×`) multiplica o `a_dec` da lei contínua; `wz_max` e o pivô não
+mudam. Os valores chegam ao vivo por tópicos DDS retidos, voltam a `1,00×` na
+subida da web e são gravados em cada linha do CSV. Implementação e comunicação
+web→seguidor/rumo provadas offline; falta instalar e testar no robô.
 
 ---
 

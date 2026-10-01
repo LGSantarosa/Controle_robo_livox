@@ -82,6 +82,75 @@
     }
   });
 
+  // --- Ajuste ao vivo do pedido do Nav2 (separado do teleop manual) ---
+  const navTuningCard = document.getElementById('nav-tuning-card');
+  const navLinearSlider = document.getElementById('nav-linear-scale');
+  const navCurveSlider = document.getElementById('nav-curve-scale');
+  const navLinearValue = document.getElementById('nav-linear-value');
+  const navCurveValue = document.getElementById('nav-curve-value');
+  const navTuningStatus = document.getElementById('nav-tuning-status');
+  const navTuningReset = document.getElementById('nav-tuning-reset');
+  let navLinearScale = 1.0;
+  let navCurveScale = 1.0;
+
+  function updateNavTuningUI(linear, curve, limits) {
+    navLinearScale = Number(linear);
+    navCurveScale = Number(curve);
+    if (limits && navLinearSlider) {
+      if (limits.linear_min != null) navLinearSlider.min = limits.linear_min;
+      if (limits.linear_max != null) navLinearSlider.max = limits.linear_max;
+    }
+    if (limits && navCurveSlider) {
+      if (limits.curve_min != null) navCurveSlider.min = limits.curve_min;
+      if (limits.curve_max != null) navCurveSlider.max = limits.curve_max;
+    }
+    if (navLinearSlider) navLinearSlider.value = navLinearScale;
+    if (navCurveSlider) navCurveSlider.value = navCurveScale;
+    if (navLinearValue) navLinearValue.textContent = navLinearScale.toFixed(2) + 'x';
+    if (navCurveValue) navCurveValue.textContent = navCurveScale.toFixed(2) + 'x';
+    if (navTuningStatus) {
+      navTuningStatus.textContent = `linear ${navLinearScale.toFixed(2)}x · curva ${navCurveScale.toFixed(2)}x`;
+      navTuningStatus.className = '';
+    }
+  }
+
+  function sendNavTuning() {
+    socket.emit('set_nav_tuning', {
+      linear_scale: navLinearScale,
+      curve_scale: navCurveScale,
+    });
+  }
+
+  if (navLinearSlider) {
+    navLinearSlider.addEventListener('input', () => {
+      updateNavTuningUI(parseFloat(navLinearSlider.value), navCurveScale);
+    });
+    navLinearSlider.addEventListener('change', sendNavTuning);
+  }
+  if (navCurveSlider) {
+    navCurveSlider.addEventListener('input', () => {
+      updateNavTuningUI(navLinearScale, parseFloat(navCurveSlider.value));
+    });
+    navCurveSlider.addEventListener('change', sendNavTuning);
+  }
+  if (navTuningReset) {
+    navTuningReset.addEventListener('click', () => {
+      updateNavTuningUI(1.0, 1.0);
+      sendNavTuning();
+    });
+  }
+
+  socket.on('nav_tuning_update', (data) => {
+    if (!data) return;
+    if (data.ok) {
+      updateNavTuningUI(data.linear_scale, data.curve_scale, data);
+      appendLog('nav2', `ajuste ao vivo: linear ${data.linear_scale.toFixed(2)}x · curva ${data.curve_scale.toFixed(2)}x`);
+    } else if (navTuningStatus) {
+      navTuningStatus.textContent = `Não aplicado: ${data.error || 'erro'}`;
+      navTuningStatus.className = 'err';
+    }
+  });
+
   // Expõe socket e helpers para o módulo gamepad
   window._robotSocket = socket;
   window._robotAppendLog = appendLog;
@@ -129,7 +198,7 @@
   // Esconde seletor de modo, barra de velocidade e os dois painéis de controle,
   // e mostra um aviso. NÃO toca no mapa/click-to-go/waypoints/infos.
   const modeSelectorEl = document.querySelector('.mode-selector');
-  const speedControlEl = document.querySelector('.speed-control');
+  const speedControlEl = document.getElementById('manual-speed-control');
   const monitorNoticeEl = document.getElementById('monitor-notice');
   // Card que embrulha pressed-row/gamepad-status-row: sem teleop as duas
   // linhas somem e a casca ficava flutuando vazia — esconde ela junto.
@@ -168,6 +237,13 @@
     // Default true se o servidor for antigo e não mandar a chave
     webTeleop = data.web_teleop !== false;
     applyTeleopVisibility(webTeleop);
+    if (navTuningCard) navTuningCard.style.display = data.mode === 'nav2' ? '' : 'none';
+    if (data.nav_tuning) {
+      updateNavTuningUI(
+        data.nav_tuning.linear_scale,
+        data.nav_tuning.curve_scale,
+        data.nav_tuning);
+    }
   });
   // Exposto pro gamepad.js parar de fazer poll/emit quando o web é só monitor
   window._robotIsTeleopEnabled = () => webTeleop;
