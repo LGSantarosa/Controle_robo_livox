@@ -23,8 +23,8 @@ completa a 057 e a 058
 
 ## Decisão
 
-1. `/web_vel` passa a ser `TwistStamped`, com stamp atual e `frame_id =
-   base_link`. Teste de contrato dos dois lados (web e `twist_mux.yaml`).
+1. `/web_vel` passa a ser `TwistStamped`, com carimbo `(0, 0)` e `frame_id =
+   base_link` (o `diff_drive_controller` põe o relógio dele; ver o adendo). Teste de contrato dos dois lados (web e `twist_mux.yaml`).
 2. Velocidade manual: base = o normal do Xbox (0,30 m/s e 1,25 rad/s). Tetos
    **separados**: `linear = min(0,30·m; 0,50)` e `angular = min(1,25·m; 1,25)`,
    com `SPEED_MULT_MAX = 0,5/0,3`. Um multiplicador comum limitado a 1× não
@@ -49,6 +49,33 @@ completa a 057 e a 058
      move o robô;
    - o handler do STOP chama a parada **antes** e independente do
      `map_bridge`.
+
+## Adendo de 01-10 (ensaio no Gazebo) — o carimbo é zero
+
+No primeiro ensaio, a web dirigiu de verdade pela primeira vez. Uma seta de
+ré segurada por 0,7 s virou **~9 s de ré a −0,29 m/s**, até o robô parar
+contra o mundo. Pela cadeia gravada, o zero da web passou pelo mux e pelo
+compensador e chegou ao `/cmd_vel_bruto`. Duas falhas se somaram:
+
+1. **o carimbo:** a web carimbava o `TwistStamped` com o relógio dela (tempo de
+   parede, sem `use_sim_time`). O `diff_drive_controller` mede o
+   `cmd_vel_timeout` (0,5 s) pelo carimbo, no tempo simulado: comando "do
+   futuro" nunca vence. **Corrigido aqui:** o `/web_vel` sai com carimbo
+   `(0, 0)`, que o `diff_drive_controller` 4.39 troca pelo relógio dele. O mux
+   (4.5.0), o compensador e a placa simulada repassam o carimbo intacto
+   (conferido pelo Codex nas versões instaladas). Vale igual no Gazebo e no
+   NUC;
+2. **a placa simulada:** a fila de latência (0,27 s) só esvazia quando chega
+   mensagem nova, e o zero único ficou retido. É defeito só do simulador.
+   Fica para um passo próprio: **até lá, nada de ensaio de movimento com a web
+   no Gazebo.**
+
+**Os canais humanos passam DEPOIS do reflexo, de propósito.** `joy_vel`
+(100), `key_vel` (90) e `web_vel` (50) entram no `twist_mux` depois do
+`collision_monitor`, que filtra só a autonomia (`auto_vel_raw → auto_vel`). É
+o que permite tirar da parede um robô que o próprio reflexo prendeu, e é
+também por isso que nada segurou a ré deste ensaio. Quem dirige pela web
+responde pelo que está atrás e à frente do robô, como no Xbox.
 
 ## Alcance — o que este STOP NÃO é
 

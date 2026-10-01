@@ -34,12 +34,16 @@ def test_web_vel_e_publicado_como_twist_stamped(ctrl):
     assert tipos['/web_vel'] is TwistStamped
 
 
-def test_mensagem_tem_carimbo_atual_e_frame_do_corpo(ctrl):
+def test_mensagem_tem_carimbo_zero_e_frame_do_corpo(ctrl):
+    """Carimbo (0, 0): o diff_drive_controller põe o relógio DELE. Com o
+    relógio da web (parede) no Gazebo (tempo simulado), o timeout de 0,5 s
+    nunca vencia e a ré seguia sem fim (ensaio de 01-10). O relógio do nó
+    falso devolve (12, 34) justamente para provar que ele não é usado."""
     c, _no = ctrl
     msg = c._monta_web_vel(0.25, -0.5)
     assert isinstance(msg, TwistStamped)
     assert msg.header.frame_id == 'base_link'
-    assert (msg.header.stamp.sec, msg.header.stamp.nanosec) == (12, 34)
+    assert (msg.header.stamp.sec, msg.header.stamp.nanosec) == (0, 0)
     assert msg.twist.linear.x == pytest.approx(0.25)
     assert msg.twist.angular.z == pytest.approx(-0.5)
 

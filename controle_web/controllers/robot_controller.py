@@ -380,10 +380,17 @@ class ROS2Controller(RobotController):
             self._last_printed = rounded
 
     def _monta_web_vel(self, linear: float, angular: float):
-        """Mensagem do /web_vel: carimbo atual e frame do corpo."""
+        """Mensagem do /web_vel: carimbo ZERO e frame do corpo.
+
+        Carimbo zero de propósito (decisão 059, revisão de 01-10): o
+        `diff_drive_controller` (4.39) troca `(0, 0)` pelo relógio DELE, e o
+        mux, o compensador e a placa simulada repassam o carimbo intacto.
+        Carimbar com o relógio da web quebrava o timeout de 0,5 s no Gazebo:
+        a web roda em tempo de parede, o controlador em tempo simulado, e um
+        comando "do futuro" nunca vence — uma ré de 0,7 s virou 9 s.
+        """
         msg = self._TwistStamped()
-        msg.header.stamp = self._node.get_clock().now().to_msg()
-        msg.header.frame_id = 'base_link'
+        msg.header.frame_id = 'base_link'      # stamp fica (0, 0)
         msg.twist.linear.x = float(linear)
         msg.twist.angular.z = float(angular)
         return msg

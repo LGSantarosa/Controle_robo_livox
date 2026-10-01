@@ -14,10 +14,29 @@
 
 ---
 
+## 🔴 01-10 — GAZEBO: STOP APROVADO; WEB ANDOU 9 s COM UM TOQUE DE RÉ
+
+Ensaio no Gazebo com o dono olhando:
+- **STOP aprovado:** o seguidor parou 23 ms depois do clique, antes de o Nav2
+  registrar o cancelamento. O mesmo ponto reenviado pegou o plano novo, e o
+  robô chegou.
+- **Teleop da web reprovado:** um toque de ré (0,7 s) virou ~9 s de ré. A
+  causa, em duas partes, está no adendo da 059:
+  1. o carimbo de relógio da web (parede) contra o tempo simulado.
+     **Corrigido**: carimbo `(0, 0)`, commit local aguardando revisão;
+  2. a fila da placa simulada retém o zero único. **Pendente: nada de ensaio
+     de movimento com a web no Gazebo até corrigir.**
+
+Os canais humanos (Xbox, teclado, web) passam **depois** do reflexo, de
+propósito; nada os segura.
+
+Também visto no CSV: falso "emperrado" por progresso euclidiano (escape de
+0,21 m com o robô andando bem) e S de ±30° com o linear em 1,40× (0,7 m/s).
+
 ## 🟡 01-10 — A3 (TELEOP DA WEB) CORRIGIDO NO DEV, PASSOS 1 E 2
 
 1. A web publicava `Twist` num mux `TwistStamped`, e nada da web chegava à
-   roda. Agora publica `TwistStamped` (stamp atual, `base_link`), com teste de
+   roda. Agora publica `TwistStamped` (carimbo `(0, 0)`, `base_link`), com teste de
    contrato dos dois lados.
 2. A velocidade manual foi calibrada para o robô 2. A base é o normal do Xbox
    (0,30 m/s e 1,25 rad/s), no lugar do giro de 6,0 rad/s do robô 1. Os tetos

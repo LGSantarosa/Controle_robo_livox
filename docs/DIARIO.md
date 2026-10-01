@@ -10735,3 +10735,29 @@ gamepad conferem a janela e atualizam o estado sob o mesmo lock, e o evento da
 janela é descartado. O teste novo avança além de 1 s e confere que não há
 movimento sem comando novo; ele falha na versão anterior e passa na nova.
 **1295 passed**. Segue local até a revisão.
+
+## 2026-10-01 (Gazebo, dono olhando) — O STOP PASSA; A WEB ANDA 9 s COM UM TOQUE
+
+Pilha no `sala_andar3` com AMCL, mais a web. O pré-voo passou: Nav2 ativo,
+`map→base_link`, `/scan` a 6,8 Hz, e `/web_vel` em `TwistStamped` dos dois
+lados.
+
+- **STOP:** o objetivo foi cancelado e o seguidor registrou `parado (objetivo
+  encerrado)` 23 ms depois do clique, antes do `bt_navigator` logar o
+  cancelamento. A parada no `CANCELING` funciona. O mesmo ponto reenviado
+  aceitou o plano novo e chegou (A6).
+- **Falso emperrado:** no corredor, a distância euclidiana ao objetivo subiu
+  de 7,04 para 7,18 m durante ~4 s com o robô andando bem, e o seguidor
+  disparou um escape de 0,21 m para frente, pelo canal que fura o reflexo. É o
+  achado "progresso euclidiano" da revisão, visto ao vivo.
+- **S:** com o linear em 1,40× (0,7 m/s), o rumo oscilou cerca de ±30°.
+- **Teleop web:** um toque de 0,7 s na seta de ré virou ~9 s de ré até bater.
+  O `freeze_capture` mostrou o zero chegando ao `/cmd_vel_bruto` e a saída da
+  placa simulada presa em −0,29. Causas: o carimbo da web em tempo de parede
+  contra o `cmd_vel_timeout` em tempo simulado, e a fila da placa simulada que
+  só esvazia com mensagem nova. O carimbo foi corrigido para `(0, 0)`
+  (adendo da 059); a placa fica para o próximo passo, e até lá não há ensaio de
+  movimento pela web.
+
+Defeito meu: o passo 1 da A3 foi revisado, mas ninguém pensou no relógio do
+carimbo, e só o ensaio pegou.
