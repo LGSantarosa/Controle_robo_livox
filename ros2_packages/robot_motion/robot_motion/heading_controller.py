@@ -166,6 +166,10 @@ class HeadingController(Node):
             # demais custa pulsos, alto demais traz sobrepasso. Ver
             # `lei_de_pivo.py`.
             ('pivo_a_dec', 0.6),
+            # 01-10: teto PRÓPRIO do giro no pivô [rad/s]. 0 = usa o wz_max.
+            # Separado porque o wz_max subiu para 2,2 (curva) e o pivô, que
+            # gira no teto, passou a varrer demais contra a retenção da placa.
+            ('pivo_wz', 0.0),
             ('pivo_tolerancia', 0.105),     # rad (~6°), o piso medido é ~4°
             ('pivo_max_pulsos', 6),
             ('pivo_teto_tempo', 20.0),
@@ -434,7 +438,8 @@ class HeadingController(Node):
             self.pivo = PivoPorCorte(
                 a_dec=self.par['pivo_a_dec'],
                 tolerancia=self.par['pivo_tolerancia'],
-                wz_comando=self.par['wz_max'],
+                wz_comando=(self.par['pivo_wz'] if self.par['pivo_wz'] > 0.0
+                            else self.par['wz_max']),
                 max_pulsos=self.par['pivo_max_pulsos'],
                 teto_tempo=self.par['pivo_teto_tempo'])
             self.get_logger().info(

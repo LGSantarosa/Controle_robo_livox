@@ -27,7 +27,7 @@ heading_controller:
     #   subir a frenagem mexe direto no S que só assentou em 11-08, e isso
     #   merece leva própria, com corrida de controle. Não é esquecimento;
     #   é a diferença entre o que a máquina faz e o que pedimos dela.
-    a_dec: 0.432      # 01-10: +50% sobre 0,288, pedido do dono; a força
+    a_dec: 0.648      # 01-10: 0,288 -> 0,432 -> 0,648 (+50% duas vezes), pedido do dono; a força
                       # de curva da web multiplica ESTE valor. Histórico: 12-08,
                       # com a roda boba antiga, 0,3 fez
                       # o rumo oscilar 38°. Esse resultado NÃO limita a omni:
@@ -111,4 +111,5 @@ heading_controller:
     # rumo em arco, não de um pulso de pivô no módulo cheio.
     # A decisão 023 segue de pé, e este perfil nunca chegou a ser mexido.
     limiar_pivo: 1.40          # rad = 80° — ver o aviso acima antes de baixar
+    pivo_wz: 1.25              # 01-10: teto do pivô, separado do wz_max 2,2 da curva
     pivo_max_pulsos: 1         # UM golpe grosso, nunca uma perseguição
