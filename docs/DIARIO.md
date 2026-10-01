@@ -10817,3 +10817,31 @@ motivo ainda não é conhecido. O freio foi aprovado no robô real em 13-08. Fic
 em aberto se ele também dá tranco lá ou se é só a placa simulada.
 
 Gazebo e web derrubados ao fim; nada foi ao NUC.
+
+## 2026-10-01 noite (lab, robô 2) — A CURVA FICA FORTE E O ROBÔ FICA "ÓTIMO"
+
+Primeira sessão no chão com a revisão aplicada. Sequência:
+
+- **Rede:** a interface do lidar (`enp1s0`) tinha link, mas não tinha o IP
+  `192.168.1.2`, e o perfil não subiu no boot. O driver do Livox caiu com
+  `bind failed`, e a pilha subiu cega. O dono ativou o perfil com sudo.
+- **Mapa:** `andar3_completo`, cópia byte a byte do mapa de 30-09 do robô 3,
+  virou o padrão do `sobe-robo`.
+- **Disco cheio:** 408 GB de bags (`--all-topics`, ~1 GB/min) e um gravador
+  órfão. Gravadores mortos, bags apagados (menos o MCAP de 30-09), e o `bag`
+  passou a nascer desligado.
+- **Curva:** "aumento o giro e nada muda". O CSV mostrou o pedido do
+  `heading_controller` colado no teto de 1,25 (p90), e por isso subir o
+  `a_dec` não fazia efeito. Teto para 2,2, o limite da placa. Depois, a
+  pedido do dono: freios de giro e linear desligados; pivô com teto próprio
+  de 1,25 (no 2,2 ele girava demais depois da ré); e o `a_dec` subiu até
+  5,832, cada passo sendo o slider de 3× aprovado no chão. Veredito: *"ele
+  foi ÓTIMO … o resto tá PERFEITO"*.
+- **FAST-LIO** divergiu uma vez na partida, com o robô parado (305 m em 36 s,
+  depois 1700 m). Lidar e IMU estavam vivos. A suspeita é movimento durante a
+  inicialização.
+
+Ficaram para a próxima sessão: o plano velho (ele segue o plano antigo depois
+de errar um pouco) e uma ré do nada no corredor, que bateu a traseira. A
+bateria do NUC acabou antes da análise. Os logs estão no NUC, e o
+`freeze_capture.csv` precisa ser copiado antes de reiniciar a pilha.

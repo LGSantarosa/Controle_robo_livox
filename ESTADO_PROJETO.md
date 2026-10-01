@@ -14,6 +14,40 @@
 
 ---
 
+## 🟢 01-10 noite (NO ROBÔ 2) — CURVA FORTE APROVADA: "ELE FOI ÓTIMO"
+
+O que mudou no robô nesta sessão, nesta ordem, cada passo testado no chão
+pelo dono:
+- **mapa padrão** = `maps/andar3_completo`, trazido do repo do robô 3. O AMCL
+  nasce em 0,0,0 = a marca de fita;
+- **bag desligado por padrão**: o `--all-topics` encheu o disco do NUC
+  (408 GB, 100%). Bags apagados, menos o MCAP de 30-09;
+- **teto de giro** `wz_max` 1,25 → **2,2** (controlador, seguidor e
+  `diff_drive`): com a força de curva no máximo, o pedido saturava no teto;
+- **freios de giro (037) e linear (038) DESLIGADOS**, a pedido do dono;
+- **pivô com teto próprio** `pivo_wz` 1,25: no 2,2 ele girava demais depois
+  da ré;
+- **`a_dec`** 0,288 → 0,432 → 0,648 → 1,944 → **5,832**. Cada ×3 foi o slider
+  em 3× aprovado no chão; o último ficou "ótimo".
+
+⚠️ No meio da sessão o FAST-LIO divergiu sozinho na partida, com o robô
+parado: em 36 s ele já se achava a 305 m da origem, e chegou a 1700 m. Lidar e
+IMU estavam vivos. A hipótese é robô mexido durante a inicialização. Subir
+sempre com o robô quieto na marca.
+
+**Pendências (ordem do dono):**
+1. **Plano velho:** às vezes ele erra um pouco o plano e continua seguindo o
+   plano antigo, em vez de pegar um novo a partir da pose atual. Hoje o BT
+   replaneja a cada 5 s, e o seguidor trava o plano aceito enquanto houver
+   progresso.
+2. **Ré do nada no corredor:** disparou uma vez na noite e bateu a traseira na
+   parede. Analisar nos logs do NUC (`~/logs_sessao/pilha.log`, último
+   `seguidor_*.csv`, `freeze_capture.csv`) ANTES de reiniciar a pilha. A
+   bateria acabou no fim da sessão. Suspeitas da revisão: progresso
+   euclidiano (falso emperrado) e `/scan` cego a menos de 0,35 m (A4).
+3. 12 `static_transform_publisher` órfãos no NUC; o `--mata` não os pega, nem
+   pega o `ros2 bag`.
+
 ## 🟢 01-10 (2ª rodada no Gazebo) — TELEOP DA WEB E STOP APROVADOS
 
 Com o carimbo `(0, 0)` e o vigia da placa simulada (`859d3f7`):
