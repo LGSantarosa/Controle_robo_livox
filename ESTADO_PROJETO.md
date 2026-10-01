@@ -14,6 +14,19 @@
 
 ---
 
+## 🟡 01-10 — FASE 2 DA REVISÃO: A2 CORRIGIDO NO DEV
+
+O `path_follower` agora para quando o estado agregado das actions passa de
+objetivo vivo para encerrado: publica zero na cadeia normal e também em
+`/unstuck_vel`, sai de `re`/`pivo_escape` e apaga o plano retido. A bancada
+sem action permanece igual. A limpeza do plano também elimina o mecanismo de
+A6 (reenviar o mesmo ponto e herdar o plano velho). Decisão **057**; testes
+focados: **29 passed**; suíte completa: **1267 passed**.
+
+🔴 Ainda não validado no Gazebo nem no robô. Antes do NUC: cancelamento durante
+trajeto, ré e pivô; ponto novo com o robô andando; troca de waypoint. A web
+(A1/A7) continua sem alteração e será um segundo commit separado.
+
 ## 🛗 01-10 — FRENTE FUTURA: ELEVADOR (só desenho, nada implementado)
 
 Função futura do robô 2, definida pelo dono: **entrar no elevador, identificar

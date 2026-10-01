@@ -1091,8 +1091,24 @@ class PathFollower(Node):
     ATIVOS = {1, 2, 3}
 
     def cb_status(self, msg, topico):
+        tinha_objetivo = self.tem_objetivo()
         self._objetivo[topico] = any(s.status in self.ATIVOS
                                      for s in msg.status_list)
+        if tinha_objetivo and not self.tem_objetivo():
+            self.encerra_objetivo()
+
+    def encerra_objetivo(self):
+        """Para agora e descarta o plano quando a action deixa de estar viva."""
+        # A ré e o pivô de escape saem por este canal, acima da autonomia e
+        # depois do collision_monitor. Parar só a cadeia normal não os corta.
+        self.publica_desencalhe(0.0)
+        if self.pose is not None:
+            self.para('objetivo encerrado')
+        else:
+            self.estado = 'ocioso'
+            self.progresso.reinicia()
+            self.correcao.reset()
+        self.plano = []
 
     def tem_objetivo(self):
         """Existe objetivo de navegação vivo AGORA?

@@ -10637,3 +10637,22 @@ cancelado continua sendo seguido por até 7 s (A2); o teleop da web publica
 escape, que furam o reflexo, decidem por um `/scan` que não vê nada a menos de
 0,35 m (A4, a medir). A limpeza fica para a fase 2, um item por vez, com o ok
 do dono.
+
+## 2026-10-01 (dev, sem Gazebo e sem robô) — FASE 2, A2: OBJETIVO MORTO PARA O SEGUIDOR
+
+Primeira mudança da fase 2, separada da web: quando o estado agregado das duas
+actions passa de objetivo vivo para nenhum objetivo vivo, o `path_follower`
+agora zera tanto a cadeia normal quanto `/unstuck_vel`, sai de `re` ou
+`pivo_escape` e apaga o plano retido. A bancada sem action não muda, porque
+nela essa transição nunca acontece. Apagar o plano também elimina o mecanismo
+de A6: o mesmo ponto reenviado não pode mais herdar a rota da missão morta.
+
+O primeiro teste focado deu **5 falhas** porque o `SeguidorFalso` novo não
+expunha a constante de classe `ATIVOS`; era defeito da fixture, não da
+produção. Corrigida a fixture, os testes novos mais os de ré e plano
+suavizado deram **29 passed**. A primeira tentativa da suíte completa usou o
+overlay herdado de `Controle_robo_web` e terminou com 1228 passes, 28 falhas e
+11 erros de pacote não encontrado (`robot_base`/`robot_motion`); resultado de
+ambiente inválido. Repetida após carregar `install/setup.bash` deste repo, a
+suíte deu **1267 passed**. Decisão **057**. Ainda faltam os casos de ordenação
+no Gazebo; nada foi levado ao NUC.
