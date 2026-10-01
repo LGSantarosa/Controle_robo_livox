@@ -32,7 +32,7 @@
 set +u
 R="$HOME/Controle_robo_livox"
 LOGS="$HOME/logs_sessao"
-MAPA="$R/maps/sala_andar3/sala_andar3.yaml"
+MAPA="$R/maps/andar3_completo/andar3_completo.yaml"   # 01-10: o andar 3 completo (veio do robô 3)
 MUNDO_POSE="pose_x:=0.0 pose_y:=0.0 pose_yaw:=0.0"
 # ⚠️ Remedir por sessão: a planta anda ~12% entre dias (ver DIARIO 14-08).
 #
