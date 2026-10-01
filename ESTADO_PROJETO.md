@@ -14,6 +14,16 @@
 
 ---
 
+## 🟡 01-10 — FASE 2 DA REVISÃO: A1/A7 (STOP DA WEB) CORRIGIDOS NO DEV
+
+O STOP da web agora cancela **todos** os goals `NavigateToPose` aceitos até o
+instante do clique, incluindo o clique-para-ir que entra por `/goal_pose`.
+Goal de rota aceito depois do STOP é cancelado no próprio aceite. Junto da 057,
+um STOP para o robô na hora. Decisão **058**; suíte: **1271 passed**.
+
+🔴 Ainda não validado no Gazebo nem no robô; vale a mesma lista da 057, mais
+o STOP durante um clique e durante uma rota.
+
 ## 🟡 01-10 — FASE 2 DA REVISÃO: A2 CORRIGIDO NO DEV
 
 O `path_follower` agora para quando o estado agregado das actions passa de

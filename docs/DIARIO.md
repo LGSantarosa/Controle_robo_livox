@@ -10656,3 +10656,18 @@ overlay herdado de `Controle_robo_web` e terminou com 1228 passes, 28 falhas e
 ambiente inválido. Repetida após carregar `install/setup.bash` deste repo, a
 suíte deu **1267 passed**. Decisão **057**. Ainda faltam os casos de ordenação
 no Gazebo; nada foi levado ao NUC.
+
+## 2026-10-01 (dev, sem robô) — FASE 2: O STOP DA WEB PASSA A CANCELAR TUDO (A1/A7)
+
+Depois da 057 (o seguidor para quando o objetivo morre, feita pelo Codex e
+revisada aqui), entrou a parte da web. Causa já confirmada na revisão: o STOP
+só cancelava o handle de rota já aceito. O clique-para-ir não tinha handle, e
+STOP antes do aceite caía no `None`.
+
+Conserto (decisão 058): cancelamento geral pelo serviço da action, com
+goal_id zerado e stamp atual, mais uma geração de rota que cancela no aceite
+o goal enviado antes do STOP. O reinício de rota não usa o cancelamento geral,
+para não matar o goal novo. 4 testes novos; suíte com overlay **1271 passed**.
+Sem o overlay a suíte acusa 28 falhas e 11 erros de ambiente; não é regressão.
+
+Falta o Gazebo, com o dono olhando, antes do NUC.

@@ -36,6 +36,7 @@ from rclpy.node import Node
 from rclpy.qos import QoSDurabilityPolicy, QoSHistoryPolicy, QoSProfile, QoSReliabilityPolicy
 
 from action_msgs.msg import GoalStatus
+from action_msgs.srv import CancelGoal
 from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped
 from nav2_msgs.action import NavigateToPose
 from nav2_msgs.srv import GetCostmap
@@ -298,6 +299,12 @@ class MapBridge:
         self._nav_action = ActionClient(
             self._node, NavigateToPose, 'navigate_to_pose'
         )
+        # STOP de verdade (A1 da revisão de 01-10): o clique-para-ir entra por
+        # /goal_pose e a web não tem handle dele. O serviço de cancelamento da
+        # action, com goal_id zerado, cancela todos os goals aceitos até o stamp.
+        self._nav_cancel_cli = self._node.create_client(
+            CancelGoal, 'navigate_to_pose/_action/cancel_goal'
+        )
         self._last_robot_xy: Optional[tuple] = None   # (x, y) do robô em map
 
         # Guarda o último metadata do mapa para converter clique pixel→mundo
@@ -329,6 +336,9 @@ class MapBridge:
         self._wp_goal_done: threading.Event = threading.Event()
         self._wp_goal_status: Optional[int] = None
         self._wp_goal_handle = None
+        # Geração da rota. Todo stop incrementa; goal aceito com geração velha
+        # é cancelado no aceite (A7: STOP entre o envio e o aceite se perdia).
+        self._wp_gen: int = 0
 
         # Executor próprio — permite spin dos callbacks sem bloquear o Flask.
         self._executor = SingleThreadedExecutor()
@@ -574,7 +584,9 @@ class MapBridge:
     def start_waypoints(self, waypoints: list, loop: bool = False) -> dict:
         if not waypoints:
             return {'ok': False, 'error': 'lista de waypoints vazia'}
-        self.stop_waypoints()
+        # Sem cancelar tudo: o goal da rota nova poderia ser aceito antes do
+        # pedido de cancelamento chegar ao servidor.
+        self.stop_waypoints(cancel_all=False)
         with self._wp_lock:
             self._wp_list = waypoints
             self._wp_loop = loop
@@ -588,11 +600,12 @@ class MapBridge:
         log.info(f"[MapBridge] waypoints: {len(waypoints)} pontos, loop={loop}")
         return {'ok': True}
 
-    def stop_waypoints(self) -> dict:
+    def stop_waypoints(self, cancel_all: bool = True) -> dict:
         self._wp_stop.set()
         # Cancela o goal ativo no Nav2 (se houver) pra não deixar o robô
         # continuar indo até o último alvo depois de parar a rota.
         with self._wp_lock:
+            self._wp_gen += 1
             handle = self._wp_goal_handle
             thread = self._wp_thread
         if handle is not None:
@@ -600,6 +613,8 @@ class MapBridge:
                 handle.cancel_goal_async()
             except Exception as e:
                 log.debug(f"[MapBridge] erro ao cancelar goal: {e}")
+        if cancel_all:
+            self._cancel_all_nav_goals()
         if thread and thread.is_alive():
             thread.join(timeout=2.0)
         with self._wp_lock:
@@ -607,6 +622,20 @@ class MapBridge:
             self._wp_active = False
         self._sock.emit('waypoint_status', {'active': False, 'index': 0, 'total': 0})
         return {'ok': True}
+
+    def _cancel_all_nav_goals(self) -> bool:
+        """Cancela todo goal NavigateToPose aceito até agora, inclusive o
+        clique-para-ir, que entra por /goal_pose e não tem handle na web."""
+        cli = self._nav_cancel_cli
+        if not cli.wait_for_service(timeout_sec=0.5):
+            log.warning("[MapBridge] STOP: serviço de cancelamento do Nav2 indisponível")
+            return False
+        req = CancelGoal.Request()
+        # goal_id zerado + stamp = cancela todos aceitos até este instante.
+        req.goal_info.stamp = self._node.get_clock().now().to_msg()
+        cli.call_async(req)
+        log.info("[MapBridge] STOP: cancelamento de todos os goals enviado ao Nav2")
+        return True
 
     @staticmethod
     def _safe_name(name) -> str:
@@ -701,11 +730,13 @@ class MapBridge:
         goal.pose.pose.orientation.z = qz
         goal.pose.pose.orientation.w = qw
 
+        gen = self._wp_gen
         send_future = self._nav_action.send_goal_async(goal)
-        send_future.add_done_callback(self._on_goal_response)
+        send_future.add_done_callback(
+            lambda f, g=gen: self._on_goal_response(f, g))
         log.info(f"[MapBridge] NavigateToPose → ({x:.2f}, {y:.2f}, yaw={yaw:.2f})")
 
-    def _on_goal_response(self, future):
+    def _on_goal_response(self, future, gen: Optional[int] = None):
         try:
             handle = future.result()
         except Exception as e:
@@ -718,7 +749,18 @@ class MapBridge:
             self._wp_goal_status = GoalStatus.STATUS_ABORTED
             self._wp_goal_done.set()
             return
-        self._wp_goal_handle = handle
+        with self._wp_lock:
+            vencido = gen is not None and gen != self._wp_gen
+            if not vencido:
+                self._wp_goal_handle = handle
+        if vencido:
+            # STOP chegou entre o envio e o aceite: cancela este goal agora.
+            log.warning("[MapBridge] goal aceito depois do STOP — cancelando")
+            try:
+                handle.cancel_goal_async()
+            except Exception as e:
+                log.debug(f"[MapBridge] erro ao cancelar goal vencido: {e}")
+            return
         handle.get_result_async().add_done_callback(self._on_goal_result)
 
     def _on_goal_result(self, future):
