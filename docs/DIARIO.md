@@ -10604,3 +10604,20 @@ Validação: `node --check` no `map.js` e 16 testes passando
 Nav2 continua no `index.html`. Exercitado pelo dono no Gazebo (web reiniciado
 para servir a página nova): **aprovado — "é assim que a web deve ficar"**.
 Ainda não testado no robô físico.
+
+### Elevador: desenho combinado para uma frente futura (mesma sessão, sem código)
+
+O dono anunciou a próxima função grande do robô 2: entrar no elevador,
+identificar o andar, trocar o mapa do Nav2 e sair andando, usando a **API do
+elevador** que já existe. Discutimos se o door crossing do robô 1 serviria: só
+para a travessia do vão (alinhar, atravessar reto, afrouxar o collision
+monitor); porta, andar e chamada vêm da API.
+
+O dono fixou a arquitetura: o código do elevador é **separado do Nav2**, toma
+conta, cala o Nav2 e só o reativa com o robô fora da cabine, como o door
+crossing fazia. Ficou registrado o furo que isso não cobre: o LIO continua
+rodando por baixo durante a viagem (IMU sente a subida e o lidar vê a cabine
+parada; cabine pequena e reflexiva; andar novo no mesmo x, y do antigo). Por
+isso a saída do nó tem ordem obrigatória: trocar o mapa → reiniciar o LIO →
+pose da porta do elevador no mapa novo → reativar o Nav2. Desenho completo em
+`ESTADO_PROJETO.md` (seção 01-10, elevador). Nada implementado.

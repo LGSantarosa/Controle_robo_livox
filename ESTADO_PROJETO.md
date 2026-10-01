@@ -14,6 +14,31 @@
 
 ---
 
+## 🛗 01-10 — FRENTE FUTURA: ELEVADOR (só desenho, nada implementado)
+
+Função futura do robô 2, definida pelo dono: **entrar no elevador, identificar
+o andar, trocar o mapa do Nav2 e sair andando.** Já existe uma **API do
+elevador** (chamar, estado da porta, andar) — porta e andar não saem de sensor.
+
+Desenho combinado:
+
+- **Nó do elevador separado do Nav2**, no molde do door crossing do robô 1: ele
+  assume, cala o Nav2 e só o reativa com o robô já FORA do elevador.
+- **Sequência de saída obrigatória, antes de devolver o controle:**
+  1. trocar o mapa pelo do andar novo (andar vindo da API);
+  2. reiniciar o LIO, para descartar o mapa interno do andar antigo;
+  3. pôr o robô na pose conhecida da porta do elevador nesse mapa;
+  4. só então reativar o Nav2.
+- **Por quê:** calar o Nav2 não para o LIO, que segue publicando pose a viagem
+  toda. Riscos dele na cabine: IMU sente a aceleração vertical e o lidar vê a
+  cabine parada; cabine pequena e de inox/espelho; e o andar novo aparece no
+  mesmo (x, y) do antigo. O reinício do passo 2 joga fora o que a viagem
+  estragou.
+- **Aberto:** odometria para entrar/sair da cabine (rodas podem bastar);
+  door crossing do robô 1 serve de base só para a travessia do vão e, no
+  robô 2, foi demolido em 14-07 e nunca testado — portar exige enumerar os
+  gates. Antes de começar: pedir a documentação da API.
+
 ## 🟡 30-09 — MAIS AUTORIDADE DE CURVA PARA A RODA OMNI
 
 O primeiro ajuste desta sessão atingiu por engano o perfil do robô 3 e foi
