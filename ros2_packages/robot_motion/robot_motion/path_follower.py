@@ -1085,10 +1085,12 @@ class PathFollower(Node):
         m.twist.angular.z = float(wz)
         self.pub_desencalhe.publish(m)
 
-    # Os três status ATIVOS do `action_msgs/GoalStatus`: 1 ACCEPTED,
-    # 2 EXECUTING, 3 CANCELING. Mesma tripla que o `unstuck_supervisor` e o
-    # `freeze_capture` já usam — se um dia mudar, muda nos três.
-    ATIVOS = {1, 2, 3}
+    # Status que AUTORIZAM movimento: 1 ACCEPTED e 2 EXECUTING.
+    # 3 CANCELING ficou de fora de propósito (decisão 059): cancelamento pedido
+    # é ordem de parar, e esperar o CANCELED terminal deixava o robô andando
+    # pelo tempo que o bt_navigator levasse. O `freeze_capture` ainda registra
+    # 1/2/3 como "goal ativo"; ali é só registro, não decide movimento.
+    ATIVOS = {1, 2}
 
     def cb_status(self, msg, topico):
         tinha_objetivo = self.tem_objetivo()

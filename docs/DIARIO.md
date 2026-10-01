@@ -10711,3 +10711,18 @@ Codex:
 abaixo de 1×, teclado e gamepad, e o casamento entre o slider/presets e o
 `SPEED_MULT_MAX`. Suíte **1285 passed**. Os passos 1 e 2 sobem juntos ao remoto;
 nada roda no Gazebo nem no NUC antes do passo 3 e da validação com o dono.
+
+## 2026-10-01 (dev, sem robô) — A3, PASSO 3: O STOP MANDA ZERO, E O SEGUIDOR NÃO ESPERA O CANCELED
+
+Último pedaço do STOP (decisão 059, que também registra os passos 1 e 2):
+
+- o `path_follower` deixa de contar `CANCELING` como objetivo vivo, e o
+  agregado das duas actions continua valendo;
+- `parada_web()` segura `/web_vel` em zero por 1 s a 20 Hz, inclusive com
+  `WEB_TELEOP=off`. Um lock serializa as publicações, e nenhum não-zero da web
+  entra na janela. Teclas e eixos retidos são limpos. O handler do STOP chama
+  a parada antes do `map_bridge`, e sem depender dele.
+
+Testes sem espera real (relógio injetado): **1294 passed**. Lembrete que vai na
+decisão: prioridade 50 não vence Xbox nem teclado; isto não é E-STOP global.
+Commit deixado **local** para revisão do Codex antes do Gazebo/NUC.

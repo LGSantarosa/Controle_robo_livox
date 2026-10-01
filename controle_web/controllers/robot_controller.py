@@ -84,6 +84,10 @@ class RobotController(ABC):
         """Hook do controlador real; o Echo só guarda o estado para a UI."""
         return None
 
+    def parada_web(self) -> None:
+        """STOP da web (decisão 059). O Echo não tem robô para parar."""
+        return None
+
 
 class EchoController(RobotController):
     def __init__(self) -> None:
@@ -228,6 +232,14 @@ class ROS2Controller(RobotController):
         self._last_printed: tuple = (None, None)
         self._rclpy = rclpy
         self._time = time
+        # Parada do STOP (decisão 059). O lock serializa TODA publicação no
+        # /web_vel: um comando não-zero calculado antes do STOP ou sai antes
+        # do primeiro zero, ou é recusado pela janela — nunca no meio dela.
+        self._pub_lock = threading.Lock()
+        self._parada_ate: float = 0.0
+        self._agora = time.monotonic
+        self._dispara = lambda alvo: threading.Thread(
+            target=alvo, daemon=True, name='web_parada').start()
 
         if not rclpy.ok():
             rclpy.init()
@@ -307,12 +319,56 @@ class ROS2Controller(RobotController):
         except Exception as e:
             print(f"[ROS2Controller] Erro ao encerrar: {e}")
 
+    # Janela da parada: mais que o dobro do timeout de 0,5 s do mux, para o
+    # zero segurar o canal enquanto o Nav2 processa o cancelamento.
+    PARADA_S: float = 1.0
+    PARADA_PERIODO_S: float = 0.05     # 20 Hz, folgado contra o timeout
+
+    def parada_web(self) -> None:
+        """STOP: zero no /web_vel por PARADA_S, mesmo com WEB_TELEOP=off.
+
+        Exclusivo de PARADA: nunca publica valor diferente de zero, então
+        vale mesmo quando a web é só visualização. Prioridade 50 vence
+        autonomia (10) e desencalhe (30), mas NÃO o Xbox (100) nem o teclado
+        (90): não é E-STOP global.
+        """
+        with self._pub_lock:
+            self._parada_ate = self._agora() + self.PARADA_S
+            # Teclas e eixos retidos não podem ressuscitar o comando depois.
+            self.pressed.clear()
+            self._last_gamepad_linear = 0.0
+            self._last_gamepad_angular = 0.0
+            self._publica_zero()
+        print('[ROS2Controller] STOP: zero no /web_vel por '
+              f'{self.PARADA_S:.1f} s')
+        self._dispara(self._laco_parada)
+
+    def _publica_zero(self) -> None:
+        """Zero cru, sem olhar WEB_TELEOP. Só a parada chama."""
+        self._publisher.publish(self._monta_web_vel(0.0, 0.0))
+
+    def _passo_parada(self) -> bool:
+        """Um zero da janela. False quando a janela acabou."""
+        with self._pub_lock:
+            if self._agora() >= self._parada_ate:
+                return False
+            self._publica_zero()
+            return True
+
+    def _laco_parada(self) -> None:
+        while self._passo_parada():
+            self._time.sleep(self.PARADA_PERIODO_S)
+
     def _publish(self, linear: float, angular: float) -> None:
         # WEB_TELEOP off: no-op. Cobre tudo (force_stop no disconnect inclusive),
         # senão o zero do force_stop voltaria a publicar na saída do twist_mux.
-        if not self._publish_enabled:
-            return
-        self._publisher.publish(self._monta_web_vel(linear, angular))
+        with self._pub_lock:
+            if not self._publish_enabled:
+                return
+            # Dentro da janela do STOP, quem fala é o laço de zeros.
+            if self._agora() < self._parada_ate:
+                return
+            self._publisher.publish(self._monta_web_vel(linear, angular))
         # Log só quando o valor muda — senão a republicação a 50 Hz polui o stdout.
         rounded = (round(linear, 3), round(angular, 3))
         if rounded != self._last_printed:

@@ -100,3 +100,33 @@ def test_bancada_sem_action_nao_e_interrompida_por_status_inicial_inativo():
     assert seguidor.plano == plano
     assert seguidor.publicados == []
     assert seguidor.desencalhe == []
+
+
+def test_canceling_ja_para_o_seguidor():
+    """Decisão 059: cancelamento pedido é ordem de parar; não espera CANCELED."""
+    seguidor = SeguidorFalso('re')
+
+    PathFollower.cb_status(
+        seguidor, mensagem_status(3), 'navigate_to_pose/_action/status')
+
+    assert seguidor.desencalhe == [(0.0, 0.0)]
+    assert seguidor.publicados[-1][1] == 0.0
+    assert seguidor.estado == 'ocioso'
+    assert seguidor.plano == []
+
+
+def test_canceling_numa_action_com_a_outra_viva_nao_para():
+    seguidor = SeguidorFalso()
+    seguidor._objetivo['navigate_through_poses/_action/status'] = True
+    plano = list(seguidor.plano)
+
+    PathFollower.cb_status(
+        seguidor, mensagem_status(3), 'navigate_to_pose/_action/status')
+
+    assert seguidor.plano == plano
+    assert seguidor.publicados == []
+
+
+def test_canceling_nao_autoriza_movimento():
+    assert 3 not in PathFollower.ATIVOS
+    assert PathFollower.ATIVOS == {1, 2}

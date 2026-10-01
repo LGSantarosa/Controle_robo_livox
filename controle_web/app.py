@@ -475,6 +475,12 @@ def handle_start_waypoints(data):
 
 @socketio.on('stop_waypoints')
 def handle_stop_waypoints():
+    # Zero no /web_vel PRIMEIRO e independente do mapa (decisão 059): é a
+    # única parte do STOP que não depende do Nav2 responder.
+    try:
+        controller.parada_web()
+    except Exception as e:
+        app.logger.warning(f"parada_web falhou: {e}")
     if map_bridge is None:
         return
     map_bridge.stop_waypoints()

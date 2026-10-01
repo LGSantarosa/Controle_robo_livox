@@ -26,9 +26,12 @@
    slider, os presets Boost/Max e a escala do gamepad acompanham. Testes
    travam os tetos mesmo com multiplicador absurdo.
 
-Suíte: **1285 passed**. 🔴 Ainda sem Gazebo e sem NUC. O passo 3 (STOP com
-zero no `/web_vel`, mesmo com `WEB_TELEOP=off`, e o seguidor parando no
-`CANCELING`) continua pendente. Lembrete: prioridade 50 vence a autonomia e o
+3. STOP (decisão **059**, commit **local**, aguardando revisão): o seguidor
+   para já no `CANCELING`; o STOP publica zero no `/web_vel` por 1 s, mesmo
+   com `WEB_TELEOP=off`, sem deixar comando não-zero da web intercalar; teclas
+   e eixos retidos são limpos; vale mesmo sem `map_bridge`.
+
+Suíte: **1294 passed**. 🔴 Ainda sem Gazebo e sem NUC. Lembrete: prioridade 50 vence a autonomia e o
 desencalhe, mas **não** vence o Xbox nem o teclado. Não é E-STOP global.
 
 ## 🟡 01-10 — FASE 2 DA REVISÃO: A1/A7 (STOP DA WEB) CORRIGIDOS NO DEV
