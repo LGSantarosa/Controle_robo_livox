@@ -10590,3 +10590,15 @@ Nota de bancada: a `colcon build` do `robot_motion` falhou ao voltar da
 `etapa6-pilha-robo3` para a `main` (link quebrado em `build/` para
 `twist_mux_pilha_robo3.yaml`, que só existe na branch). O código rodou certo
 mesmo assim, porque o install é `--symlink-install` e aponta para a fonte.
+
+### Edição de rota trazida do robô 3 (mesma sessão)
+
+A pedido do dono, a web do robô 2 ganhou as três edições de rota que o robô 3
+já tinha (repo `Controle_robo_livox_robo3`, 30-09), trazidas por
+`cherry-pick` sem conflito: **arrastar** um ponto existente o move em vez de
+criar outro (`8bd414c`), **reordenar** os pontos da rota (`c0430b0`) e
+**apagar um ponto** sem limpar a rota inteira (`663232c`). É só frontend
+(`map.js`, `index.html`, `styles.css`) mais o teste `test_ui_route_edit.py`.
+Validação: `node --check` no `map.js` e 16 testes passando
+(`test_ui_route_edit.py` + `test_nav_tuning.py`); o card de ajuste ao vivo do
+Nav2 continua no `index.html`. Ainda não exercitado no Gazebo nem no robô.
