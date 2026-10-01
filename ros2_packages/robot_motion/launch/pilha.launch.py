@@ -760,14 +760,18 @@ def generate_launch_description():
         # defeito que o `ensaio.py` tinha e que o `--topico` consertou.
         Node(package='robot_motion', executable='compensador_rumo',
              name='compensador_rumo', output='both',
-             parameters=[{'use_sim_time': sim, 'segura_rumo': False}]
+             parameters=[{'use_sim_time': sim, 'segura_rumo': False,
+                         # 01-10: freio linear (038) DESLIGADO, pedido do dono
+                         'freio_linear': False}]
                         + curv + ganho,
              remappings=[('/hoverboard_base_controller/cmd_vel',
                           '/cmd_vel_bruto')],
              condition=IfCondition(sim)),
         Node(package='robot_motion', executable='compensador_rumo',
              name='compensador_rumo', output='both',
-             parameters=[{'use_sim_time': sim, 'segura_rumo': False}]
+             parameters=[{'use_sim_time': sim, 'segura_rumo': False,
+                         # 01-10: freio linear (038) DESLIGADO, pedido do dono
+                         'freio_linear': False}]
                         + curv + ganho,
              condition=UnlessCondition(sim)),
         Node(package='robot_motion', executable='path_follower',

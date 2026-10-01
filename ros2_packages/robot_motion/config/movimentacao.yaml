@@ -27,13 +27,19 @@ heading_controller:
     #   subir a frenagem mexe direto no S que só assentou em 11-08, e isso
     #   merece leva própria, com corrida de controle. Não é esquecimento;
     #   é a diferença entre o que a máquina faz e o que pedimos dela.
-    a_dec: 0.288      # 12-08 no robô, ainda com a roda boba antiga, 0,3 fez
+    a_dec: 0.432      # 01-10: +50% sobre 0,288, pedido do dono; a força
+                      # de curva da web multiplica ESTE valor. Histórico: 12-08,
+                      # com a roda boba antiga, 0,3 fez
                       # o rumo oscilar 38°. Esse resultado NÃO limita a omni:
                       # a planta física mudou. Com 0,1, uma corrida de 30-09
                       # real pediu |wz| mediano 0,35 e p90 0,47 rad/s nas
                       # curvas, muito abaixo do teto 1,25. Os testes com 0,2
                       # e 0,24 melhoraram muito; em 01-10, 0,288 acrescenta
                       # mais 20% no parâmetro (~9,5% no pedido angular).
+
+    # 01-10: freio de giro (037) DESLIGADO, pedido do dono: os freios "estão
+    # só atrapalhando" e faziam o robô dançar do nada. Religar com true.
+    freio_ligado: false
 
     # Tetos. Iguais aos do diff_drive_controller.
     wz_max: 2.2   # 01-10: era 1,25 e o pedido saturava nele (p90); 2,2 = limite da placa (020)

@@ -146,5 +146,7 @@ def generate_launch_description():
         # humano: o operador manda reto e o robô vai reto.
         Node(package='robot_motion', executable='compensador_rumo',
              name='compensador_rumo', output='both',
-             parameters=[{'use_sim_time': False, 'segura_rumo': False}] + curv),
+             parameters=[{'use_sim_time': False, 'segura_rumo': False,
+                         # 01-10: freio linear (038) DESLIGADO, pedido do dono
+                         'freio_linear': False}] + curv),
     ])
