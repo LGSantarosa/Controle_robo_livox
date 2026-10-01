@@ -148,7 +148,9 @@ class ROS2Controller(RobotController):
     """
     Controlador real que publica em /web_vel via ROS2 para integração com Nav2.
 
-    Tópico de saída: /web_vel (geometry_msgs/Twist) — entrada de priority 50 do
+    Tópico de saída: /web_vel (geometry_msgs/TwistStamped, frame base_link) —
+    o twist_mux do robô 2 roda com `use_stamped: true`; `Twist` cru não se
+    conecta e o comando morria no DDS (A3 da revisão de 01-10). Entrada de priority 50 do
     twist_mux. O mux arbitra com joy_vel (PS4, prio 100), key_vel (WASD, 90) e
     nav_vel (Nav2/trekking, 10). Saída do mux: /cmd_vel, consumido pelo
     cmd_vel_to_wheels.
@@ -225,15 +227,15 @@ class ROS2Controller(RobotController):
 
         self._node: Node = rclpy.create_node('web_robot_controller')
 
-        # Publica geometry_msgs/Twist para integração com Nav2
-        from geometry_msgs.msg import Twist
+        # TwistStamped: é o tipo que o twist_mux do robô 2 assina (A3).
+        from geometry_msgs.msg import TwistStamped
         from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
         from std_msgs.msg import Float64
-        self._Twist = Twist
+        self._TwistStamped = TwistStamped
         self._Float64 = Float64
 
         self._publisher = self._node.create_publisher(
-            Twist,
+            TwistStamped,
             '/web_vel',
             qos_profile=10,
         )
@@ -264,7 +266,7 @@ class ROS2Controller(RobotController):
                   "/web_vel (movimento via PS4/WASD; web é só visualização).")
 
     def force_stop(self) -> None:
-        """Zera teclas pressionadas + último eixo de gamepad e publica Twist(0).
+        """Zera teclas pressionadas + último eixo de gamepad e publica velocidade zero.
 
         Chamado quando um cliente Socket.IO cai com tecla segurada: sem isso
         o republicador a 50 Hz continua mandando o último /web_vel até o
@@ -300,18 +302,24 @@ class ROS2Controller(RobotController):
 
     def _publish(self, linear: float, angular: float) -> None:
         # WEB_TELEOP off: no-op. Cobre tudo (force_stop no disconnect inclusive),
-        # senão o Twist(0) do force_stop voltaria a publicar na saída do twist_mux.
+        # senão o zero do force_stop voltaria a publicar na saída do twist_mux.
         if not self._publish_enabled:
             return
-        msg = self._Twist()
-        msg.linear.x = float(linear)
-        msg.angular.z = float(angular)
-        self._publisher.publish(msg)
+        self._publisher.publish(self._monta_web_vel(linear, angular))
         # Log só quando o valor muda — senão a republicação a 50 Hz polui o stdout.
         rounded = (round(linear, 3), round(angular, 3))
         if rounded != self._last_printed:
             print(f"[ROS2Controller] web_vel → linear={linear:+.3f} m/s  angular={angular:+.3f} rad/s")
             self._last_printed = rounded
+
+    def _monta_web_vel(self, linear: float, angular: float):
+        """Mensagem do /web_vel: carimbo atual e frame do corpo."""
+        msg = self._TwistStamped()
+        msg.header.stamp = self._node.get_clock().now().to_msg()
+        msg.header.frame_id = 'base_link'
+        msg.twist.linear.x = float(linear)
+        msg.twist.angular.z = float(angular)
+        return msg
 
     def _publish_loop(self) -> None:
         PERIOD = 0.02  # 50 Hz

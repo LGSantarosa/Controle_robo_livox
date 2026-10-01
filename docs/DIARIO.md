@@ -10679,3 +10679,16 @@ muda o sinal e a geração juntos, sob lock, e o runner lê os dois juntos. Dois
 testes novos cobrem as duas ordens; suíte **1273 passed**. A decisão 058
 afirmava "para na hora", o que é mais forte do que o código garante (o seguidor
 só para no `CANCELED`). Texto corrigido; a parada imediata fica junto da A3.
+
+## 2026-10-01 (dev, sem robô) — A3, PASSO 1: A WEB FALA O TIPO DO MUX
+
+O `/web_vel` passou de `Twist` para `TwistStamped` (stamp atual,
+`frame_id = base_link`). O `twist_mux` do robô 2 roda com `use_stamped: true`.
+Com tipos diferentes no mesmo tópico, o DDS não liga os dois lados, e a WASD,
+o gamepad e o "Space = stop" da web morriam sem erro visível.
+`test_web_vel_contrato.py` trava os dois lados: o tipo publicado pela web e o
+`use_stamped` do mux.
+
+Restrição combinada com o Codex: este commit **não** roda isolado no Gazebo
+nem no NUC, porque passaria a valer o giro herdado de 6,0 rad/s. A calibração
+(passo 2) entra antes.

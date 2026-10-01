@@ -14,6 +14,16 @@
 
 ---
 
+## 🔴 01-10 — A3 PASSO 1: `/web_vel` VIROU `TwistStamped` — NÃO RODAR SOZINHO
+
+A web publicava `Twist` num mux `TwistStamped`: nada da web chegava à roda.
+Agora publica `TwistStamped` (stamp atual, `base_link`), com teste de contrato.
+
+🔴 **Este commit isolado NÃO vai ao Gazebo nem ao NUC.** Ele torna efetivo o
+giro herdado do robô 1 (`BASE_ANGULAR_SPEED = 6,0` rad/s, até 4× no
+multiplicador). O passo 2 (calibração: linear até 0,5 m/s e angular saturado
+em 1,25, com limites separados) tem de entrar antes de qualquer execução.
+
 ## 🟡 01-10 — FASE 2 DA REVISÃO: A1/A7 (STOP DA WEB) CORRIGIDOS NO DEV
 
 O STOP da web agora cancela **todos** os goals `NavigateToPose` aceitos até o
