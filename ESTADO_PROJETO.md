@@ -40,11 +40,23 @@ sempre com o robô quieto na marca.
    plano antigo, em vez de pegar um novo a partir da pose atual. Hoje o BT
    replaneja a cada 5 s, e o seguidor trava o plano aceito enquanto houver
    progresso.
-2. **Ré do nada no corredor:** disparou uma vez na noite e bateu a traseira na
-   parede. Analisar nos logs do NUC (`~/logs_sessao/pilha.log`, último
-   `seguidor_*.csv`, `freeze_capture.csv`) ANTES de reiniciar a pilha. A
-   bateria acabou no fim da sessão. Suspeitas da revisão: progresso
-   euclidiano (falso emperrado) e `/scan` cego a menos de 0,35 m (A4).
+2. **Ré do nada no corredor — CAUSA ACHADA** (logs em
+   `docs/dados/2026-10-01-robo2-curva-forte/`, `pilha.log` +
+   `seguidor_2026-10-01_185111.csv`, t=1790891749):
+   - **falso emperrado:** numa curva longa (rumo 177° → 103° em 5 s, a
+     0,5 m/s) a distância EUCLIDIANA ao objetivo subiu (20,92 → 21,83 m). O
+     critério de progresso (4 s sem cair 5 cm) disparou a recuperação:
+     escape para frente e, 5 s depois, a ré. A mesma corrida teve ~15
+     escapes para frente, um a cada ~5 s; era o robô "dançando do nada";
+   - **ré mais forte desde hoje:** a ré anda no `v_piso`, que subiu de 0,24
+     para 0,36 m/s junto com o `wz_max` 2,2 (acoplamento meu, não separei).
+     Sem freio linear, a placa empurra ~0,5 s depois do corte. O robô ainda
+     girava da curva durante a ré (103° → 75°), e a traseira varreu o lado.
+
+   **Plano para amanhã, uma mudança por vez:** (1) emperrado = o robô NÃO SE
+   MEXEU (< ~5 cm em 4 s), e não a distância ao objetivo; (2) velocidade
+   própria da ré (~0,24 m/s), desacoplada do `v_piso`; (3) depois, o plano
+   velho (item 1).
 3. 12 `static_transform_publisher` órfãos no NUC; o `--mata` não os pega, nem
    pega o `ros2 bag`.
 

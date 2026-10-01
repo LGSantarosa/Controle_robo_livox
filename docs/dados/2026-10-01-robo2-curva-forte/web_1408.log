@@ -1,0 +1,18 @@
+[2026-08-14 16:58:00,426] INFO: [MapBridge] inicializado (modo=nav2, maps_dir=/home/bara/Controle_robo_livox/maps)
+[2026-08-14 16:58:00,428] WARNING: [Camera] ffmpeg não instalado (sudo apt install ffmpeg) — POV desabilitado
+[2026-08-14 16:58:00,450] INFO: [NavMetrics] coletor iniciado. CSV dir: /home/bara/Controle_robo_livox/controle_web/logs/nav_metrics
+[2026-08-14 16:58:00,451] WARNING: [app] Falha ao iniciar PowerMonitor: No module named 'wheel_msgs'. Monitor de tensão desabilitado.
+[2026-08-14 16:58:00,453] INFO: Starting Socket.IO server on 0.0.0.0:5000
+[ROS2Controller] Nó inicializado. Publicando em /web_vel @ 50 Hz (mux prio 50)
+ * Serving Flask app 'app'
+ * Debug mode: off
+[2026-08-14 16:58:02,641] INFO: [MapBridge] /map 197x636 @ 0.050 m/px emitido
+[2026-08-14 16:58:06,083] INFO: Client connected: addr=10.244.3.5 sid=YZRUpfDMwJoOjB6JAAAB
+[2026-08-14 16:58:06,360] INFO: client_hello from 10.244.3.5 sid=YZRUpfDMwJoOjB6JAAAB payload={'ts': 1786737485900, 'href': 'http://10.244.3.205:5000/', 'ua': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36'}
+[2026-08-14 16:58:16,941] INFO: [MapBridge] /map 197x636 @ 0.050 m/px emitido
+[2026-08-14 16:59:29,505] INFO: [MapBridge] waypoints: 1 pontos, loop=False
+[2026-08-14 16:59:29,505] INFO: [Camera] nav_active(rota) sem câmera — gravação pulada
+[2026-08-14 16:59:31,008] INFO: [MapBridge] NavigateToPose → (6.23, 4.44, yaw=1.54)
+[2026-08-14 16:59:31,010] INFO: [NavMetrics] início nav ec8f7524
+[2026-08-14 16:59:31,010] INFO: [Camera] nav_active(nav) sem câmera — gravação pulada
+[2026-08-14 17:00:47,130] INFO: [NavMetrics] nav ec8f7524 → CANCELED em 76.1s | replans=72 | rec(b/s/w)=0/0/0 | dist=0.00m

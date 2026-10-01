@@ -10845,3 +10845,22 @@ Ficaram para a próxima sessão: o plano velho (ele segue o plano antigo depois
 de errar um pouco) e uma ré do nada no corredor, que bateu a traseira. A
 bateria do NUC acabou antes da análise. Os logs estão no NUC, e o
 `freeze_capture.csv` precisa ser copiado antes de reiniciar a pilha.
+
+### Depois da bateria — a ré do corredor, lida nos logs
+
+Robô religado só para copiar os logs para
+`docs/dados/2026-10-01-robo2-curva-forte/`, antes de qualquer reinício. A ré
+que bateu a traseira (t=1790891749, `EMPERRADO a 21,83 m — ré de até 0,11 m`)
+foi um **falso emperrado**. O robô fazia uma curva longa a 0,5 m/s (rumo
+177° → 103° em 5 s), e a distância em linha reta ao objetivo subiu de 20,92
+para 21,83 m. Como o progresso é medido só por essa distância, 4 s "sem
+progresso" dispararam a recuperação. A mesma corrida teve ~15 escapes para
+frente pelo mesmo motivo, e eram eles que faziam o robô "dançar".
+
+A ré ficou mais violenta por uma consequência minha: ela anda no `v_piso`, e
+o `v_piso` subiu de 0,24 para 0,36 m/s junto com o teto de giro de 2,2. Sem
+freio linear e com a placa segurando ~0,5 s, e com o robô ainda girando da
+curva durante a ré (103° → 75°), a traseira varreu a parede.
+
+Para a próxima sessão: emperrado passa a ser "o robô não se mexeu", a ré ganha
+velocidade própria, e depois vem o plano velho.

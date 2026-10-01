@@ -1,0 +1,90 @@
+[2026-08-14 17:18:27,244] INFO: [MapBridge] inicializado (modo=nav2, maps_dir=/home/bara/Controle_robo_livox/maps)
+[2026-08-14 17:18:27,246] WARNING: [Camera] ffmpeg não instalado (sudo apt install ffmpeg) — POV desabilitado
+[2026-08-14 17:18:27,260] INFO: [NavMetrics] coletor iniciado. CSV dir: /home/bara/Controle_robo_livox/controle_web/logs/nav_metrics
+[2026-08-14 17:18:27,262] WARNING: [app] Falha ao iniciar PowerMonitor: No module named 'wheel_msgs'. Monitor de tensão desabilitado.
+[2026-08-14 17:18:27,263] INFO: Starting Socket.IO server on 0.0.0.0:5000
+[ROS2Controller] Nó inicializado. Publicando em /web_vel @ 50 Hz (mux prio 50)
+ * Serving Flask app 'app'
+ * Debug mode: off
+[2026-08-14 17:18:29,576] INFO: [MapBridge] /map 197x636 @ 0.050 m/px emitido
+[2026-08-14 17:18:49,686] INFO: [MapBridge] /map 197x636 @ 0.050 m/px emitido
+[2026-08-14 17:19:09,725] INFO: [MapBridge] /map 197x636 @ 0.050 m/px emitido
+[2026-08-14 17:20:12,377] INFO: HTTP GET / from 10.244.3.5 UA=Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36
+[2026-08-14 17:20:12,381] INFO: HTTP 200 GET /
+[2026-08-14 17:20:12,455] INFO: HTTP GET /static/css/styles.css from 10.244.3.5 UA=Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36
+[2026-08-14 17:20:12,459] INFO: HTTP 304 GET /static/css/styles.css
+[2026-08-14 17:20:12,512] INFO: HTTP GET /static/js/gamepad.js from 10.244.3.5 UA=Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36
+[2026-08-14 17:20:12,512] INFO: HTTP 304 GET /static/js/gamepad.js
+[2026-08-14 17:20:12,514] INFO: HTTP GET /static/js/client.js from 10.244.3.5 UA=Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36
+[2026-08-14 17:20:12,515] INFO: HTTP GET /static/js/map.js from 10.244.3.5 UA=Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36
+[2026-08-14 17:20:12,515] INFO: HTTP 304 GET /static/js/client.js
+[2026-08-14 17:20:12,516] INFO: HTTP 304 GET /static/js/map.js
+[2026-08-14 17:20:12,803] INFO: HTTP GET /favicon.ico from 10.244.3.5 UA=Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36
+[2026-08-14 17:20:12,803] INFO: HTTP 404 GET /favicon.ico
+[2026-08-14 17:20:12,851] INFO: Client connected: addr=10.244.3.5 sid=Vg0ENEl6ZfBptvonAAAB
+[2026-08-14 17:20:13,242] INFO: client_hello from 10.244.3.5 sid=Vg0ENEl6ZfBptvonAAAB payload={'ts': 1786738813008, 'href': 'http://10.244.3.205:5000/', 'ua': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36'}
+[2026-08-14 17:20:39,840] INFO: [MapBridge] waypoints: 1 pontos, loop=False
+[2026-08-14 17:20:41,342] INFO: [MapBridge] NavigateToPose → (6.15, 4.47, yaw=1.65)
+[2026-08-14 17:20:41,343] INFO: [NavMetrics] início nav c450d4be
+[2026-08-14 17:20:59,017] INFO: [NavMetrics] nav c450d4be → CANCELED em 17.7s | replans=16 | rec(b/s/w)=0/0/0 | dist=0.00m
+[2026-08-14 17:25:55,771] INFO: HTTP GET / from 10.244.3.5 UA=Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36
+[2026-08-14 17:25:55,771] INFO: HTTP 200 GET /
+[2026-08-14 17:25:55,849] INFO: HTTP GET /static/css/styles.css from 10.244.3.5 UA=Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36
+[2026-08-14 17:25:55,850] INFO: HTTP 304 GET /static/css/styles.css
+[2026-08-14 17:25:55,851] INFO: Client disconnected: addr=10.244.3.5 sid=Vg0ENEl6ZfBptvonAAAB
+[2026-08-14 17:25:55,885] INFO: HTTP GET /static/js/client.js from 10.244.3.5 UA=Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36
+[2026-08-14 17:25:55,886] INFO: HTTP 304 GET /static/js/client.js
+[2026-08-14 17:25:55,894] INFO: HTTP GET /static/js/map.js from 10.244.3.5 UA=Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36
+[2026-08-14 17:25:55,894] INFO: HTTP GET /static/js/gamepad.js from 10.244.3.5 UA=Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36
+[2026-08-14 17:25:55,895] INFO: HTTP 304 GET /static/js/map.js
+[2026-08-14 17:25:55,895] INFO: HTTP 304 GET /static/js/gamepad.js
+[2026-08-14 17:25:56,079] INFO: Client connected: addr=10.244.3.5 sid=Q-ao4iMllQbKRnHCAAAD
+[2026-08-14 17:25:56,190] INFO: client_hello from 10.244.3.5 sid=Q-ao4iMllQbKRnHCAAAD payload={'ts': 1786739156106, 'href': 'http://10.244.3.205:5000/', 'ua': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36'}
+[2026-08-14 17:26:22,731] INFO: [MapBridge] waypoints: 1 pontos, loop=False
+[2026-08-14 17:26:24,233] INFO: [MapBridge] NavigateToPose → (6.15, 4.47, yaw=1.65)
+[2026-08-14 17:26:24,233] INFO: [NavMetrics] início nav 737eea44
+[2026-08-14 17:27:08,715] INFO: [MapBridge] waypoint 1/1 concluído
+[2026-08-14 17:27:08,717] INFO: [NavMetrics] nav 737eea44 → SUCCEEDED em 44.5s | replans=41 | rec(b/s/w)=0/0/0 | dist=0.00m
+[2026-08-14 17:27:24,594] INFO: [MapBridge] waypoints: 1 pontos, loop=False
+[2026-08-14 17:27:26,096] INFO: [MapBridge] NavigateToPose → (0.37, -0.13, yaw=3.09)
+[2026-08-14 17:27:26,097] INFO: [NavMetrics] início nav f223bb06
+[2026-08-14 17:29:40,208] INFO: [MapBridge] waypoint 1/1 concluído
+[2026-08-14 17:29:40,210] INFO: [NavMetrics] nav f223bb06 → SUCCEEDED em 134.1s | replans=126 | rec(b/s/w)=0/0/0 | dist=0.00m
+[2026-08-14 17:32:56,984] INFO: HTTP GET / from 10.244.3.5 UA=Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36
+[2026-08-14 17:32:56,985] INFO: HTTP 200 GET /
+[2026-08-14 17:32:57,094] INFO: Client disconnected: addr=10.244.3.5 sid=Q-ao4iMllQbKRnHCAAAD
+[2026-08-14 17:32:57,097] INFO: HTTP GET /static/css/styles.css from 10.244.3.5 UA=Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36
+[2026-08-14 17:32:57,098] INFO: HTTP 304 GET /static/css/styles.css
+[2026-08-14 17:32:57,158] INFO: HTTP GET /static/js/gamepad.js from 10.244.3.5 UA=Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36
+[2026-08-14 17:32:57,159] INFO: HTTP 304 GET /static/js/gamepad.js
+[2026-08-14 17:32:57,159] INFO: HTTP GET /static/js/client.js from 10.244.3.5 UA=Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36
+[2026-08-14 17:32:57,160] INFO: HTTP 304 GET /static/js/client.js
+[2026-08-14 17:32:57,160] INFO: HTTP GET /static/js/map.js from 10.244.3.5 UA=Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36
+[2026-08-14 17:32:57,161] INFO: HTTP 304 GET /static/js/map.js
+[2026-08-14 17:32:57,596] INFO: Client connected: addr=10.244.3.5 sid=nCr92csUmLPBhGXNAAAF
+[2026-08-14 17:32:57,708] INFO: client_hello from 10.244.3.5 sid=nCr92csUmLPBhGXNAAAF payload={'ts': 1786739577584, 'href': 'http://10.244.3.205:5000/', 'ua': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36'}
+[2026-08-14 17:33:14,131] INFO: [MapBridge] waypoints: 1 pontos, loop=False
+[2026-08-14 17:33:15,632] INFO: [MapBridge] NavigateToPose → (6.22, 5.03, yaw=1.47)
+[2026-08-14 17:33:15,633] INFO: [NavMetrics] início nav dba7d358
+[2026-08-14 17:34:17,394] INFO: [MapBridge] waypoint 1/1 concluído
+[2026-08-14 17:34:17,397] INFO: [NavMetrics] nav dba7d358 → SUCCEEDED em 61.8s | replans=57 | rec(b/s/w)=0/0/0 | dist=0.00m
+[2026-08-14 17:36:27,792] INFO: HTTP GET / from 10.244.3.5 UA=Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36
+[2026-08-14 17:36:27,793] INFO: HTTP 200 GET /
+[2026-08-14 17:36:27,829] INFO: HTTP GET /static/css/styles.css from 10.244.3.5 UA=Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36
+[2026-08-14 17:36:27,830] INFO: Client disconnected: addr=10.244.3.5 sid=nCr92csUmLPBhGXNAAAF
+[2026-08-14 17:36:27,830] INFO: HTTP 304 GET /static/css/styles.css
+[2026-08-14 17:36:27,842] INFO: HTTP GET /static/js/client.js from 10.244.3.5 UA=Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36
+[2026-08-14 17:36:27,842] INFO: HTTP GET /static/js/gamepad.js from 10.244.3.5 UA=Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36
+[2026-08-14 17:36:27,843] INFO: HTTP GET /static/js/map.js from 10.244.3.5 UA=Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36
+[2026-08-14 17:36:27,843] INFO: HTTP 304 GET /static/js/gamepad.js
+[2026-08-14 17:36:27,844] INFO: HTTP 304 GET /static/js/client.js
+[2026-08-14 17:36:27,845] INFO: HTTP 304 GET /static/js/map.js
+[2026-08-14 17:36:28,062] INFO: Client connected: addr=10.244.3.5 sid=hMjDFLoUTzJCotVkAAAH
+[2026-08-14 17:36:28,602] INFO: client_hello from 10.244.3.5 sid=hMjDFLoUTzJCotVkAAAH payload={'ts': 1786739788224, 'href': 'http://10.244.3.205:5000/', 'ua': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36'}
+[2026-08-14 17:36:37,247] INFO: [MapBridge] /initialpose → (0.29, -0.04, yaw=-0.07)
+[2026-08-14 17:36:37,248] INFO: set_pose from 10.244.3.5: (0.29, -0.04, -0.07)
+[2026-08-14 17:38:21,581] INFO: [MapBridge] waypoints: 1 pontos, loop=False
+[2026-08-14 17:38:23,082] INFO: [MapBridge] NavigateToPose → (6.22, 5.03, yaw=1.47)
+[2026-08-14 17:38:23,084] INFO: [NavMetrics] início nav 18c37676
+[2026-08-14 17:39:04,995] INFO: [MapBridge] waypoint 1/1 concluído
+[2026-08-14 17:39:04,998] INFO: [NavMetrics] nav 18c37676 → SUCCEEDED em 41.9s | replans=39 | rec(b/s/w)=0/0/0 | dist=0.00m
