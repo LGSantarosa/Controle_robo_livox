@@ -1,8 +1,8 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-09-30** (terceiro ajuste incremental
-> do giro para a roda omni, após teste no chão). O estado
+> Versionado na `main`. Atualizado em **2026-10-01** (quarto ajuste incremental
+> do giro para a roda omni, ainda sem teste no chão). O estado
 > anterior continua sendo o de 24-09: Mid-360, FAST-LIO, `/scan` e TF do robô 3
 > provados com placa/motores desligados; a configuração que funcionou está só
 > no clone ignorado pelo git e ainda precisa virar solução por máquina.
@@ -50,9 +50,14 @@ O pivô gira muito bem; o que ainda pesa são diagonais e curvas abertas, nas
 quais a omni arrasta lateralmente e o Nav2 perde autoridade para seguir o
 plano. A sessão foi encerrada sem nova mudança e seus CSVs, metadados e logs
 estão em `docs/dados/2026-09-30-curva-omni-a-dec-024/`; o MCAP de 8,2 GB ficou
-preservado no NUC com SHA-256 registrado. **Próximo passo:** testar somente
-`a_dec` **0,24 → 0,276** (+15% no parâmetro, ~7,2% no pedido angular), mantendo
-pivô, linear, compensador e tetos iguais.
+preservado no NUC com SHA-256 registrado.
+
+Em 01-10, antes de aplicar o passo planejado de 15%, o dono revisou o pedido
+para **mais 20%**, porque a diagonal e a curva aberta ainda ficaram fracas.
+Quarto ajuste no código: `a_dec` **0,24 → 0,288** (+20% no parâmetro, ~9,5% no
+pedido angular). O valor fica só 0,012 abaixo do 0,30 que oscilou, portanto o
+próximo passo é exclusivamente testar esse valor no chão. Pivô, linear,
+compensador e tetos continuam iguais.
 
 ---
 

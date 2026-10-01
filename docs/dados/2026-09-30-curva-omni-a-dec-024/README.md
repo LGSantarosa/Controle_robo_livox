@@ -13,12 +13,13 @@ está funcionando muito bem. O problema restante aparece nas diagonais e nas
 curvas abertas: a roda omni arrasta lateralmente, o conjunto fica pesado e o
 Nav2 ainda precisa de mais autoridade de giro para seguir o plano.
 
-## Próximo passo
+## Próximo passo (revisado em 2026-10-01)
 
-Fazer uma única mudança experimental no Nav2: aumentar `a_dec` em mais 15%, de
-`0,24` para `0,276`. Como a lei usa `wz = sqrt(2*a_dec*erro)`, isso representa
-aproximadamente 7,2% a mais de comando angular para o mesmo erro. Preservar o
-pivô, a velocidade linear, o compensador e os tetos atuais.
+O fechamento original registrou um aumento de 15%, mas, antes de implementá-lo,
+o dono revisou o pedido para 20%. A mudança experimental no Nav2 passa a ser
+`a_dec` de `0,24` para `0,288`. Como a lei usa `wz = sqrt(2*a_dec*erro)`, isso
+representa aproximadamente 9,5% a mais de comando angular para o mesmo erro.
+Preservar o pivô, a velocidade linear, o compensador e os tetos atuais.
 
 ## Evidência salva
 

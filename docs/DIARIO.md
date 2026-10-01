@@ -10513,3 +10513,16 @@ dos arquivos trazidos.
 **Primeira ação da próxima sessão:** mudar apenas `a_dec` **0,24 → 0,276**
 (+15% no parâmetro, ~7,2% no pedido angular para o mesmo erro). Não mexer no
 pivô, na velocidade linear, no compensador nem nos tetos.
+
+## 🟡 2026-10-01 — MAIS 20% PARA A CURVA ABERTA
+
+Antes de implementar o passo de 15% anotado no fechamento, o dono revisou o
+pedido para **20%**: na diagonal e na curva aberta o robô ainda vai fraco e a
+omni arrasta; o pivô, em contraste, está funcionando muito bem.
+
+Foi alterado somente o ganho da lei de rumo usada pelo Nav2: `a_dec` **0,24 →
+0,288**. É +20% no parâmetro e, pela raiz quadrada da lei, ~9,5% a mais de
+pedido angular para o mesmo erro. O valor permanece abaixo de 0,30, mas por
+apenas 0,012; 0,30 já produziu oscilação de 38° em 12-08. Pivô, velocidade
+linear, compensador e tetos não mudaram. Esta alteração ainda não foi instalada
+nem testada no robô.
