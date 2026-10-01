@@ -10726,3 +10726,12 @@ nada roda no Gazebo nem no NUC antes do passo 3 e da validação com o dono.
 Testes sem espera real (relógio injetado): **1294 passed**. Lembrete que vai na
 decisão: prioridade 50 não vence Xbox nem teclado; isto não é E-STOP global.
 Commit deixado **local** para revisão do Codex antes do Gazebo/NUC.
+
+Revisão do Codex sobre o passo 3: um comando chegado **durante** a janela era
+recusado na publicação, mas ficava guardado em `pressed` ou nos eixos do
+gamepad. O republicador voltava a mover o robô 1 s depois do STOP, inclusive
+com um pacote enviado antes do STOP e processado depois. Corrigido: teclado e
+gamepad conferem a janela e atualizam o estado sob o mesmo lock, e o evento da
+janela é descartado. O teste novo avança além de 1 s e confere que não há
+movimento sem comando novo; ele falha na versão anterior e passa na nova.
+**1295 passed**. Segue local até a revisão.

@@ -343,6 +343,10 @@ class ROS2Controller(RobotController):
               f'{self.PARADA_S:.1f} s')
         self._dispara(self._laco_parada)
 
+    def _em_parada(self) -> bool:
+        """Dentro da janela do STOP? Chamar com `_pub_lock` na mão."""
+        return self._agora() < self._parada_ate
+
     def _publica_zero(self) -> None:
         """Zero cru, sem olhar WEB_TELEOP. Só a parada chama."""
         self._publisher.publish(self._monta_web_vel(0.0, 0.0))
@@ -350,7 +354,7 @@ class ROS2Controller(RobotController):
     def _passo_parada(self) -> bool:
         """Um zero da janela. False quando a janela acabou."""
         with self._pub_lock:
-            if self._agora() >= self._parada_ate:
+            if not self._em_parada():
                 return False
             self._publica_zero()
             return True
@@ -366,7 +370,7 @@ class ROS2Controller(RobotController):
             if not self._publish_enabled:
                 return
             # Dentro da janela do STOP, quem fala é o laço de zeros.
-            if self._agora() < self._parada_ate:
+            if self._em_parada():
                 return
             self._publisher.publish(self._monta_web_vel(linear, angular))
         # Log só quando o valor muda — senão a republicação a 50 Hz polui o stdout.
@@ -473,14 +477,21 @@ class ROS2Controller(RobotController):
             # Tecla sem mapeamento — ignora
             return None
 
-        # Atualiza conjunto de teclas pressionadas
-        if etype == 'down' and not repeat:
-            if cmd == 'stop':
-                self.pressed.clear()
-            else:
-                self.pressed.add(code)
-        elif etype == 'up':
-            self.pressed.discard(code)
+        # Atualiza conjunto de teclas pressionadas. Sob o lock da parada:
+        # evento que chega DENTRO da janela do STOP é descartado sem ser
+        # guardado — senão a tecla ressuscitava o movimento quando a janela
+        # acabasse (revisão do Codex sobre a 059).
+        with self._pub_lock:
+            if self._em_parada():
+                return {'command': 'stop', 'action': 'stop', 'code': code,
+                        'descartado': 'parada'}
+            if etype == 'down' and not repeat:
+                if cmd == 'stop':
+                    self.pressed.clear()
+                else:
+                    self.pressed.add(code)
+            elif etype == 'up':
+                self.pressed.discard(code)
 
         # Calcula e publica velocidades resultantes
         linear, angular = self._compute_cmd_vel()
@@ -526,9 +537,16 @@ class ROS2Controller(RobotController):
             if abs(gp_angular) < 0.05:
                 gp_angular = 0.0
 
-            # Salva para republicação instantânea ao mudar velocidade
-            self._last_gamepad_linear = gp_linear
-            self._last_gamepad_angular = gp_angular
+            # Salva para republicação instantânea ao mudar velocidade — e,
+            # como no teclado, NÃO guarda nada que chegue dentro da janela do
+            # STOP (o republicador voltaria a mover depois dela).
+            with self._pub_lock:
+                if self._em_parada():
+                    return {'command': 'stop', 'action': 'stop', 'linear': 0,
+                            'angular': 0, 'left_speed': 0, 'right_speed': 0,
+                            'descartado': 'parada'}
+                self._last_gamepad_linear = gp_linear
+                self._last_gamepad_angular = gp_angular
 
             # Converte joystick para m/s e rad/s (angular: direita positiva no gamepad = negativo no ROS)
             linear = gp_linear * self.linear_speed

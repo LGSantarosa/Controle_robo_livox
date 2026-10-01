@@ -99,3 +99,37 @@ def test_handler_do_stop_para_antes_e_sem_depender_do_mapa():
     primeiro = func.body[0]
     assert isinstance(primeiro, ast.Try)
     assert 'parada_web' in ast.unparse(primeiro.body[0])
+
+
+def _republica(c):
+    """Um ciclo do republicador a 50 Hz, sem thread nem sleep."""
+    if c.pressed:
+        c._publish(*c._compute_cmd_vel())
+    elif abs(c._last_gamepad_linear) > 0.01 or abs(c._last_gamepad_angular) > 0.01:
+        c._publish(c._last_gamepad_linear * c.linear_speed,
+                   -c._last_gamepad_angular * c.angular_speed)
+
+
+def test_evento_dentro_da_janela_nao_ressuscita_depois_dela(ctrl):
+    """Revisão do Codex: o comando era recusado na hora mas GUARDADO, e o
+    republicador voltava a mover quando a janela acabava. Inclui o pacote
+    enviado antes do STOP e processado depois dele."""
+    ctrl._publish_enabled = True
+    ctrl.parada_web()
+    ctrl._agora.t = 100.5
+    r = ctrl.handle_key_event({'type': 'down', 'code': 'KeyW'})
+    g = ctrl.handle_gamepad_event({'type': 'axis', 'linear': 1.0, 'angular': 0.5})
+    assert r['descartado'] == 'parada' and g['descartado'] == 'parada'
+    assert ctrl.pressed == set()
+    assert ctrl._last_gamepad_linear == 0.0 and ctrl._last_gamepad_angular == 0.0
+
+    ctrl._agora.t = 100.0 + ctrl.PARADA_S + 0.5      # janela acabou
+    antes = len(publicados(ctrl))
+    for _ in range(5):
+        _republica(ctrl)
+    assert all(p == (0.0, 0.0) for p in publicados(ctrl)[antes:])
+    assert not any(p != (0.0, 0.0) for p in publicados(ctrl)[antes:])
+
+    # Só um comando NOVO, depois da janela, volta a mover.
+    ctrl.handle_key_event({'type': 'down', 'code': 'KeyW'})
+    assert publicados(ctrl)[-1][0] > 0.0

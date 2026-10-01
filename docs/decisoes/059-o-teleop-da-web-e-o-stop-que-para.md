@@ -39,7 +39,14 @@ completa a 057 e a 058
    - um lock serializa toda publicação no `/web_vel`. Dentro da janela, nenhum
      comando não-zero da própria web sai: teclado, gamepad e republicador são
      recusados;
-   - teclas e eixos de gamepad retidos são limpos;
+   - teclas e eixos de gamepad retidos são limpos. Evento de teclado ou de
+     gamepad que chega **dentro** da janela é descartado sem ser guardado: a
+     checagem e a atualização do estado ficam sob o mesmo lock. (Na primeira
+     versão o evento era recusado na publicação, mas guardado, e o
+     republicador voltava a mover quando a janela acabava. Isso valia até
+     para pacote enviado antes do STOP e processado depois. A revisão do Codex
+     achou; corrigido antes do push.) Depois da janela, só um comando **novo**
+     move o robô;
    - o handler do STOP chama a parada **antes** e independente do
      `map_bridge`.
 
@@ -67,4 +74,4 @@ Não é E-STOP global. O freio de mão físico continua sendo o Xbox.
 três casos novos em `test_objetivo_encerrado.py` (`CANCELING` para; `CANCELING`
 numa action com a outra viva não para; `ATIVOS = {1, 2}`). A parada é testada
 sem espera real (relógio e disparo injetados). Suíte com overlay:
-**1294 passed**.
+**1295 passed**.
