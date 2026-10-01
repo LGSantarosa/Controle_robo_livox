@@ -317,7 +317,10 @@ class PathFollower(Node):
             ('desvio_taxa_deg_s', 15.0),
             ('v_max', 0.5),
             ('a_lin', 0.3),
-            ('wz_max', 1.25),
+            # 01-10: 1,25 -> 2,2. Com a força de curva no máximo (3x) o pedido
+            # do heading_controller ficava colado no teto (p90 = 1,25): era o
+            # teto, e não o a_dec, que limitava a curva. 2,2 = o módulo da placa (020).
+            ('wz_max', 2.2),
             # --- travessia DETERMINÍSTICA de gargalo (20-08) ---
             #
             # O mesmo /plan_smoothed nas corridas de 11:34 e 11:39 passou no
@@ -428,7 +431,7 @@ class PathFollower(Node):
             # que bater" acima era só comentário: os dois arquivos andaram
             # separados por doze dias porque nada conferia. Agora confere
             # (`test_o_piso_do_seguidor_sai_da_movimentacao`).
-            ('v_piso', 0.23655),
+            ('v_piso', 0.3648),   # 0,0178 + 2,2·0,270/2 + 0,05 (01-10)
             ('raio_chegada', 0.25),
             # --- chegada em DUAS FASES (05-08) ---
             # A decisão 006 tirou o rumo de chegada com esta razão: "girar

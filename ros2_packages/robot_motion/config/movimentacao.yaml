@@ -36,7 +36,7 @@ heading_controller:
                       # mais 20% no parâmetro (~9,5% no pedido angular).
 
     # Tetos. Iguais aos do diff_drive_controller.
-    wz_max: 1.25
+    wz_max: 2.2   # 01-10: era 1,25 e o pedido saturava nele (p90); 2,2 = limite da placa (020)
     v_max: 0.5
 
     # Zona morta da RODA [m/s]: abaixo disso a placa ignora o comando.
