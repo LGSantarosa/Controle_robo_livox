@@ -88,6 +88,14 @@ class Placa:
         self.saida_retida = None
         self.fila = []
 
+    VIGIA_HZ = placa_mod.PlacaSimulada.VIGIA_HZ
+    na_roda = None
+    t_vencido = None
+    t_entrada = None
+    assentado = True
+    saida = placa_mod.PlacaSimulada.saida
+    drena = placa_mod.PlacaSimulada.drena
+    passo_do_vigia = placa_mod.PlacaSimulada.passo_do_vigia
     enfileira = placa_mod.PlacaSimulada.enfileira
     retencao_de_desliga = placa_mod.PlacaSimulada.retencao_de_desliga
     unidades = placa_mod.PlacaSimulada.unidades
@@ -425,6 +433,118 @@ def test_a_fila_nao_cresce_sem_limite():
         p.enfileira(100.0 + i * 0.02, 0.30, 0.0)
     assert len(p.fila) <= 1 + PADRAO['latencia'] / 0.02, (
         f'fila com {len(p.fila)} entradas — está vazando')
+
+
+# ------------------------------- o zero ÚNICO não pode ficar preso (01-10)
+#
+# No Gazebo, um toque de 0,7 s na ré pela web virou ~9 s de ré: o único zero
+# entrou na fila de latência e ninguém mais publicou para tirá-lo de lá.
+
+
+def _entrada(p, t, v, wz=0.0):
+    """O que o callback faz, sem ROS: registra a entrada e devolve a saída."""
+    p.t_entrada = t
+    p.assentado = False
+    return p.saida(t, p.enfileira(t, v, wz))
+
+
+def _vigia_ate(p, t0, t1):
+    saidas, t = [], t0
+    while t <= t1 + 1e-9:
+        out = p.passo_do_vigia(t)
+        if out is not None:
+            saidas.append((round(t, 3), out))
+        t += 1.0 / p.VIGIA_HZ
+    return saidas
+
+
+def test_zero_unico_depois_de_re_chega_na_roda_sem_nova_mensagem():
+    p = Placa()
+    t = 100.0
+    while t < 100.7:                       # 0,7 s de ré a 20 Hz
+        _entrada(p, t, -0.30)
+        t += 0.05
+    _entrada(p, t, 0.0)                    # o ÚNICO zero; depois, silêncio
+    saidas = _vigia_ate(p, t + 0.02, t + 3.0)
+    assert saidas, 'com a entrada muda o vigia tem de falar'
+    lat, ret = PADRAO['latencia'], PADRAO['atraso_desliga']
+    t_ultima, ultima = saidas[-1]
+    assert ultima == (0.0, 0.0), 'a última palavra do vigia é zero'
+    assert t_ultima <= t + lat + ret + 0.05, (
+        f'parou em {t_ultima - t:.2f} s; devia em latência + retenção '
+        f'({lat + ret:.2f} s) — não em 9 s')
+    assert all(o[0] <= 0.0 for (_tt, o) in saidas), 'nunca inverte o sentido'
+    assert p.assentado, 'e o vigia se cala depois de assentar'
+    assert p.passo_do_vigia(t + 5.0) is None
+
+
+def test_o_vigia_preserva_latencia_e_retencao():
+    """Drenar pelo relógio não pode encurtar o modelo medido: o zero só chega
+    à roda depois da latência e a retenção ainda decai depois disso."""
+    p = Placa()
+    for i in range(10):
+        _entrada(p, 100.0 + 0.05 * i, -0.30)
+    t_zero = 100.5
+    _entrada(p, t_zero, 0.0)
+    lat = PADRAO['latencia']
+    antes = p.passo_do_vigia(t_zero + lat - 0.05)
+    assert antes is not None and antes[0] < -0.1, 'antes da latência, ré cheia'
+    logo_depois = p.passo_do_vigia(t_zero + lat + 0.10)
+    assert logo_depois is not None and -0.30 < logo_depois[0] < 0.0, (
+        'depois da latência, a retenção decai — não corta seco')
+
+
+def test_entrada_que_some_sem_zero_nao_vira_comando_eterno():
+    """Revisão do Codex: 0,30 m/s por 0,7 s e depois SILÊNCIO, sem zero
+    (processo morto, mux mudo). O vigia entrega só o que ainda estava na fila
+    de latência e se cala; não republica o comando cheio. Quem para o robô é
+    o watchdog de 0,5 s do diff_drive_controller, que só funciona se ninguém
+    ficar reenviando o comando com carimbo novo."""
+    p = Placa()
+    t = 100.0
+    while t < 100.7:
+        _entrada(p, t, 0.30)
+        t += 0.05
+    saidas = _vigia_ate(p, t, t + 3.0)
+    nao_zero = [o for (_tt, o) in saidas if o != (0.0, 0.0)]
+    pendentes = int(PADRAO['latencia'] / 0.05) + 2
+    assert len(nao_zero) <= pendentes, (
+        f'{len(nao_zero)} publicações não-zero com a entrada muda — só podia '
+        f'entregar o que estava na fila (≤ {pendentes})')
+    assert all(tt <= t + PADRAO['latencia'] + 0.05 for (tt, _o) in saidas), (
+        'depois de esvaziar a fila o vigia tem de se calar')
+    assert p.fila == []
+    assert p.assentado
+    assert p.passo_do_vigia(t + 10.0) is None, 'a 10 s, ainda falando'
+
+    # A entrada VOLTA com um zero novo (revisão do Codex): o comando antigo
+    # não pode ressuscitar — nem na hora, nem pela latência, nem pela retenção.
+    t_volta = t + 10.0
+    assert _entrada(p, t_volta, 0.0) == (0.0, 0.0), 'o 0,30 antigo ressuscitou'
+    depois = _vigia_ate(p, t_volta + 0.02, t_volta + 2.0)
+    assert all(o == (0.0, 0.0) for (_tt, o) in depois), (
+        f'movimento depois do zero novo: {[o for (_tt, o) in depois if o != (0.0, 0.0)]}')
+
+
+def test_o_vigia_nao_fala_com_mensagens_chegando():
+    """Com a entrada viva, quem publica é o callback; o vigia não duplica."""
+    p = Placa()
+    _entrada(p, 100.0, 0.30)
+    assert p.passo_do_vigia(100.0 + 0.5 / p.VIGIA_HZ) is None
+
+
+def test_o_vigia_fica_quieto_sem_nunca_ter_recebido_nada():
+    p = Placa()
+    assert p.passo_do_vigia(100.0) is None
+
+
+def test_com_entrada_continua_o_comportamento_e_o_de_antes():
+    """Sequência contínua a 50 Hz: a saída do callback é a de sempre — nada
+    na roda durante a latência, depois o comando cheio."""
+    p = Placa()
+    outs = [_entrada(p, 100.0 + 0.02 * i, 0.30, 0.0) for i in range(30)]
+    assert outs[0] == (0.0, 0.0)
+    assert outs[-1] == (0.30, 0.0)
 
 
 def test_o_carregador_nao_estraga_o_rclpy_dos_outros_testes():

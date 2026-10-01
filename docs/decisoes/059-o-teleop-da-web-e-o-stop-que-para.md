@@ -67,8 +67,26 @@ compensador e chegou ao `/cmd_vel_bruto`. Duas falhas se somaram:
    NUC;
 2. **a placa simulada:** a fila de latência (0,27 s) só esvazia quando chega
    mensagem nova, e o zero único ficou retido. É defeito só do simulador.
-   Fica para um passo próprio: **até lá, nada de ensaio de movimento com a web
-   no Gazebo.**
+   **Corrigido em passo próprio (mesmo dia):** a placa guarda o que está "na
+   roda", e um vigia a 50 Hz drena a fila e a retenção quando a entrada fica
+   muda, até assentar em zero (carimbo `(0, 0)`). O cronômetro da retenção
+   parte de quando o zero vence a latência. Com a entrada viva, quem publica
+   segue sendo o callback, e latência (0,27 s) e retenção (0,52 s) ficam como
+   medidas. Mudança de comportamento: quando nada novo vence a latência num
+   callback, a roda segue com o comando que já executava, em vez de publicar
+   zero.
+
+   **Limite do vigia (revisão do Codex):** ele só entrega o que vence a
+   latência e a retenção de um zero. Comando cheio sem nada novo **não é
+   republicado**, e com a fila vazia o vigia se cala. Se a entrada some sem
+   mandar zero (processo morto, mux mudo), quem para o robô é o watchdog de
+   0,5 s do `diff_drive_controller`, e ele só vence se ninguém reenviar o
+   comando com carimbo novo. A primeira versão republicava o comando cheio a
+   50 Hz com carimbo zero, e o robô andaria para sempre.
+   Ao se calar assim, o vigia também **invalida o estado** (comando na roda,
+   retenção, cronômetro): sem isso, uma entrada que voltasse 10 s depois com
+   um zero republicava o comando antigo na hora, e a retenção o reanimava por
+   ~0,8 s.
 
 **Os canais humanos passam DEPOIS do reflexo, de propósito.** `joy_vel`
 (100), `key_vel` (90) e `web_vel` (50) entram no `twist_mux` depois do

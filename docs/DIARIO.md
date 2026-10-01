@@ -10761,3 +10761,36 @@ lados.
 
 Defeito meu: o passo 1 da A3 foi revisado, mas ninguém pensou no relógio do
 carimbo, e só o ensaio pegou.
+
+## 2026-10-01 (dev, Gazebo desligado) — A PLACA SIMULADA SOLTA O ZERO ÚNICO
+
+Segunda metade da ré de 9 s. A `placa_simulada` só andava a fila de
+latência quando chegava mensagem nova. Com a web mandando um zero só, e o
+reflexo mudo com o robô parado, o zero ficou na fila, e a saída presa no
+último −0,29 m/s.
+
+Conserto: a placa passa a guardar o que está "na roda" e ganha um vigia a
+50 Hz. Com a entrada muda, o vigia drena a fila e a retenção até assentar em
+zero, e se cala. O cronômetro da retenção parte de quando o zero vence a
+latência. Esse defeito apareceu no meu próprio teste: a primeira versão
+contava a retenção a partir de quando o vigia olhava a fila. Com a entrada
+viva nada muda, exceto que um callback sem item vencido mantém o comando da
+roda, em vez de publicar zero. No cenário da ré (0,7 s a 20 Hz e um zero), a
+roda para em latência + retenção (~0,8 s), sem inverter, e o vigia se cala.
+Cinco testes novos; **1300 passed**. Commit local; o ensaio no Gazebo só
+depois da revisão.
+
+A revisão do Codex pegou o caso oposto: entrada que some **sem** zero. O vigia
+republicava o último comando cheio a 50 Hz com carimbo `(0, 0)`, e o
+`diff_drive_controller` tomava cada publicação por nova, então o watchdog dele
+nunca vencia. Reproduzido: 0,30 m/s por 0,7 s e depois silêncio, e o vigia
+ainda falava `(0.3, 0.0)` aos 10 s. Corrigido: o vigia só entrega o que vence
+a latência e a retenção de um zero, e com a fila vazia se cala. O teste de
+regressão falha na versão anterior e passa na nova. **1301 passed**.
+
+Segunda volta da revisão: ao se calar por silêncio, o vigia deixava o comando
+antigo guardado. Um zero novo, 10 s depois, publicava na hora o 0,30 antigo, e a
+retenção o reanimava por ~0,8 s. Agora, ao assentar por silêncio, o estado é
+invalidado. O teste de regressão ganhou a volta da entrada com um zero e exige
+saída zero, na hora e depois. Falha na versão anterior ("o 0,30 antigo
+ressuscitou"), passa na nova. **1301 passed**.

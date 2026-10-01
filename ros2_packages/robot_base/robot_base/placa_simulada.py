@@ -189,6 +189,21 @@ class PlacaSimulada(Node):
         self.t_corte = None       # quando o comando ZEROU (atraso de desliga)
         self.saida_retida = None  # o que a placa segue empurrando depois dele
 
+        # O que a roda está executando AGORA (o último item que venceu a
+        # latência). A saída sai deste estado, não da mensagem que chegou.
+        self.na_roda = None
+        self.t_vencido = None      # quando venceu o último item drenado
+        # Relógio de vigia (01-10): sem ele a fila só andava quando chegava
+        # mensagem nova, e um zero ÚNICO ficava preso nela. No Gazebo, um toque
+        # de 0,7 s na ré pela web virou ~9 s de ré (o reflexo fica mudo com o
+        # robô parado e ninguém mais publicava). O vigia drena a fila e a
+        # retenção com a entrada muda; com mensagens chegando, quem publica
+        # continua sendo o callback.
+        self.t_entrada = None
+        self.frame_entrada = ''
+        self.assentado = True
+        self.create_timer(1.0 / self.VIGIA_HZ, self.vigia)
+
         self._anuncia()
 
     def _anuncia(self):
@@ -315,18 +330,97 @@ class PlacaSimulada(Node):
                 throttle_duration_sec=1.0 / self.par['taxa_avisos'])
 
         # ...e a RODA responde `latencia` depois. Ver `enfileira`.
+        self.t_entrada = agora
+        self.frame_entrada = msg.header.frame_id
+        self.assentado = False             # há o que o vigia acompanhar
         chegou = self.enfileira(agora, v, wz)
-        if chegou is None:
-            return self.publica(msg, 0.0, 0.0)
+        self.publica(msg, *self.saida(agora, chegou))
 
-        if abs(chegou[0]) < 1e-9 and abs(chegou[1]) < 1e-9:
+    VIGIA_HZ = 50.0
+
+    def saida(self, agora, chegou):
+        """O que a roda faz agora, dado o que acabou de vencer a latência.
+
+        `chegou is None` = nada novo venceu neste instante: a roda segue com o
+        que já estava executando (antes do vigia, isso publicava zero).
+        """
+        if chegou is not None:
+            vinha_andando = (self.na_roda is not None
+                             and (abs(self.na_roda[0]) >= 1e-9
+                                  or abs(self.na_roda[1]) >= 1e-9))
+            zero = abs(chegou[0]) < 1e-9 and abs(chegou[1]) < 1e-9
+            if zero and vinha_andando and self.t_corte is None:
+                # O cronômetro da retenção parte de quando o zero VENCEU a
+                # latência, não de quando alguém olhou a fila.
+                self.t_corte = min(agora, self.t_vencido or agora)
+            self.na_roda = chegou
+        if self.na_roda is None:
+            return 0.0, 0.0
+        if abs(self.na_roda[0]) < 1e-9 and abs(self.na_roda[1]) < 1e-9:
             # O que chegou à roda é zero: aqui começa o atraso de DESLIGA.
             retida = self.retencao_de_desliga(agora)
-            return self.publica(msg, *(retida if retida else (0.0, 0.0)))
-
+            return retida if retida else (0.0, 0.0)
         self.t_corte = None
-        self.saida_retida = chegou
-        self.publica(msg, *chegou)
+        self.saida_retida = self.na_roda
+        return self.na_roda
+
+    def drena(self, agora):
+        """Tira da fila o que já venceu a latência, sem enfileirar nada."""
+        chegou = None
+        self.t_vencido = None
+        while self.fila and self.fila[0][0] <= agora:
+            self.t_vencido, cv, cwz = self.fila.pop(0)
+            chegou = (cv, cwz)
+        return chegou
+
+    def passo_do_vigia(self, agora):
+        """Saída do vigia, ou None quando não há o que publicar.
+
+        Só fala com a entrada MUDA (mais de um período sem mensagem) e só até
+        a roda assentar em zero: fila vazia, nada retido, roda parada.
+        """
+        if self.t_entrada is None or agora - self.t_entrada < 1.0 / self.VIGIA_HZ:
+            return None
+        if self.assentado:
+            return None
+        chegou = self.drena(agora)
+        andando = (self.na_roda is not None
+                   and (abs(self.na_roda[0]) >= 1e-9
+                        or abs(self.na_roda[1]) >= 1e-9))
+        if chegou is None and andando:
+            # Comando CHEIO sem nada novo vencendo a latência: o vigia não o
+            # republica. Republicado com carimbo zero, ele pareceria novo ao
+            # diff_drive_controller e o watchdog de 0,5 s dele nunca venceria —
+            # entrada que some SEM mandar zero (processo morto, mux mudo)
+            # deixaria o robô andando para sempre (revisão do Codex, 01-10).
+            # Fila vazia: nada mais a entregar; quem para é o watchdog.
+            if not self.fila:
+                self.assentado = True
+                # E o comando velho MORRE aqui: o watchdog do controlador vai
+                # pará-lo, e uma entrada futura não pode ressuscitá-lo (um zero
+                # novo, 10 s depois, republicava o antigo 0,30 e ainda armava
+                # a retenção sobre ele — revisão do Codex, 01-10).
+                self.na_roda = None
+                self.saida_retida = None
+                self.t_corte = None
+            return None
+        v, wz = self.saida(agora, chegou)
+        parada = (self.na_roda is None
+                  or (abs(self.na_roda[0]) < 1e-9 and abs(self.na_roda[1]) < 1e-9))
+        if (not self.fila and parada and self.saida_retida is None
+                and abs(v) < 1e-9 and abs(wz) < 1e-9):
+            self.assentado = True          # este zero é o último
+        return v, wz
+
+    def vigia(self):
+        agora = self.get_clock().now().nanoseconds * 1e-9
+        out = self.passo_do_vigia(agora)
+        if out is None:
+            return
+        m = TwistStamped()
+        # Carimbo (0, 0): o diff_drive_controller põe o relógio dele (059).
+        m.header.frame_id = self.frame_entrada
+        self.publica(m, *out)
 
     def enfileira(self, agora, v, wz):
         """Fila de atraso: o que a placa decidiu agora chega à roda depois.

@@ -24,8 +24,9 @@ Ensaio no Gazebo com o dono olhando:
   causa, em duas partes, está no adendo da 059:
   1. o carimbo de relógio da web (parede) contra o tempo simulado.
      **Corrigido**: carimbo `(0, 0)`, commit local aguardando revisão;
-  2. a fila da placa simulada retém o zero único. **Pendente: nada de ensaio
-     de movimento com a web no Gazebo até corrigir.**
+  2. a fila da placa simulada retém o zero único. **Corrigido** (vigia de
+     50 Hz, commit local aguardando revisão). O ensaio de movimento pela web
+     no Gazebo volta só depois da revisão.
 
 Os canais humanos (Xbox, teclado, web) passam **depois** do reflexo, de
 propósito; nada os segura.
