@@ -27,7 +27,7 @@ heading_controller:
     #   subir a frenagem mexe direto no S que só assentou em 11-08, e isso
     #   merece leva própria, com corrida de controle. Não é esquecimento;
     #   é a diferença entre o que a máquina faz e o que pedimos dela.
-    a_dec: 0.648      # 01-10: 0,288 -> 0,432 -> 0,648 (+50% duas vezes), pedido do dono; a força
+    a_dec: 1.944      # 01-10: 0,288 -> 0,432 -> 0,648 -> 1,944 (= 0,648 x 3, o slider em 3x que o dono aprovou no chão); a força
                       # de curva da web multiplica ESTE valor. Histórico: 12-08,
                       # com a roda boba antiga, 0,3 fez
                       # o rumo oscilar 38°. Esse resultado NÃO limita a omni:
