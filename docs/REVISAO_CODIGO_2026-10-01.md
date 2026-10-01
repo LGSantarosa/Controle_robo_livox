@@ -61,6 +61,7 @@ clique-para-ir.
 | A9 | 🟠 média | O `controller_manager` roda a **10 Hz**: até 100 ms de atraso de comando, candidato a reduzir o tempo morto | verificar |
 | A10 | 🟠 média | A TF `odom→camera_init`, sem a qual o robô não anda, **só existe no `bin/sobe-robo`** e vira órfã a cada subida | confirmado |
 | A11 | 🟠 média | O monitor de tensão e as métricas Nav2 da web escutam **tópicos do robô 1**: no robô 2 gravam zero | confirmado |
+| A12 | 🟠 média | **Freio linear (038) dá tranco** de 6–15 cm no sentido oposto quando o comando humano é cortado (visto no Gazebo, 2ª rodada de 01-10) | verificar no robô |
 
 O resto (seções 2 a 7) vai de bug latente a limpeza.
 

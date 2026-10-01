@@ -14,6 +14,25 @@
 
 ---
 
+## 🟢 01-10 (2ª rodada no Gazebo) — TELEOP DA WEB E STOP APROVADOS
+
+Com o carimbo `(0, 0)` e o vigia da placa simulada (`859d3f7`):
+- **toque de 0,8 s na ré:** parou ~1,05 s depois de soltar (latência +
+  retenção + rampa) e andou 16 cm nesse tempo. Antes eram 9 s;
+- **W segurado e STOP clicado no meio:** o `/web_vel` foi a zero na hora; a
+  janela acabou e o W ainda ficou segurado por mais 1,7 s sem ressuscitar
+  nada; o robô assentou ~1,6 s depois do clique.
+
+🟡 **Achado novo — o freio linear (038) dá tranco contra a latência da placa
+simulada.** Comando cortado com o robô a ~0,29 m/s → o compensador manda
+contra-torque de ±0,5. Esse comando chega à roda ~0,4 s depois, com o robô já
+parando, e o empurra no sentido oposto: **15 cm para frente** depois de uma
+ré, **6 cm para trás** depois do STOP. Não vem das mudanças de hoje.
+Investigar se o mesmo acontece no robô real, onde o freio foi aprovado em
+13-08. Ainda não se sabe por que ele não disparou no toque curto.
+
+Nada disso foi ao NUC.
+
 ## 🔴 01-10 — GAZEBO: STOP APROVADO; WEB ANDOU 9 s COM UM TOQUE DE RÉ
 
 Ensaio no Gazebo com o dono olhando:

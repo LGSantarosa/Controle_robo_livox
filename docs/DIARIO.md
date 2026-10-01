@@ -10794,3 +10794,26 @@ retenção o reanimava por ~0,8 s. Agora, ao assentar por silêncio, o estado é
 invalidado. O teste de regressão ganhou a volta da entrada com um zero e exige
 saída zero, na hora e depois. Falha na versão anterior ("o 0,30 antigo
 ressuscitou"), passa na nova. **1301 passed**.
+
+## 2026-10-01 (Gazebo, dono olhando, 2ª rodada) — A WEB PARA, E O FREIO LINEAR DÁ TRANCO
+
+Pilha e web subidas de novo, com a placa simulada nova (`859d3f7`). Lido no
+`freeze_capture.csv`:
+
+- **toque de 0,8 s na ré pelo tecladinho:** zero na web ao soltar. A roda
+  seguiu a latência (0,27 s) e a retenção (0,52 s) e chegou a zero ~1,05 s
+  depois; o robô andou 16 cm nesse tempo. Antes do conserto eram 9 s;
+- **W do teclado físico segurado e STOP clicado no meio:** `/web_vel` em zero
+  no mesmo instante. A tecla ficou segurada mais 2,7 s, passando do fim da
+  janela de 1 s, e as repetições automáticas foram descartadas: nada
+  ressuscitou. O robô assentou ~1,6 s depois do clique.
+
+**Achado novo (A12 na revisão):** nas paradas com o robô a ~0,29 m/s, o
+`compensador_rumo` aciona o freio linear (038), contra-torque de ±0,5. Pela
+latência da placa simulada, o empurrão chega à roda ~0,4 s depois, com o robô
+já parando, e o leva para o lado oposto: 15 cm para frente depois de uma ré
+segurada; 6 cm para trás depois do STOP. No toque curto ele não disparou, e o
+motivo ainda não é conhecido. O freio foi aprovado no robô real em 13-08. Fica
+em aberto se ele também dá tranco lá ou se é só a placa simulada.
+
+Gazebo e web derrubados ao fim; nada foi ao NUC.
