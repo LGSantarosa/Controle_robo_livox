@@ -10621,3 +10621,19 @@ parada; cabine pequena e reflexiva; andar novo no mesmo x, y do antigo). Por
 isso a saída do nó tem ordem obrigatória: trocar o mapa → reiniciar o LIO →
 pose da porta do elevador no mapa novo → reativar o Nav2. Desenho completo em
 `ESTADO_PROJETO.md` (seção 01-10, elevador). Nada implementado.
+
+## 2026-10-01 (dev, sem robô) — REVISÃO DE CÓDIGO DO ROBÔ 2, FASE 1 (SÓ LEITURA)
+
+Pedido do dono: revisar o robô 2 inteiro, achar erro de código e de lógica, e
+listar o lixo velho. Tudo do robô 3 sai deste repo, porque ele agora tem
+repositório próprio. Nada foi alterado no código; o resultado está em
+`docs/REVISAO_CODIGO_2026-10-01.md` e vai para revisão cruzada do Codex antes
+da fase 2.
+
+Suíte na raiz: **1262 passed**. Os quatro achados de maior peso, nenhum coberto
+por teste: o STOP da web não cancela o objetivo de clique (A1); objetivo
+cancelado continua sendo seguido por até 7 s (A2); o teleop da web publica
+`Twist` num mux `TwistStamped` e nunca chega à roda (A3); e a ré e o pivô de
+escape, que furam o reflexo, decidem por um `/scan` que não vê nada a menos de
+0,35 m (A4, a medir). A limpeza fica para a fase 2, um item por vez, com o ok
+do dono.
