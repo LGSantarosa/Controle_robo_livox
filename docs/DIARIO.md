@@ -10671,3 +10671,11 @@ para não matar o goal novo. 4 testes novos; suíte com overlay **1271 passed**.
 Sem o overlay a suíte acusa 28 falhas e 11 erros de ambiente; não é regressão.
 
 Falta o Gazebo, com o dono olhando, antes do NUC.
+
+Na revisão cruzada, o Codex reproduziu uma corrida na 058: o runner conferia o
+STOP e só depois lia a geração. Um STOP entre as duas leituras dava ao goal a
+geração nova, e ele escapava do cancelamento. Corrigido no mesmo dia: o STOP
+muda o sinal e a geração juntos, sob lock, e o runner lê os dois juntos. Dois
+testes novos cobrem as duas ordens; suíte **1273 passed**. A decisão 058
+afirmava "para na hora", o que é mais forte do que o código garante (o seguidor
+só para no `CANCELED`). Texto corrigido; a parada imediata fica junto da A3.

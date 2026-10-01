@@ -65,3 +65,56 @@ def test_goal_aceito_sem_stop_segue_normal():
     MapBridge._on_goal_response(fb, futuro, fb._wp_gen)
     handle.cancel_goal_async.assert_not_called()
     assert fb._wp_goal_handle is handle
+
+
+def _runner_bridge():
+    """Bridge falsa para rodar o `_wp_runner` real com uma rota de 1 ponto."""
+    fb = _fake_bridge()
+    fb._wp_list = [{'x': 1.0, 'y': 2.0, 'yaw': 0.0}]
+    fb._wp_current_idx = 0
+    fb._wp_loop = False
+    fb._clear_costmap_srv = Mock()
+    fb._clear_costmap_srv.wait_for_service.return_value = True
+    return fb
+
+
+def _stop(fb):
+    with fb._wp_lock:
+        fb._wp_stop.set()
+        fb._wp_gen += 1
+
+
+def test_stop_antes_da_conferencia_nao_envia_goal(monkeypatch):
+    """STOP durante a espera do `_send`: nada é enviado."""
+    import map_service
+    fb = _runner_bridge()
+    fb._wp_send_goal_action = Mock()
+    monkeypatch.setattr(map_service.time, 'sleep', lambda _s: _stop(fb))
+    MapBridge._wp_runner(fb)
+    fb._wp_send_goal_action.assert_not_called()
+
+
+def test_stop_logo_depois_da_conferencia_cancela_no_aceite(monkeypatch):
+    """A ordem que a revisão do Codex reproduziu: STOP depois da conferência,
+    antes do aceite. O goal leva a geração VELHA e é cancelado no aceite."""
+    import map_service
+    fb = _runner_bridge()
+    monkeypatch.setattr(map_service.time, 'sleep', lambda _s: None)
+    enviados = []
+
+    def envia(x, y, yaw, gen=None):
+        enviados.append(gen)
+        _stop(fb)                       # o STOP chega agora
+
+    fb._wp_send_goal_action = envia
+    fb._wp_goal_done.set()              # sai do laço logo depois do envio
+    fb._wp_goal_status = 6
+    MapBridge._wp_runner(fb)
+    assert enviados == [0]
+
+    handle = Mock(accepted=True)
+    futuro = Mock()
+    futuro.result.return_value = handle
+    MapBridge._on_goal_response(fb, futuro, enviados[0])
+    handle.cancel_goal_async.assert_called_once()
+    assert fb._wp_goal_handle is None

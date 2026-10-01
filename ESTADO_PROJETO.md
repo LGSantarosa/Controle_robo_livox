@@ -19,7 +19,10 @@
 O STOP da web agora cancela **todos** os goals `NavigateToPose` aceitos até o
 instante do clique, incluindo o clique-para-ir que entra por `/goal_pose`.
 Goal de rota aceito depois do STOP é cancelado no próprio aceite. Junto da 057,
-um STOP para o robô na hora. Decisão **058**; suíte: **1271 passed**.
+o cancelamento chega ao seguidor. Decisão **058**; suíte: **1273 passed**.
+A revisão do Codex achou uma corrida no runner (geração lida fora do lock),
+corrigida no mesmo dia. Ainda **não é parada instantânea**: o seguidor só para
+no estado `CANCELED`, não no `CANCELING`. Isso fecha junto da A3.
 
 🔴 Ainda não validado no Gazebo nem no robô; vale a mesma lista da 057, mais
 o STOP durante um clique e durante uma rota.

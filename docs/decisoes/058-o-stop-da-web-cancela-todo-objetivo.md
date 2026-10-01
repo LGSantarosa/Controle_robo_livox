@@ -21,15 +21,23 @@ antes de levar ao NUC
 1. O STOP chama o serviço `navigate_to_pose/_action/cancel_goal` com `goal_id`
    zerado e `stamp` = agora: pela semântica do `action_msgs/CancelGoal`, isso
    cancela todo goal aceito até esse instante, venha de onde vier.
-2. Cada stop incrementa uma geração (`_wp_gen`). O goal enviado guarda a
-   geração do envio; se ele for aceito numa geração vencida, é cancelado no
-   próprio aceite e não vira o handle corrente.
+2. Cada stop liga `_wp_stop` e incrementa uma geração (`_wp_gen`) juntos,
+   sob o `_wp_lock`. O `_send` do runner confere o STOP e lê a geração no mesmo
+   trecho travado e entrega essa geração ao envio. Um goal aceito numa geração
+   vencida é cancelado no próprio aceite e não vira o handle corrente.
+   (Na primeira versão a geração era lida fora do lock, depois da conferência:
+   um STOP entre as duas dava ao goal a geração nova e ele escapava. A
+   revisão do Codex reproduziu essa ordem; corrigido no mesmo dia.)
 3. `start_waypoints` para a rota anterior **sem** o cancelamento geral. Senão o
    pedido assíncrono poderia chegar ao servidor depois do aceite do primeiro
    goal da rota nova e cancelá-lo.
 
-Com a 057, o cancelamento passa a parar o robô na hora: o seguidor zera a cadeia
-normal e `/unstuck_vel` e apaga o plano.
+Com a 057, o cancelamento faz o seguidor zerar a cadeia normal e
+`/unstuck_vel` e apagar o plano. **Isso não é "na hora":** o seguidor conta
+`CANCELING` (3) como objetivo vivo e só para quando chega o estado terminal
+`CANCELED`. A demora é a do `bt_navigator` processar o cancelamento, sem teto
+explícito. Fecha junto da A3: o zero da web em prioridade alta é hoje `Twist`
+num mux `TwistStamped` e não chega.
 
 ## Alternativas descartadas
 
@@ -45,9 +53,15 @@ cancelamento escapa do item 1. A janela é a latência de aceite do
 `bt_navigator`. O item 2 não cobre esse caso, porque o clique não passa pelo
 executor de rotas.
 
+Outro limite: o pedido de cancelamento é só enfileirado (`call_async`). Se
+o serviço estiver indisponível, há aviso no log, mas a web segue respondendo
+`ok`. Também fica para depois.
+
 ## Testes de desenvolvimento
 
 `test_map_service_stop.py`: o STOP cancela todos (goal_id zerado, stamp
 atual); o reinício de rota não cancela tudo; o goal aceito depois do STOP é
-cancelado no aceite; o goal aceito sem STOP segue normal. Suíte completa com
-o overlay carregado: **1271 passed**.
+cancelado no aceite; o goal aceito sem STOP segue normal; STOP durante a
+espera do runner não envia goal; STOP logo depois da conferência cancela no
+aceite (a ordem que a revisão reproduziu). Suíte completa com o overlay
+carregado: **1273 passed**.

@@ -601,10 +601,12 @@ class MapBridge:
         return {'ok': True}
 
     def stop_waypoints(self, cancel_all: bool = True) -> dict:
-        self._wp_stop.set()
         # Cancela o goal ativo no Nav2 (se houver) pra não deixar o robô
         # continuar indo até o último alvo depois de parar a rota.
+        # Sinal de parada e geração mudam JUNTOS, sob o lock: o `_send` do
+        # runner confere os dois de uma vez (A7).
         with self._wp_lock:
+            self._wp_stop.set()
             self._wp_gen += 1
             handle = self._wp_goal_handle
             thread = self._wp_thread
@@ -704,7 +706,8 @@ class MapBridge:
             names = []
         return {'ok': True, 'routes': names}
 
-    def _wp_send_goal_action(self, x: float, y: float, yaw: float = 0.0):
+    def _wp_send_goal_action(self, x: float, y: float, yaw: float = 0.0,
+                             gen: Optional[int] = None):
         """Envia um goal via NavigateToPose (action). Os callbacks
         `_on_goal_response` e `_on_goal_result` atualizam `_wp_goal_status`
         e sinalizam `_wp_goal_done` quando o Nav2 termina (SUCCEEDED,
@@ -730,7 +733,8 @@ class MapBridge:
         goal.pose.pose.orientation.z = qz
         goal.pose.pose.orientation.w = qw
 
-        gen = self._wp_gen
+        if gen is None:
+            gen = self._wp_gen
         send_future = self._nav_action.send_goal_async(goal)
         send_future.add_done_callback(
             lambda f, g=gen: self._on_goal_response(f, g))
@@ -796,8 +800,15 @@ class MapBridge:
                 self._wp_stop.set()
                 return
             time.sleep(0.5)
-            if not self._wp_stop.is_set():
-                self._wp_send_goal_action(wp['x'], wp['y'], wp.get('yaw', 0.0))
+            # Confere o STOP e lê a geração no mesmo trecho travado. Lidos em
+            # momentos diferentes, um STOP entre os dois dava ao goal a geração
+            # nova: ele escapava do cancelamento no aceite (A7, revisão do Codex).
+            with self._wp_lock:
+                if self._wp_stop.is_set():
+                    return
+                gen = self._wp_gen
+            self._wp_send_goal_action(wp['x'], wp['y'], wp.get('yaw', 0.0),
+                                      gen=gen)
 
         def _advance() -> bool:
             """Avança idx; retorna False quando a rota terminou (sem loop)."""
