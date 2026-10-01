@@ -10549,3 +10549,44 @@ Validação de desenvolvimento: build dos três pacotes concluído; **527 testes
 focados passaram; num domínio ROS isolado, a web publicou linear `1,20×` e
 curva `1,55×`, e ambos os nós receberam exatamente os dois valores. Ainda não
 foi instalado nem testado no robô.
+
+## 2026-10-01 (dev + Gazebo, robô 2, sem robô físico) — O AJUSTE AO VIVO FUNCIONA NO GAZEBO
+
+Pilha `robo:=2 sim:=true localizacao:=fixa` no mundo `pista_obstaculos`, já na
+`main` (`1158db6`), com o web novo. O dono dirigiu por objetivos e mexeu só na
+**força de curva**; a velocidade pedida ficou em `1,00×` o tempo todo. Ele viu
+o robô "sair patinando" com a curva alta e pediu para confirmar nos logs se o
+giro tinha mudado mesmo.
+
+**O ajuste chegou nos nós.** Cada mudança apareceu no `heading_controller` como
+`AJUSTE AO VIVO`, com o `a_dec` efetivo recalculado (base 0,30):
+
+| hora | curva | `a_dec` efetivo |
+|---|---|---|
+| 11:11:29 | 2,95× → 3,00× | 0,885 → 0,900 rad/s² |
+| 11:12:06 | 2,00× | 0,600 rad/s² |
+| 11:12:21 | 2,35× | 0,705 rad/s² |
+
+**O giro acompanhou.** Taxa de giro derivada do `rumo` do CSV do seguidor,
+separada pela coluna `escala_curva_nav`:
+
+| curva | amostras | média girando | p90 | pico |
+|---|---|---|---|---|
+| 3,00× | 532 | 0,55 rad/s | 0,95 | 1,55 rad/s |
+| 2,00× | 298 | 0,48 rad/s | 0,83 | 1,36 rad/s |
+| 2,35× | 1462 | 0,36 rad/s | 0,51 | 1,22 rad/s |
+
+O 3,00× deu o giro mais forte, coerente com o patinar visto pelo dono.
+**Limites:** não houve trecho em `1,00×` (a corrida começou já com o ajuste
+alto), os trajetos de cada fator foram diferentes e o 2,35× inclui ré. Os
+números provam que o controle age, não medem quanto cada fator vale. Para
+isso falta um par de corridas iguais, `1,00×` contra `3,00×`, mesmo objetivo.
+
+Evidência (fora do git, nesta máquina):
+`~/logs_robo2/20261001_110834-gazebo-web-main/` (`web.log`, `pilha.log`,
+`seguidor_2026-10-01_110835.csv`).
+
+Nota de bancada: a `colcon build` do `robot_motion` falhou ao voltar da
+`etapa6-pilha-robo3` para a `main` (link quebrado em `build/` para
+`twist_mux_pilha_robo3.yaml`, que só existe na branch). O código rodou certo
+mesmo assim, porque o install é `--symlink-install` e aponta para a fonte.

@@ -66,7 +66,9 @@ não apenas `v_max` — com teto físico final de 0,70 m/s. **Força de curva**
 (`0,50×–3,00×`) multiplica o `a_dec` da lei contínua; `wz_max` e o pivô não
 mudam. Os valores chegam ao vivo por tópicos DDS retidos, voltam a `1,00×` na
 subida da web e são gravados em cada linha do CSV. Implementação e comunicação
-web→seguidor/rumo provadas offline; falta instalar e testar no robô.
+web→seguidor/rumo provadas offline e, em 01-10, **no Gazebo (robô 2)**: a
+força de curva chegou ao vivo e o giro medido subiu com ela (detalhe no
+DIARIO, 01-10). Falta instalar e testar no robô.
 
 ---
 
