@@ -22,7 +22,7 @@ ros2_packages/robot_base/launch/sim_robo3.launch.py:
 ros2_packages/robot_motion/launch/joystick.launch.py:
   dev: auto
 ros2_packages/robot_motion/launch/pilha.launch.py:
-  bag: 'true'
+  bag: 'false'   # 01-10: padrão desligado, o bag encheu o disco do NUC
   curv_frente: '-0.817'
   curv_medido_em: HERDADO
   curv_re: '-0.098'

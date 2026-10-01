@@ -539,10 +539,15 @@ def generate_launch_description():
             description='diretório dos logs de corrida (CSV do seguidor + bag '
                         'da corrente). Vazio DESLIGA — mas não desligue: '
                         'corrida sem registro não vira número'),
+        # 🔴 01-10: DESLIGADO POR PADRÃO, ordem do dono. Com `--all-topics` ele
+        # gravava ~1 GB/min: 408 GB em `~/logs_robo2` encheram o disco do NUC
+        # (100%) no meio da sessão. O CSV do seguidor e o `freeze_capture`
+        # continuam gravando sempre; bag só com `bag:=true` explícito.
         DeclareLaunchArgument(
-            'bag', default_value='true',
-            description='grava a corrente inteira em `ros2 bag` junto com o '
-                        'CSV. false deixa só o CSV (NUC com disco apertado)'),
+            'bag', default_value='false',
+            description='true grava a corrente inteira em `ros2 bag` '
+                        '(--all-topics, ~1 GB/min). Padrão false desde 01-10: '
+                        'encheu o disco do NUC'),
         DeclareLaunchArgument(
             'desvio_taxa_deg_s', default_value='15.0',
             description='[°/s] o quanto a correção lateral pode mover a '
