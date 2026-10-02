@@ -1020,3 +1020,86 @@ def test_gargalo_nao_larga_o_eixo_por_ruido_de_pose():
         caminho, porta, x=1.0, y=0.10, rumo_atual=0.0, saida=1.0,
         eixo_comprometido=False)
     assert fase_sem_latch == 'centro'
+
+
+# ------------------------- 02-10: progresso medido PELO PLANO, não em reta
+#
+# Robô 2, 01-10, t=1790891749 (`docs/dados/2026-10-01-robo2-curva-forte/`):
+# numa curva longa (rumo 177° → 103° em 5 s, a 0,5 m/s) a distância em linha
+# reta ao objetivo SUBIU de 20,92 para 21,83 m com o robô andando direito. O
+# gatilho de 4 s leu isso como emperrado e disparou escape e ré no corredor.
+
+from robot_motion.lei_de_seguimento import (          # noqa: E402
+    indice_mais_proximo,
+    restante_pelo_plano,
+)
+
+
+def _plano_em_u(raio, passo=0.05, reta=20.0):
+    """Sai da origem rumo oeste, faz a volta pela direita e segue para leste."""
+    pts = []
+    n = int(math.pi * raio / passo)
+    for k in range(n + 1):
+        a = math.pi * k / n               # 0 → 180° de volta
+        pts.append((-raio * math.sin(a), raio - raio * math.cos(a)))
+    x0, y0 = pts[-1]
+    for k in range(1, int(reta / passo) + 1):
+        pts.append((x0 + k * passo, y0))
+    return pts
+
+
+def _curva_de_01_10():
+    """Posições do robô a 20 Hz: 0,5 m/s, rumo 177° → 103° em 5 s."""
+    w = math.radians(177 - 103) / 5.0
+    raio = 0.5 / w                        # ~1,94 m
+    pos = []
+    t = 0.0
+    while t <= 5.0 + 1e-9:
+        a = w * t
+        pos.append((t, -raio * math.sin(a), raio - raio * math.cos(a)))
+        t += 0.05
+    return raio, pos
+
+
+def test_na_curva_de_01_10_a_reta_ao_objetivo_sobe_e_dispara():
+    """O defeito, travado: a métrica antiga acusa um robô que está andando."""
+    raio, pos = _curva_de_01_10()
+    plano = _plano_em_u(raio)
+    gx, gy = plano[-1]
+    p = ProgressoDeAvanco(parado_s=4.0, avanco_min=0.05)
+    reta = [math.hypot(gx - x, gy - y) for (_, x, y) in pos]
+    assert reta[-1] > reta[0] + 0.5, 'a reta ao objetivo sobe na curva'
+    assert any(p.atualiza(t, d) for (t, _, _), d in zip(pos, reta))
+
+
+def test_na_curva_de_01_10_o_restante_pelo_plano_nao_dispara():
+    raio, pos = _curva_de_01_10()
+    plano = _plano_em_u(raio)
+    p = ProgressoDeAvanco(parado_s=4.0, avanco_min=0.05)
+    for t, x, y in pos:
+        restante = restante_pelo_plano(plano, indice_mais_proximo(plano, x, y))
+        assert not p.atualiza(t, restante), f'emperrado falso em t={t:.2f} s'
+
+
+def test_orbita_continua_sendo_emperrado_pelo_plano():
+    """A razão de existir do detector (docstring dele): velocidade sem
+    avanço. Um robô girando em volta de um ponto do plano anda, mas o ponto
+    mais próximo dele no plano não sai do lugar."""
+    plano = [(0.05 * k, 0.0) for k in range(200)]       # 10 m reto
+    p = ProgressoDeAvanco(parado_s=4.0, avanco_min=0.05)
+    disparou = False
+    t = 0.0
+    while t < 10.0:
+        a = 0.5 / 0.3 * t                               # 0,5 m/s, raio 0,3
+        x, y = 2.0 + 0.3 * math.cos(a), 0.3 * math.sin(a)
+        disparou |= p.atualiza(t, restante_pelo_plano(
+            plano, indice_mais_proximo(plano, x, y)))
+        t += 0.05
+    assert disparou, 'órbita deixou de ser detectada'
+
+
+def test_restante_pelo_plano_e_o_arco_ate_o_fim():
+    plano = [(0.0, 0.0), (1.0, 0.0), (1.0, 2.0)]
+    assert restante_pelo_plano(plano, 0) == pytest.approx(3.0)
+    assert restante_pelo_plano(plano, 1) == pytest.approx(2.0)
+    assert restante_pelo_plano(plano, 2) == 0.0

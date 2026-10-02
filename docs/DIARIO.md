@@ -10864,3 +10864,14 @@ curva durante a ré (103° → 75°), a traseira varreu a parede.
 
 Para a próxima sessão: emperrado passa a ser "o robô não se mexeu", a ré ganha
 velocidade própria, e depois vem o plano velho.
+
+## 2026-10-02 (dev, robô desligado) — O EMPERRADO PASSA A SER MEDIDO PELO PLANO
+
+Primeiro item das pendências de 01-10. A proposta inicial era "emperrado = o
+robô não se mexeu". A revisão do Codex apontou que isso deixa de pegar a
+órbita e segura o replanejamento. Ficou a decisão 060: o progresso é o que
+falta pelo plano (`restante_pelo_plano`), e um plano aceito reinicia o
+detector. Testes primeiro: a curva de 01-10 reproduzida faz a métrica antiga
+disparar e a nova não, e a órbita continua disparando. Suíte: 461 passam e 18
+falham, todos no `test_pilha_robo` (precisam do ambiente ROS e já falhavam
+antes). Falta validar no chão.

@@ -444,6 +444,17 @@ def indice_mais_proximo(caminho, x, y):
     return melhor
 
 
+def restante_pelo_plano(caminho, i0):
+    """Quanto falta andar PELO caminho, de `i0` até o fim [m].
+
+    É a medida de progresso do seguidor desde 02-10. A distância em linha reta
+    ao objetivo não serve: numa curva longa ela SOBE com o robô andando certo
+    (robô 2, 01-10: 20,92 → 21,83 m em 5 s), e o gatilho de emperrado disparava
+    escape e ré no meio do corredor.
+    """
+    return sum(math.dist(a, b) for a, b in zip(caminho[i0:], caminho[i0 + 1:]))
+
+
 def carrot(caminho, i0, lookahead):
     """Ponto a `lookahead` à frente de `i0`, medido pelo ARCO do caminho.
 
@@ -806,10 +817,13 @@ def escala_velocidade_pedida(v, escala, teto_absoluto):
 
 
 class ProgressoDeAvanco:
-    """Diz se o robô parou de se aproximar do objetivo.
+    """Diz se o robô parou de avançar rumo ao objetivo.
 
-    Mede aproximação, não velocidade: robô que anda em círculo tem velocidade e
+    Mede avanço, não velocidade: robô que anda em círculo tem velocidade e
     não tem progresso, e é exatamente o caso que interessa (a órbita).
+
+    O seguidor alimenta com `restante_pelo_plano` (02-10), e não com a
+    distância em linha reta, que sobe em curva longa com o robô andando.
 
     Só acusa depois de `parado_s` CONTÍNUOS sem ganhar `avanco_min` metros. O
     relógio zera a cada avanço real — dois travamentos curtos separados não
@@ -819,17 +833,20 @@ class ProgressoDeAvanco:
     def __init__(self, parado_s=1.5, avanco_min=0.05):
         self.parado_s = parado_s
         self.avanco_min = avanco_min
-        self.melhor = None      # menor distância já vista neste objetivo
+        self.melhor = None      # menor restante já visto neste objetivo
         self.desde = None       # instante em que a melhor marca parou de cair
 
     def reinicia(self):
         self.melhor = None
         self.desde = None
 
-    def atualiza(self, t, dist_ao_objetivo):
-        """Devolve True enquanto o robô estiver emperrado."""
-        if self.melhor is None or dist_ao_objetivo <= self.melhor - self.avanco_min:
-            self.melhor = dist_ao_objetivo
+    def atualiza(self, t, restante):
+        """Devolve True enquanto o robô estiver emperrado.
+
+        `restante`: quanto falta até o objetivo [m], pelo plano.
+        """
+        if self.melhor is None or restante <= self.melhor - self.avanco_min:
+            self.melhor = restante
             self.desde = t
             return False
         return (t - self.desde) > self.parado_s

@@ -14,6 +14,13 @@
 
 ---
 
+## 🟡 02-10 dev — FALSO EMPERRADO CORRIGIDO NO CÓDIGO (decisão 060)
+
+O progresso agora é o que falta **pelo plano**, não a reta até o objetivo, e
+um plano aceito reinicia o detector. A órbita continua sendo pega (teste).
+**Ainda não foi ao NUC nem ao chão.** Próximos da lista de 01-10: velocidade
+própria da ré (desacoplar do `v_piso`) e depois o plano velho.
+
 ## 🟢 01-10 noite (NO ROBÔ 2) — CURVA FORTE APROVADA: "ELE FOI ÓTIMO"
 
 O que mudou no robô nesta sessão, nesta ordem, cada passo testado no chão

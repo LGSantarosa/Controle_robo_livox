@@ -56,6 +56,7 @@ from robot_motion.lei_de_seguimento import (
     passagens_estreitas,
     raio_de_chegada_minimo,
     re_esgotada,
+    restante_pelo_plano,
     escala_velocidade_pedida,
     rumo_para,
     alvo_estavel_de_passagem,
@@ -1172,6 +1173,9 @@ class PathFollower(Node):
             self.passagem_fase = ''
         self.plano = novo
         self.aceita_replano = False
+        # O progresso é medido pelo arco do plano aceito (02-10). Rota nova
+        # tem outro comprimento: sem zerar, a marca da velha acusaria emperrado.
+        self.progresso.reinicia()
         if hasattr(self, 'pub_plano_aceito'):
             self.pub_plano_aceito.publish(msg)
         # 🔴 14-08: GUARDAR O FRAME DO PLANO. Até esta data ele era ignorado, e
@@ -1257,6 +1261,12 @@ class PathFollower(Node):
             self.passo_de_pivo_escape(t, rumo, dist)
             return
 
+        # 02-10: progresso é o que falta PELO plano, não `dist` em reta — numa
+        # curva longa a reta sobe com o robô andando certo, e o gatilho de 4 s
+        # disparava escape e ré no corredor (robô 2, 01-10).
+        i0 = indice_mais_proximo(plano, x, y)
+        restante = restante_pelo_plano(plano, i0)
+
         if (self.t_plano is not None
                 and t - self.t_plano > self.par['timeout_plano']):
             # ⚠️ PLANO VELHO COM O ROBÔ EMPERRADO NÃO É MOTIVO PARA DESISTIR —
@@ -1270,7 +1280,7 @@ class PathFollower(Node):
             # recusou com `Start occupied`, o `bt_navigator` abortou o objetivo
             # e o seguidor parou PARA SEMPRE a 2,49 m do alvo — 87 s de CSV
             # com a pose imóvel na mesma casa decimal.
-            if self.progresso.atualiza(t, dist):
+            if self.progresso.atualiza(t, restante):
                 if (self.par['recuperacao_infinita_com_objetivo']
                         or self.res_sem_plano < self.par['re_max_sem_plano']):
                     self.entra_na_re(t, x, y, dist)
@@ -1296,7 +1306,6 @@ class PathFollower(Node):
             return
 
         # --- seguindo ---
-        i0 = indice_mais_proximo(plano, x, y)
         # Decisão 040: a mira ESTICA em reta e encolhe em curva. Mira fixa de
         # 0,37 m amplificava o salto do plano (p90 5,8 cm, max 15,1 cm) em até
         # 22° de referência — a amplitude p90 medida em 14-08 foi 20,0°.
@@ -1357,7 +1366,7 @@ class PathFollower(Node):
             self.res_seguidas = 0
             self.dist_antes_da_re = dist
 
-        if self.progresso.atualiza(t, dist):
+        if self.progresso.atualiza(t, restante):
             self.entra_na_re(t, x, y, dist)
 
     def aponta(self, rumo):

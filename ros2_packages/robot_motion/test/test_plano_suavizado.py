@@ -191,3 +191,32 @@ def test_o_default_do_topico_e_o_suavizado():
     m = re.search(r"\('topico_plano',\s*'([^']+)'\)", src)
     assert m and m.group(1) == '/plan_smoothed', (
         f'`topico_plano` é {m.group(1) if m else "indefinido"}, não o suavizado')
+
+
+class ContaReinicio:
+    def __init__(self):
+        self.n = 0
+
+    def reinicia(self):
+        self.n += 1
+
+
+def test_plano_aceito_reinicia_o_progresso():
+    """02-10: o progresso é medido pelo arco do plano aceito. Rota nova tem
+    outro comprimento, e sem reinício a marca da rota velha acusaria
+    emperrado 4 s depois da troca."""
+    s = SeguidorFalso()
+    chama(s, SUAVE, suave=True)
+    s.progresso = ContaReinicio()
+    s.aceita_replano = True
+    chama(s, [(0.0, 0.0), (1.0, -0.8), SUAVE[-1]], suave=True)
+    assert s.progresso.n == 1
+
+
+def test_replano_recusado_nao_reinicia_o_progresso():
+    """Senão o replano de 5 s do BT zeraria o relógio de 4 s para sempre."""
+    s = SeguidorFalso()
+    chama(s, SUAVE, suave=True)
+    s.progresso = ContaReinicio()
+    chama(s, [(0.0, 0.0), (1.0, -0.8), SUAVE[-1]], suave=True)
+    assert s.progresso.n == 0
