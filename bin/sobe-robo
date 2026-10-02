@@ -34,22 +34,6 @@ R="$HOME/Controle_robo_livox"
 LOGS="$HOME/logs_sessao"
 MAPA="$R/maps/andar3_completo/andar3_completo.yaml"   # 01-10: o andar 3 completo (veio do robô 3)
 MUNDO_POSE="pose_x:=0.0 pose_y:=0.0 pose_yaw:=0.0"
-# ⚠️ Remedir por sessão: a planta anda ~12% entre dias (ver DIARIO 14-08).
-#
-# 20-08: medido -0,8365 (`logs_curvatura/reta_1.csv`, v=0,30 m/s, LIO). É 8,5%
-# mais brando que o de 11-08, dentro da faixa que o próprio aviso acima prevê.
-#
-# ⚠️ n=1, e a decisão 013 pede TRÊS. Entra assim mesmo porque o valor de 11-08
-# tem nove dias e a planta anda ~12% entre dias — um número de hoje com uma
-# corrida é melhor evidência que um número medido em outra semana. A corrida
-# que o produziu terminou em batida (a trava `--espaco` do ensaio corta o
-# COMANDO, e a placa segura a saída 0,52 s depois — decisão 020), e o dono
-# decidiu seguir com o dado que já existe em vez de repetir.
-#
-# ⚠️ O laudo de rumo dessa mesma corrida REPROVOU: girou 38,6° depois de soltar
-# o cutucão e não assentou — "a boba está mandando, INSTÁVEL". Isso não afeta o
-# feedforward, mas é o pano de fundo de qualquer coisa que sair torta hoje.
-CURV="curv_frente:=-0.8365 curv_medido_em:=2026-08-20"
 # 🔴 20-08: a retenção da placa entra no cálculo do erro de rumo. Zerar o
 # comando não para o giro — a placa segura a saída ~0,52 s (decisão 020), e a
 # lei de rumo via só o erro de agora. Medido nesta máquina, no corredor depois
@@ -186,7 +170,7 @@ echo "   ⚠️ a bateria do NUC é OUTRA e não tem telemetria — olhe nela."
 if [ "$MODO" = nav2 ]; then
   echo "== 2/5 Nav2 + seguidor =="
   setsid nohup ros2 launch robot_motion pilha.launch.py sim:=false gui:=false rviz:=false \
-      mapa:="$MAPA" localizacao:=amcl $MUNDO_POSE $CURV $RETENCAO \
+      mapa:="$MAPA" localizacao:=amcl $MUNDO_POSE $RETENCAO \
       log_dir:="$HOME/logs_robo2" \
       > "$LOGS/pilha.log" 2>&1 < /dev/null &
   for i in $(seq 1 45); do
@@ -203,7 +187,7 @@ else
   # `/map` e de `map->odom` é o slam_toolbox, e dois donos da mesma TF fazem a
   # pose piscar. E nada de Nav2/seguidor: autonomia enquanto se mapeia é robô
   # perseguindo um mapa que muda debaixo dele.
-  setsid nohup ros2 launch robot_motion mapeia.launch.py $CURV \
+  setsid nohup ros2 launch robot_motion mapeia.launch.py \
       > "$LOGS/mapeia.log" 2>&1 < /dev/null &
   for i in $(seq 1 30); do
     grep -qE "Managed nodes are active|Registering sensor" "$LOGS/mapeia.log" && break
@@ -223,10 +207,10 @@ echo "== 3/5 a transformada que faz ele ANDAR =="
 # ⚠️ Remendo de runtime; o conserto de verdade é o seguidor ler a pose por TF.
 #
 # ⚠️ No modo slam ela NÃO é quem faz o robô andar — não há seguidor para
-# recusar plano nenhum, e o `compensador_rumo` lê o yaw da mensagem, não por
-# lookup. Fica assim mesmo, e de propósito: sem ela a árvore nasce partida em
-# duas e todo diagnóstico de TF da sessão vira caça ao fantasma. Custo zero,
-# um dono só, nenhum conflito com o `map->odom` do slam_toolbox.
+# recusar plano nenhum. Fica assim mesmo, e de propósito: sem ela a árvore
+# nasce partida em duas e todo diagnóstico de TF da sessão vira caça ao
+# fantasma. Custo zero, um dono só, nenhum conflito com o `map->odom` do
+# slam_toolbox.
 setsid nohup ros2 run tf2_ros static_transform_publisher \
     --frame-id odom --child-frame-id camera_init \
     > "$LOGS/tf_camera_init.log" 2>&1 < /dev/null &

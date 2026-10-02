@@ -9,7 +9,7 @@
 #     heading_controller ──/auto_vel_raw──▶ collision_monitor ──/auto_vel──▶
 #         twist_mux  ◀── /key_vel (humano, prio 90)
 #              │
-#              ▼  compensador_rumo ──▶ atuador
+#              ▼  atuador (robô) / compensador_rumo (sim)
 #
 # Ele filtra SÓ a autonomia, e o humano entra DEPOIS: quem está com o teclado
 # atravessa o reflexo de propósito. É a única forma de tirar um robô que o

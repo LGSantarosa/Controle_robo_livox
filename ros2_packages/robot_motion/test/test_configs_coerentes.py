@@ -152,7 +152,9 @@ def test_a_cadeia_da_launch_bate_com_a_config():
         'o heading_controller tem de alimentar a entrada do reflexo'
     assert 'nav2_collision_monitor' in launch, 'o reflexo tem de subir'
     assert "'/cmd_vel_out', '/compensador_rumo/cmd_vel'" in launch, \
-        'a saída do mux tem de entrar no compensador'
+        'no simulador a saída do mux tem de entrar no compensador'
+    assert "'/cmd_vel_out', '/hoverboard_base_controller/cmd_vel'" in launch, \
+        'no robô real a saída do mux tem de ir direto ao controlador'
 
 
 def test_ajuste_web_nav2_tem_mesmas_faixas_nos_tres_consumidores():
@@ -520,7 +522,7 @@ def _launch_ast():
 
 
 def _nos_compensador():
-    """Os `Node(...)` do compensador na pilha — são DOIS (sim e robô)."""
+    """Os `Node(...)` do compensador na pilha — somente o simulador."""
     import ast
     arvore, _ = _launch_ast()
     achados = []
@@ -535,61 +537,113 @@ def _nos_compensador():
     return achados
 
 
+def _nos_twist_mux():
+    """Os dois ramos mutuamente exclusivos da saída do mux."""
+    import ast
+    arvore, _ = _launch_ast()
+    achados = []
+    for no in ast.walk(arvore):
+        if not (isinstance(no, ast.Call)
+                and getattr(no.func, 'id', None) == 'Node'):
+            continue
+        kw = {x.arg: x.value for x in no.keywords}
+        exe = kw.get('executable')
+        if isinstance(exe, ast.Constant) and exe.value == 'twist_mux':
+            achados.append(kw)
+    return achados
+
+
 @pytest.mark.parametrize('arg', ['curv_frente', 'curv_re', 'curv_medido_em'])
-def test_a_launch_declara_o_ff_do_dia(arg):
+def test_a_launch_declara_o_ff_do_simulador(arg):
     _, texto = _launch_ast()
     assert f"DeclareLaunchArgument(\n            '{arg}'" in texto \
         or f"'{arg}'" in texto, f'{arg} não é argumento da pilha'
 
 
-def test_OS_DOIS_compensadores_recebem_o_ff():
-    """Sim e robô. Se só um receber, a sessão de bancada mede uma coisa e o
-    robô roda outra — a divergência silenciosa que este arquivo existe para
-    impedir."""
+def test_so_o_simulador_sobe_compensador_e_recebe_o_ff():
+    """A omni aposentou a compensação no robô real (063).
+
+    O Gazebo ainda usa o nó para corrigir o `ganho_wz` próprio da simulação,
+    mas com curvatura zero desde a 062.
+    """
     import ast
     nos = _nos_compensador()
-    assert len(nos) == 2, f'esperava 2 compensadores na pilha, achei {len(nos)}'
-    for kw in nos:
-        fonte = ast.dump(kw['parameters'])
-        assert "'curv'" in fonte or "id='curv'" in fonte, \
-            'este compensador sobe sem o ff do dia'
+    assert len(nos) == 1, f'esperava só o compensador do sim, achei {len(nos)}'
+    kw = nos[0]
+    assert "IfCondition" in ast.dump(kw['condition']), \
+        'o compensador remanescente tem de subir somente com sim:=true'
+    fonte = ast.dump(kw['parameters'])
+    assert "'curv'" in fonte or "id='curv'" in fonte, \
+        'o compensador do simulador sobe sem a curvatura declarada'
+
+
+def test_mux_escolhe_um_unico_destino_para_sim_e_robo():
+    """Os dois destinos não podem subir juntos nem ficar ambos desligados."""
+    import ast
+    nos = _nos_twist_mux()
+    assert len(nos) == 2, f'esperava 2 ramos do mux, achei {len(nos)}'
+    por_destino = {ast.dump(kw['remappings']): ast.dump(kw['condition'])
+                   for kw in nos}
+    sim = next(cond for remap, cond in por_destino.items()
+               if 'compensador_rumo' in remap)
+    robo = next(cond for remap, cond in por_destino.items()
+                if 'hoverboard_base_controller' in remap)
+    assert 'IfCondition' in sim, 'ramo do simulador não está sob IfCondition'
+    assert 'UnlessCondition' in robo, \
+        'ramo do robô real não está sob UnlessCondition'
+    assert "Name(id='sim'" in sim and "Name(id='sim'" in robo, \
+        'os dois ramos têm de usar exatamente o mesmo argumento `sim`'
+
+
+def test_mapeamento_real_vai_direto_do_mux_ao_controlador():
+    """A roda omni vale também quando o humano dirige para mapear."""
+    p = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                     'launch', 'mapeia.launch.py')
+    fonte = open(p).read()
+    assert "executable='compensador_rumo'" not in fonte
+    assert "('/cmd_vel_out', '/hoverboard_base_controller/cmd_vel')" in fonte
+
+
+def test_sobe_robo_nao_injeta_curvatura_da_boba():
+    """O script de produção não pode ressuscitar o ff removido da launch."""
+    p = os.path.join(RAIZ, 'bin', 'sobe-robo')
+    fonte = open(p).read()
+    assert 'CURV=' not in fonte
+    assert '$CURV' not in fonte
+
+
+@pytest.mark.parametrize('rel', [
+    'tools/banco/corrida_nav.py',
+    'tools/banco/prova_mux.py',
+    'tools/banco/homem_morto.py',
+    'tools/banco/checa_pilha.py',
+])
+def test_ferramentas_do_robo_ouvem_a_saida_direta_do_mux(rel):
+    """Instrumentos reais não podem esperar o tópico que deixou de existir."""
+    p = os.path.join(RAIZ, rel)
+    fonte = open(p).read()
+    assert '/hoverboard_base_controller/cmd_vel' in fonte
+    assert '/compensador_rumo/cmd_vel' not in fonte
 
 
 def test_o_ff_vai_TIPADO_para_o_no():
     """Argumento de launch chega como TEXTO e o nó declarou `curv_frente` como
-    double. Passar a substituição crua derruba o compensador na subida com
-    "parameter type mismatch" — e compensador que não sobe é o robô arcando
-    0,82 1/m com a pilha inteira de pé."""
+    double. Passar a substituição crua derruba o compensador do simulador na
+    subida com "parameter type mismatch"."""
     _, texto = _launch_ast()
     assert texto.count('value_type=float') >= 2, \
         'curv_frente e curv_re têm de ir como float'
     assert 'value_type=str' in texto, 'curv_medido_em é texto'
 
 
-def test_o_default_da_launch_e_o_default_do_no():
-    """Default duplicado é default que deriva (o caso da bitola, 29-07). Quem
-    não passa nada tem de subir exatamente como subia antes destes argumentos
-    existirem."""
-    import ast
-    fonte_no = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        'robot_motion', 'compensador_rumo.py')
-    arvore = ast.parse(open(fonte_no).read())
-    par = {}
-    for no in ast.walk(arvore):
-        if (isinstance(no, ast.Call)
-                and getattr(no.func, 'attr', None) == 'declare_parameters'):
-            par = {ast.literal_eval(t.elts[0]): ast.literal_eval(t.elts[1])
-                   for t in no.args[1].elts}
+def test_o_default_do_ff_do_simulador_e_zero():
+    """O único compensador da pilha é o do Gazebo, cuja planta nasce reta."""
     _, texto = _launch_ast()
-    # 02-10 (decisão 062): o default do ROBÔ REAL continua sendo o do nó; com
-    # `sim:=true` ele é zero, porque a placa simulada nasce reta (roda omni).
     for chave in ('curv_frente', 'curv_re'):
-        assert f"' == 'true' else '{par[chave]}'" in texto, \
-            f'{chave}: launch e nó divergiram ({par[chave]} não está na launch)'
-    assert texto.count("[\"'0.0' if '\", LaunchConfiguration('sim'),") >= 2, \
-        'no simulador o feedforward tem de ser zero: a placa nasce reta (062)'
-    assert f"default_value='{par['curv_medido_em']}'" in texto
+        assert re.search(
+            rf"DeclareLaunchArgument\(\s*'{chave}',\s*default_value='0\.0'",
+            texto), \
+            f'{chave}: o feedforward do simulador tem de nascer zero (062)'
 
 
 # ------------------------------------- o contrato da nuvem entre os DOIS mundos

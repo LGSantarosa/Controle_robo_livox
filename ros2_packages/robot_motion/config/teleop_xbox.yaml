@@ -8,8 +8,9 @@
 #
 # O mux do robô 2 roda com `use_stamped: true` (`twist_mux.yaml`), porque a
 # cadeia inteira daqui fala TwistStamped: o `diff_drive_controller`, a placa
-# fingida e o `compensador_rumo`. O robô 1 usava `false`, e o arquivo de lá
-# traz `publish_stamped_twist: false`.
+# fingida e, no simulador, o `compensador_rumo`. No robô real o mux vai direto
+# ao controlador desde a decisão 063. O robô 1 usava `false`, e o arquivo de
+# lá traz `publish_stamped_twist: false`.
 #
 # Copiar aquele valor NÃO dá erro: o `teleop_twist_joy` sobe, o `/joy` publica,
 # o `joy_vel` aparece em `ros2 topic list` — e o DDS recusa a ligação por type

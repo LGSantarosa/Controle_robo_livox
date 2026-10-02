@@ -19,7 +19,7 @@ O que ele grava é a CORRENTE INTEIRA, e cada elo separa uma hipótese:
     /plan                    o Nav2 planejou? replanejou quantas vezes?
     /auto_vel_raw            o nosso seguidor pediu o quê
     /auto_vel                o que o REFLEXO deixou passar   <- ele agiu?
-    /compensador_rumo/cmd_vel  o que o MUX entregou
+    /hoverboard_base_controller/cmd_vel  o que o MUX entregou ao atuador
     /key_vel                 o humano meteu a mão?           <- corrida MISTA
     /Odometry                a pose aguentou 10 Hz ANDANDO?  <- a pergunta do CPU
 
@@ -92,7 +92,7 @@ def main():
             self.create_subscription(Path, '/plan', self.cb_plano, qos)
             for topico, campo in (('/auto_vel_raw', 'raw'),
                                   ('/auto_vel', 'saida'),
-                                  ('/compensador_rumo/cmd_vel', 'mux'),
+                                  ('/hoverboard_base_controller/cmd_vel', 'mux'),
                                   ('/key_vel', 'key')):
                 self.create_subscription(
                     TwistStamped, topico,

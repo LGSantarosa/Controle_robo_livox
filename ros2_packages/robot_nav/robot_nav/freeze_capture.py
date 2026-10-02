@@ -14,8 +14,8 @@ Este nó veio do robô 1 e chegava mudo aqui (tipo `Twist` numa cadeia
      t_wall, topic, vx, wz, px, py, extra
      auto_vel_raw    : o que o heading_controller PEDIU (pré-reflexo)
      auto_vel        : o que SOBROU do collision_monitor
-     compensador_rumo/cmd_vel : o que o twist_mux repassou (pós-humano)
-     hoverboard_base_controller/cmd_vel : o que foi ao ATUADOR (robô)
+     compensador_rumo/cmd_vel : o que o twist_mux repassou (só no simulador)
+     hoverboard_base_controller/cmd_vel : mux → ATUADOR direto (robô)
      cmd_vel_bruto   : idem, no simulador (a placa fingida)
      joy_vel/key_vel/web_vel : o humano, se ele interferiu
      odom            : o que o robô FAZ (twist) + pose (px,py) — `/Odometry`
@@ -94,7 +94,7 @@ class FreezeCapture(Node):
         #
         #     path_follower ──(rumo_alvo, velocidade_alvo)──▶ heading_controller
         #        ──/auto_vel_raw──▶ collision_monitor ──/auto_vel──▶ twist_mux
-        #        ──/compensador_rumo/cmd_vel──▶ compensador ──▶ atuador
+        #        ──▶ atuador (robô) / compensador ──▶ placa (sim)
         #
         # 🔴 A PERGUNTA QUE ELE EXISTE PARA RESPONDER, aberta desde 20-08: na
         # porta a lei pede giro com 50° de erro e o robô não gira; e ele fica
@@ -108,8 +108,8 @@ class FreezeCapture(Node):
         topicos = self.declare_parameter('topicos', [
             '/auto_vel_raw',                     # o que o heading_controller pediu
             '/auto_vel',                         # o que SOBROU do reflexo
-            '/compensador_rumo/cmd_vel',         # o que o mux repassou
-            '/hoverboard_base_controller/cmd_vel',   # o que foi ao atuador
+            '/compensador_rumo/cmd_vel',         # o que o mux repassou (sim)
+            '/hoverboard_base_controller/cmd_vel',   # mux → atuador (robô)
             '/cmd_vel_bruto',                    # idem, no simulador
             '/joy_vel', '/key_vel', '/web_vel',  # o humano, se interferiu
         ]).value

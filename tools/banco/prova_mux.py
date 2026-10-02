@@ -3,7 +3,7 @@
 
     ros2 run twist_mux twist_mux --ros-args \\
         --params-file install/robot_motion/share/robot_motion/config/twist_mux.yaml \\
-        -r /cmd_vel_out:=/compensador_rumo/cmd_vel
+        -r /cmd_vel_out:=/hoverboard_base_controller/cmd_vel
     python3 tools/banco/prova_mux.py
 
 ## Por que isto existe
@@ -45,7 +45,7 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy
 
 AUTONOMIA = 0.10      # o que a pilha do Nav2 estaria pedindo
 HUMANO = 0.90         # o que o dedo no teclado pede
-SAIDA = '/compensador_rumo/cmd_vel'   # onde o mux entrega (ver pilha.launch.py)
+SAIDA = '/hoverboard_base_controller/cmd_vel'  # saída direta no robô (063)
 
 
 class ProvaDoMux(Node):

@@ -1,8 +1,8 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-10-01** (quarto ajuste incremental
-> e controles ao vivo do Nav2, ainda sem teste no chão). O estado
+> Versionado na `main`. Atualizado em **2026-10-02** (ajustes 060–063 no dev,
+> ainda sem teste no chão). O estado
 > anterior continua sendo o de 24-09: Mid-360, FAST-LIO, `/scan` e TF do robô 3
 > provados com placa/motores desligados; a configuração que funcionou está só
 > no clone ignorado pelo git e ainda precisa virar solução por máquina.
@@ -14,20 +14,31 @@
 
 ---
 
-## 🟡 02-10 dev — FALSO EMPERRADO, RÉ E GAZEBO RETO NO CÓDIGO (060, 061, 062)
+## 🟡 02-10 dev — EMPERRADO, RÉ, OMNI E COMPENSADOR (060–063)
 
 O progresso agora é o que falta **pelo plano**, não a reta até o objetivo, e
 um plano aceito reinicia o detector. A órbita continua sendo pega (teste).
 A ré ganhou velocidade própria, `re_v` 0,24 m/s (decisão 061), e o escape
 para frente fica no `v_piso`. **Nenhuma das duas foi ao NUC nem ao chão.**
-Próximo da lista de 01-10: o plano velho.
+O plano velho foi investigado no Gazebo abaixo; o sintoma fica para o robô.
 
-**Roteiro curto do chão para a 060/061 (próxima ida ao lab, antes do item 3):**
+**Compensador fora do robô real (decisão 063):** a leitura anterior de que ele
+já estava desligado confundiu `segura_rumo: false` com nó inativo. O log de
+01-10 confirma ff −0,8365 1/m; ele ainda somava aproximadamente +0,25 rad/s a
+0,30 m/s em toda curva. Agora, com `sim:=false`, o mux vai direto ao
+controlador no Nav2 e no mapeamento, e `bin/sobe-robo` não passa mais a
+curvatura da boba. O Gazebo conserva o nó somente para seu `ganho_wz=0,45`,
+com curvatura zero. **Ainda não foi ao NUC nem ao chão.** A velocidade não foi
+reduzida: primeiro repetir a corrida e ler os logs sem esse viés.
+
+**Roteiro curto do chão para a 060/061/063 (próxima ida ao lab, antes do item 3):**
 1. robô **ligado e quieto na marca** durante a partida (o FAST-LIO divergiu em
    01-10 com o robô mexido);
-2. repetir a curva longa do corredor de 01-10: não pode haver escape nem ré;
+2. conferir que `compensador_rumo` não subiu e repetir a curva longa do
+   corredor de 01-10: comparar os dois sentidos e não pode haver escape nem ré;
 3. uma recuperação controlada com espaço livre atrás: a ré a ~0,24 m/s;
-4. puxar `pilha.log` + CSV do seguidor e conferir antes de mexer no plano
+4. puxar `pilha.log`, `freeze_capture.csv` e o CSV do seguidor; decidir pelos
+   dados se a velocidade continua boa antes de mexer no plano
    velho.
 
 O plano velho também aparece no Gazebo (dono, 02-10), então pode ser
@@ -44,7 +55,7 @@ e o feedforward do compensador é zero com `sim:=true`. Corrida reta no Gazebo
 feita em 02-10, com o dono olhando: curvatura **0,000 1/m** de frente e de ré,
 |y| máx 0,0000 m em 2,45 m. Com a pilha completa (`sim:=true`), o compensador
 subiu com ff 0/0 e entregou |wz| 0,0000; frente e ré sem giro nem desvio. O
-próximo no Gazebo é o plano velho.
+plano velho foi observado na rodada seguinte.
 
 **Plano velho no Gazebo (02-10, só observação):** trava confirmada, 18 de 22
 planos novos (nascidos na pose atual) recusados. Replano só entra com objetivo
@@ -59,11 +70,10 @@ houve desvio lateral (|lat| ≤ 0,19 m).
 humana que recua o robô, o detector da 060 mantém a melhor marca de antes da
 intervenção e dispara escape (2 escapes nesta rodada).
 
-**Próxima ida ao lab, nesta ordem:** (1) validar 060/061 no chão pelo roteiro
-acima; (2) observar o plano velho no robô real e analisar os logs; (3) só
-então propor correção. ⚠️ No robô real o
-`bin/sobe-robo` ainda passa `CURV=-0.8365` (boba, 20-08). Conferir no chão se a
-omni precisa de feedforward zero.
+**Próxima ida ao lab, nesta ordem:** (1) validar 063 e depois 060/061 no chão
+pelo roteiro acima, trazendo os logs; (2) observar o plano velho no robô real
+e analisar os dados; (3) só então propor correção. A velocidade permanece a
+de 01-10 até essa comparação.
 
 ## 🟢 01-10 noite (NO ROBÔ 2) — CURVA FORTE APROVADA: "ELE FOI ÓTIMO"
 

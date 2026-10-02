@@ -2,8 +2,7 @@
 """
 Mapeamento por teleop: o robô desenha o próprio mapa da sala onde vai andar.
 
-    ros2 launch robot_motion mapeia.launch.py \
-        curv_frente:=-0.9145 curv_medido_em:=2026-08-11
+    ros2 launch robot_motion mapeia.launch.py
     # noutro terminal: bin/robot-key, e dirigir devagar pela sala
     # no fim:  ros2 run nav2_map_server map_saver_cli -f maps/<nome>/<nome>
 
@@ -33,11 +32,10 @@ pose errada, é mapa errado. O AMCL não tem o que casar.
 
 ✅ O que sobe é só a cadeia de comando do humano, a mesma da `pilha.launch.py`:
 
-    bin/robot-key --/key_vel--> twist_mux --> compensador_rumo --> placa
+    bin/robot-key --/key_vel--> twist_mux --> placa
 
-O `compensador_rumo` fica porque o robô comandado reto arca −0,91 1/m (decisão
-011): sem ele o operador luta contra a curva do próprio robô enquanto tenta
-desenhar uma parede reta, e o mapa sai torto por causa do atuador.
+Com a roda omni o robô passou a andar reto. A compensação medida com a boba
+foi removida também do mapeamento (decisão 063).
 """
 
 import os
@@ -47,36 +45,13 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, LogInfo
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
-from launch_ros.parameter_descriptions import ParameterValue
 
 
 def generate_launch_description():
     pkg = get_package_share_directory('robot_motion')
     mux_params = os.path.join(pkg, 'config', 'twist_mux.yaml')
 
-    # ⚠️ A mesma armadilha da `pilha.launch.py`: argumento de launch chega como
-    # TEXTO e o nó declarou `curv_frente` como double. Cru, o compensador cai na
-    # subida com "parameter type mismatch" — e aí o robô arca 0,91 1/m com a
-    # pilha inteira de pé, que é como se mapeia uma sala torta sem perceber.
-    curv = [
-        {'curv_frente': ParameterValue(LaunchConfiguration('curv_frente'),
-                                       value_type=float),
-         'curv_re': ParameterValue(LaunchConfiguration('curv_re'),
-                                   value_type=float),
-         'curv_medido_em': ParameterValue(LaunchConfiguration('curv_medido_em'),
-                                          value_type=str)},
-    ]
-
     return LaunchDescription([
-        DeclareLaunchArgument(
-            'curv_frente', default_value='-0.817',
-            description='curvatura crua indo para a FRENTE [1/m], medida hoje '
-                        'sem compensador (medir.py --resumo curvatura)'),
-        DeclareLaunchArgument('curv_re', default_value='-0.098'),
-        DeclareLaunchArgument(
-            'curv_medido_em', default_value='HERDADO',
-            description='data da medida; HERDADO denuncia mapa desenhado com '
-                        'ff velho'),
         DeclareLaunchArgument(
             'resolucao', default_value='0.05',
             description='célula do mapa [m]. 0,05 é a dos mapas do andar 3 e a '
@@ -140,13 +115,5 @@ def generate_launch_description():
         Node(package='twist_mux', executable='twist_mux',
              name='twist_mux', output='both',
              parameters=[mux_params, {'use_sim_time': False}],
-             remappings=[('/cmd_vel_out', '/compensador_rumo/cmd_vel')]),
-
-        # A última camada antes do atuador (decisão 011), inclusive para o
-        # humano: o operador manda reto e o robô vai reto.
-        Node(package='robot_motion', executable='compensador_rumo',
-             name='compensador_rumo', output='both',
-             parameters=[{'use_sim_time': False, 'segura_rumo': False,
-                         # 01-10: freio linear (038) DESLIGADO, pedido do dono
-                         'freio_linear': False}] + curv),
+             remappings=[('/cmd_vel_out', '/hoverboard_base_controller/cmd_vel')]),
     ])

@@ -25,18 +25,13 @@ A cadeia, e de quem é cada pedaço:
                                           twist_mux  ← /key_vel, /web_vel
                                                        (humano FURA o reflexo)
                                                                  ↓
-                                              /compensador_rumo/cmd_vel
-                                                                 ↓
-                                                 compensador_rumo  (nosso)
-                                                                 ↓
-                              /cmd_vel_bruto (sim) ou direto (robô)
+                         direto ao atuador (robô) ou compensador_rumo (sim)
                                                                  ↓
                                     /hoverboard_base_controller/cmd_vel
 
-O `compensador_rumo` (decisão 011) é a última camada antes do atuador: ele
-existe porque o robô comandado a ir RETO descreve um círculo de 1,22 m de raio
-(−0,817 1/m de frente, −0,098 de ré, medidos em 04-08). Corrigir isso é
-problema de todo comandante, então mora fora de todos eles.
+No robô real com roda omni, o mux publica direto no atuador (decisão 063).
+O `compensador_rumo` fica somente no simulador para corrigir o `ganho_wz=0,45`
+próprio do Gazebo; a curvatura dele é zero desde a decisão 062.
 
 O `controller_server` do Nav2 sobe junto e é IGNORADO de propósito: a árvore de
 comportamento padrão usa `FollowPath` e sem esse servidor ela falha, levando o
@@ -202,9 +197,8 @@ def generate_launch_description():
     sim = LaunchConfiguration('sim')
     # ⚠️ `ParameterValue(..., value_type=float)` e não a substituição crua: o
     # argumento de launch chega como TEXTO, e o nó declarou `curv_frente` como
-    # double. Passar cru derruba o compensador na subida com "parameter type
-    # mismatch" — e um compensador que não sobe é o robô arcando 0,82 1/m com
-    # a pilha inteira de pé.
+    # double. Passar cru derruba o compensador do simulador na subida com
+    # "parameter type mismatch".
     curv = [
         {'curv_frente': ParameterValue(LaunchConfiguration('curv_frente'),
                                        value_type=float),
@@ -574,24 +568,16 @@ def generate_launch_description():
                         'false só na bancada, onde o seguidor é dirigido por '
                         '/plan cru e não existe ação do Nav2'),
         # 🔄 02-10 (decisão 062): no SIMULADOR o feedforward é zero, porque
-        # a placa simulada nasce reta (roda omni). Deixar −0,817 aqui faria o
-        # Gazebo curvar para o lado OPOSTO. No robô real fica o de 04-08 até
-        # a curvatura da omni ser conferida no chão.
+        # Só o SIMULADOR usa estes argumentos. O feedforward nasce zero porque
+        # a placa simulada nasce reta; o robô real não sobe mais este nó (063).
         DeclareLaunchArgument(
-            'curv_frente',
-            default_value=PythonExpression(
-                ["'0.0' if '", LaunchConfiguration('sim'),
-                 "' == 'true' else '-0.817'"]),
-            description='curvatura crua indo para a FRENTE [1/m], medida hoje '
-                        'sem compensador (medir.py --resumo curvatura). '
-                        'Zero com sim:=true (062)'),
+            'curv_frente', default_value='0.0',
+            description='curvatura da placa simulada de frente [1/m]. Zero '
+                        'com a roda omni (062)'),
         DeclareLaunchArgument(
-            'curv_re',
-            default_value=PythonExpression(
-                ["'0.0' if '", LaunchConfiguration('sim'),
-                 "' == 'true' else '-0.098'"]),
-            description='idem, de ré. Muda menos e raramente se remede. '
-                        'Zero com sim:=true (062)'),
+            'curv_re', default_value='0.0',
+            description='curvatura da placa simulada de ré [1/m]. Zero '
+                        'com a roda omni (062)'),
         DeclareLaunchArgument(
             'curv_medido_em', default_value='HERDADO',
             description='a data da medida acima. Não entra na conta: entra no '
@@ -713,17 +699,14 @@ def generate_launch_description():
 
         # ------------------------------------------------------- os nossos
         #
-        # A cadeia de comando, e por que ela tem esta forma (decisão 011):
+        # A cadeia de comando desde a roda omni (decisão 063):
         #
-        #   heading_controller  --/compensador_rumo/cmd_vel-->
-        #   compensador_rumo    --/cmd_vel_bruto (sim) ou direto (robô)-->
-        #   [placa fingida, só no sim] --> diff_drive_controller
+        #   robô: twist_mux --> diff_drive_controller
+        #   sim:  twist_mux --> compensador_rumo (ganho_wz do Gazebo)
+        #                   --> placa fingida --> diff_drive_controller
         #
-        # O compensador é a ÚLTIMA camada antes do atuador de propósito: ele
-        # corrige fidelidade de comando (o robô comandado reto arca −0,82 1/m),
-        # e isso vale para QUALQUER comandante. Pôr o Nav2 ou o
-        # heading_controller para brigar com o arco sozinhos é o que a fatia 1
-        # tornou desnecessário.
+        # A compensação de curvatura medida com a boba saiu do robô real: a
+        # omni anda reta, e manter o ff antigo somava ~+0,25 rad/s a 0,30 m/s.
         Node(package='robot_motion', executable='heading_controller',
              name='heading_controller', output='both',
              # O dicionário do argumento vem DEPOIS do perfil: valor vazio não
@@ -759,10 +742,20 @@ def generate_launch_description():
         # pilha não tinha nenhum: o heading_controller publicava direto no
         # atuador e não havia como tomar o controle de um robô indo para a
         # parede. Racional e prioridades em `config/twist_mux.yaml`.
+        # No Gazebo o mux ainda passa pelo compensador: ele converte o giro
+        # desejado pelo ganho de 0,45 medido na planta simulada.
         Node(package='twist_mux', executable='twist_mux',
              name='twist_mux', output='both',
              parameters=[mux_params, {'use_sim_time': sim}],
-             remappings=[('/cmd_vel_out', '/compensador_rumo/cmd_vel')]),
+             remappings=[('/cmd_vel_out', '/compensador_rumo/cmd_vel')],
+             condition=IfCondition(sim)),
+
+        # No robô real não há mais camada entre a arbitragem e o atuador.
+        Node(package='twist_mux', executable='twist_mux',
+             name='twist_mux', output='both',
+             parameters=[mux_params, {'use_sim_time': sim}],
+             remappings=[('/cmd_vel_out', '/hoverboard_base_controller/cmd_vel')],
+             condition=UnlessCondition(sim)),
 
         # ⚠️ No simulador o comando TEM de passar pela placa fingida
         # (`/cmd_vel_bruto`), como já fazia o `navegacao.launch.py`. Esta
@@ -779,13 +772,6 @@ def generate_launch_description():
              remappings=[('/hoverboard_base_controller/cmd_vel',
                           '/cmd_vel_bruto')],
              condition=IfCondition(sim)),
-        Node(package='robot_motion', executable='compensador_rumo',
-             name='compensador_rumo', output='both',
-             parameters=[{'use_sim_time': sim, 'segura_rumo': False,
-                         # 01-10: freio linear (038) DESLIGADO, pedido do dono
-                         'freio_linear': False}]
-                        + curv + ganho,
-             condition=UnlessCondition(sim)),
         Node(package='robot_motion', executable='path_follower',
              name='path_follower', output='both',
              # A sobreposição do perfil vem por ÚLTIMO, e só se existir: vazia,

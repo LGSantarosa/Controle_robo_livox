@@ -17,13 +17,11 @@
 #     teclado (robot-key) ──/key_vel───┤
 #     web                 ──/web_vel───┤  twist_mux
 #     heading_controller  ──/auto_vel──┘      │
-#                                             ▼  /cmd_vel_mux
-#                                      compensador_rumo   (cancela o arco)
 #                                             ▼
-#                          /cmd_vel_bruto (sim) ou o atuador (robô)
+#                          atuador (robô) ou compensador_rumo (sim)
 #
-# O compensador fica DEPOIS do mux de propósito: o arco do corpo é do robô, não
-# da fonte. Humano que pede "reto" merece reto pelo mesmo motivo que o Nav2.
+# No robô real com roda omni, o mux vai direto ao atuador (decisão 063). O
+# compensador fica apenas no Gazebo para o ganho de giro próprio da simulação.
 #
 # ⚠️ DIFERENÇA DELIBERADA PARA O ROBÔ 1: lá existe uma entrada `unstuck_vel`
 # (prio 30) que FURA o reflexo de colisão para dar ré. Aqui ela não existe

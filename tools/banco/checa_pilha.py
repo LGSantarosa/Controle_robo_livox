@@ -85,8 +85,7 @@ CADEIA = [
     ('/auto_vel_raw', 'heading_controller → reflexo', True),
     ('/auto_vel', 'reflexo → mux (SAÍDA do collision_monitor)', 'se_nao_nulo'),
     ('/key_vel', 'teclado → mux (só com o robot-key rodando)', False),
-    ('/compensador_rumo/cmd_vel', 'mux → compensador', False),
-    ('/hoverboard_base_controller/cmd_vel', 'compensador → ATUADOR', False),
+    ('/hoverboard_base_controller/cmd_vel', 'mux → ATUADOR direto', False),
 ]
 
 

@@ -23,9 +23,9 @@ ros2_packages/robot_motion/launch/joystick.launch.py:
   dev: auto
 ros2_packages/robot_motion/launch/pilha.launch.py:
   bag: 'false'   # 01-10: padrão desligado, o bag encheu o disco do NUC
-  curv_frente: PythonExpr(''0.0' if '' + LaunchConfig('sim') + '' == 'true' else '-0.817'', ['math'])   # 02-10: zero no sim (062)
+  curv_frente: '0.0'   # 02-10: só o sim usa; compensador fora do robô (063)
   curv_medido_em: HERDADO
-  curv_re: PythonExpr(''0.0' if '' + LaunchConfig('sim') + '' == 'true' else '-0.098'', ['math'])   # 02-10: zero no sim (062)
+  curv_re: '0.0'   # 02-10: só o sim usa; compensador fora do robô (063)
   desvio_taxa_deg_s: '15.0'
   ganho_wz: PythonExpr(''0.45' if '' + LaunchConfig('sim') + '' == 'true' else '1.0'', ['math'])
   gargalo: 'false'

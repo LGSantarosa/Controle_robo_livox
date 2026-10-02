@@ -10992,3 +10992,24 @@ manter a marca depois de uma intervenção humana fica anotado como achado
 separado, fora do item 3. Próxima ida ao lab: validar 060/061 no chão, depois
 observar o plano velho no robô real e analisar os logs antes de propor
 correção.
+
+### O compensador sai do robô real (decisão 063)
+
+O dono lembrou que havia pedido para tirar o compensador. A afirmação anterior
+de que ele já estava fora do Nav2 estava errada: `segura_rumo: false` tirava o
+PI, mas deixava o feedforward ativo. O `pilha.log` de 01-10 confirma ff
+−0,8365 1/m, ainda vindo da roda boba. A lei o somava em toda curva: a
+0,30 m/s, aproximadamente +0,25 rad/s. No CSV há um exemplo direto de pedido
+−0,8365 virar −0,6673 rad/s na saída.
+
+Com a omni, o robô real agora desvia o nó: `twist_mux` publica direto no
+controlador em `pilha.launch.py` com `sim:=false` e em `mapeia.launch.py`.
+`bin/sobe-robo` não injeta mais `CURV=-0.8365`. O Gazebo conserva o
+compensador apenas para seu ganho de giro 0,45; a curvatura continua zero
+(062). O gravador `corrida_nav.py` passou a ouvir a saída direta do mux para a
+próxima coleta no robô.
+
+A velocidade não mudou. A corrida de 01-10 pareceu boa e rápida, mas foi feita
+com esse viés; primeiro se repete no chão, puxa os logs e compara os dois
+sentidos de curva. Suíte completa, com o `install` deste repo carregado: **1320
+passam**. Não foi ao NUC nem ao robô.

@@ -85,7 +85,7 @@ class Gravador(Node):
             TwistStamped, '/key_vel',
             lambda m: self.grava('key', m.twist.linear.x), qos)
         self.create_subscription(
-            TwistStamped, '/compensador_rumo/cmd_vel',
+            TwistStamped, '/hoverboard_base_controller/cmd_vel',
             lambda m: self.grava('mux', m.twist.linear.x), qos)
         self.create_subscription(
             Odometry, '/hoverboard_base_controller/odom',
