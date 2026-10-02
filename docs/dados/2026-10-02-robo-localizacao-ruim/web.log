@@ -1,0 +1,42 @@
+[2026-10-02 20:17:48,698] INFO: [MapBridge] inicializado (modo=nav2, maps_dir=/home/bara/Controle_robo_livox/maps)
+[2026-10-02 20:17:48,700] WARNING: [Camera] ffmpeg não instalado (sudo apt install ffmpeg) — POV desabilitado
+[2026-10-02 20:17:48,722] INFO: [NavMetrics] coletor iniciado. CSV dir: /home/bara/Controle_robo_livox/controle_web/logs/nav_metrics
+[2026-10-02 20:17:48,755] INFO: [PowerMonitor] iniciado. CSV: /home/bara/Controle_robo_livox/controle_web/logs/power/power_2026-10-02_201748.csv
+[2026-10-02 20:17:48,758] INFO: Starting Socket.IO server on 0.0.0.0:5000
+[ROS2Controller] Nav2 ao vivo: linear=1.00x, curva=1.00x
+[ROS2Controller] Nó inicializado. Publicando em /web_vel @ 50 Hz (mux prio 50)
+ * Serving Flask app 'app'
+ * Debug mode: off
+[2026-10-02 20:17:48,850] INFO: HTTP GET / from 10.233.141.5 UA=Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36
+[2026-10-02 20:17:48,856] INFO: HTTP 200 GET /
+[2026-10-02 20:17:48,880] INFO: HTTP GET /static/css/styles.css from 10.233.141.5 UA=Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36
+[2026-10-02 20:17:48,887] INFO: HTTP 304 GET /static/css/styles.css
+[2026-10-02 20:17:48,911] INFO: HTTP GET /static/js/map.js from 10.233.141.5 UA=Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36
+[2026-10-02 20:17:48,912] INFO: HTTP GET /static/js/client.js from 10.233.141.5 UA=Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36
+[2026-10-02 20:17:48,913] INFO: HTTP 304 GET /static/js/client.js
+[2026-10-02 20:17:48,914] INFO: HTTP GET /static/js/gamepad.js from 10.233.141.5 UA=Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36
+[2026-10-02 20:17:48,914] INFO: HTTP 304 GET /static/js/map.js
+[2026-10-02 20:17:48,915] INFO: HTTP 304 GET /static/js/gamepad.js
+[2026-10-02 20:17:49,083] INFO: Client connected: addr=10.233.141.5 sid=YtZptUlg578mln-UAAAB
+[2026-10-02 20:17:49,192] INFO: client_hello from 10.233.141.5 sid=YtZptUlg578mln-UAAAB payload={'ts': 1790983069133, 'href': 'http://10.233.141.205:5000/', 'ua': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36'}
+[2026-10-02 20:17:51,949] INFO: [MapBridge] /map 391x1158 @ 0.050 m/px emitido
+[2026-10-02 20:17:58,163] INFO: [MapBridge] rota carregada: /home/bara/Controle_robo_livox/maps/routes/rotalonnga.json (2 pontos)
+[2026-10-02 20:17:59,535] INFO: [MapBridge] waypoints: 2 pontos, loop=False
+[2026-10-02 20:17:59,536] INFO: [Camera] nav_active(rota) sem câmera — gravação pulada
+[2026-10-02 20:18:01,038] INFO: [MapBridge] NavigateToPose → (1.11, 18.73, yaw=-1.51)
+[2026-10-02 20:18:01,039] INFO: [NavMetrics] início nav e75cd74d
+[2026-10-02 20:18:01,040] INFO: [Camera] nav_active(nav) sem câmera — gravação pulada
+[2026-10-02 20:20:44,170] INFO: [MapBridge] waypoint 1/2 concluído
+[2026-10-02 20:20:44,173] INFO: [NavMetrics] nav e75cd74d → SUCCEEDED em 163.1s | replans=32 | rec(b/s/w)=0/0/0 | dist=0.00m
+[2026-10-02 20:20:45,673] INFO: [MapBridge] NavigateToPose → (1.90, 0.31, yaw=-3.14)
+[2026-10-02 20:20:45,675] INFO: [NavMetrics] início nav 16ea2bba
+[2026-10-02 20:20:45,676] INFO: [Camera] nav_active(nav) sem câmera — gravação pulada
+[2026-10-02 20:21:37,040] INFO: [MapBridge] STOP: cancelamento de todos os goals enviado ao Nav2
+[2026-10-02 20:21:37,070] INFO: [NavMetrics] nav 16ea2bba → CANCELED em 51.4s | replans=9 | rec(b/s/w)=0/0/0 | dist=0.00m
+[2026-10-02 20:22:15,956] INFO: [MapBridge] waypoints: 1 pontos, loop=False
+[2026-10-02 20:22:15,956] INFO: [Camera] nav_active(rota) sem câmera — gravação pulada
+[2026-10-02 20:22:17,458] INFO: [MapBridge] NavigateToPose → (1.62, 0.64, yaw=0.00)
+[2026-10-02 20:22:17,459] INFO: [NavMetrics] início nav 6ca3e918
+[2026-10-02 20:22:17,460] INFO: [Camera] nav_active(nav) sem câmera — gravação pulada
+[2026-10-02 20:24:26,990] INFO: [MapBridge] waypoint 1/1 concluído
+[2026-10-02 20:24:26,994] INFO: [NavMetrics] nav 6ca3e918 → SUCCEEDED em 129.5s | replans=25 | rec(b/s/w)=0/0/0 | dist=0.00m

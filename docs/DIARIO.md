@@ -11052,3 +11052,36 @@ Uma segunda parada no corredor não veio da autonomia: `/joy_vel` publicou zero
 por 13,45 s e, por ter prioridade maior, suprimiu o comando automático. Quando
 o joystick calou e venceu seu timeout, o robô seguiu. O detector contar durante
 controle manual fica anotado como achado separado; não entrou na 064.
+
+### Fechamento no robô: a localização 2D reprova e o alvo volta a ser 3D
+
+A 064 foi implantada no NUC (`04adb94`), mas o teste do chão não serve como
+validação dela. Na primeira subida, o `collision_monitor` perdeu quatro
+heartbeats e o `lifecycle_manager` reiniciou a pilha inteira, cancelando goals.
+Não houve mensagem de recuperação contextual da 064. Essa tentativa fica
+separada nos dados porque mistura falha de ciclo de vida com navegação.
+
+O dono reiniciou a pilha e repetiu a rota a partir da origem. Na volta, o robô
+se perdeu de forma grave no corredor e entrou contra a parede. Durante as
+corridas, ele observou a pose oscilar no mapa, dar pulos e por vezes perder a
+localização. A pilha e os CSVs das duas tentativas foram copiados para
+`docs/dados/2026-10-02-robo-localizacao-ruim/`; a tentativa final começou às
+20:17. O robô foi desligado. Nenhum código foi alterado depois da coleta.
+
+O requisito do dono foi reafirmado: o robô 2 deve ter localização ao menos tão
+estável quanto o robô 1, mas explorando toda a geometria 3D do Mid-360. A web,
+os goals e a visualização continuam 2D. Isso retoma as decisões 001 e 003; não
+é uma nova decisão de arquitetura. A cadeia atual usa FAST-LIO como odometria
+3D relativa, porém ainda entrega a correção global `map → odom` ao AMCL, que
+casa um `/scan` projetado contra o mapa 2D. AMCL não consome nuvem/mapa 3D.
+
+O AMCL funciona muito bem na maior parte das rotas e **não será descartado**.
+Seu estado atual fica preservado na branch `baseline-amcl-2d-2026-10-02`, como
+baseline funcional, comparação e caminho recuperável. Ele será substituído no
+caminho ativo porque seus poucos pontos de salto/perda, embora raros, são
+inaceitáveis diante da capacidade do Mid-360.
+
+Próxima sessão: primeiro separar nos dados se o salto nasce no `/Odometry` do
+FAST-LIO ou no `map → odom` do AMCL e comparar com o robô 1. Só depois escolher
+e documentar o localizador/mapa 3D que substituirá o AMCL. O seguidor não deve
+ser alterado para mascarar pose incorreta.

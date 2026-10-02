@@ -1,0 +1,1012 @@
+[INFO] [launch]: All log files can be found below /home/bara/.ros/log/2026-10-02-20-02-03-946811-bara-3881
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [launch.user]: PILHA subindo — espere os servidores ativarem (o Smac leva ~16 s montando a heurística) e então clique "2D Goal Pose" no RViz.
+[INFO] [map_server-1]: process started with pid [3888]
+[INFO] [planner_server-2]: process started with pid [3889]
+[INFO] [smoother_server-3]: process started with pid [3890]
+[INFO] [controller_server-4]: process started with pid [3891]
+[INFO] [bt_navigator-5]: process started with pid [3892]
+[INFO] [amcl-6]: process started with pid [3893]
+[INFO] [lifecycle_manager-7]: process started with pid [3894]
+[INFO] [heading_controller-8]: process started with pid [3895]
+[INFO] [collision_monitor-9]: process started with pid [3896]
+[INFO] [twist_mux-10]: process started with pid [3897]
+[INFO] [path_follower-11]: process started with pid [3898]
+[INFO] [freeze_capture-12]: process started with pid [3899]
+[twist_mux-10] [INFO] [1790982124.303078518] [twist_mux]: Topic handler 'topics.autonomia' subscribed to topic 'auto_vel': timeout = 0.500000s , priority = 10.
+[twist_mux-10] [INFO] [1790982124.311442073] [twist_mux]: Topic handler 'topics.desencalhe' subscribed to topic 'unstuck_vel': timeout = 0.500000s , priority = 30.
+[twist_mux-10] [INFO] [1790982124.314292498] [twist_mux]: Topic handler 'topics.joystick' subscribed to topic 'joy_vel': timeout = 0.500000s , priority = 100.
+[twist_mux-10] [INFO] [1790982124.318460017] [twist_mux]: Topic handler 'topics.teclado' subscribed to topic 'key_vel': timeout = 0.500000s , priority = 90.
+[twist_mux-10] [INFO] [1790982124.319655818] [twist_mux]: Topic handler 'topics.web' subscribed to topic 'web_vel': timeout = 0.500000s , priority = 50.
+[lifecycle_manager-7] [INFO] [1790982124.362142939] [lifecycle_manager_pilha]: Creating
+[planner_server-2] [INFO] [1790982124.391110550] [planner_server]: 
+[planner_server-2] 	planner_server lifecycle node launched. 
+[planner_server-2] 	Waiting on external lifecycle transitions to activate
+[planner_server-2] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[smoother_server-3] [INFO] [1790982124.398931879] [smoother_server]: 
+[smoother_server-3] 	smoother_server lifecycle node launched. 
+[smoother_server-3] 	Waiting on external lifecycle transitions to activate
+[smoother_server-3] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[planner_server-2] [INFO] [1790982124.411837516] [planner_server]: Creating
+[smoother_server-3] [INFO] [1790982124.412281231] [smoother_server]: Creating smoother server
+[planner_server-2] [INFO] [1790982124.439663462] [global_costmap.global_costmap]: 
+[planner_server-2] 	global_costmap lifecycle node launched. 
+[planner_server-2] 	Waiting on external lifecycle transitions to activate
+[planner_server-2] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[planner_server-2] [INFO] [1790982124.444291468] [global_costmap.global_costmap]: Creating Costmap
+[lifecycle_manager-7] [INFO] [1790982124.762116093] [lifecycle_manager_pilha]: [34m[1mCreating and initializing lifecycle service clients[0m[0m
+[controller_server-4] [INFO] [1790982124.800163692] [controller_server]: 
+[controller_server-4] 	controller_server lifecycle node launched. 
+[controller_server-4] 	Waiting on external lifecycle transitions to activate
+[controller_server-4] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[amcl-6] [INFO] [1790982124.806469035] [amcl]: 
+[amcl-6] 	amcl lifecycle node launched. 
+[amcl-6] 	Waiting on external lifecycle transitions to activate
+[amcl-6] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[bt_navigator-5] [INFO] [1790982124.806663123] [bt_navigator]: 
+[bt_navigator-5] 	bt_navigator lifecycle node launched. 
+[bt_navigator-5] 	Waiting on external lifecycle transitions to activate
+[bt_navigator-5] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[collision_monitor-9] [INFO] [1790982124.807642999] [collision_monitor]: 
+[collision_monitor-9] 	collision_monitor lifecycle node launched. 
+[collision_monitor-9] 	Waiting on external lifecycle transitions to activate
+[collision_monitor-9] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[amcl-6] [INFO] [1790982124.808983928] [amcl]: Creating
+[bt_navigator-5] [INFO] [1790982124.812506570] [bt_navigator]: Creating
+[controller_server-4] [INFO] [1790982124.819515969] [controller_server]: Creating controller server
+[map_server-1] [INFO] [1790982124.892338333] [map_server]: 
+[map_server-1] 	map_server lifecycle node launched. 
+[map_server-1] 	Waiting on external lifecycle transitions to activate
+[map_server-1] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[map_server-1] [INFO] [1790982124.892507748] [map_server]: Creating
+[controller_server-4] [INFO] [1790982124.893953741] [local_costmap.local_costmap]: 
+[controller_server-4] 	local_costmap lifecycle node launched. 
+[controller_server-4] 	Waiting on external lifecycle transitions to activate
+[controller_server-4] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[controller_server-4] [INFO] [1790982124.894967332] [local_costmap.local_costmap]: Creating Costmap
+[heading_controller-8] [WARN] [1790982125.383455339] [heading_controller]: parâmetros NÃO MEDIDOS neste robô — a_dec=5.832 rad/s², zona_morta=0.0178 m/s, bitola=0.27 m. Rodar tools/banco/ e corrigir (BO-3).
+[heading_controller-8] [INFO] [1790982125.384440825] [heading_controller]: pivô DISPONÍVEL acima de 0.13 rad/s — o robô consegue virar no próprio eixo
+[heading_controller-8] [WARN] [1790982125.394053022] [heading_controller]: sem /Odometry
+[freeze_capture-12] [INFO] [1790982125.425346569] [freeze_capture]: freeze_capture: chain=/home/bara/logs_robo2/freeze_capture.csv diag=/home/bara/logs_robo2/freeze_diag.csv
+[path_follower-11] [INFO] [1790982125.440471032] [path_follower]: log da corrida -> /home/bara/logs_robo2/seguidor_2026-10-02_200205.csv
+[path_follower-11] [INFO] [1790982125.441285057] [path_follower]: seguidor de pé — raio da máquina 0.37 m, mira 0.37 m em curva e 1.00 m em reta (040), piso de linear 0.365 m/s
+[path_follower-11] [INFO] [1790982125.442014372] [path_follower]: raio de chegada 0.25 m (mínimo viável 0.22 m)
+[lifecycle_manager-7] [INFO] [1790982125.797128553] [lifecycle_manager_pilha]: [34m[1mStarting managed nodes bringup...[0m[0m
+[lifecycle_manager-7] [INFO] [1790982125.797169884] [lifecycle_manager_pilha]: [34m[1mConfiguring map_server[0m[0m
+[map_server-1] [INFO] [1790982125.797506352] [map_server]: Configuring
+[map_server-1] [INFO] [1790982125.797554807] [map_io]: Loading yaml file: /home/bara/Controle_robo_livox/maps/andar3_completo/andar3_completo.yaml
+[map_server-1] [INFO] [1790982125.798084963] [map_io]: resolution: 0.05
+[map_server-1] [INFO] [1790982125.798097499] [map_io]: origin[0]: -2.202
+[map_server-1] [INFO] [1790982125.798106689] [map_io]: origin[1]: -12.239
+[map_server-1] [INFO] [1790982125.798113770] [map_io]: origin[2]: 0
+[map_server-1] [INFO] [1790982125.798120987] [map_io]: free_thresh: 0.196
+[map_server-1] [INFO] [1790982125.798127971] [map_io]: occupied_thresh: 0.65
+[map_server-1] [INFO] [1790982125.798135220] [map_io]: mode: trinary
+[map_server-1] [INFO] [1790982125.798142785] [map_io]: negate: 0
+[map_server-1] [INFO] [1790982125.808483747] [map_io]: Loading image_file: /home/bara/Controle_robo_livox/maps/andar3_completo/andar3_completo.pgm
+[map_server-1] [INFO] [1790982125.820459718] [map_io]: Read map /home/bara/Controle_robo_livox/maps/andar3_completo/andar3_completo.pgm: 391 X 1158 map @ 0.05 m/cell
+[lifecycle_manager-7] [INFO] [1790982125.832082100] [lifecycle_manager_pilha]: [34m[1mConfiguring amcl[0m[0m
+[amcl-6] [INFO] [1790982125.832350826] [amcl]: Configuring
+[amcl-6] [INFO] [1790982125.832767777] [amcl]: initTransforms
+[amcl-6] [INFO] [1790982125.848327569] [amcl]: initPubSub
+[amcl-6] [INFO] [1790982125.869226637] [amcl]: Subscribed to map topic.
+[lifecycle_manager-7] [INFO] [1790982125.878672738] [lifecycle_manager_pilha]: [34m[1mConfiguring planner_server[0m[0m
+[planner_server-2] [INFO] [1790982125.878995961] [planner_server]: Configuring
+[planner_server-2] [INFO] [1790982125.879031904] [global_costmap.global_costmap]: Configuring
+[planner_server-2] [INFO] [1790982125.892171556] [global_costmap.global_costmap]: Using plugin "static_layer"
+[planner_server-2] [INFO] [1790982125.907778434] [global_costmap.global_costmap]: Subscribing to the map topic (/map) with transient local durability
+[planner_server-2] [INFO] [1790982125.910746557] [global_costmap.global_costmap]: Initialized plugin "static_layer"
+[planner_server-2] [INFO] [1790982125.910775726] [global_costmap.global_costmap]: Using plugin "obstacle_layer"
+[planner_server-2] [INFO] [1790982125.912759460] [global_costmap.global_costmap]: Subscribed to Topics: livox
+[planner_server-2] [INFO] [1790982125.920290840] [global_costmap.global_costmap]: Initialized plugin "obstacle_layer"
+[planner_server-2] [INFO] [1790982125.920338068] [global_costmap.global_costmap]: Using plugin "inflation_layer"
+[planner_server-2] [INFO] [1790982125.921677742] [global_costmap.global_costmap]: Initialized plugin "inflation_layer"
+[planner_server-2] [INFO] [1790982125.984989960] [planner_server]: Created global planner plugin GridBased of type nav2_smac_planner::SmacPlanner2D
+[planner_server-2] [INFO] [1790982125.985044373] [planner_server]: Configuring GridBased of type SmacPlanner2D
+[planner_server-2] [ERROR] [1790982125.986327124] [planner_server]: Inflation layer either not found or inflation is not set sufficiently for optimized non-circular collision checking capabilities. It is HIGHLY recommended to set the inflation radius to be at MINIMUM half of the robot's largest cross-section. See github.com/ros-planning/navigation2/tree/main/nav2_smac_planner#potential-fields for full instructions. This will substantially impact run-time performance.
+[planner_server-2] [INFO] [1790982125.989906583] [planner_server]: Configured plugin GridBased of type SmacPlanner2D with tolerance 0.25, maximum iterations 1000000, max on approach iterations 1000, and not allowing unknown traversal.
+[planner_server-2] [INFO] [1790982125.990015277] [planner_server]: Planner Server has GridBased  planners available.
+[lifecycle_manager-7] [INFO] [1790982126.010416285] [lifecycle_manager_pilha]: [34m[1mConfiguring smoother_server[0m[0m
+[smoother_server-3] [INFO] [1790982126.010678273] [smoother_server]: Configuring smoother server
+[smoother_server-3] [INFO] [1790982126.050865434] [smoother_server]: Created smoother : suave of type nav2_constrained_smoother/ConstrainedSmoother
+[smoother_server-3] [INFO] [1790982126.054184791] [smoother_server]: Created smoother : simples of type nav2_smoother::SimpleSmoother
+[smoother_server-3] [INFO] [1790982126.057285342] [smoother_server]: Created smoother : savgol of type nav2_smoother::SavitzkyGolaySmoother
+[smoother_server-3] [INFO] [1790982126.057728508] [smoother_server]: Smoother Server has suave simples savgol  smoothers available.
+[lifecycle_manager-7] [INFO] [1790982126.066806815] [lifecycle_manager_pilha]: [34m[1mConfiguring controller_server[0m[0m
+[controller_server-4] [INFO] [1790982126.067084623] [controller_server]: Configuring controller interface
+[controller_server-4] [INFO] [1790982126.067107299] [controller_server]: getting progress checker plugins..
+[controller_server-4] [INFO] [1790982126.067291694] [controller_server]: getting goal checker plugins..
+[controller_server-4] [INFO] [1790982126.067473114] [controller_server]: Controller frequency set to 5.0000Hz
+[controller_server-4] [INFO] [1790982126.067512456] [local_costmap.local_costmap]: Configuring
+[controller_server-4] [INFO] [1790982126.076565379] [local_costmap.local_costmap]: Using plugin "static_layer"
+[controller_server-4] [INFO] [1790982126.081439884] [local_costmap.local_costmap]: Subscribing to the map topic (/map) with transient local durability
+[controller_server-4] [INFO] [1790982126.083863873] [local_costmap.local_costmap]: Initialized plugin "static_layer"
+[controller_server-4] [INFO] [1790982126.083896194] [local_costmap.local_costmap]: Using plugin "obstacle_layer"
+[controller_server-4] [INFO] [1790982126.084477279] [local_costmap.local_costmap]: Subscribed to Topics: livox
+[controller_server-4] [INFO] [1790982126.098517733] [local_costmap.local_costmap]: Initialized plugin "obstacle_layer"
+[controller_server-4] [INFO] [1790982126.098547157] [local_costmap.local_costmap]: Using plugin "inflation_layer"
+[controller_server-4] [INFO] [1790982126.099356141] [local_costmap.local_costmap]: Initialized plugin "inflation_layer"
+[controller_server-4] [INFO] [1790982126.130969034] [controller_server]: Created progress_checker : progress_checker of type nav2_controller::SimpleProgressChecker
+[controller_server-4] [INFO] [1790982126.131281751] [controller_server]: Controller Server has progress_checker  progress checkers available.
+[controller_server-4] [INFO] [1790982126.132892325] [controller_server]: Created goal checker : goal_checker of type nav2_controller::SimpleGoalChecker
+[controller_server-4] [INFO] [1790982126.133766185] [controller_server]: Controller Server has goal_checker  goal checkers available.
+[controller_server-4] [INFO] [1790982126.137357699] [controller_server]: Created controller : FollowPath of type nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[controller_server-4] [INFO] [1790982126.145375647] [controller_server]: Controller Server has FollowPath  controllers available.
+[lifecycle_manager-7] [INFO] [1790982126.158559873] [lifecycle_manager_pilha]: [34m[1mConfiguring bt_navigator[0m[0m
+[bt_navigator-5] [INFO] [1790982126.158834587] [bt_navigator]: Configuring
+[bt_navigator-5] [INFO] [1790982126.171952843] [bt_navigator]: Creating navigator id navigate_to_pose of type nav2_bt_navigator::NavigateToPoseNavigator
+[bt_navigator-5] [WARN] [1790982126.184626435] [bt_navigator]: Error_code parameters were not set. Using default values of: follow_path_error_code compute_path_error_code
+[bt_navigator-5] Make sure these match your BT and there are not other sources of error codes youreported to your application
+[lifecycle_manager-7] [INFO] [1790982126.379799071] [lifecycle_manager_pilha]: [34m[1mConfiguring collision_monitor[0m[0m
+[collision_monitor-9] [INFO] [1790982126.380059119] [collision_monitor]: Configuring
+[collision_monitor-9] [INFO] [1790982126.389381150] [collision_monitor]: [livox]: Creating PointCloud
+[collision_monitor-9] [INFO] [1790982126.393402613] [collision_monitor]: [PolygonApproach]: Creating Polygon
+[collision_monitor-9] [INFO] [1790982126.397647421] [collision_monitor]: [PolygonStop]: Creating Polygon
+[lifecycle_manager-7] [INFO] [1790982126.419071668] [lifecycle_manager_pilha]: [34m[1mActivating map_server[0m[0m
+[map_server-1] [INFO] [1790982126.419375699] [map_server]: Activating
+[map_server-1] [INFO] [1790982126.420408303] [map_server]: Creating bond (map_server) to lifecycle manager.
+[amcl-6] [INFO] [1790982126.422042729] [amcl]: Received a 391 X 1158 map @ 0.050 m/pix
+[planner_server-2] [INFO] [1790982126.422196834] [global_costmap.global_costmap]: StaticLayer: Resizing costmap to 391 X 1158 at 0.050000 m/pix
+[controller_server-4] [INFO] [1790982126.422198739] [local_costmap.local_costmap]: StaticLayer: Resizing static layer to 391 X 1158 at 0.050000 m/pix
+[lifecycle_manager-7] [INFO] [1790982126.529430530] [lifecycle_manager_pilha]: Server map_server connected with bond.
+[lifecycle_manager-7] [INFO] [1790982126.529469291] [lifecycle_manager_pilha]: [34m[1mActivating amcl[0m[0m
+[amcl-6] [INFO] [1790982126.529767956] [amcl]: Activating
+[amcl-6] [INFO] [1790982126.529798183] [amcl]: initialPoseReceived
+[amcl-6] [INFO] [1790982126.530366925] [amcl]: Setting pose (1790982126.530367): 0.000 0.000 0.000
+[amcl-6] [INFO] [1790982126.530822423] [amcl]: Creating bond (amcl) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982126.636555624] [lifecycle_manager_pilha]: Server amcl connected with bond.
+[lifecycle_manager-7] [INFO] [1790982126.636604409] [lifecycle_manager_pilha]: [34m[1mActivating planner_server[0m[0m
+[planner_server-2] [INFO] [1790982126.636924546] [planner_server]: Activating
+[planner_server-2] [INFO] [1790982126.636964067] [global_costmap.global_costmap]: Activating
+[planner_server-2] [INFO] [1790982126.636977802] [global_costmap.global_costmap]: Checking transform
+[planner_server-2] [INFO] [1790982126.637029084] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
+[planner_server-2] [INFO] [1790982127.137088114] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
+[planner_server-2] [INFO] [1790982127.637082799] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
+[planner_server-2] [INFO] [1790982128.137084699] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
+[amcl-6] [INFO] [1790982128.577207890] [amcl]: createLaserObject
+[planner_server-2] [INFO] [1790982128.637088661] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
+[planner_server-2] [INFO] [1790982129.137277851] [global_costmap.global_costmap]: start
+[planner_server-2] [INFO] [1790982129.538288690] [global_costmap.global_costmap]: Message Filter dropping message: frame 'livox_frame' at time 1790982128.619 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[planner_server-2] [INFO] [1790982129.643500246] [global_costmap.global_costmap]: Message Filter dropping message: frame 'livox_frame' at time 1790982128.719 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[planner_server-2] [INFO] [1790982129.773310694] [global_costmap.global_costmap]: Message Filter dropping message: frame 'livox_frame' at time 1790982128.819 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[planner_server-2] [INFO] [1790982130.188975054] [planner_server]: Activating plugin GridBased of type SmacPlanner2D
+[planner_server-2] [INFO] [1790982130.191107052] [planner_server]: Creating bond (planner_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982130.297084753] [lifecycle_manager_pilha]: Server planner_server connected with bond.
+[lifecycle_manager-7] [INFO] [1790982130.297128885] [lifecycle_manager_pilha]: [34m[1mActivating smoother_server[0m[0m
+[smoother_server-3] [INFO] [1790982130.297631729] [smoother_server]: Activating
+[smoother_server-3] [INFO] [1790982130.297656617] [smoother_server]: Activating smoother: suave of type nav2_constrained_smoother::ConstrainedSmoother
+[smoother_server-3] [INFO] [1790982130.297672084] [smoother_server]: Creating bond (smoother_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982130.405239941] [lifecycle_manager_pilha]: Server smoother_server connected with bond.
+[lifecycle_manager-7] [INFO] [1790982130.405276203] [lifecycle_manager_pilha]: [34m[1mActivating controller_server[0m[0m
+[controller_server-4] [INFO] [1790982130.405715396] [controller_server]: Activating
+[controller_server-4] [INFO] [1790982130.405744022] [local_costmap.local_costmap]: Activating
+[controller_server-4] [INFO] [1790982130.405754085] [local_costmap.local_costmap]: Checking transform
+[controller_server-4] [INFO] [1790982130.405918722] [local_costmap.local_costmap]: start
+[controller_server-4] [INFO] [1790982130.657212040] [controller_server]: Activating controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[controller_server-4] [INFO] [1790982130.657285748] [controller_server]: Creating bond (controller_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982130.767020771] [lifecycle_manager_pilha]: Server controller_server connected with bond.
+[lifecycle_manager-7] [INFO] [1790982130.767086443] [lifecycle_manager_pilha]: [34m[1mActivating bt_navigator[0m[0m
+[bt_navigator-5] [INFO] [1790982130.767617624] [bt_navigator]: Activating
+[bt_navigator-5] [INFO] [1790982130.816133830] [bt_navigator]: Creating bond (bt_navigator) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982130.925439497] [lifecycle_manager_pilha]: Server bt_navigator connected with bond.
+[lifecycle_manager-7] [INFO] [1790982130.925509076] [lifecycle_manager_pilha]: [34m[1mActivating collision_monitor[0m[0m
+[collision_monitor-9] [INFO] [1790982130.926091459] [collision_monitor]: Activating
+[collision_monitor-9] [INFO] [1790982130.926407444] [collision_monitor]: Creating bond (collision_monitor) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982131.053869847] [lifecycle_manager_pilha]: Server collision_monitor connected with bond.
+[lifecycle_manager-7] [INFO] [1790982131.053910868] [lifecycle_manager_pilha]: [34m[1mManaged nodes are active[0m[0m
+[lifecycle_manager-7] [INFO] [1790982131.053925541] [lifecycle_manager_pilha]: [34m[1mCreating bond timer...[0m[0m
+[lifecycle_manager-7] [INFO] [1790982145.054059932] [lifecycle_manager_pilha]: [34m[1mHave not received a heartbeat from collision_monitor.[0m[0m
+[lifecycle_manager-7] [ERROR] [1790982145.054096287] [lifecycle_manager_pilha]: CRITICAL FAILURE: SERVER collision_monitor IS DOWN after not receiving a heartbeat for 4000 ms. Shutting down related nodes.
+[lifecycle_manager-7] [INFO] [1790982145.054122493] [lifecycle_manager_pilha]: [34m[1mTerminating bond timer...[0m[0m
+[lifecycle_manager-7] [INFO] [1790982145.054129785] [lifecycle_manager_pilha]: [34m[1mResetting managed nodes...[0m[0m
+[lifecycle_manager-7] [INFO] [1790982145.054135208] [lifecycle_manager_pilha]: [34m[1mDeactivating collision_monitor[0m[0m
+[collision_monitor-9] [INFO] [1790982145.241385159] [collision_monitor]: Deactivating
+[collision_monitor-9] [INFO] [1790982145.241423980] [collision_monitor]: Destroying bond (collision_monitor) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982145.265018723] [lifecycle_manager_pilha]: [34m[1mDeactivating bt_navigator[0m[0m
+[bt_navigator-5] [INFO] [1790982145.265366872] [bt_navigator]: Deactivating
+[bt_navigator-5] [INFO] [1790982145.265406007] [bt_navigator]: Destroying bond (bt_navigator) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982145.378951423] [lifecycle_manager_pilha]: [34m[1mDeactivating controller_server[0m[0m
+[controller_server-4] [INFO] [1790982145.379216600] [controller_server]: Deactivating
+[controller_server-4] [INFO] [1790982145.379248850] [controller_server]: Deactivating controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[controller_server-4] [INFO] [1790982145.379273173] [local_costmap.local_costmap]: Deactivating
+[controller_server-4] [INFO] [1790982145.406116460] [controller_server]: Destroying bond (controller_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982145.520094692] [lifecycle_manager_pilha]: [34m[1mDeactivating smoother_server[0m[0m
+[smoother_server-3] [INFO] [1790982145.520458662] [smoother_server]: Deactivating
+[smoother_server-3] [INFO] [1790982145.520483047] [smoother_server]: Deactivating smoother: suave of type nav2_constrained_smoother::ConstrainedSmoother
+[smoother_server-3] [INFO] [1790982145.520498863] [smoother_server]: Destroying bond (smoother_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982145.634297260] [lifecycle_manager_pilha]: [34m[1mDeactivating planner_server[0m[0m
+[planner_server-2] [INFO] [1790982145.634646572] [planner_server]: Deactivating
+[planner_server-2] [INFO] [1790982145.634691832] [global_costmap.global_costmap]: Deactivating
+[planner_server-2] [INFO] [1790982146.137541958] [planner_server]: Deactivating plugin GridBased of type SmacPlanner2D
+[planner_server-2] [INFO] [1790982146.137579144] [planner_server]: Destroying bond (planner_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982146.251813620] [lifecycle_manager_pilha]: [34m[1mDeactivating amcl[0m[0m
+[amcl-6] [INFO] [1790982146.252611701] [amcl]: Deactivating
+[amcl-6] [INFO] [1790982146.252679299] [amcl]: Destroying bond (amcl) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982146.365949291] [lifecycle_manager_pilha]: [34m[1mDeactivating map_server[0m[0m
+[map_server-1] [INFO] [1790982146.366369703] [map_server]: Deactivating
+[map_server-1] [INFO] [1790982146.366422847] [map_server]: Destroying bond (map_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982146.479673346] [lifecycle_manager_pilha]: [34m[1mCleaning up collision_monitor[0m[0m
+[collision_monitor-9] [INFO] [1790982146.480115764] [collision_monitor]: Cleaning up
+[collision_monitor-9] [INFO] [1790982146.484531527] [collision_monitor]: [PolygonApproach]: Destroying Polygon
+[collision_monitor-9] [INFO] [1790982146.485558837] [collision_monitor]: [PolygonStop]: Destroying Polygon
+[collision_monitor-9] [INFO] [1790982146.486786558] [collision_monitor]: [livox]: Destroying PointCloud
+[lifecycle_manager-7] [INFO] [1790982146.491037437] [lifecycle_manager_pilha]: [34m[1mCleaning up bt_navigator[0m[0m
+[bt_navigator-5] [INFO] [1790982146.491361852] [bt_navigator]: Cleaning up
+[bt_navigator-5] [INFO] [1790982146.571982134] [bt_navigator]: Completed Cleaning up
+[lifecycle_manager-7] [INFO] [1790982146.572435899] [lifecycle_manager_pilha]: [34m[1mCleaning up controller_server[0m[0m
+[controller_server-4] [INFO] [1790982146.572652372] [controller_server]: Cleaning up
+[controller_server-4] [INFO] [1790982146.572673894] [controller_server]: Cleaning up controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[controller_server-4] [INFO] [1790982146.579518670] [local_costmap.local_costmap]: Cleaning up
+[lifecycle_manager-7] [INFO] [1790982146.630256193] [lifecycle_manager_pilha]: [34m[1mCleaning up smoother_server[0m[0m
+[smoother_server-3] [INFO] [1790982146.630467098] [smoother_server]: Cleaning up
+[smoother_server-3] [INFO] [1790982146.630490106] [smoother_server]: Cleaning up smoother: suave of type nav2_constrained_smoother::ConstrainedSmoother
+[lifecycle_manager-7] [INFO] [1790982146.652329740] [lifecycle_manager_pilha]: [34m[1mCleaning up planner_server[0m[0m
+[planner_server-2] [INFO] [1790982146.652552669] [planner_server]: Cleaning up
+[planner_server-2] [INFO] [1790982146.673868603] [global_costmap.global_costmap]: Cleaning up
+[planner_server-2] [INFO] [1790982146.684207420] [planner_server]: Cleaning up plugin GridBased of type SmacPlanner2D
+[planner_server-2] [INFO] [1790982146.686732963] [planner_server]: Destroying plugin GridBased of type SmacPlanner2D
+[lifecycle_manager-7] [INFO] [1790982146.720868494] [lifecycle_manager_pilha]: [34m[1mCleaning up amcl[0m[0m
+[amcl-6] [INFO] [1790982146.721095630] [amcl]: Cleaning up
+[lifecycle_manager-7] [INFO] [1790982146.741491407] [lifecycle_manager_pilha]: [34m[1mCleaning up map_server[0m[0m
+[map_server-1] [INFO] [1790982146.741691432] [map_server]: Cleaning up
+[lifecycle_manager-7] [INFO] [1790982146.746107349] [lifecycle_manager_pilha]: [34m[1mManaged nodes have been reset[0m[0m
+[lifecycle_manager-7] [INFO] [1790982147.747881402] [lifecycle_manager_pilha]: [34m[1mSuccessfully re-established connections from server respawns, starting back up.[0m[0m
+[lifecycle_manager-7] [INFO] [1790982147.747912810] [lifecycle_manager_pilha]: [34m[1mStarting managed nodes bringup...[0m[0m
+[lifecycle_manager-7] [INFO] [1790982147.747920374] [lifecycle_manager_pilha]: [34m[1mConfiguring map_server[0m[0m
+[map_server-1] [INFO] [1790982147.748092405] [map_server]: Configuring
+[map_server-1] [INFO] [1790982147.748121961] [map_io]: Loading yaml file: /home/bara/Controle_robo_livox/maps/andar3_completo/andar3_completo.yaml
+[map_server-1] [INFO] [1790982147.748261917] [map_io]: resolution: 0.05
+[map_server-1] [INFO] [1790982147.748272440] [map_io]: origin[0]: -2.202
+[map_server-1] [INFO] [1790982147.748280421] [map_io]: origin[1]: -12.239
+[map_server-1] [INFO] [1790982147.748287307] [map_io]: origin[2]: 0
+[map_server-1] [INFO] [1790982147.748294376] [map_io]: free_thresh: 0.196
+[map_server-1] [INFO] [1790982147.748301414] [map_io]: occupied_thresh: 0.65
+[map_server-1] [INFO] [1790982147.748307760] [map_io]: mode: trinary
+[map_server-1] [INFO] [1790982147.748314188] [map_io]: negate: 0
+[map_server-1] [INFO] [1790982147.748333264] [map_io]: Loading image_file: /home/bara/Controle_robo_livox/maps/andar3_completo/andar3_completo.pgm
+[map_server-1] [INFO] [1790982147.755272419] [map_io]: Read map /home/bara/Controle_robo_livox/maps/andar3_completo/andar3_completo.pgm: 391 X 1158 map @ 0.05 m/cell
+[lifecycle_manager-7] [INFO] [1790982147.760375211] [lifecycle_manager_pilha]: [34m[1mConfiguring amcl[0m[0m
+[amcl-6] [INFO] [1790982147.760542672] [amcl]: Configuring
+[amcl-6] [INFO] [1790982147.760607859] [amcl]: initTransforms
+[amcl-6] [INFO] [1790982147.769855539] [amcl]: initPubSub
+[amcl-6] [INFO] [1790982147.774526258] [amcl]: Subscribed to map topic.
+[lifecycle_manager-7] [INFO] [1790982147.780428074] [lifecycle_manager_pilha]: [34m[1mConfiguring planner_server[0m[0m
+[planner_server-2] [INFO] [1790982147.780645981] [planner_server]: Configuring
+[planner_server-2] [INFO] [1790982147.780675083] [global_costmap.global_costmap]: Configuring
+[planner_server-2] [INFO] [1790982147.791055344] [global_costmap.global_costmap]: Using plugin "static_layer"
+[planner_server-2] [INFO] [1790982147.791166897] [global_costmap.global_costmap]: Subscribing to the map topic (/map) with transient local durability
+[planner_server-2] [INFO] [1790982147.792267358] [global_costmap.global_costmap]: Initialized plugin "static_layer"
+[planner_server-2] [INFO] [1790982147.792306014] [global_costmap.global_costmap]: Using plugin "obstacle_layer"
+[planner_server-2] [INFO] [1790982147.792465151] [global_costmap.global_costmap]: Subscribed to Topics: livox
+[planner_server-2] [INFO] [1790982147.796520074] [global_costmap.global_costmap]: Initialized plugin "obstacle_layer"
+[planner_server-2] [INFO] [1790982147.796555413] [global_costmap.global_costmap]: Using plugin "inflation_layer"
+[planner_server-2] [INFO] [1790982147.796724101] [global_costmap.global_costmap]: Initialized plugin "inflation_layer"
+[planner_server-2] [INFO] [1790982147.833024453] [planner_server]: Created global planner plugin GridBased of type nav2_smac_planner::SmacPlanner2D
+[planner_server-2] [INFO] [1790982147.833210303] [planner_server]: Configuring GridBased of type SmacPlanner2D
+[planner_server-2] [ERROR] [1790982147.833263946] [planner_server]: Inflation layer either not found or inflation is not set sufficiently for optimized non-circular collision checking capabilities. It is HIGHLY recommended to set the inflation radius to be at MINIMUM half of the robot's largest cross-section. See github.com/ros-planning/navigation2/tree/main/nav2_smac_planner#potential-fields for full instructions. This will substantially impact run-time performance.
+[planner_server-2] [INFO] [1790982147.835469511] [planner_server]: Configured plugin GridBased of type SmacPlanner2D with tolerance 0.25, maximum iterations 1000000, max on approach iterations 1000, and not allowing unknown traversal.
+[planner_server-2] [INFO] [1790982147.835535541] [planner_server]: Planner Server has GridBased GridBased  planners available.
+[lifecycle_manager-7] [INFO] [1790982147.855780988] [lifecycle_manager_pilha]: [34m[1mConfiguring smoother_server[0m[0m
+[smoother_server-3] [INFO] [1790982147.856022269] [smoother_server]: Configuring smoother server
+[smoother_server-3] [INFO] [1790982147.862755111] [smoother_server]: Created smoother : suave of type nav2_constrained_smoother/ConstrainedSmoother
+[smoother_server-3] [INFO] [1790982147.863336502] [smoother_server]: Created smoother : simples of type nav2_smoother::SimpleSmoother
+[smoother_server-3] [INFO] [1790982147.863379318] [smoother_server]: Created smoother : savgol of type nav2_smoother::SavitzkyGolaySmoother
+[smoother_server-3] [INFO] [1790982147.863397206] [smoother_server]: Smoother Server has suave simples savgol suave simples savgol  smoothers available.
+[lifecycle_manager-7] [INFO] [1790982147.872154651] [lifecycle_manager_pilha]: [34m[1mConfiguring controller_server[0m[0m
+[controller_server-4] [INFO] [1790982147.872399211] [controller_server]: Configuring controller interface
+[controller_server-4] [INFO] [1790982147.872417067] [controller_server]: getting progress checker plugins..
+[controller_server-4] [INFO] [1790982147.872430367] [controller_server]: getting goal checker plugins..
+[controller_server-4] [INFO] [1790982147.872441399] [controller_server]: Controller frequency set to 5.0000Hz
+[controller_server-4] [INFO] [1790982147.872457126] [local_costmap.local_costmap]: Configuring
+[controller_server-4] [INFO] [1790982147.881049668] [local_costmap.local_costmap]: Using plugin "static_layer"
+[controller_server-4] [INFO] [1790982147.881170705] [local_costmap.local_costmap]: Subscribing to the map topic (/map) with transient local durability
+[controller_server-4] [INFO] [1790982147.882512652] [local_costmap.local_costmap]: Initialized plugin "static_layer"
+[controller_server-4] [INFO] [1790982147.882538926] [local_costmap.local_costmap]: Using plugin "obstacle_layer"
+[controller_server-4] [INFO] [1790982147.882597378] [local_costmap.local_costmap]: Subscribed to Topics: livox
+[controller_server-4] [INFO] [1790982147.887177278] [local_costmap.local_costmap]: Initialized plugin "obstacle_layer"
+[controller_server-4] [INFO] [1790982147.887215119] [local_costmap.local_costmap]: Using plugin "inflation_layer"
+[controller_server-4] [INFO] [1790982147.887390999] [local_costmap.local_costmap]: Initialized plugin "inflation_layer"
+[controller_server-4] [INFO] [1790982147.917400109] [controller_server]: Created progress_checker : progress_checker of type nav2_controller::SimpleProgressChecker
+[controller_server-4] [INFO] [1790982147.917458534] [controller_server]: Controller Server has progress_checker progress_checker  progress checkers available.
+[controller_server-4] [INFO] [1790982147.917486475] [controller_server]: Created goal checker : goal_checker of type nav2_controller::SimpleGoalChecker
+[controller_server-4] [INFO] [1790982147.917505475] [controller_server]: Controller Server has goal_checker goal_checker  goal checkers available.
+[controller_server-4] [INFO] [1790982147.917527046] [controller_server]: Created controller : FollowPath of type nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[controller_server-4] [INFO] [1790982147.922808006] [controller_server]: Controller Server has FollowPath FollowPath  controllers available.
+[lifecycle_manager-7] [INFO] [1790982147.932858419] [lifecycle_manager_pilha]: [34m[1mConfiguring bt_navigator[0m[0m
+[bt_navigator-5] [INFO] [1790982147.934056418] [bt_navigator]: Configuring
+[bt_navigator-5] [INFO] [1790982147.940022903] [bt_navigator]: Creating navigator id navigate_to_pose of type nav2_bt_navigator::NavigateToPoseNavigator
+[lifecycle_manager-7] [INFO] [1790982147.990290554] [lifecycle_manager_pilha]: [34m[1mConfiguring collision_monitor[0m[0m
+[collision_monitor-9] [INFO] [1790982147.990510780] [collision_monitor]: Configuring
+[collision_monitor-9] [INFO] [1790982147.993552295] [collision_monitor]: [livox]: Creating PointCloud
+[collision_monitor-9] [INFO] [1790982147.996852801] [collision_monitor]: [PolygonApproach]: Creating Polygon
+[collision_monitor-9] [INFO] [1790982147.998608107] [collision_monitor]: [PolygonStop]: Creating Polygon
+[lifecycle_manager-7] [INFO] [1790982148.012389454] [lifecycle_manager_pilha]: [34m[1mActivating map_server[0m[0m
+[map_server-1] [INFO] [1790982148.012595886] [map_server]: Activating
+[map_server-1] [INFO] [1790982148.012986749] [map_server]: Creating bond (map_server) to lifecycle manager.
+[planner_server-2] [INFO] [1790982148.013481382] [global_costmap.global_costmap]: StaticLayer: Resizing costmap to 391 X 1158 at 0.050000 m/pix
+[amcl-6] [INFO] [1790982148.013884583] [amcl]: Received a 391 X 1158 map @ 0.050 m/pix
+[controller_server-4] [INFO] [1790982148.014381211] [local_costmap.local_costmap]: StaticLayer: Resizing static layer to 391 X 1158 at 0.050000 m/pix
+[lifecycle_manager-7] [INFO] [1790982148.125389385] [lifecycle_manager_pilha]: Server map_server connected with bond.
+[lifecycle_manager-7] [INFO] [1790982148.125439123] [lifecycle_manager_pilha]: [34m[1mActivating amcl[0m[0m
+[amcl-6] [INFO] [1790982148.125827457] [amcl]: Activating
+[amcl-6] [INFO] [1790982148.125857200] [amcl]: initialPoseReceived
+[amcl-6] [INFO] [1790982148.125918991] [amcl]: Setting pose (1790982148.125919): 0.000 0.000 0.000
+[amcl-6] [INFO] [1790982148.126611095] [amcl]: Creating bond (amcl) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982148.234346287] [lifecycle_manager_pilha]: Server amcl connected with bond.
+[lifecycle_manager-7] [INFO] [1790982148.234388753] [lifecycle_manager_pilha]: [34m[1mActivating planner_server[0m[0m
+[planner_server-2] [INFO] [1790982148.234703090] [planner_server]: Activating
+[planner_server-2] [INFO] [1790982148.234740132] [global_costmap.global_costmap]: Activating
+[planner_server-2] [INFO] [1790982148.234751376] [global_costmap.global_costmap]: Checking transform
+[planner_server-2] [INFO] [1790982148.234768524] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
+[amcl-6] [INFO] [1790982148.502001379] [amcl]: createLaserObject
+[planner_server-2] [INFO] [1790982148.734896683] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Lookup would require extrapolation into the past.  Requested time 1790982148.619215 but the earliest data is at time 1790982148.818992, when looking up transform from frame [base_link] to frame [map]
+[amcl-6] [INFO] [1790982148.915524984] [amcl]: Message Filter dropping message: frame 'base_link' at time 1790982147.220 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[amcl-6] [INFO] [1790982149.057806188] [amcl]: Message Filter dropping message: frame 'base_link' at time 1790982147.319 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[amcl-6] [INFO] [1790982149.163362870] [amcl]: Message Filter dropping message: frame 'base_link' at time 1790982147.519 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[planner_server-2] [INFO] [1790982149.235109202] [global_costmap.global_costmap]: start
+[amcl-6] [INFO] [1790982149.283296050] [amcl]: Message Filter dropping message: frame 'base_link' at time 1790982147.619 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[amcl-6] [INFO] [1790982149.405326915] [amcl]: Message Filter dropping message: frame 'base_link' at time 1790982147.719 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[planner_server-2] [INFO] [1790982149.600845468] [global_costmap.global_costmap]: Message Filter dropping message: frame 'livox_frame' at time 1790982148.619 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[planner_server-2] [INFO] [1790982149.726166902] [global_costmap.global_costmap]: Message Filter dropping message: frame 'livox_frame' at time 1790982148.719 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[planner_server-2] [INFO] [1790982150.288299307] [planner_server]: Activating plugin GridBased of type SmacPlanner2D
+[planner_server-2] [INFO] [1790982150.291431617] [planner_server]: Creating bond (planner_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982150.396848816] [lifecycle_manager_pilha]: Server planner_server connected with bond.
+[lifecycle_manager-7] [INFO] [1790982150.396882933] [lifecycle_manager_pilha]: [34m[1mActivating smoother_server[0m[0m
+[smoother_server-3] [INFO] [1790982150.397191715] [smoother_server]: Activating
+[smoother_server-3] [INFO] [1790982150.397213944] [smoother_server]: Activating smoother: suave of type nav2_constrained_smoother::ConstrainedSmoother
+[smoother_server-3] [INFO] [1790982150.397226699] [smoother_server]: Creating bond (smoother_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982150.503117464] [lifecycle_manager_pilha]: Server smoother_server connected with bond.
+[lifecycle_manager-7] [INFO] [1790982150.503161011] [lifecycle_manager_pilha]: [34m[1mActivating controller_server[0m[0m
+[controller_server-4] [INFO] [1790982150.503801494] [controller_server]: Activating
+[controller_server-4] [INFO] [1790982150.503850449] [local_costmap.local_costmap]: Activating
+[controller_server-4] [INFO] [1790982150.503863193] [local_costmap.local_costmap]: Checking transform
+[controller_server-4] [INFO] [1790982150.503964550] [local_costmap.local_costmap]: start
+[controller_server-4] [INFO] [1790982150.755206850] [controller_server]: Activating controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[controller_server-4] [INFO] [1790982150.755247793] [controller_server]: Creating bond (controller_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982150.861344322] [lifecycle_manager_pilha]: Server controller_server connected with bond.
+[lifecycle_manager-7] [INFO] [1790982150.861378921] [lifecycle_manager_pilha]: [34m[1mActivating bt_navigator[0m[0m
+[bt_navigator-5] [INFO] [1790982150.861690373] [bt_navigator]: Activating
+[bt_navigator-5] [INFO] [1790982150.895507751] [bt_navigator]: Creating bond (bt_navigator) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982151.003097962] [lifecycle_manager_pilha]: Server bt_navigator connected with bond.
+[lifecycle_manager-7] [INFO] [1790982151.003132004] [lifecycle_manager_pilha]: [34m[1mActivating collision_monitor[0m[0m
+[collision_monitor-9] [INFO] [1790982151.003514026] [collision_monitor]: Activating
+[collision_monitor-9] [INFO] [1790982151.003555617] [collision_monitor]: Creating bond (collision_monitor) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982151.140507252] [lifecycle_manager_pilha]: Server collision_monitor connected with bond.
+[lifecycle_manager-7] [INFO] [1790982151.140542370] [lifecycle_manager_pilha]: [34m[1mManaged nodes are active[0m[0m
+[lifecycle_manager-7] [INFO] [1790982151.140548934] [lifecycle_manager_pilha]: [34m[1mCreating bond timer...[0m[0m
+[path_follower-11] [WARN] [1790982153.066731203] [path_follower]: AJUSTE AO VIVO: pedido linear do Nav2 em 1.00x
+[heading_controller-8] [WARN] [1790982153.291745015] [heading_controller]: AJUSTE AO VIVO: pedido linear do Nav2 em 1.00x (teto 0.50 m/s)
+[heading_controller-8] [WARN] [1790982153.292875251] [heading_controller]: AJUSTE AO VIVO: força de curva do Nav2 em 1.00x (a_dec efetivo 5.832 rad/s²)
+[lifecycle_manager-7] [INFO] [1790982165.140649225] [lifecycle_manager_pilha]: [34m[1mHave not received a heartbeat from collision_monitor.[0m[0m
+[lifecycle_manager-7] [ERROR] [1790982165.140692525] [lifecycle_manager_pilha]: CRITICAL FAILURE: SERVER collision_monitor IS DOWN after not receiving a heartbeat for 4000 ms. Shutting down related nodes.
+[lifecycle_manager-7] [INFO] [1790982165.140725724] [lifecycle_manager_pilha]: [34m[1mTerminating bond timer...[0m[0m
+[lifecycle_manager-7] [INFO] [1790982165.140735308] [lifecycle_manager_pilha]: [34m[1mResetting managed nodes...[0m[0m
+[lifecycle_manager-7] [INFO] [1790982165.140743313] [lifecycle_manager_pilha]: [34m[1mDeactivating collision_monitor[0m[0m
+[collision_monitor-9] [INFO] [1790982165.342752147] [collision_monitor]: Deactivating
+[collision_monitor-9] [INFO] [1790982165.342796535] [collision_monitor]: Destroying bond (collision_monitor) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982165.366459288] [lifecycle_manager_pilha]: [34m[1mDeactivating bt_navigator[0m[0m
+[bt_navigator-5] [INFO] [1790982165.367014468] [bt_navigator]: Deactivating
+[bt_navigator-5] [INFO] [1790982165.367056383] [bt_navigator]: Destroying bond (bt_navigator) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982165.481164712] [lifecycle_manager_pilha]: [34m[1mDeactivating controller_server[0m[0m
+[controller_server-4] [INFO] [1790982165.481651669] [controller_server]: Deactivating
+[controller_server-4] [INFO] [1790982165.481681874] [controller_server]: Deactivating controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[controller_server-4] [INFO] [1790982165.481703823] [local_costmap.local_costmap]: Deactivating
+[controller_server-4] [INFO] [1790982165.504157383] [controller_server]: Destroying bond (controller_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982165.618119967] [lifecycle_manager_pilha]: [34m[1mDeactivating smoother_server[0m[0m
+[smoother_server-3] [INFO] [1790982165.618546001] [smoother_server]: Deactivating
+[smoother_server-3] [INFO] [1790982165.618568716] [smoother_server]: Deactivating smoother: suave of type nav2_constrained_smoother::ConstrainedSmoother
+[smoother_server-3] [INFO] [1790982165.618577320] [smoother_server]: Destroying bond (smoother_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982165.733516190] [lifecycle_manager_pilha]: [34m[1mDeactivating planner_server[0m[0m
+[planner_server-2] [INFO] [1790982165.734778810] [planner_server]: Deactivating
+[planner_server-2] [INFO] [1790982165.735087804] [global_costmap.global_costmap]: Deactivating
+[planner_server-2] [INFO] [1790982166.235342722] [planner_server]: Deactivating plugin GridBased of type SmacPlanner2D
+[planner_server-2] [INFO] [1790982166.235383666] [planner_server]: Destroying bond (planner_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982166.349237839] [lifecycle_manager_pilha]: [34m[1mDeactivating amcl[0m[0m
+[amcl-6] [INFO] [1790982166.349591285] [amcl]: Deactivating
+[amcl-6] [INFO] [1790982166.349618712] [amcl]: Destroying bond (amcl) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982166.462645645] [lifecycle_manager_pilha]: [34m[1mDeactivating map_server[0m[0m
+[map_server-1] [INFO] [1790982166.462951092] [map_server]: Deactivating
+[map_server-1] [INFO] [1790982166.462974263] [map_server]: Destroying bond (map_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982166.576983810] [lifecycle_manager_pilha]: [34m[1mCleaning up collision_monitor[0m[0m
+[collision_monitor-9] [INFO] [1790982166.577401882] [collision_monitor]: Cleaning up
+[collision_monitor-9] [INFO] [1790982166.581783894] [collision_monitor]: [PolygonApproach]: Destroying Polygon
+[collision_monitor-9] [INFO] [1790982166.582768090] [collision_monitor]: [PolygonStop]: Destroying Polygon
+[collision_monitor-9] [INFO] [1790982166.583890178] [collision_monitor]: [livox]: Destroying PointCloud
+[lifecycle_manager-7] [INFO] [1790982166.588016135] [lifecycle_manager_pilha]: [34m[1mCleaning up bt_navigator[0m[0m
+[bt_navigator-5] [INFO] [1790982166.588227143] [bt_navigator]: Cleaning up
+[bt_navigator-5] [INFO] [1790982166.669137124] [bt_navigator]: Completed Cleaning up
+[lifecycle_manager-7] [INFO] [1790982166.669637772] [lifecycle_manager_pilha]: [34m[1mCleaning up controller_server[0m[0m
+[controller_server-4] [INFO] [1790982166.669891106] [controller_server]: Cleaning up
+[controller_server-4] [INFO] [1790982166.669911318] [controller_server]: Cleaning up controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[controller_server-4] [INFO] [1790982166.676520417] [local_costmap.local_costmap]: Cleaning up
+[lifecycle_manager-7] [INFO] [1790982166.747756169] [lifecycle_manager_pilha]: [34m[1mCleaning up smoother_server[0m[0m
+[smoother_server-3] [INFO] [1790982166.748914647] [smoother_server]: Cleaning up
+[smoother_server-3] [INFO] [1790982166.748977454] [smoother_server]: Cleaning up smoother: suave of type nav2_constrained_smoother::ConstrainedSmoother
+[lifecycle_manager-7] [INFO] [1790982166.770109074] [lifecycle_manager_pilha]: [34m[1mCleaning up planner_server[0m[0m
+[planner_server-2] [INFO] [1790982166.770338273] [planner_server]: Cleaning up
+[planner_server-2] [INFO] [1790982166.789156913] [global_costmap.global_costmap]: Cleaning up
+[planner_server-2] [INFO] [1790982166.797503965] [planner_server]: Cleaning up plugin GridBased of type SmacPlanner2D
+[planner_server-2] [INFO] [1790982166.799090908] [planner_server]: Destroying plugin GridBased of type SmacPlanner2D
+[lifecycle_manager-7] [INFO] [1790982166.833481613] [lifecycle_manager_pilha]: [34m[1mCleaning up amcl[0m[0m
+[amcl-6] [INFO] [1790982166.833736571] [amcl]: Cleaning up
+[lifecycle_manager-7] [INFO] [1790982166.854319557] [lifecycle_manager_pilha]: [34m[1mCleaning up map_server[0m[0m
+[map_server-1] [INFO] [1790982166.854542521] [map_server]: Cleaning up
+[lifecycle_manager-7] [INFO] [1790982166.862575137] [lifecycle_manager_pilha]: [34m[1mManaged nodes have been reset[0m[0m
+[lifecycle_manager-7] [INFO] [1790982167.864685055] [lifecycle_manager_pilha]: [34m[1mSuccessfully re-established connections from server respawns, starting back up.[0m[0m
+[lifecycle_manager-7] [INFO] [1790982167.864719079] [lifecycle_manager_pilha]: [34m[1mStarting managed nodes bringup...[0m[0m
+[lifecycle_manager-7] [INFO] [1790982167.864728312] [lifecycle_manager_pilha]: [34m[1mConfiguring map_server[0m[0m
+[map_server-1] [INFO] [1790982167.864900749] [map_server]: Configuring
+[map_server-1] [INFO] [1790982167.864933911] [map_io]: Loading yaml file: /home/bara/Controle_robo_livox/maps/andar3_completo/andar3_completo.yaml
+[map_server-1] [INFO] [1790982167.865129009] [map_io]: resolution: 0.05
+[map_server-1] [INFO] [1790982167.865140002] [map_io]: origin[0]: -2.202
+[map_server-1] [INFO] [1790982167.865148973] [map_io]: origin[1]: -12.239
+[map_server-1] [INFO] [1790982167.865156236] [map_io]: origin[2]: 0
+[map_server-1] [INFO] [1790982167.865163803] [map_io]: free_thresh: 0.196
+[map_server-1] [INFO] [1790982167.865171236] [map_io]: occupied_thresh: 0.65
+[map_server-1] [INFO] [1790982167.865178028] [map_io]: mode: trinary
+[map_server-1] [INFO] [1790982167.865184958] [map_io]: negate: 0
+[map_server-1] [INFO] [1790982167.865204499] [map_io]: Loading image_file: /home/bara/Controle_robo_livox/maps/andar3_completo/andar3_completo.pgm
+[map_server-1] [INFO] [1790982167.869376835] [map_io]: Read map /home/bara/Controle_robo_livox/maps/andar3_completo/andar3_completo.pgm: 391 X 1158 map @ 0.05 m/cell
+[lifecycle_manager-7] [INFO] [1790982167.876022692] [lifecycle_manager_pilha]: [34m[1mConfiguring amcl[0m[0m
+[amcl-6] [INFO] [1790982167.876303972] [amcl]: Configuring
+[amcl-6] [INFO] [1790982167.876373073] [amcl]: initTransforms
+[amcl-6] [INFO] [1790982167.885677492] [amcl]: initPubSub
+[amcl-6] [INFO] [1790982167.890806706] [amcl]: Subscribed to map topic.
+[lifecycle_manager-7] [INFO] [1790982167.898594580] [lifecycle_manager_pilha]: [34m[1mConfiguring planner_server[0m[0m
+[planner_server-2] [INFO] [1790982167.898989831] [planner_server]: Configuring
+[planner_server-2] [INFO] [1790982167.899040228] [global_costmap.global_costmap]: Configuring
+[planner_server-2] [INFO] [1790982167.911569394] [global_costmap.global_costmap]: Using plugin "static_layer"
+[planner_server-2] [INFO] [1790982167.911690062] [global_costmap.global_costmap]: Subscribing to the map topic (/map) with transient local durability
+[planner_server-2] [INFO] [1790982167.913851986] [global_costmap.global_costmap]: Initialized plugin "static_layer"
+[planner_server-2] [INFO] [1790982167.913915568] [global_costmap.global_costmap]: Using plugin "obstacle_layer"
+[planner_server-2] [INFO] [1790982167.914000640] [global_costmap.global_costmap]: Subscribed to Topics: livox
+[planner_server-2] [INFO] [1790982167.918855131] [global_costmap.global_costmap]: Initialized plugin "obstacle_layer"
+[planner_server-2] [INFO] [1790982167.918904122] [global_costmap.global_costmap]: Using plugin "inflation_layer"
+[planner_server-2] [INFO] [1790982167.919119403] [global_costmap.global_costmap]: Initialized plugin "inflation_layer"
+[planner_server-2] [INFO] [1790982167.963777950] [planner_server]: Created global planner plugin GridBased of type nav2_smac_planner::SmacPlanner2D
+[planner_server-2] [INFO] [1790982167.963843007] [planner_server]: Configuring GridBased of type SmacPlanner2D
+[planner_server-2] [ERROR] [1790982167.963873916] [planner_server]: Inflation layer either not found or inflation is not set sufficiently for optimized non-circular collision checking capabilities. It is HIGHLY recommended to set the inflation radius to be at MINIMUM half of the robot's largest cross-section. See github.com/ros-planning/navigation2/tree/main/nav2_smac_planner#potential-fields for full instructions. This will substantially impact run-time performance.
+[planner_server-2] [INFO] [1790982167.965742352] [planner_server]: Configured plugin GridBased of type SmacPlanner2D with tolerance 0.25, maximum iterations 1000000, max on approach iterations 1000, and not allowing unknown traversal.
+[planner_server-2] [INFO] [1790982167.965811795] [planner_server]: Planner Server has GridBased GridBased GridBased  planners available.
+[lifecycle_manager-7] [INFO] [1790982167.986428775] [lifecycle_manager_pilha]: [34m[1mConfiguring smoother_server[0m[0m
+[smoother_server-3] [INFO] [1790982167.986682408] [smoother_server]: Configuring smoother server
+[smoother_server-3] [INFO] [1790982167.996393604] [smoother_server]: Created smoother : suave of type nav2_constrained_smoother/ConstrainedSmoother
+[smoother_server-3] [INFO] [1790982167.996497379] [smoother_server]: Created smoother : simples of type nav2_smoother::SimpleSmoother
+[smoother_server-3] [INFO] [1790982167.996543841] [smoother_server]: Created smoother : savgol of type nav2_smoother::SavitzkyGolaySmoother
+[smoother_server-3] [INFO] [1790982167.996563452] [smoother_server]: Smoother Server has suave simples savgol suave simples savgol suave simples savgol  smoothers available.
+[lifecycle_manager-7] [INFO] [1790982168.006815188] [lifecycle_manager_pilha]: [34m[1mConfiguring controller_server[0m[0m
+[controller_server-4] [INFO] [1790982168.007093292] [controller_server]: Configuring controller interface
+[controller_server-4] [INFO] [1790982168.007128126] [controller_server]: getting progress checker plugins..
+[controller_server-4] [INFO] [1790982168.007151307] [controller_server]: getting goal checker plugins..
+[controller_server-4] [INFO] [1790982168.007179989] [controller_server]: Controller frequency set to 5.0000Hz
+[controller_server-4] [INFO] [1790982168.007244192] [local_costmap.local_costmap]: Configuring
+[controller_server-4] [INFO] [1790982168.018301285] [local_costmap.local_costmap]: Using plugin "static_layer"
+[controller_server-4] [INFO] [1790982168.018420990] [local_costmap.local_costmap]: Subscribing to the map topic (/map) with transient local durability
+[controller_server-4] [INFO] [1790982168.020063043] [local_costmap.local_costmap]: Initialized plugin "static_layer"
+[controller_server-4] [INFO] [1790982168.020105014] [local_costmap.local_costmap]: Using plugin "obstacle_layer"
+[controller_server-4] [INFO] [1790982168.020178115] [local_costmap.local_costmap]: Subscribed to Topics: livox
+[controller_server-4] [INFO] [1790982168.025998477] [local_costmap.local_costmap]: Initialized plugin "obstacle_layer"
+[controller_server-4] [INFO] [1790982168.026030143] [local_costmap.local_costmap]: Using plugin "inflation_layer"
+[controller_server-4] [INFO] [1790982168.026220969] [local_costmap.local_costmap]: Initialized plugin "inflation_layer"
+[controller_server-4] [INFO] [1790982168.060782861] [controller_server]: Created progress_checker : progress_checker of type nav2_controller::SimpleProgressChecker
+[controller_server-4] [INFO] [1790982168.060831883] [controller_server]: Controller Server has progress_checker progress_checker progress_checker  progress checkers available.
+[controller_server-4] [INFO] [1790982168.060862167] [controller_server]: Created goal checker : goal_checker of type nav2_controller::SimpleGoalChecker
+[controller_server-4] [INFO] [1790982168.060882170] [controller_server]: Controller Server has goal_checker goal_checker goal_checker  goal checkers available.
+[controller_server-4] [INFO] [1790982168.060908735] [controller_server]: Created controller : FollowPath of type nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[controller_server-4] [INFO] [1790982168.066405971] [controller_server]: Controller Server has FollowPath FollowPath FollowPath  controllers available.
+[lifecycle_manager-7] [INFO] [1790982168.077842713] [lifecycle_manager_pilha]: [34m[1mConfiguring bt_navigator[0m[0m
+[bt_navigator-5] [INFO] [1790982168.078081599] [bt_navigator]: Configuring
+[bt_navigator-5] [INFO] [1790982168.083710912] [bt_navigator]: Creating navigator id navigate_to_pose of type nav2_bt_navigator::NavigateToPoseNavigator
+[lifecycle_manager-7] [INFO] [1790982168.140490910] [lifecycle_manager_pilha]: [34m[1mConfiguring collision_monitor[0m[0m
+[collision_monitor-9] [INFO] [1790982168.140900114] [collision_monitor]: Configuring
+[collision_monitor-9] [INFO] [1790982168.145571780] [collision_monitor]: [livox]: Creating PointCloud
+[collision_monitor-9] [INFO] [1790982168.148005716] [collision_monitor]: [PolygonApproach]: Creating Polygon
+[collision_monitor-9] [INFO] [1790982168.149937167] [collision_monitor]: [PolygonStop]: Creating Polygon
+[lifecycle_manager-7] [INFO] [1790982168.165006012] [lifecycle_manager_pilha]: [34m[1mActivating map_server[0m[0m
+[map_server-1] [INFO] [1790982168.165298355] [map_server]: Activating
+[map_server-1] [INFO] [1790982168.165728053] [map_server]: Creating bond (map_server) to lifecycle manager.
+[planner_server-2] [INFO] [1790982168.166036972] [global_costmap.global_costmap]: StaticLayer: Resizing costmap to 391 X 1158 at 0.050000 m/pix
+[controller_server-4] [INFO] [1790982168.166726170] [local_costmap.local_costmap]: StaticLayer: Resizing static layer to 391 X 1158 at 0.050000 m/pix
+[amcl-6] [INFO] [1790982168.166840216] [amcl]: Received a 391 X 1158 map @ 0.050 m/pix
+[lifecycle_manager-7] [INFO] [1790982168.277543299] [lifecycle_manager_pilha]: Server map_server connected with bond.
+[lifecycle_manager-7] [INFO] [1790982168.277593553] [lifecycle_manager_pilha]: [34m[1mActivating amcl[0m[0m
+[amcl-6] [INFO] [1790982168.278024875] [amcl]: Activating
+[amcl-6] [INFO] [1790982168.278056295] [amcl]: initialPoseReceived
+[amcl-6] [INFO] [1790982168.278126662] [amcl]: Setting pose (1790982168.278127): 0.002 -0.000 0.000
+[amcl-6] [INFO] [1790982168.278857000] [amcl]: Creating bond (amcl) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982168.385300651] [lifecycle_manager_pilha]: Server amcl connected with bond.
+[lifecycle_manager-7] [INFO] [1790982168.385329136] [lifecycle_manager_pilha]: [34m[1mActivating planner_server[0m[0m
+[planner_server-2] [INFO] [1790982168.385661134] [planner_server]: Activating
+[planner_server-2] [INFO] [1790982168.385684499] [global_costmap.global_costmap]: Activating
+[planner_server-2] [INFO] [1790982168.385692737] [global_costmap.global_costmap]: Checking transform
+[planner_server-2] [INFO] [1790982168.385704288] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
+[amcl-6] [INFO] [1790982168.712590953] [amcl]: createLaserObject
+[planner_server-2] [INFO] [1790982168.885787667] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Lookup would require extrapolation into the past.  Requested time 1790982168.819124 but the earliest data is at time 1790982169.019044, when looking up transform from frame [base_link] to frame [map]
+[amcl-6] [INFO] [1790982169.041267207] [amcl]: Message Filter dropping message: frame 'base_link' at time 1790982167.319 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[amcl-6] [INFO] [1790982169.225778494] [amcl]: Message Filter dropping message: frame 'base_link' at time 1790982167.519 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[amcl-6] [INFO] [1790982169.359987179] [amcl]: Message Filter dropping message: frame 'base_link' at time 1790982167.619 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[planner_server-2] [INFO] [1790982169.385838974] [global_costmap.global_costmap]: start
+[amcl-6] [INFO] [1790982169.477163316] [amcl]: Message Filter dropping message: frame 'base_link' at time 1790982167.819 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[amcl-6] [INFO] [1790982169.603457696] [amcl]: Message Filter dropping message: frame 'base_link' at time 1790982167.919 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[planner_server-2] [INFO] [1790982169.722031165] [global_costmap.global_costmap]: Message Filter dropping message: frame 'livox_frame' at time 1790982168.720 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[planner_server-2] [INFO] [1790982169.820788233] [global_costmap.global_costmap]: Message Filter dropping message: frame 'livox_frame' at time 1790982168.919 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[planner_server-2] [INFO] [1790982169.943281627] [global_costmap.global_costmap]: Message Filter dropping message: frame 'livox_frame' at time 1790982169.019 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[planner_server-2] [INFO] [1790982170.437254241] [planner_server]: Activating plugin GridBased of type SmacPlanner2D
+[planner_server-2] [INFO] [1790982170.441400728] [planner_server]: Creating bond (planner_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982170.551743997] [lifecycle_manager_pilha]: Server planner_server connected with bond.
+[lifecycle_manager-7] [INFO] [1790982170.551792150] [lifecycle_manager_pilha]: [34m[1mActivating smoother_server[0m[0m
+[smoother_server-3] [INFO] [1790982170.552263246] [smoother_server]: Activating
+[smoother_server-3] [INFO] [1790982170.552284105] [smoother_server]: Activating smoother: suave of type nav2_constrained_smoother::ConstrainedSmoother
+[smoother_server-3] [INFO] [1790982170.552293146] [smoother_server]: Creating bond (smoother_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982170.660068861] [lifecycle_manager_pilha]: Server smoother_server connected with bond.
+[lifecycle_manager-7] [INFO] [1790982170.660106380] [lifecycle_manager_pilha]: [34m[1mActivating controller_server[0m[0m
+[controller_server-4] [INFO] [1790982170.660572888] [controller_server]: Activating
+[controller_server-4] [INFO] [1790982170.660602057] [local_costmap.local_costmap]: Activating
+[controller_server-4] [INFO] [1790982170.660613338] [local_costmap.local_costmap]: Checking transform
+[controller_server-4] [INFO] [1790982170.660707438] [local_costmap.local_costmap]: start
+[controller_server-4] [INFO] [1790982170.912079665] [controller_server]: Activating controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[controller_server-4] [INFO] [1790982170.912118490] [controller_server]: Creating bond (controller_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982171.019347792] [lifecycle_manager_pilha]: Server controller_server connected with bond.
+[lifecycle_manager-7] [INFO] [1790982171.019405863] [lifecycle_manager_pilha]: [34m[1mActivating bt_navigator[0m[0m
+[bt_navigator-5] [INFO] [1790982171.021445866] [bt_navigator]: Activating
+[bt_navigator-5] [INFO] [1790982171.066356252] [bt_navigator]: Creating bond (bt_navigator) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982171.174522681] [lifecycle_manager_pilha]: Server bt_navigator connected with bond.
+[lifecycle_manager-7] [INFO] [1790982171.174552649] [lifecycle_manager_pilha]: [34m[1mActivating collision_monitor[0m[0m
+[collision_monitor-9] [INFO] [1790982171.174955374] [collision_monitor]: Activating
+[collision_monitor-9] [INFO] [1790982171.174990618] [collision_monitor]: Creating bond (collision_monitor) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982171.343108612] [lifecycle_manager_pilha]: Server collision_monitor connected with bond.
+[lifecycle_manager-7] [INFO] [1790982171.343148557] [lifecycle_manager_pilha]: [34m[1mManaged nodes are active[0m[0m
+[lifecycle_manager-7] [INFO] [1790982171.343156952] [lifecycle_manager_pilha]: [34m[1mCreating bond timer...[0m[0m
+[bt_navigator-5] [INFO] [1790982183.153303760] [bt_navigator]: Begin navigating from current location (0.00, -0.00) to (1.11, 18.73)
+[smoother_server-3] [INFO] [1790982183.215098795] [smoother_server]: Received a path to smooth.
+[path_follower-11] [WARN] [1790982183.230391644] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[controller_server-4] [INFO] [1790982183.234806205] [controller_server]: Received a goal, begin computing control effort.
+[controller_server-4] [WARN] [1790982183.234851358] [controller_server]: No goal checker was specified in parameter 'current_goal_checker'. Server will use only plugin loaded goal_checker goal_checker goal_checker . This warning will appear once.
+[controller_server-4] [WARN] [1790982183.234866965] [controller_server]: No progress checker was specified in parameter 'current_progress_checker'. Server will use only plugin loaded progress_checker progress_checker progress_checker . This warning will appear once.
+[lifecycle_manager-7] [INFO] [1790982185.343281205] [lifecycle_manager_pilha]: [34m[1mHave not received a heartbeat from collision_monitor.[0m[0m
+[lifecycle_manager-7] [ERROR] [1790982185.343332962] [lifecycle_manager_pilha]: CRITICAL FAILURE: SERVER collision_monitor IS DOWN after not receiving a heartbeat for 4000 ms. Shutting down related nodes.
+[lifecycle_manager-7] [INFO] [1790982185.343373458] [lifecycle_manager_pilha]: [34m[1mTerminating bond timer...[0m[0m
+[lifecycle_manager-7] [INFO] [1790982185.343387627] [lifecycle_manager_pilha]: [34m[1mResetting managed nodes...[0m[0m
+[lifecycle_manager-7] [INFO] [1790982185.343396306] [lifecycle_manager_pilha]: [34m[1mDeactivating collision_monitor[0m[0m
+[path_follower-11] [INFO] [1790982185.403137729] [path_follower]: 44 amostras -> /home/bara/logs_robo2/seguidor_2026-10-02_200205.csv
+[collision_monitor-9] [INFO] [1790982185.442212587] [collision_monitor]: Deactivating
+[collision_monitor-9] [INFO] [1790982185.442259141] [collision_monitor]: Destroying bond (collision_monitor) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982185.466575051] [lifecycle_manager_pilha]: [34m[1mDeactivating bt_navigator[0m[0m
+[bt_navigator-5] [INFO] [1790982185.466894317] [bt_navigator]: Deactivating
+[bt_navigator-5] [WARN] [1790982185.466916753] [bt_navigator]: [navigate_to_pose] [ActionServer] Requested to deactivate server but goal is still executing. Should check if action server is running before deactivating.
+[bt_navigator-5] [ERROR] [1790982185.493970081] [bt_navigator_navigate_to_pose_rclcpp_node]: Failed to get result for follow_path in node halt!
+[bt_navigator-5] [WARN] [1790982185.494162970] [bt_navigator]: [navigate_to_pose] [ActionServer] Aborting handle.
+[bt_navigator-5] [INFO] [1790982185.494368101] [bt_navigator]: Goal canceled
+[bt_navigator-5] [WARN] [1790982185.494388548] [bt_navigator]: [navigate_to_pose] [ActionServer] Stopping the thread per request.
+[bt_navigator-5] [INFO] [1790982185.494443821] [bt_navigator]: Destroying bond (bt_navigator) to lifecycle manager.
+[path_follower-11] [INFO] [1790982185.495911313] [path_follower]: parado (objetivo encerrado)
+[lifecycle_manager-7] [INFO] [1790982185.609178589] [lifecycle_manager_pilha]: [34m[1mDeactivating controller_server[0m[0m
+[controller_server-4] [INFO] [1790982185.609567859] [controller_server]: Deactivating
+[controller_server-4] [WARN] [1790982185.609586695] [controller_server]: [follow_path] [ActionServer] Requested to deactivate server but goal is still executing. Should check if action server is running before deactivating.
+[controller_server-4] [WARN] [1790982185.635097082] [controller_server]: [follow_path] [ActionServer] Stopping the thread per request.
+[controller_server-4] [INFO] [1790982185.635136246] [controller_server]: [follow_path] [ActionServer] Client requested to cancel the goal. Cancelling.
+[controller_server-4] [INFO] [1790982185.635356564] [controller_server]: Deactivating controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[controller_server-4] [INFO] [1790982185.635400352] [local_costmap.local_costmap]: Deactivating
+[controller_server-4] [INFO] [1790982185.661034210] [controller_server]: Destroying bond (controller_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982185.775474750] [lifecycle_manager_pilha]: [34m[1mDeactivating smoother_server[0m[0m
+[smoother_server-3] [INFO] [1790982185.775865050] [smoother_server]: Deactivating
+[smoother_server-3] [INFO] [1790982185.775892304] [smoother_server]: Deactivating smoother: suave of type nav2_constrained_smoother::ConstrainedSmoother
+[smoother_server-3] [INFO] [1790982185.775905178] [smoother_server]: Destroying bond (smoother_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982185.890395930] [lifecycle_manager_pilha]: [34m[1mDeactivating planner_server[0m[0m
+[planner_server-2] [INFO] [1790982185.890644724] [planner_server]: Deactivating
+[planner_server-2] [INFO] [1790982185.890680273] [global_costmap.global_costmap]: Deactivating
+[planner_server-2] [INFO] [1790982186.386001709] [planner_server]: Deactivating plugin GridBased of type SmacPlanner2D
+[planner_server-2] [INFO] [1790982186.386035957] [planner_server]: Destroying bond (planner_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982186.500706126] [lifecycle_manager_pilha]: [34m[1mDeactivating amcl[0m[0m
+[amcl-6] [INFO] [1790982186.501110179] [amcl]: Deactivating
+[amcl-6] [INFO] [1790982186.501138284] [amcl]: Destroying bond (amcl) to lifecycle manager.
+[heading_controller-8] [WARN] [1790982186.543718566] [heading_controller]: alvo de rumo venceu
+[lifecycle_manager-7] [INFO] [1790982186.614817938] [lifecycle_manager_pilha]: [34m[1mDeactivating map_server[0m[0m
+[map_server-1] [INFO] [1790982186.615341237] [map_server]: Deactivating
+[map_server-1] [INFO] [1790982186.615387926] [map_server]: Destroying bond (map_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982186.729998546] [lifecycle_manager_pilha]: [34m[1mCleaning up collision_monitor[0m[0m
+[collision_monitor-9] [INFO] [1790982186.730370067] [collision_monitor]: Cleaning up
+[collision_monitor-9] [INFO] [1790982186.737859623] [collision_monitor]: [PolygonApproach]: Destroying Polygon
+[collision_monitor-9] [INFO] [1790982186.739403422] [collision_monitor]: [PolygonStop]: Destroying Polygon
+[collision_monitor-9] [INFO] [1790982186.741163836] [collision_monitor]: [livox]: Destroying PointCloud
+[lifecycle_manager-7] [INFO] [1790982186.751250236] [lifecycle_manager_pilha]: [34m[1mCleaning up bt_navigator[0m[0m
+[bt_navigator-5] [INFO] [1790982186.751488332] [bt_navigator]: Cleaning up
+[bt_navigator-5] [INFO] [1790982186.884629490] [bt_navigator]: Completed Cleaning up
+[lifecycle_manager-7] [INFO] [1790982186.885256727] [lifecycle_manager_pilha]: [34m[1mCleaning up controller_server[0m[0m
+[controller_server-4] [INFO] [1790982186.885514359] [controller_server]: Cleaning up
+[controller_server-4] [INFO] [1790982186.885538543] [controller_server]: Cleaning up controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[controller_server-4] [INFO] [1790982186.896357726] [local_costmap.local_costmap]: Cleaning up
+[lifecycle_manager-7] [INFO] [1790982186.981966808] [lifecycle_manager_pilha]: [34m[1mCleaning up smoother_server[0m[0m
+[smoother_server-3] [INFO] [1790982186.982205759] [smoother_server]: Cleaning up
+[smoother_server-3] [INFO] [1790982186.982238365] [smoother_server]: Cleaning up smoother: suave of type nav2_constrained_smoother::ConstrainedSmoother
+[lifecycle_manager-7] [INFO] [1790982187.004940436] [lifecycle_manager_pilha]: [34m[1mCleaning up planner_server[0m[0m
+[planner_server-2] [INFO] [1790982187.005205242] [planner_server]: Cleaning up
+[planner_server-2] [INFO] [1790982187.040436702] [global_costmap.global_costmap]: Cleaning up
+[planner_server-2] [INFO] [1790982187.056355004] [planner_server]: Cleaning up plugin GridBased of type SmacPlanner2D
+[planner_server-2] [INFO] [1790982187.059908345] [planner_server]: Destroying plugin GridBased of type SmacPlanner2D
+[lifecycle_manager-7] [INFO] [1790982187.115879813] [lifecycle_manager_pilha]: [34m[1mCleaning up amcl[0m[0m
+[amcl-6] [INFO] [1790982187.116197260] [amcl]: Cleaning up
+[lifecycle_manager-7] [INFO] [1790982187.147599579] [lifecycle_manager_pilha]: [34m[1mCleaning up map_server[0m[0m
+[map_server-1] [INFO] [1790982187.148142898] [map_server]: Cleaning up
+[lifecycle_manager-7] [INFO] [1790982187.157113029] [lifecycle_manager_pilha]: [34m[1mManaged nodes have been reset[0m[0m
+[lifecycle_manager-7] [INFO] [1790982188.159749288] [lifecycle_manager_pilha]: [34m[1mSuccessfully re-established connections from server respawns, starting back up.[0m[0m
+[lifecycle_manager-7] [INFO] [1790982188.159894335] [lifecycle_manager_pilha]: [34m[1mStarting managed nodes bringup...[0m[0m
+[lifecycle_manager-7] [INFO] [1790982188.159941248] [lifecycle_manager_pilha]: [34m[1mConfiguring map_server[0m[0m
+[map_server-1] [INFO] [1790982188.160313161] [map_server]: Configuring
+[map_server-1] [INFO] [1790982188.160393014] [map_io]: Loading yaml file: /home/bara/Controle_robo_livox/maps/andar3_completo/andar3_completo.yaml
+[map_server-1] [INFO] [1790982188.160671099] [map_io]: resolution: 0.05
+[map_server-1] [INFO] [1790982188.160681770] [map_io]: origin[0]: -2.202
+[map_server-1] [INFO] [1790982188.160687219] [map_io]: origin[1]: -12.239
+[map_server-1] [INFO] [1790982188.160691119] [map_io]: origin[2]: 0
+[map_server-1] [INFO] [1790982188.160694966] [map_io]: free_thresh: 0.196
+[map_server-1] [INFO] [1790982188.160698513] [map_io]: occupied_thresh: 0.65
+[map_server-1] [INFO] [1790982188.160702234] [map_io]: mode: trinary
+[map_server-1] [INFO] [1790982188.160706843] [map_io]: negate: 0
+[map_server-1] [INFO] [1790982188.160727057] [map_io]: Loading image_file: /home/bara/Controle_robo_livox/maps/andar3_completo/andar3_completo.pgm
+[map_server-1] [INFO] [1790982188.165497230] [map_io]: Read map /home/bara/Controle_robo_livox/maps/andar3_completo/andar3_completo.pgm: 391 X 1158 map @ 0.05 m/cell
+[lifecycle_manager-7] [INFO] [1790982188.174332817] [lifecycle_manager_pilha]: [34m[1mConfiguring amcl[0m[0m
+[amcl-6] [INFO] [1790982188.174596455] [amcl]: Configuring
+[amcl-6] [INFO] [1790982188.174670034] [amcl]: initTransforms
+[amcl-6] [INFO] [1790982188.187994603] [amcl]: initPubSub
+[amcl-6] [INFO] [1790982188.199118680] [amcl]: Subscribed to map topic.
+[lifecycle_manager-7] [INFO] [1790982188.208491985] [lifecycle_manager_pilha]: [34m[1mConfiguring planner_server[0m[0m
+[planner_server-2] [INFO] [1790982188.208731196] [planner_server]: Configuring
+[planner_server-2] [INFO] [1790982188.208762663] [global_costmap.global_costmap]: Configuring
+[planner_server-2] [INFO] [1790982188.225598138] [global_costmap.global_costmap]: Using plugin "static_layer"
+[planner_server-2] [INFO] [1790982188.225704742] [global_costmap.global_costmap]: Subscribing to the map topic (/map) with transient local durability
+[planner_server-2] [INFO] [1790982188.228397503] [global_costmap.global_costmap]: Initialized plugin "static_layer"
+[planner_server-2] [INFO] [1790982188.228437526] [global_costmap.global_costmap]: Using plugin "obstacle_layer"
+[planner_server-2] [INFO] [1790982188.228509746] [global_costmap.global_costmap]: Subscribed to Topics: livox
+[planner_server-2] [INFO] [1790982188.235284796] [global_costmap.global_costmap]: Initialized plugin "obstacle_layer"
+[planner_server-2] [INFO] [1790982188.235331967] [global_costmap.global_costmap]: Using plugin "inflation_layer"
+[planner_server-2] [INFO] [1790982188.235542610] [global_costmap.global_costmap]: Initialized plugin "inflation_layer"
+[planner_server-2] [INFO] [1790982188.288546422] [planner_server]: Created global planner plugin GridBased of type nav2_smac_planner::SmacPlanner2D
+[planner_server-2] [INFO] [1790982188.288580702] [planner_server]: Configuring GridBased of type SmacPlanner2D
+[planner_server-2] [ERROR] [1790982188.288607702] [planner_server]: Inflation layer either not found or inflation is not set sufficiently for optimized non-circular collision checking capabilities. It is HIGHLY recommended to set the inflation radius to be at MINIMUM half of the robot's largest cross-section. See github.com/ros-planning/navigation2/tree/main/nav2_smac_planner#potential-fields for full instructions. This will substantially impact run-time performance.
+[planner_server-2] [INFO] [1790982188.290567456] [planner_server]: Configured plugin GridBased of type SmacPlanner2D with tolerance 0.25, maximum iterations 1000000, max on approach iterations 1000, and not allowing unknown traversal.
+[planner_server-2] [INFO] [1790982188.290610588] [planner_server]: Planner Server has GridBased GridBased GridBased GridBased  planners available.
+[lifecycle_manager-7] [INFO] [1790982188.317324005] [lifecycle_manager_pilha]: [34m[1mConfiguring smoother_server[0m[0m
+[smoother_server-3] [INFO] [1790982188.317676115] [smoother_server]: Configuring smoother server
+[smoother_server-3] [INFO] [1790982188.330712632] [smoother_server]: Created smoother : suave of type nav2_constrained_smoother/ConstrainedSmoother
+[smoother_server-3] [INFO] [1790982188.330812832] [smoother_server]: Created smoother : simples of type nav2_smoother::SimpleSmoother
+[smoother_server-3] [INFO] [1790982188.330856891] [smoother_server]: Created smoother : savgol of type nav2_smoother::SavitzkyGolaySmoother
+[smoother_server-3] [INFO] [1790982188.330875038] [smoother_server]: Smoother Server has suave simples savgol suave simples savgol suave simples savgol suave simples savgol  smoothers available.
+[lifecycle_manager-7] [INFO] [1790982188.349680116] [lifecycle_manager_pilha]: [34m[1mConfiguring controller_server[0m[0m
+[controller_server-4] [INFO] [1790982188.350006608] [controller_server]: Configuring controller interface
+[controller_server-4] [INFO] [1790982188.350036189] [controller_server]: getting progress checker plugins..
+[controller_server-4] [INFO] [1790982188.350058278] [controller_server]: getting goal checker plugins..
+[controller_server-4] [INFO] [1790982188.350080289] [controller_server]: Controller frequency set to 5.0000Hz
+[controller_server-4] [INFO] [1790982188.350106246] [local_costmap.local_costmap]: Configuring
+[controller_server-4] [INFO] [1790982188.369419519] [local_costmap.local_costmap]: Using plugin "static_layer"
+[controller_server-4] [INFO] [1790982188.369562242] [local_costmap.local_costmap]: Subscribing to the map topic (/map) with transient local durability
+[controller_server-4] [INFO] [1790982188.372762283] [local_costmap.local_costmap]: Initialized plugin "static_layer"
+[controller_server-4] [INFO] [1790982188.372795095] [local_costmap.local_costmap]: Using plugin "obstacle_layer"
+[controller_server-4] [INFO] [1790982188.372849322] [local_costmap.local_costmap]: Subscribed to Topics: livox
+[controller_server-4] [INFO] [1790982188.382598057] [local_costmap.local_costmap]: Initialized plugin "obstacle_layer"
+[controller_server-4] [INFO] [1790982188.382639789] [local_costmap.local_costmap]: Using plugin "inflation_layer"
+[controller_server-4] [INFO] [1790982188.382837918] [local_costmap.local_costmap]: Initialized plugin "inflation_layer"
+[controller_server-4] [INFO] [1790982188.439781250] [controller_server]: Created progress_checker : progress_checker of type nav2_controller::SimpleProgressChecker
+[controller_server-4] [INFO] [1790982188.439817121] [controller_server]: Controller Server has progress_checker progress_checker progress_checker progress_checker  progress checkers available.
+[controller_server-4] [INFO] [1790982188.439834815] [controller_server]: Created goal checker : goal_checker of type nav2_controller::SimpleGoalChecker
+[controller_server-4] [INFO] [1790982188.439848783] [controller_server]: Controller Server has goal_checker goal_checker goal_checker goal_checker  goal checkers available.
+[controller_server-4] [INFO] [1790982188.439866205] [controller_server]: Created controller : FollowPath of type nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[controller_server-4] [INFO] [1790982188.450370768] [controller_server]: Controller Server has FollowPath FollowPath FollowPath FollowPath  controllers available.
+[lifecycle_manager-7] [INFO] [1790982188.469072826] [lifecycle_manager_pilha]: [34m[1mConfiguring bt_navigator[0m[0m
+[bt_navigator-5] [INFO] [1790982188.469320607] [bt_navigator]: Configuring
+[bt_navigator-5] [INFO] [1790982188.478132783] [bt_navigator]: Creating navigator id navigate_to_pose of type nav2_bt_navigator::NavigateToPoseNavigator
+[lifecycle_manager-7] [INFO] [1790982188.566090413] [lifecycle_manager_pilha]: [34m[1mConfiguring collision_monitor[0m[0m
+[collision_monitor-9] [INFO] [1790982188.566382210] [collision_monitor]: Configuring
+[collision_monitor-9] [INFO] [1790982188.571559776] [collision_monitor]: [livox]: Creating PointCloud
+[collision_monitor-9] [INFO] [1790982188.574121393] [collision_monitor]: [PolygonApproach]: Creating Polygon
+[collision_monitor-9] [INFO] [1790982188.576482571] [collision_monitor]: [PolygonStop]: Creating Polygon
+[lifecycle_manager-7] [INFO] [1790982188.597771493] [lifecycle_manager_pilha]: [34m[1mActivating map_server[0m[0m
+[map_server-1] [INFO] [1790982188.598009751] [map_server]: Activating
+[map_server-1] [INFO] [1790982188.598569036] [map_server]: Creating bond (map_server) to lifecycle manager.
+[amcl-6] [INFO] [1790982188.598863648] [amcl]: Received a 391 X 1158 map @ 0.050 m/pix
+[planner_server-2] [INFO] [1790982188.598925426] [global_costmap.global_costmap]: StaticLayer: Resizing costmap to 391 X 1158 at 0.050000 m/pix
+[controller_server-4] [INFO] [1790982188.603367055] [local_costmap.local_costmap]: StaticLayer: Resizing static layer to 391 X 1158 at 0.050000 m/pix
+[lifecycle_manager-7] [INFO] [1790982188.713424028] [lifecycle_manager_pilha]: Server map_server connected with bond.
+[lifecycle_manager-7] [INFO] [1790982188.713467172] [lifecycle_manager_pilha]: [34m[1mActivating amcl[0m[0m
+[amcl-6] [INFO] [1790982188.713815776] [amcl]: Activating
+[amcl-6] [INFO] [1790982188.713841193] [amcl]: initialPoseReceived
+[amcl-6] [INFO] [1790982188.713895655] [amcl]: Setting pose (1790982188.713896): 0.282 -0.073 -0.452
+[amcl-6] [INFO] [1790982188.714737832] [amcl]: Creating bond (amcl) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982188.827707577] [lifecycle_manager_pilha]: Server amcl connected with bond.
+[lifecycle_manager-7] [INFO] [1790982188.827841781] [lifecycle_manager_pilha]: [34m[1mActivating planner_server[0m[0m
+[planner_server-2] [INFO] [1790982188.828488459] [planner_server]: Activating
+[planner_server-2] [INFO] [1790982188.828540993] [global_costmap.global_costmap]: Activating
+[planner_server-2] [INFO] [1790982188.828555838] [global_costmap.global_costmap]: Checking transform
+[planner_server-2] [INFO] [1790982188.828577472] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
+[amcl-6] [INFO] [1790982188.920057380] [amcl]: createLaserObject
+[bt_navigator-5] [INFO] [1790982188.997494133] [bt_navigator]: Action server is inactive. Rejecting the goal.
+[planner_server-2] [INFO] [1790982189.328653330] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Lookup would require extrapolation into the past.  Requested time 1790982189.219035 but the earliest data is at time 1790982189.219593, when looking up transform from frame [base_link] to frame [map]
+[amcl-6] [INFO] [1790982189.368737434] [amcl]: Message Filter dropping message: frame 'base_link' at time 1790982187.619 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[amcl-6] [INFO] [1790982189.554069125] [amcl]: Message Filter dropping message: frame 'base_link' at time 1790982187.819 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[amcl-6] [INFO] [1790982189.694417974] [amcl]: Message Filter dropping message: frame 'base_link' at time 1790982188.019 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[amcl-6] [INFO] [1790982189.806217723] [amcl]: Message Filter dropping message: frame 'base_link' at time 1790982188.119 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[planner_server-2] [INFO] [1790982189.828768071] [global_costmap.global_costmap]: start
+[planner_server-2] [INFO] [1790982190.191092696] [global_costmap.global_costmap]: Message Filter dropping message: frame 'livox_frame' at time 1790982189.220 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[planner_server-2] [INFO] [1790982190.882067575] [planner_server]: Activating plugin GridBased of type SmacPlanner2D
+[planner_server-2] [INFO] [1790982190.886809186] [planner_server]: Creating bond (planner_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982190.996713302] [lifecycle_manager_pilha]: Server planner_server connected with bond.
+[lifecycle_manager-7] [INFO] [1790982190.996750005] [lifecycle_manager_pilha]: [34m[1mActivating smoother_server[0m[0m
+[smoother_server-3] [INFO] [1790982190.997129322] [smoother_server]: Activating
+[smoother_server-3] [INFO] [1790982190.997147201] [smoother_server]: Activating smoother: suave of type nav2_constrained_smoother::ConstrainedSmoother
+[smoother_server-3] [INFO] [1790982190.997156675] [smoother_server]: Creating bond (smoother_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982191.105880506] [lifecycle_manager_pilha]: Server smoother_server connected with bond.
+[lifecycle_manager-7] [INFO] [1790982191.105911647] [lifecycle_manager_pilha]: [34m[1mActivating controller_server[0m[0m
+[controller_server-4] [INFO] [1790982191.106276296] [controller_server]: Activating
+[controller_server-4] [INFO] [1790982191.106304374] [local_costmap.local_costmap]: Activating
+[controller_server-4] [INFO] [1790982191.106317811] [local_costmap.local_costmap]: Checking transform
+[controller_server-4] [INFO] [1790982191.106421588] [local_costmap.local_costmap]: start
+[controller_server-4] [INFO] [1790982191.358595584] [controller_server]: Activating controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[controller_server-4] [INFO] [1790982191.358629956] [controller_server]: Creating bond (controller_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982191.470759532] [lifecycle_manager_pilha]: Server controller_server connected with bond.
+[lifecycle_manager-7] [INFO] [1790982191.470805577] [lifecycle_manager_pilha]: [34m[1mActivating bt_navigator[0m[0m
+[bt_navigator-5] [INFO] [1790982191.471279142] [bt_navigator]: Activating
+[bt_navigator-5] [INFO] [1790982191.525268421] [bt_navigator]: Creating bond (bt_navigator) to lifecycle manager.
+[heading_controller-8] [WARN] [1790982191.593638968] [heading_controller]: alvo de rumo venceu
+[lifecycle_manager-7] [INFO] [1790982191.636256249] [lifecycle_manager_pilha]: Server bt_navigator connected with bond.
+[lifecycle_manager-7] [INFO] [1790982191.636302668] [lifecycle_manager_pilha]: [34m[1mActivating collision_monitor[0m[0m
+[collision_monitor-9] [INFO] [1790982191.636679013] [collision_monitor]: Activating
+[collision_monitor-9] [INFO] [1790982191.636726704] [collision_monitor]: Creating bond (collision_monitor) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982191.755711877] [lifecycle_manager_pilha]: Server collision_monitor connected with bond.
+[lifecycle_manager-7] [INFO] [1790982191.755750428] [lifecycle_manager_pilha]: [34m[1mManaged nodes are active[0m[0m
+[lifecycle_manager-7] [INFO] [1790982191.755760586] [lifecycle_manager_pilha]: [34m[1mCreating bond timer...[0m[0m
+[bt_navigator-5] [INFO] [1790982192.501905108] [bt_navigator]: Begin navigating from current location (0.28, -0.08) to (1.11, 18.73)
+[smoother_server-3] [INFO] [1790982192.562946375] [smoother_server]: Received a path to smooth.
+[controller_server-4] [INFO] [1790982192.583039388] [controller_server]: Received a goal, begin computing control effort.
+[smoother_server-3] [INFO] [1790982197.653032657] [smoother_server]: Received a path to smooth.
+[path_follower-11] [WARN] [1790982197.663699399] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[controller_server-4] [WARN] [1790982197.672941232] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790982197.783194394] [controller_server]: Passing new path to controller.
+[smoother_server-3] [INFO] [1790982202.733215288] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790982202.753122323] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790982202.783243066] [controller_server]: Passing new path to controller.
+[lifecycle_manager-7] [INFO] [1790982205.755865205] [lifecycle_manager_pilha]: [34m[1mHave not received a heartbeat from collision_monitor.[0m[0m
+[lifecycle_manager-7] [ERROR] [1790982205.755917389] [lifecycle_manager_pilha]: CRITICAL FAILURE: SERVER collision_monitor IS DOWN after not receiving a heartbeat for 4000 ms. Shutting down related nodes.
+[lifecycle_manager-7] [INFO] [1790982205.755978787] [lifecycle_manager_pilha]: [34m[1mTerminating bond timer...[0m[0m
+[lifecycle_manager-7] [INFO] [1790982205.755990922] [lifecycle_manager_pilha]: [34m[1mResetting managed nodes...[0m[0m
+[lifecycle_manager-7] [INFO] [1790982205.756000829] [lifecycle_manager_pilha]: [34m[1mDeactivating collision_monitor[0m[0m
+[collision_monitor-9] [INFO] [1790982205.947723764] [collision_monitor]: Deactivating
+[collision_monitor-9] [INFO] [1790982205.947760462] [collision_monitor]: Destroying bond (collision_monitor) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982205.970563612] [lifecycle_manager_pilha]: [34m[1mDeactivating bt_navigator[0m[0m
+[bt_navigator-5] [INFO] [1790982205.970901536] [bt_navigator]: Deactivating
+[bt_navigator-5] [WARN] [1790982205.970940220] [bt_navigator]: [navigate_to_pose] [ActionServer] Requested to deactivate server but goal is still executing. Should check if action server is running before deactivating.
+[controller_server-4] [INFO] [1790982205.983194267] [controller_server]: Cancellation was successful. Stopping the robot.
+[controller_server-4] [INFO] [1790982205.983241374] [controller_server]: [follow_path] [ActionServer] Client requested to cancel the goal. Cancelling.
+[bt_navigator-5] [WARN] [1790982205.983469061] [bt_navigator]: [navigate_to_pose] [ActionServer] Aborting handle.
+[bt_navigator-5] [INFO] [1790982205.983584006] [bt_navigator]: Goal canceled
+[bt_navigator-5] [WARN] [1790982205.983605456] [bt_navigator]: [navigate_to_pose] [ActionServer] Stopping the thread per request.
+[bt_navigator-5] [INFO] [1790982205.983671790] [bt_navigator]: Destroying bond (bt_navigator) to lifecycle manager.
+[path_follower-11] [INFO] [1790982205.985267178] [path_follower]: parado (objetivo encerrado)
+[lifecycle_manager-7] [INFO] [1790982206.097531709] [lifecycle_manager_pilha]: [34m[1mDeactivating controller_server[0m[0m
+[controller_server-4] [INFO] [1790982206.097886597] [controller_server]: Deactivating
+[controller_server-4] [INFO] [1790982206.097907475] [controller_server]: Deactivating controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[controller_server-4] [INFO] [1790982206.097922614] [local_costmap.local_costmap]: Deactivating
+[controller_server-4] [INFO] [1790982206.106648838] [controller_server]: Destroying bond (controller_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982206.222147633] [lifecycle_manager_pilha]: [34m[1mDeactivating smoother_server[0m[0m
+[smoother_server-3] [INFO] [1790982206.222595408] [smoother_server]: Deactivating
+[smoother_server-3] [INFO] [1790982206.222622009] [smoother_server]: Deactivating smoother: suave of type nav2_constrained_smoother::ConstrainedSmoother
+[smoother_server-3] [INFO] [1790982206.222633012] [smoother_server]: Destroying bond (smoother_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982206.337429066] [lifecycle_manager_pilha]: [34m[1mDeactivating planner_server[0m[0m
+[planner_server-2] [INFO] [1790982206.337871172] [planner_server]: Deactivating
+[planner_server-2] [INFO] [1790982206.337934303] [global_costmap.global_costmap]: Deactivating
+[planner_server-2] [INFO] [1790982206.828972135] [planner_server]: Deactivating plugin GridBased of type SmacPlanner2D
+[planner_server-2] [INFO] [1790982206.829011604] [planner_server]: Destroying bond (planner_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982206.946265436] [lifecycle_manager_pilha]: [34m[1mDeactivating amcl[0m[0m
+[amcl-6] [INFO] [1790982206.946691857] [amcl]: Deactivating
+[amcl-6] [INFO] [1790982206.946719335] [amcl]: Destroying bond (amcl) to lifecycle manager.
+[heading_controller-8] [WARN] [1790982206.993479375] [heading_controller]: alvo de rumo venceu
+[lifecycle_manager-7] [INFO] [1790982207.060217675] [lifecycle_manager_pilha]: [34m[1mDeactivating map_server[0m[0m
+[map_server-1] [INFO] [1790982207.060576601] [map_server]: Deactivating
+[map_server-1] [INFO] [1790982207.060600151] [map_server]: Destroying bond (map_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982207.173556382] [lifecycle_manager_pilha]: [34m[1mCleaning up collision_monitor[0m[0m
+[collision_monitor-9] [INFO] [1790982207.173895553] [collision_monitor]: Cleaning up
+[collision_monitor-9] [INFO] [1790982207.178050145] [collision_monitor]: [PolygonApproach]: Destroying Polygon
+[collision_monitor-9] [INFO] [1790982207.178988106] [collision_monitor]: [PolygonStop]: Destroying Polygon
+[collision_monitor-9] [INFO] [1790982207.179811806] [collision_monitor]: [livox]: Destroying PointCloud
+[lifecycle_manager-7] [INFO] [1790982207.184036014] [lifecycle_manager_pilha]: [34m[1mCleaning up bt_navigator[0m[0m
+[bt_navigator-5] [INFO] [1790982207.184253516] [bt_navigator]: Cleaning up
+[bt_navigator-5] [INFO] [1790982207.267154163] [bt_navigator]: Completed Cleaning up
+[lifecycle_manager-7] [INFO] [1790982207.267676323] [lifecycle_manager_pilha]: [34m[1mCleaning up controller_server[0m[0m
+[controller_server-4] [INFO] [1790982207.267932268] [controller_server]: Cleaning up
+[controller_server-4] [INFO] [1790982207.267957421] [controller_server]: Cleaning up controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[controller_server-4] [INFO] [1790982207.274185490] [local_costmap.local_costmap]: Cleaning up
+[lifecycle_manager-7] [INFO] [1790982207.335547725] [lifecycle_manager_pilha]: [34m[1mCleaning up smoother_server[0m[0m
+[smoother_server-3] [INFO] [1790982207.335832028] [smoother_server]: Cleaning up
+[smoother_server-3] [INFO] [1790982207.335855637] [smoother_server]: Cleaning up smoother: suave of type nav2_constrained_smoother::ConstrainedSmoother
+[lifecycle_manager-7] [INFO] [1790982207.359027548] [lifecycle_manager_pilha]: [34m[1mCleaning up planner_server[0m[0m
+[planner_server-2] [INFO] [1790982207.359267946] [planner_server]: Cleaning up
+[planner_server-2] [INFO] [1790982207.380398895] [global_costmap.global_costmap]: Cleaning up
+[planner_server-2] [INFO] [1790982207.388283216] [planner_server]: Cleaning up plugin GridBased of type SmacPlanner2D
+[planner_server-2] [INFO] [1790982207.391711488] [planner_server]: Destroying plugin GridBased of type SmacPlanner2D
+[lifecycle_manager-7] [INFO] [1790982207.424721694] [lifecycle_manager_pilha]: [34m[1mCleaning up amcl[0m[0m
+[amcl-6] [INFO] [1790982207.424949615] [amcl]: Cleaning up
+[lifecycle_manager-7] [INFO] [1790982207.440667396] [lifecycle_manager_pilha]: [34m[1mCleaning up map_server[0m[0m
+[map_server-1] [INFO] [1790982207.440938102] [map_server]: Cleaning up
+[lifecycle_manager-7] [INFO] [1790982207.448692103] [lifecycle_manager_pilha]: [34m[1mManaged nodes have been reset[0m[0m
+[lifecycle_manager-7] [INFO] [1790982208.450749677] [lifecycle_manager_pilha]: [34m[1mSuccessfully re-established connections from server respawns, starting back up.[0m[0m
+[lifecycle_manager-7] [INFO] [1790982208.450777686] [lifecycle_manager_pilha]: [34m[1mStarting managed nodes bringup...[0m[0m
+[lifecycle_manager-7] [INFO] [1790982208.450783627] [lifecycle_manager_pilha]: [34m[1mConfiguring map_server[0m[0m
+[map_server-1] [INFO] [1790982208.450923589] [map_server]: Configuring
+[map_server-1] [INFO] [1790982208.450956100] [map_io]: Loading yaml file: /home/bara/Controle_robo_livox/maps/andar3_completo/andar3_completo.yaml
+[map_server-1] [INFO] [1790982208.451139477] [map_io]: resolution: 0.05
+[map_server-1] [INFO] [1790982208.451148533] [map_io]: origin[0]: -2.202
+[map_server-1] [INFO] [1790982208.451155588] [map_io]: origin[1]: -12.239
+[map_server-1] [INFO] [1790982208.451161077] [map_io]: origin[2]: 0
+[map_server-1] [INFO] [1790982208.451166933] [map_io]: free_thresh: 0.196
+[map_server-1] [INFO] [1790982208.451172400] [map_io]: occupied_thresh: 0.65
+[map_server-1] [INFO] [1790982208.451177569] [map_io]: mode: trinary
+[map_server-1] [INFO] [1790982208.451182674] [map_io]: negate: 0
+[map_server-1] [INFO] [1790982208.451198483] [map_io]: Loading image_file: /home/bara/Controle_robo_livox/maps/andar3_completo/andar3_completo.pgm
+[map_server-1] [INFO] [1790982208.457269012] [map_io]: Read map /home/bara/Controle_robo_livox/maps/andar3_completo/andar3_completo.pgm: 391 X 1158 map @ 0.05 m/cell
+[lifecycle_manager-7] [INFO] [1790982208.462683251] [lifecycle_manager_pilha]: [34m[1mConfiguring amcl[0m[0m
+[amcl-6] [INFO] [1790982208.462866828] [amcl]: Configuring
+[amcl-6] [INFO] [1790982208.462926511] [amcl]: initTransforms
+[amcl-6] [INFO] [1790982208.468885701] [amcl]: initPubSub
+[amcl-6] [INFO] [1790982208.473149977] [amcl]: Subscribed to map topic.
+[lifecycle_manager-7] [INFO] [1790982208.478566052] [lifecycle_manager_pilha]: [34m[1mConfiguring planner_server[0m[0m
+[planner_server-2] [INFO] [1790982208.478750089] [planner_server]: Configuring
+[planner_server-2] [INFO] [1790982208.478779768] [global_costmap.global_costmap]: Configuring
+[planner_server-2] [INFO] [1790982208.486216690] [global_costmap.global_costmap]: Using plugin "static_layer"
+[planner_server-2] [INFO] [1790982208.486298355] [global_costmap.global_costmap]: Subscribing to the map topic (/map) with transient local durability
+[planner_server-2] [INFO] [1790982208.487311525] [global_costmap.global_costmap]: Initialized plugin "static_layer"
+[planner_server-2] [INFO] [1790982208.487342975] [global_costmap.global_costmap]: Using plugin "obstacle_layer"
+[planner_server-2] [INFO] [1790982208.487411873] [global_costmap.global_costmap]: Subscribed to Topics: livox
+[planner_server-2] [INFO] [1790982208.491145911] [global_costmap.global_costmap]: Initialized plugin "obstacle_layer"
+[planner_server-2] [INFO] [1790982208.491207121] [global_costmap.global_costmap]: Using plugin "inflation_layer"
+[planner_server-2] [INFO] [1790982208.491462535] [global_costmap.global_costmap]: Initialized plugin "inflation_layer"
+[planner_server-2] [INFO] [1790982208.526734576] [planner_server]: Created global planner plugin GridBased of type nav2_smac_planner::SmacPlanner2D
+[planner_server-2] [INFO] [1790982208.526790264] [planner_server]: Configuring GridBased of type SmacPlanner2D
+[planner_server-2] [ERROR] [1790982208.526825820] [planner_server]: Inflation layer either not found or inflation is not set sufficiently for optimized non-circular collision checking capabilities. It is HIGHLY recommended to set the inflation radius to be at MINIMUM half of the robot's largest cross-section. See github.com/ros-planning/navigation2/tree/main/nav2_smac_planner#potential-fields for full instructions. This will substantially impact run-time performance.
+[planner_server-2] [INFO] [1790982208.528425241] [planner_server]: Configured plugin GridBased of type SmacPlanner2D with tolerance 0.25, maximum iterations 1000000, max on approach iterations 1000, and not allowing unknown traversal.
+[planner_server-2] [INFO] [1790982208.528483161] [planner_server]: Planner Server has GridBased GridBased GridBased GridBased GridBased  planners available.
+[lifecycle_manager-7] [INFO] [1790982208.551186271] [lifecycle_manager_pilha]: [34m[1mConfiguring smoother_server[0m[0m
+[smoother_server-3] [INFO] [1790982208.551721917] [smoother_server]: Configuring smoother server
+[smoother_server-3] [INFO] [1790982208.561247245] [smoother_server]: Created smoother : suave of type nav2_constrained_smoother/ConstrainedSmoother
+[smoother_server-3] [INFO] [1790982208.561331053] [smoother_server]: Created smoother : simples of type nav2_smoother::SimpleSmoother
+[smoother_server-3] [INFO] [1790982208.561359279] [smoother_server]: Created smoother : savgol of type nav2_smoother::SavitzkyGolaySmoother
+[smoother_server-3] [INFO] [1790982208.561371623] [smoother_server]: Smoother Server has suave simples savgol suave simples savgol suave simples savgol suave simples savgol suave simples savgol  smoothers available.
+[lifecycle_manager-7] [INFO] [1790982208.572315746] [lifecycle_manager_pilha]: [34m[1mConfiguring controller_server[0m[0m
+[controller_server-4] [INFO] [1790982208.572641264] [controller_server]: Configuring controller interface
+[controller_server-4] [INFO] [1790982208.572662183] [controller_server]: getting progress checker plugins..
+[controller_server-4] [INFO] [1790982208.572677060] [controller_server]: getting goal checker plugins..
+[controller_server-4] [INFO] [1790982208.572689721] [controller_server]: Controller frequency set to 5.0000Hz
+[controller_server-4] [INFO] [1790982208.572709028] [local_costmap.local_costmap]: Configuring
+[controller_server-4] [INFO] [1790982208.585151262] [local_costmap.local_costmap]: Using plugin "static_layer"
+[controller_server-4] [INFO] [1790982208.585262540] [local_costmap.local_costmap]: Subscribing to the map topic (/map) with transient local durability
+[controller_server-4] [INFO] [1790982208.586988366] [local_costmap.local_costmap]: Initialized plugin "static_layer"
+[controller_server-4] [INFO] [1790982208.587021452] [local_costmap.local_costmap]: Using plugin "obstacle_layer"
+[controller_server-4] [INFO] [1790982208.587099665] [local_costmap.local_costmap]: Subscribed to Topics: livox
+[controller_server-4] [INFO] [1790982208.593568037] [local_costmap.local_costmap]: Initialized plugin "obstacle_layer"
+[controller_server-4] [INFO] [1790982208.593631850] [local_costmap.local_costmap]: Using plugin "inflation_layer"
+[controller_server-4] [INFO] [1790982208.593861985] [local_costmap.local_costmap]: Initialized plugin "inflation_layer"
+[controller_server-4] [INFO] [1790982208.633996167] [controller_server]: Created progress_checker : progress_checker of type nav2_controller::SimpleProgressChecker
+[controller_server-4] [INFO] [1790982208.634074374] [controller_server]: Controller Server has progress_checker progress_checker progress_checker progress_checker progress_checker  progress checkers available.
+[controller_server-4] [INFO] [1790982208.634112016] [controller_server]: Created goal checker : goal_checker of type nav2_controller::SimpleGoalChecker
+[controller_server-4] [INFO] [1790982208.634135896] [controller_server]: Controller Server has goal_checker goal_checker goal_checker goal_checker goal_checker  goal checkers available.
+[controller_server-4] [INFO] [1790982208.634169282] [controller_server]: Created controller : FollowPath of type nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[controller_server-4] [INFO] [1790982208.640755177] [controller_server]: Controller Server has FollowPath FollowPath FollowPath FollowPath FollowPath  controllers available.
+[lifecycle_manager-7] [INFO] [1790982208.655912443] [lifecycle_manager_pilha]: [34m[1mConfiguring bt_navigator[0m[0m
+[bt_navigator-5] [INFO] [1790982208.656238206] [bt_navigator]: Configuring
+[bt_navigator-5] [INFO] [1790982208.662131858] [bt_navigator]: Creating navigator id navigate_to_pose of type nav2_bt_navigator::NavigateToPoseNavigator
+[lifecycle_manager-7] [INFO] [1790982208.710174090] [lifecycle_manager_pilha]: [34m[1mConfiguring collision_monitor[0m[0m
+[collision_monitor-9] [INFO] [1790982208.710402632] [collision_monitor]: Configuring
+[collision_monitor-9] [INFO] [1790982208.714089032] [collision_monitor]: [livox]: Creating PointCloud
+[collision_monitor-9] [INFO] [1790982208.715545821] [collision_monitor]: [PolygonApproach]: Creating Polygon
+[collision_monitor-9] [INFO] [1790982208.717016193] [collision_monitor]: [PolygonStop]: Creating Polygon
+[lifecycle_manager-7] [INFO] [1790982208.729885924] [lifecycle_manager_pilha]: [34m[1mActivating map_server[0m[0m
+[map_server-1] [INFO] [1790982208.730133812] [map_server]: Activating
+[map_server-1] [INFO] [1790982208.730603432] [map_server]: Creating bond (map_server) to lifecycle manager.
+[amcl-6] [INFO] [1790982208.730884094] [amcl]: Received a 391 X 1158 map @ 0.050 m/pix
+[controller_server-4] [INFO] [1790982208.731055847] [local_costmap.local_costmap]: StaticLayer: Resizing static layer to 391 X 1158 at 0.050000 m/pix
+[planner_server-2] [INFO] [1790982208.731623008] [global_costmap.global_costmap]: StaticLayer: Resizing costmap to 391 X 1158 at 0.050000 m/pix
+[bt_navigator-5] [INFO] [1790982208.743027862] [bt_navigator]: Action server is inactive. Rejecting the goal.
+[lifecycle_manager-7] [INFO] [1790982208.840748674] [lifecycle_manager_pilha]: Server map_server connected with bond.
+[lifecycle_manager-7] [INFO] [1790982208.840792089] [lifecycle_manager_pilha]: [34m[1mActivating amcl[0m[0m
+[amcl-6] [INFO] [1790982208.841176597] [amcl]: Activating
+[amcl-6] [INFO] [1790982208.841202349] [amcl]: initialPoseReceived
+[amcl-6] [INFO] [1790982208.841286832] [amcl]: Setting pose (1790982208.841287): 2.165 0.713 0.059
+[amcl-6] [INFO] [1790982208.842153319] [amcl]: Creating bond (amcl) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982208.952763470] [lifecycle_manager_pilha]: Server amcl connected with bond.
+[lifecycle_manager-7] [INFO] [1790982208.952799779] [lifecycle_manager_pilha]: [34m[1mActivating planner_server[0m[0m
+[planner_server-2] [INFO] [1790982208.953142157] [planner_server]: Activating
+[planner_server-2] [INFO] [1790982208.953171374] [global_costmap.global_costmap]: Activating
+[planner_server-2] [INFO] [1790982208.953183273] [global_costmap.global_costmap]: Checking transform
+[planner_server-2] [INFO] [1790982208.953199017] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
+[amcl-6] [INFO] [1790982209.165939438] [amcl]: createLaserObject
+[planner_server-2] [INFO] [1790982209.453302985] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Lookup would require extrapolation into the past.  Requested time 1790982209.419138 but the earliest data is at time 1790982209.519985, when looking up transform from frame [base_link] to frame [map]
+[amcl-6] [INFO] [1790982209.498516881] [amcl]: Message Filter dropping message: frame 'base_link' at time 1790982207.819 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[amcl-6] [INFO] [1790982209.706068812] [amcl]: Message Filter dropping message: frame 'base_link' at time 1790982207.919 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[amcl-6] [INFO] [1790982209.848482363] [amcl]: Message Filter dropping message: frame 'base_link' at time 1790982208.119 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[amcl-6] [INFO] [1790982209.945216871] [amcl]: Message Filter dropping message: frame 'base_link' at time 1790982208.319 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[planner_server-2] [INFO] [1790982209.953334531] [global_costmap.global_costmap]: start
+[amcl-6] [INFO] [1790982210.040777695] [amcl]: Message Filter dropping message: frame 'base_link' at time 1790982208.419 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[planner_server-2] [INFO] [1790982210.322625073] [global_costmap.global_costmap]: Message Filter dropping message: frame 'livox_frame' at time 1790982209.419 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[planner_server-2] [INFO] [1790982210.424115363] [global_costmap.global_costmap]: Message Filter dropping message: frame 'livox_frame' at time 1790982209.519 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[planner_server-2] [INFO] [1790982211.004817593] [planner_server]: Activating plugin GridBased of type SmacPlanner2D
+[planner_server-2] [INFO] [1790982211.008178680] [planner_server]: Creating bond (planner_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982211.115793011] [lifecycle_manager_pilha]: Server planner_server connected with bond.
+[lifecycle_manager-7] [INFO] [1790982211.115825360] [lifecycle_manager_pilha]: [34m[1mActivating smoother_server[0m[0m
+[smoother_server-3] [INFO] [1790982211.116207808] [smoother_server]: Activating
+[smoother_server-3] [INFO] [1790982211.116243956] [smoother_server]: Activating smoother: suave of type nav2_constrained_smoother::ConstrainedSmoother
+[smoother_server-3] [INFO] [1790982211.116258612] [smoother_server]: Creating bond (smoother_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982211.222410059] [lifecycle_manager_pilha]: Server smoother_server connected with bond.
+[lifecycle_manager-7] [INFO] [1790982211.222479508] [lifecycle_manager_pilha]: [34m[1mActivating controller_server[0m[0m
+[controller_server-4] [INFO] [1790982211.223173139] [controller_server]: Activating
+[controller_server-4] [INFO] [1790982211.223209899] [local_costmap.local_costmap]: Activating
+[controller_server-4] [INFO] [1790982211.223224527] [local_costmap.local_costmap]: Checking transform
+[controller_server-4] [INFO] [1790982211.223376669] [local_costmap.local_costmap]: start
+[controller_server-4] [INFO] [1790982211.475540763] [controller_server]: Activating controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[controller_server-4] [INFO] [1790982211.475573695] [controller_server]: Creating bond (controller_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982211.582006666] [lifecycle_manager_pilha]: Server controller_server connected with bond.
+[lifecycle_manager-7] [INFO] [1790982211.582039653] [lifecycle_manager_pilha]: [34m[1mActivating bt_navigator[0m[0m
+[bt_navigator-5] [INFO] [1790982211.582394226] [bt_navigator]: Activating
+[bt_navigator-5] [INFO] [1790982211.618829716] [bt_navigator]: Creating bond (bt_navigator) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982211.728122511] [lifecycle_manager_pilha]: Server bt_navigator connected with bond.
+[lifecycle_manager-7] [INFO] [1790982211.728160455] [lifecycle_manager_pilha]: [34m[1mActivating collision_monitor[0m[0m
+[collision_monitor-9] [INFO] [1790982211.728667430] [collision_monitor]: Activating
+[collision_monitor-9] [INFO] [1790982211.728710814] [collision_monitor]: Creating bond (collision_monitor) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790982211.848846540] [lifecycle_manager_pilha]: Server collision_monitor connected with bond.
+[lifecycle_manager-7] [INFO] [1790982211.848882055] [lifecycle_manager_pilha]: [34m[1mManaged nodes are active[0m[0m
+[lifecycle_manager-7] [INFO] [1790982211.848889535] [lifecycle_manager_pilha]: [34m[1mCreating bond timer...[0m[0m
+[heading_controller-8] [WARN] [1790982211.993515301] [heading_controller]: alvo de rumo venceu
+[bt_navigator-5] [INFO] [1790982212.291020065] [bt_navigator]: Begin navigating from current location (2.16, 0.70) to (1.90, 0.31)
+[path_follower-11] [WARN] [1790982212.293478217] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[smoother_server-3] [INFO] [1790982212.311619661] [smoother_server]: Received a path to smooth.
+[controller_server-4] [INFO] [1790982212.321543356] [controller_server]: Received a goal, begin computing control effort.
+[heading_controller-8] [INFO] [1790982212.393935918] [heading_controller]: PIVÔ: -126° de erro — parando para virar no eixo (arcar daria raio de ~0,8 m)
+[heading_controller-8] [ERROR] [1790982214.843644565] [heading_controller]: PIVÔ DESISTIU — 1 pulsos e ainda faltam 20° — o resíduo é menor que o pivô mínimo desta máquina?
+[path_follower-11] [INFO] [1790982215.409626969] [path_follower]: 375 amostras -> /home/bara/logs_robo2/seguidor_2026-10-02_200205.csv
+[path_follower-11] [INFO] [1790982216.349971527] [path_follower]: parado (chegou)
+[controller_server-4] [INFO] [1790982216.722296721] [controller_server]: Reached the goal!
+[bt_navigator-5] [INFO] [1790982216.751310029] [bt_navigator]: Goal succeeded
+[heading_controller-8] [WARN] [1790982217.793568910] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790982222.843416139] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790982227.843598065] [heading_controller]: alvo de rumo venceu
+[bt_navigator-5] [INFO] [1790982229.429041507] [bt_navigator]: Begin navigating from current location (2.01, 0.36) to (1.11, 18.73)
+[smoother_server-3] [INFO] [1790982229.490412805] [smoother_server]: Received a path to smooth.
+[path_follower-11] [WARN] [1790982229.505681632] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[controller_server-4] [INFO] [1790982229.510469503] [controller_server]: Received a goal, begin computing control effort.
+[heading_controller-8] [INFO] [1790982229.593411817] [heading_controller]: PIVÔ: +120° de erro — parando para virar no eixo (arcar daria raio de ~0,8 m)
+[heading_controller-8] [ERROR] [1790982232.143519813] [heading_controller]: PIVÔ DESISTIU — 1 pulsos e ainda faltam 12° — o resíduo é menor que o pivô mínimo desta máquina?
+[smoother_server-3] [INFO] [1790982234.600205280] [smoother_server]: Received a path to smooth.
+[controller_server-4] [INFO] [1790982234.710631619] [controller_server]: Passing new path to controller.
+[smoother_server-3] [INFO] [1790982239.680260752] [smoother_server]: Received a path to smooth.
+[path_follower-11] [WARN] [1790982239.691289313] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[controller_server-4] [INFO] [1790982239.710628209] [controller_server]: Passing new path to controller.
+[smoother_server-3] [INFO] [1790982244.760429775] [smoother_server]: Received a path to smooth.
+[controller_server-4] [INFO] [1790982244.910627923] [controller_server]: Passing new path to controller.
+[path_follower-11] [INFO] [1790982245.414244934] [path_follower]: 711 amostras -> /home/bara/logs_robo2/seguidor_2026-10-02_200205.csv
+[heading_controller-8] [INFO] [1790982247.543278852] [heading_controller]: PIVÔ: -81° de erro — parando para virar no eixo (arcar daria raio de ~0,8 m)
+[path_follower-11] [INFO] [1790982248.267256679] [path_follower]: parado (objetivo encerrado)
+[bt_navigator-5] [ERROR] [1790982248.289594470] [bt_navigator_navigate_to_pose_rclcpp_node]: Failed to get result for follow_path in node halt!
+[bt_navigator-5] [INFO] [1790982248.289709752] [bt_navigator]: [navigate_to_pose] [ActionServer] Client requested to cancel the goal. Cancelling.
+[bt_navigator-5] [INFO] [1790982248.289856123] [bt_navigator]: Goal canceled
+[controller_server-4] [INFO] [1790982248.310673861] [controller_server]: Cancellation was successful. Stopping the robot.
+[controller_server-4] [INFO] [1790982248.310708572] [controller_server]: [follow_path] [ActionServer] Client requested to cancel the goal. Cancelling.
+[heading_controller-8] [WARN] [1790982249.293539310] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790982254.343358017] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790982259.393568724] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790982264.443251183] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790982269.443594308] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790982274.493270942] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790982279.543202475] [heading_controller]: alvo de rumo venceu
+[path_follower-11] [INFO] [1790982280.409101010] [path_follower]: 768 amostras -> /home/bara/logs_robo2/seguidor_2026-10-02_200205.csv
+[heading_controller-8] [WARN] [1790982284.543776442] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790982289.593252086] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790982294.593466767] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790982299.593503466] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790982304.643658373] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790982309.643669969] [heading_controller]: alvo de rumo venceu
+[path_follower-11] [INFO] [1790982310.415863782] [path_follower]: 768 amostras -> /home/bara/logs_robo2/seguidor_2026-10-02_200205.csv
+[heading_controller-8] [WARN] [1790982314.644050587] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790982319.693165189] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790982324.693584918] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790982329.743289926] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790982334.743651623] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790982339.793238310] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790982344.843321672] [heading_controller]: alvo de rumo venceu
+[path_follower-11] [INFO] [1790982345.408997048] [path_follower]: 768 amostras -> /home/bara/logs_robo2/seguidor_2026-10-02_200205.csv
+[heading_controller-8] [WARN] [1790982349.843662259] [heading_controller]: alvo de rumo venceu

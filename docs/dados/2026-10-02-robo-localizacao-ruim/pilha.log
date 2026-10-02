@@ -1,0 +1,879 @@
+[INFO] [launch]: All log files can be found below /home/bara/.ros/log/2026-10-02-20-17-19-243287-bara-6701
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [launch.user]: PILHA subindo — espere os servidores ativarem (o Smac leva ~16 s montando a heurística) e então clique "2D Goal Pose" no RViz.
+[INFO] [map_server-1]: process started with pid [6708]
+[INFO] [planner_server-2]: process started with pid [6709]
+[INFO] [smoother_server-3]: process started with pid [6710]
+[INFO] [controller_server-4]: process started with pid [6711]
+[INFO] [bt_navigator-5]: process started with pid [6712]
+[INFO] [amcl-6]: process started with pid [6713]
+[INFO] [lifecycle_manager-7]: process started with pid [6714]
+[INFO] [heading_controller-8]: process started with pid [6715]
+[INFO] [collision_monitor-9]: process started with pid [6716]
+[INFO] [twist_mux-10]: process started with pid [6717]
+[INFO] [path_follower-11]: process started with pid [6718]
+[INFO] [freeze_capture-12]: process started with pid [6719]
+[amcl-6] [INFO] [1790983039.621650588] [amcl]: 
+[amcl-6] 	amcl lifecycle node launched. 
+[amcl-6] 	Waiting on external lifecycle transitions to activate
+[amcl-6] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[amcl-6] [INFO] [1790983039.623721670] [amcl]: Creating
+[twist_mux-10] [INFO] [1790983039.659251030] [twist_mux]: Topic handler 'topics.autonomia' subscribed to topic 'auto_vel': timeout = 0.500000s , priority = 10.
+[twist_mux-10] [INFO] [1790983039.663356969] [twist_mux]: Topic handler 'topics.desencalhe' subscribed to topic 'unstuck_vel': timeout = 0.500000s , priority = 30.
+[twist_mux-10] [INFO] [1790983039.664603063] [twist_mux]: Topic handler 'topics.joystick' subscribed to topic 'joy_vel': timeout = 0.500000s , priority = 100.
+[twist_mux-10] [INFO] [1790983039.666149890] [twist_mux]: Topic handler 'topics.teclado' subscribed to topic 'key_vel': timeout = 0.500000s , priority = 90.
+[twist_mux-10] [INFO] [1790983039.668116061] [twist_mux]: Topic handler 'topics.web' subscribed to topic 'web_vel': timeout = 0.500000s , priority = 50.
+[lifecycle_manager-7] [INFO] [1790983039.693137791] [lifecycle_manager_pilha]: Creating
+[smoother_server-3] [INFO] [1790983039.696786109] [smoother_server]: 
+[smoother_server-3] 	smoother_server lifecycle node launched. 
+[smoother_server-3] 	Waiting on external lifecycle transitions to activate
+[smoother_server-3] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[smoother_server-3] [INFO] [1790983039.704690033] [smoother_server]: Creating smoother server
+[lifecycle_manager-7] [INFO] [1790983039.709479461] [lifecycle_manager_pilha]: [34m[1mCreating and initializing lifecycle service clients[0m[0m
+[collision_monitor-9] [INFO] [1790983039.710784780] [collision_monitor]: 
+[collision_monitor-9] 	collision_monitor lifecycle node launched. 
+[collision_monitor-9] 	Waiting on external lifecycle transitions to activate
+[collision_monitor-9] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[bt_navigator-5] [INFO] [1790983039.748661567] [bt_navigator]: 
+[bt_navigator-5] 	bt_navigator lifecycle node launched. 
+[bt_navigator-5] 	Waiting on external lifecycle transitions to activate
+[bt_navigator-5] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[map_server-1] [INFO] [1790983039.750898383] [map_server]: 
+[map_server-1] 	map_server lifecycle node launched. 
+[map_server-1] 	Waiting on external lifecycle transitions to activate
+[map_server-1] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[map_server-1] [INFO] [1790983039.751055131] [map_server]: Creating
+[controller_server-4] [INFO] [1790983039.754417378] [controller_server]: 
+[controller_server-4] 	controller_server lifecycle node launched. 
+[controller_server-4] 	Waiting on external lifecycle transitions to activate
+[controller_server-4] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[bt_navigator-5] [INFO] [1790983039.754940838] [bt_navigator]: Creating
+[controller_server-4] [INFO] [1790983039.767656249] [controller_server]: Creating controller server
+[controller_server-4] [INFO] [1790983040.093905899] [local_costmap.local_costmap]: 
+[controller_server-4] 	local_costmap lifecycle node launched. 
+[controller_server-4] 	Waiting on external lifecycle transitions to activate
+[controller_server-4] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[controller_server-4] [INFO] [1790983040.097353813] [local_costmap.local_costmap]: Creating Costmap
+[planner_server-2] [INFO] [1790983040.340795859] [planner_server]: 
+[planner_server-2] 	planner_server lifecycle node launched. 
+[planner_server-2] 	Waiting on external lifecycle transitions to activate
+[planner_server-2] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[planner_server-2] [INFO] [1790983040.346556615] [planner_server]: Creating
+[planner_server-2] [INFO] [1790983040.371457950] [global_costmap.global_costmap]: 
+[planner_server-2] 	global_costmap lifecycle node launched. 
+[planner_server-2] 	Waiting on external lifecycle transitions to activate
+[planner_server-2] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[planner_server-2] [INFO] [1790983040.372506174] [global_costmap.global_costmap]: Creating Costmap
+[path_follower-11] [INFO] [1790983040.943592595] [path_follower]: log da corrida -> /home/bara/logs_robo2/seguidor_2026-10-02_201720.csv
+[path_follower-11] [INFO] [1790983040.944074750] [path_follower]: seguidor de pé — raio da máquina 0.37 m, mira 0.37 m em curva e 1.00 m em reta (040), piso de linear 0.365 m/s
+[path_follower-11] [INFO] [1790983040.944538861] [path_follower]: raio de chegada 0.25 m (mínimo viável 0.22 m)
+[lifecycle_manager-7] [INFO] [1790983040.978933105] [lifecycle_manager_pilha]: [34m[1mStarting managed nodes bringup...[0m[0m
+[lifecycle_manager-7] [INFO] [1790983040.978985422] [lifecycle_manager_pilha]: [34m[1mConfiguring map_server[0m[0m
+[map_server-1] [INFO] [1790983040.979392286] [map_server]: Configuring
+[map_server-1] [INFO] [1790983040.979457652] [map_io]: Loading yaml file: /home/bara/Controle_robo_livox/maps/andar3_completo/andar3_completo.yaml
+[map_server-1] [INFO] [1790983040.979727506] [map_io]: resolution: 0.05
+[map_server-1] [INFO] [1790983040.979743838] [map_io]: origin[0]: -2.202
+[map_server-1] [INFO] [1790983040.979754493] [map_io]: origin[1]: -12.239
+[map_server-1] [INFO] [1790983040.979762695] [map_io]: origin[2]: 0
+[map_server-1] [INFO] [1790983040.979771065] [map_io]: free_thresh: 0.196
+[map_server-1] [INFO] [1790983040.979779530] [map_io]: occupied_thresh: 0.65
+[map_server-1] [INFO] [1790983040.979803592] [map_io]: mode: trinary
+[map_server-1] [INFO] [1790983040.979812359] [map_io]: negate: 0
+[map_server-1] [INFO] [1790983040.980040099] [map_io]: Loading image_file: /home/bara/Controle_robo_livox/maps/andar3_completo/andar3_completo.pgm
+[map_server-1] [INFO] [1790983040.990368589] [map_io]: Read map /home/bara/Controle_robo_livox/maps/andar3_completo/andar3_completo.pgm: 391 X 1158 map @ 0.05 m/cell
+[lifecycle_manager-7] [INFO] [1790983041.004453064] [lifecycle_manager_pilha]: [34m[1mConfiguring amcl[0m[0m
+[amcl-6] [INFO] [1790983041.004770399] [amcl]: Configuring
+[amcl-6] [INFO] [1790983041.004865801] [amcl]: initTransforms
+[amcl-6] [INFO] [1790983041.016821441] [amcl]: initPubSub
+[amcl-6] [INFO] [1790983041.027935318] [amcl]: Subscribed to map topic.
+[lifecycle_manager-7] [INFO] [1790983041.031921577] [lifecycle_manager_pilha]: [34m[1mConfiguring planner_server[0m[0m
+[freeze_capture-12] [INFO] [1790983041.367952302] [freeze_capture]: freeze_capture: chain=/home/bara/logs_robo2/freeze_capture.csv diag=/home/bara/logs_robo2/freeze_diag.csv
+[planner_server-2] [INFO] [1790983041.815859694] [planner_server]: Configuring
+[planner_server-2] [INFO] [1790983041.815910595] [global_costmap.global_costmap]: Configuring
+[planner_server-2] [INFO] [1790983041.830540014] [global_costmap.global_costmap]: Using plugin "static_layer"
+[planner_server-2] [INFO] [1790983041.838388114] [global_costmap.global_costmap]: Subscribing to the map topic (/map) with transient local durability
+[planner_server-2] [INFO] [1790983041.842250443] [global_costmap.global_costmap]: Initialized plugin "static_layer"
+[planner_server-2] [INFO] [1790983041.842293275] [global_costmap.global_costmap]: Using plugin "obstacle_layer"
+[planner_server-2] [INFO] [1790983041.843202200] [global_costmap.global_costmap]: Subscribed to Topics: livox
+[planner_server-2] [INFO] [1790983041.852470357] [global_costmap.global_costmap]: Initialized plugin "obstacle_layer"
+[planner_server-2] [INFO] [1790983041.852517138] [global_costmap.global_costmap]: Using plugin "inflation_layer"
+[planner_server-2] [INFO] [1790983041.853886638] [global_costmap.global_costmap]: Initialized plugin "inflation_layer"
+[heading_controller-8] [WARN] [1790983041.887813594] [heading_controller]: parâmetros NÃO MEDIDOS neste robô — a_dec=5.832 rad/s², zona_morta=0.0178 m/s, bitola=0.27 m. Rodar tools/banco/ e corrigir (BO-3).
+[heading_controller-8] [INFO] [1790983041.888983939] [heading_controller]: pivô DISPONÍVEL acima de 0.13 rad/s — o robô consegue virar no próprio eixo
+[heading_controller-8] [WARN] [1790983041.903457013] [heading_controller]: sem /Odometry
+[planner_server-2] [INFO] [1790983041.913777542] [planner_server]: Created global planner plugin GridBased of type nav2_smac_planner::SmacPlanner2D
+[planner_server-2] [INFO] [1790983041.913833797] [planner_server]: Configuring GridBased of type SmacPlanner2D
+[planner_server-2] [ERROR] [1790983041.915551993] [planner_server]: Inflation layer either not found or inflation is not set sufficiently for optimized non-circular collision checking capabilities. It is HIGHLY recommended to set the inflation radius to be at MINIMUM half of the robot's largest cross-section. See github.com/ros-planning/navigation2/tree/main/nav2_smac_planner#potential-fields for full instructions. This will substantially impact run-time performance.
+[planner_server-2] [INFO] [1790983041.928620153] [planner_server]: Configured plugin GridBased of type SmacPlanner2D with tolerance 0.25, maximum iterations 1000000, max on approach iterations 1000, and not allowing unknown traversal.
+[planner_server-2] [INFO] [1790983041.928683336] [planner_server]: Planner Server has GridBased  planners available.
+[lifecycle_manager-7] [INFO] [1790983041.948145874] [lifecycle_manager_pilha]: [34m[1mConfiguring smoother_server[0m[0m
+[smoother_server-3] [INFO] [1790983041.948463705] [smoother_server]: Configuring smoother server
+[smoother_server-3] [INFO] [1790983041.974437574] [smoother_server]: Created smoother : suave of type nav2_constrained_smoother/ConstrainedSmoother
+[smoother_server-3] [INFO] [1790983041.977820753] [smoother_server]: Created smoother : simples of type nav2_smoother::SimpleSmoother
+[smoother_server-3] [INFO] [1790983041.979442429] [smoother_server]: Created smoother : savgol of type nav2_smoother::SavitzkyGolaySmoother
+[smoother_server-3] [INFO] [1790983041.979753983] [smoother_server]: Smoother Server has suave simples savgol  smoothers available.
+[lifecycle_manager-7] [INFO] [1790983042.000293430] [lifecycle_manager_pilha]: [34m[1mConfiguring controller_server[0m[0m
+[controller_server-4] [INFO] [1790983042.000879465] [controller_server]: Configuring controller interface
+[controller_server-4] [INFO] [1790983042.000912560] [controller_server]: getting progress checker plugins..
+[controller_server-4] [INFO] [1790983042.002221589] [controller_server]: getting goal checker plugins..
+[controller_server-4] [INFO] [1790983042.003466941] [controller_server]: Controller frequency set to 5.0000Hz
+[controller_server-4] [INFO] [1790983042.003572179] [local_costmap.local_costmap]: Configuring
+[controller_server-4] [INFO] [1790983042.023910966] [local_costmap.local_costmap]: Using plugin "static_layer"
+[controller_server-4] [INFO] [1790983042.032007073] [local_costmap.local_costmap]: Subscribing to the map topic (/map) with transient local durability
+[controller_server-4] [INFO] [1790983042.036391128] [local_costmap.local_costmap]: Initialized plugin "static_layer"
+[controller_server-4] [INFO] [1790983042.036427001] [local_costmap.local_costmap]: Using plugin "obstacle_layer"
+[controller_server-4] [INFO] [1790983042.037029632] [local_costmap.local_costmap]: Subscribed to Topics: livox
+[controller_server-4] [INFO] [1790983042.061204349] [local_costmap.local_costmap]: Initialized plugin "obstacle_layer"
+[controller_server-4] [INFO] [1790983042.061287629] [local_costmap.local_costmap]: Using plugin "inflation_layer"
+[controller_server-4] [INFO] [1790983042.062515347] [local_costmap.local_costmap]: Initialized plugin "inflation_layer"
+[controller_server-4] [INFO] [1790983042.117019859] [controller_server]: Created progress_checker : progress_checker of type nav2_controller::SimpleProgressChecker
+[controller_server-4] [INFO] [1790983042.117978051] [controller_server]: Controller Server has progress_checker  progress checkers available.
+[controller_server-4] [INFO] [1790983042.119129293] [controller_server]: Created goal checker : goal_checker of type nav2_controller::SimpleGoalChecker
+[controller_server-4] [INFO] [1790983042.119689093] [controller_server]: Controller Server has goal_checker  goal checkers available.
+[controller_server-4] [INFO] [1790983042.121960702] [controller_server]: Created controller : FollowPath of type nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[controller_server-4] [INFO] [1790983042.133080355] [controller_server]: Controller Server has FollowPath  controllers available.
+[lifecycle_manager-7] [INFO] [1790983042.152217650] [lifecycle_manager_pilha]: [34m[1mConfiguring bt_navigator[0m[0m
+[bt_navigator-5] [INFO] [1790983042.152617998] [bt_navigator]: Configuring
+[bt_navigator-5] [INFO] [1790983042.165784067] [bt_navigator]: Creating navigator id navigate_to_pose of type nav2_bt_navigator::NavigateToPoseNavigator
+[bt_navigator-5] [WARN] [1790983042.172638134] [bt_navigator]: Error_code parameters were not set. Using default values of: follow_path_error_code compute_path_error_code
+[bt_navigator-5] Make sure these match your BT and there are not other sources of error codes youreported to your application
+[amcl-6] [INFO] [1790983042.194183069] [amcl]: Message Filter dropping message: frame 'base_link' at time 1790983040.469 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[lifecycle_manager-7] [INFO] [1790983042.276266836] [lifecycle_manager_pilha]: [34m[1mConfiguring collision_monitor[0m[0m
+[collision_monitor-9] [INFO] [1790983042.276576207] [collision_monitor]: Configuring
+[collision_monitor-9] [INFO] [1790983042.288646709] [collision_monitor]: [livox]: Creating PointCloud
+[collision_monitor-9] [INFO] [1790983042.295200334] [collision_monitor]: [PolygonApproach]: Creating Polygon
+[collision_monitor-9] [INFO] [1790983042.304099885] [collision_monitor]: [PolygonStop]: Creating Polygon
+[amcl-6] [INFO] [1790983042.317195915] [amcl]: Message Filter dropping message: frame 'base_link' at time 1790983040.669 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[lifecycle_manager-7] [INFO] [1790983042.333689825] [lifecycle_manager_pilha]: [34m[1mActivating map_server[0m[0m
+[map_server-1] [INFO] [1790983042.333945369] [map_server]: Activating
+[map_server-1] [INFO] [1790983042.334912323] [map_server]: Creating bond (map_server) to lifecycle manager.
+[amcl-6] [INFO] [1790983042.336292248] [amcl]: Received a 391 X 1158 map @ 0.050 m/pix
+[controller_server-4] [INFO] [1790983042.336391734] [local_costmap.local_costmap]: StaticLayer: Resizing static layer to 391 X 1158 at 0.050000 m/pix
+[planner_server-2] [INFO] [1790983042.336613413] [global_costmap.global_costmap]: StaticLayer: Resizing costmap to 391 X 1158 at 0.050000 m/pix
+[lifecycle_manager-7] [INFO] [1790983042.447131986] [lifecycle_manager_pilha]: Server map_server connected with bond.
+[lifecycle_manager-7] [INFO] [1790983042.447220802] [lifecycle_manager_pilha]: [34m[1mActivating amcl[0m[0m
+[amcl-6] [INFO] [1790983042.447727905] [amcl]: Activating
+[amcl-6] [INFO] [1790983042.447795631] [amcl]: initialPoseReceived
+[amcl-6] [INFO] [1790983042.447873760] [amcl]: Setting pose (1790983042.447874): 0.000 0.000 0.000
+[amcl-6] [INFO] [1790983042.448587644] [amcl]: Creating bond (amcl) to lifecycle manager.
+[amcl-6] [INFO] [1790983042.448848699] [amcl]: createLaserObject
+[amcl-6] [INFO] [1790983042.527882121] [amcl]: Message Filter dropping message: frame 'base_link' at time 1790983040.769 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[lifecycle_manager-7] [INFO] [1790983042.557215472] [lifecycle_manager_pilha]: Server amcl connected with bond.
+[lifecycle_manager-7] [INFO] [1790983042.557261397] [lifecycle_manager_pilha]: [34m[1mActivating planner_server[0m[0m
+[planner_server-2] [INFO] [1790983042.557648835] [planner_server]: Activating
+[planner_server-2] [INFO] [1790983042.557682030] [global_costmap.global_costmap]: Activating
+[planner_server-2] [INFO] [1790983042.557699301] [global_costmap.global_costmap]: Checking transform
+[planner_server-2] [INFO] [1790983042.557741181] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Could not find a connection between 'map' and 'base_link' because they are not part of the same tree.Tf has two or more unconnected trees.
+[amcl-6] [INFO] [1790983042.578739014] [amcl]: Message Filter dropping message: frame 'base_link' at time 1790983040.869 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[amcl-6] [INFO] [1790983042.695686731] [amcl]: Message Filter dropping message: frame 'base_link' at time 1790983040.969 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[amcl-6] [INFO] [1790983042.814461896] [amcl]: Message Filter dropping message: frame 'base_link' at time 1790983041.169 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[amcl-6] [INFO] [1790983042.982237389] [amcl]: Message Filter dropping message: frame 'base_link' at time 1790983041.269 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[planner_server-2] [INFO] [1790983043.057799570] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Could not find a connection between 'map' and 'base_link' because they are not part of the same tree.Tf has two or more unconnected trees.
+[amcl-6] [INFO] [1790983043.211438294] [amcl]: Message Filter dropping message: frame 'base_link' at time 1790983041.469 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[amcl-6] [INFO] [1790983043.359418901] [amcl]: Message Filter dropping message: frame 'base_link' at time 1790983041.669 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[planner_server-2] [INFO] [1790983043.557858797] [global_costmap.global_costmap]: start
+[planner_server-2] [INFO] [1790983043.892312012] [global_costmap.global_costmap]: Message Filter dropping message: frame 'livox_frame' at time 1790983042.969 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[planner_server-2] [INFO] [1790983043.979026192] [global_costmap.global_costmap]: Message Filter dropping message: frame 'livox_frame' at time 1790983043.069 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[planner_server-2] [INFO] [1790983044.609347484] [planner_server]: Activating plugin GridBased of type SmacPlanner2D
+[planner_server-2] [INFO] [1790983044.611098153] [planner_server]: Creating bond (planner_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790983044.717782590] [lifecycle_manager_pilha]: Server planner_server connected with bond.
+[lifecycle_manager-7] [INFO] [1790983044.717823829] [lifecycle_manager_pilha]: [34m[1mActivating smoother_server[0m[0m
+[smoother_server-3] [INFO] [1790983044.718212118] [smoother_server]: Activating
+[smoother_server-3] [INFO] [1790983044.718247945] [smoother_server]: Activating smoother: suave of type nav2_constrained_smoother::ConstrainedSmoother
+[smoother_server-3] [INFO] [1790983044.718263613] [smoother_server]: Creating bond (smoother_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790983044.826406139] [lifecycle_manager_pilha]: Server smoother_server connected with bond.
+[lifecycle_manager-7] [INFO] [1790983044.826466108] [lifecycle_manager_pilha]: [34m[1mActivating controller_server[0m[0m
+[controller_server-4] [INFO] [1790983044.826951417] [controller_server]: Activating
+[controller_server-4] [INFO] [1790983044.826986741] [local_costmap.local_costmap]: Activating
+[controller_server-4] [INFO] [1790983044.826997774] [local_costmap.local_costmap]: Checking transform
+[controller_server-4] [INFO] [1790983044.827158815] [local_costmap.local_costmap]: start
+[controller_server-4] [INFO] [1790983045.079122126] [controller_server]: Activating controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[controller_server-4] [INFO] [1790983045.079186785] [controller_server]: Creating bond (controller_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790983045.188672756] [lifecycle_manager_pilha]: Server controller_server connected with bond.
+[lifecycle_manager-7] [INFO] [1790983045.188721144] [lifecycle_manager_pilha]: [34m[1mActivating bt_navigator[0m[0m
+[bt_navigator-5] [INFO] [1790983045.189072847] [bt_navigator]: Activating
+[bt_navigator-5] [INFO] [1790983045.234038563] [bt_navigator]: Creating bond (bt_navigator) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790983045.342867961] [lifecycle_manager_pilha]: Server bt_navigator connected with bond.
+[lifecycle_manager-7] [INFO] [1790983045.342902167] [lifecycle_manager_pilha]: [34m[1mActivating collision_monitor[0m[0m
+[collision_monitor-9] [INFO] [1790983045.343237319] [collision_monitor]: Activating
+[collision_monitor-9] [INFO] [1790983045.343333464] [collision_monitor]: Creating bond (collision_monitor) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790983045.490975125] [lifecycle_manager_pilha]: Server collision_monitor connected with bond.
+[lifecycle_manager-7] [INFO] [1790983045.491006744] [lifecycle_manager_pilha]: [34m[1mManaged nodes are active[0m[0m
+[lifecycle_manager-7] [INFO] [1790983045.491015580] [lifecycle_manager_pilha]: [34m[1mCreating bond timer...[0m[0m
+[lifecycle_manager-7] [INFO] [1790983059.491219360] [lifecycle_manager_pilha]: [34m[1mHave not received a heartbeat from collision_monitor.[0m[0m
+[lifecycle_manager-7] [ERROR] [1790983059.491424340] [lifecycle_manager_pilha]: CRITICAL FAILURE: SERVER collision_monitor IS DOWN after not receiving a heartbeat for 4000 ms. Shutting down related nodes.
+[lifecycle_manager-7] [INFO] [1790983059.491478262] [lifecycle_manager_pilha]: [34m[1mTerminating bond timer...[0m[0m
+[lifecycle_manager-7] [INFO] [1790983059.491491058] [lifecycle_manager_pilha]: [34m[1mResetting managed nodes...[0m[0m
+[lifecycle_manager-7] [INFO] [1790983059.491501872] [lifecycle_manager_pilha]: [34m[1mDeactivating collision_monitor[0m[0m
+[collision_monitor-9] [INFO] [1790983059.604745720] [collision_monitor]: Deactivating
+[collision_monitor-9] [INFO] [1790983059.604788487] [collision_monitor]: Destroying bond (collision_monitor) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790983059.629265113] [lifecycle_manager_pilha]: [34m[1mDeactivating bt_navigator[0m[0m
+[bt_navigator-5] [INFO] [1790983059.629573081] [bt_navigator]: Deactivating
+[bt_navigator-5] [INFO] [1790983059.629606166] [bt_navigator]: Destroying bond (bt_navigator) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790983059.743444682] [lifecycle_manager_pilha]: [34m[1mDeactivating controller_server[0m[0m
+[controller_server-4] [INFO] [1790983059.743745320] [controller_server]: Deactivating
+[controller_server-4] [INFO] [1790983059.743771844] [controller_server]: Deactivating controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[controller_server-4] [INFO] [1790983059.743793497] [local_costmap.local_costmap]: Deactivating
+[controller_server-4] [INFO] [1790983059.827422818] [controller_server]: Destroying bond (controller_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790983059.940963243] [lifecycle_manager_pilha]: [34m[1mDeactivating smoother_server[0m[0m
+[smoother_server-3] [INFO] [1790983059.941275819] [smoother_server]: Deactivating
+[smoother_server-3] [INFO] [1790983059.941304460] [smoother_server]: Deactivating smoother: suave of type nav2_constrained_smoother::ConstrainedSmoother
+[smoother_server-3] [INFO] [1790983059.941329084] [smoother_server]: Destroying bond (smoother_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790983060.055174234] [lifecycle_manager_pilha]: [34m[1mDeactivating planner_server[0m[0m
+[planner_server-2] [INFO] [1790983060.055457488] [planner_server]: Deactivating
+[planner_server-2] [INFO] [1790983060.055494293] [global_costmap.global_costmap]: Deactivating
+[planner_server-2] [INFO] [1790983060.558085489] [planner_server]: Deactivating plugin GridBased of type SmacPlanner2D
+[planner_server-2] [INFO] [1790983060.558122684] [planner_server]: Destroying bond (planner_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790983060.672024756] [lifecycle_manager_pilha]: [34m[1mDeactivating amcl[0m[0m
+[amcl-6] [INFO] [1790983060.672444514] [amcl]: Deactivating
+[amcl-6] [INFO] [1790983060.672484212] [amcl]: Destroying bond (amcl) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790983060.786700064] [lifecycle_manager_pilha]: [34m[1mDeactivating map_server[0m[0m
+[map_server-1] [INFO] [1790983060.787113045] [map_server]: Deactivating
+[map_server-1] [INFO] [1790983060.787141979] [map_server]: Destroying bond (map_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790983060.902030789] [lifecycle_manager_pilha]: [34m[1mCleaning up collision_monitor[0m[0m
+[collision_monitor-9] [INFO] [1790983060.902411057] [collision_monitor]: Cleaning up
+[collision_monitor-9] [INFO] [1790983060.907906583] [collision_monitor]: [PolygonApproach]: Destroying Polygon
+[collision_monitor-9] [INFO] [1790983060.909145470] [collision_monitor]: [PolygonStop]: Destroying Polygon
+[collision_monitor-9] [INFO] [1790983060.910184856] [collision_monitor]: [livox]: Destroying PointCloud
+[lifecycle_manager-7] [INFO] [1790983060.914419377] [lifecycle_manager_pilha]: [34m[1mCleaning up bt_navigator[0m[0m
+[bt_navigator-5] [INFO] [1790983060.914650719] [bt_navigator]: Cleaning up
+[bt_navigator-5] [INFO] [1790983061.010380513] [bt_navigator]: Completed Cleaning up
+[lifecycle_manager-7] [INFO] [1790983061.011326805] [lifecycle_manager_pilha]: [34m[1mCleaning up controller_server[0m[0m
+[controller_server-4] [INFO] [1790983061.011589067] [controller_server]: Cleaning up
+[controller_server-4] [INFO] [1790983061.011613883] [controller_server]: Cleaning up controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[controller_server-4] [INFO] [1790983061.021337668] [local_costmap.local_costmap]: Cleaning up
+[lifecycle_manager-7] [INFO] [1790983061.083807141] [lifecycle_manager_pilha]: [34m[1mCleaning up smoother_server[0m[0m
+[smoother_server-3] [INFO] [1790983061.084053168] [smoother_server]: Cleaning up
+[smoother_server-3] [INFO] [1790983061.084083611] [smoother_server]: Cleaning up smoother: suave of type nav2_constrained_smoother::ConstrainedSmoother
+[lifecycle_manager-7] [INFO] [1790983061.107769547] [lifecycle_manager_pilha]: [34m[1mCleaning up planner_server[0m[0m
+[planner_server-2] [INFO] [1790983061.108000779] [planner_server]: Cleaning up
+[planner_server-2] [INFO] [1790983061.128363254] [global_costmap.global_costmap]: Cleaning up
+[planner_server-2] [INFO] [1790983061.137476073] [planner_server]: Cleaning up plugin GridBased of type SmacPlanner2D
+[planner_server-2] [INFO] [1790983061.138880528] [planner_server]: Destroying plugin GridBased of type SmacPlanner2D
+[lifecycle_manager-7] [INFO] [1790983061.179547111] [lifecycle_manager_pilha]: [34m[1mCleaning up amcl[0m[0m
+[amcl-6] [INFO] [1790983061.179794969] [amcl]: Cleaning up
+[lifecycle_manager-7] [INFO] [1790983061.206117738] [lifecycle_manager_pilha]: [34m[1mCleaning up map_server[0m[0m
+[map_server-1] [INFO] [1790983061.208442230] [map_server]: Cleaning up
+[lifecycle_manager-7] [INFO] [1790983061.215127966] [lifecycle_manager_pilha]: [34m[1mManaged nodes have been reset[0m[0m
+[lifecycle_manager-7] [INFO] [1790983062.217004692] [lifecycle_manager_pilha]: [34m[1mSuccessfully re-established connections from server respawns, starting back up.[0m[0m
+[lifecycle_manager-7] [INFO] [1790983062.217040622] [lifecycle_manager_pilha]: [34m[1mStarting managed nodes bringup...[0m[0m
+[lifecycle_manager-7] [INFO] [1790983062.217047772] [lifecycle_manager_pilha]: [34m[1mConfiguring map_server[0m[0m
+[map_server-1] [INFO] [1790983062.217205514] [map_server]: Configuring
+[map_server-1] [INFO] [1790983062.217256459] [map_io]: Loading yaml file: /home/bara/Controle_robo_livox/maps/andar3_completo/andar3_completo.yaml
+[map_server-1] [INFO] [1790983062.217458730] [map_io]: resolution: 0.05
+[map_server-1] [INFO] [1790983062.217470886] [map_io]: origin[0]: -2.202
+[map_server-1] [INFO] [1790983062.217478269] [map_io]: origin[1]: -12.239
+[map_server-1] [INFO] [1790983062.217484180] [map_io]: origin[2]: 0
+[map_server-1] [INFO] [1790983062.217489639] [map_io]: free_thresh: 0.196
+[map_server-1] [INFO] [1790983062.217494993] [map_io]: occupied_thresh: 0.65
+[map_server-1] [INFO] [1790983062.217500728] [map_io]: mode: trinary
+[map_server-1] [INFO] [1790983062.217506546] [map_io]: negate: 0
+[map_server-1] [INFO] [1790983062.217523223] [map_io]: Loading image_file: /home/bara/Controle_robo_livox/maps/andar3_completo/andar3_completo.pgm
+[map_server-1] [INFO] [1790983062.225221534] [map_io]: Read map /home/bara/Controle_robo_livox/maps/andar3_completo/andar3_completo.pgm: 391 X 1158 map @ 0.05 m/cell
+[lifecycle_manager-7] [INFO] [1790983062.232888694] [lifecycle_manager_pilha]: [34m[1mConfiguring amcl[0m[0m
+[amcl-6] [INFO] [1790983062.233255342] [amcl]: Configuring
+[amcl-6] [INFO] [1790983062.233348291] [amcl]: initTransforms
+[amcl-6] [INFO] [1790983062.242758003] [amcl]: initPubSub
+[amcl-6] [INFO] [1790983062.248613141] [amcl]: Subscribed to map topic.
+[lifecycle_manager-7] [INFO] [1790983062.256123350] [lifecycle_manager_pilha]: [34m[1mConfiguring planner_server[0m[0m
+[planner_server-2] [INFO] [1790983062.256373995] [planner_server]: Configuring
+[planner_server-2] [INFO] [1790983062.256407346] [global_costmap.global_costmap]: Configuring
+[planner_server-2] [INFO] [1790983062.267384056] [global_costmap.global_costmap]: Using plugin "static_layer"
+[planner_server-2] [INFO] [1790983062.267509322] [global_costmap.global_costmap]: Subscribing to the map topic (/map) with transient local durability
+[planner_server-2] [INFO] [1790983062.269203856] [global_costmap.global_costmap]: Initialized plugin "static_layer"
+[planner_server-2] [INFO] [1790983062.269349565] [global_costmap.global_costmap]: Using plugin "obstacle_layer"
+[planner_server-2] [INFO] [1790983062.269429248] [global_costmap.global_costmap]: Subscribed to Topics: livox
+[planner_server-2] [INFO] [1790983062.273963862] [global_costmap.global_costmap]: Initialized plugin "obstacle_layer"
+[planner_server-2] [INFO] [1790983062.274007100] [global_costmap.global_costmap]: Using plugin "inflation_layer"
+[planner_server-2] [INFO] [1790983062.274240572] [global_costmap.global_costmap]: Initialized plugin "inflation_layer"
+[planner_server-2] [INFO] [1790983062.312423225] [planner_server]: Created global planner plugin GridBased of type nav2_smac_planner::SmacPlanner2D
+[planner_server-2] [INFO] [1790983062.312460681] [planner_server]: Configuring GridBased of type SmacPlanner2D
+[planner_server-2] [ERROR] [1790983062.312496918] [planner_server]: Inflation layer either not found or inflation is not set sufficiently for optimized non-circular collision checking capabilities. It is HIGHLY recommended to set the inflation radius to be at MINIMUM half of the robot's largest cross-section. See github.com/ros-planning/navigation2/tree/main/nav2_smac_planner#potential-fields for full instructions. This will substantially impact run-time performance.
+[planner_server-2] [INFO] [1790983062.314001194] [planner_server]: Configured plugin GridBased of type SmacPlanner2D with tolerance 0.25, maximum iterations 1000000, max on approach iterations 1000, and not allowing unknown traversal.
+[planner_server-2] [INFO] [1790983062.314055478] [planner_server]: Planner Server has GridBased GridBased  planners available.
+[lifecycle_manager-7] [INFO] [1790983062.332535864] [lifecycle_manager_pilha]: [34m[1mConfiguring smoother_server[0m[0m
+[smoother_server-3] [INFO] [1790983062.332759871] [smoother_server]: Configuring smoother server
+[smoother_server-3] [INFO] [1790983062.340871484] [smoother_server]: Created smoother : suave of type nav2_constrained_smoother/ConstrainedSmoother
+[smoother_server-3] [INFO] [1790983062.340944275] [smoother_server]: Created smoother : simples of type nav2_smoother::SimpleSmoother
+[smoother_server-3] [INFO] [1790983062.340971618] [smoother_server]: Created smoother : savgol of type nav2_smoother::SavitzkyGolaySmoother
+[smoother_server-3] [INFO] [1790983062.340983825] [smoother_server]: Smoother Server has suave simples savgol suave simples savgol  smoothers available.
+[lifecycle_manager-7] [INFO] [1790983062.351807052] [lifecycle_manager_pilha]: [34m[1mConfiguring controller_server[0m[0m
+[controller_server-4] [INFO] [1790983062.352106844] [controller_server]: Configuring controller interface
+[controller_server-4] [INFO] [1790983062.352132687] [controller_server]: getting progress checker plugins..
+[controller_server-4] [INFO] [1790983062.352154532] [controller_server]: getting goal checker plugins..
+[controller_server-4] [INFO] [1790983062.352178064] [controller_server]: Controller frequency set to 5.0000Hz
+[controller_server-4] [INFO] [1790983062.352207276] [local_costmap.local_costmap]: Configuring
+[controller_server-4] [INFO] [1790983062.361817136] [local_costmap.local_costmap]: Using plugin "static_layer"
+[controller_server-4] [INFO] [1790983062.361956095] [local_costmap.local_costmap]: Subscribing to the map topic (/map) with transient local durability
+[controller_server-4] [INFO] [1790983062.363446929] [local_costmap.local_costmap]: Initialized plugin "static_layer"
+[controller_server-4] [INFO] [1790983062.363491940] [local_costmap.local_costmap]: Using plugin "obstacle_layer"
+[controller_server-4] [INFO] [1790983062.363598154] [local_costmap.local_costmap]: Subscribed to Topics: livox
+[controller_server-4] [INFO] [1790983062.370018816] [local_costmap.local_costmap]: Initialized plugin "obstacle_layer"
+[controller_server-4] [INFO] [1790983062.370061716] [local_costmap.local_costmap]: Using plugin "inflation_layer"
+[controller_server-4] [INFO] [1790983062.370278867] [local_costmap.local_costmap]: Initialized plugin "inflation_layer"
+[controller_server-4] [INFO] [1790983062.412004781] [controller_server]: Created progress_checker : progress_checker of type nav2_controller::SimpleProgressChecker
+[controller_server-4] [INFO] [1790983062.412048456] [controller_server]: Controller Server has progress_checker progress_checker  progress checkers available.
+[controller_server-4] [INFO] [1790983062.412068868] [controller_server]: Created goal checker : goal_checker of type nav2_controller::SimpleGoalChecker
+[controller_server-4] [INFO] [1790983062.412098701] [controller_server]: Controller Server has goal_checker goal_checker  goal checkers available.
+[controller_server-4] [INFO] [1790983062.412127229] [controller_server]: Created controller : FollowPath of type nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[controller_server-4] [INFO] [1790983062.419160618] [controller_server]: Controller Server has FollowPath FollowPath  controllers available.
+[lifecycle_manager-7] [INFO] [1790983062.433794769] [lifecycle_manager_pilha]: [34m[1mConfiguring bt_navigator[0m[0m
+[bt_navigator-5] [INFO] [1790983062.434067362] [bt_navigator]: Configuring
+[bt_navigator-5] [INFO] [1790983062.439901513] [bt_navigator]: Creating navigator id navigate_to_pose of type nav2_bt_navigator::NavigateToPoseNavigator
+[lifecycle_manager-7] [INFO] [1790983062.497282438] [lifecycle_manager_pilha]: [34m[1mConfiguring collision_monitor[0m[0m
+[collision_monitor-9] [INFO] [1790983062.497675326] [collision_monitor]: Configuring
+[collision_monitor-9] [INFO] [1790983062.502499815] [collision_monitor]: [livox]: Creating PointCloud
+[collision_monitor-9] [INFO] [1790983062.503814615] [collision_monitor]: [PolygonApproach]: Creating Polygon
+[collision_monitor-9] [INFO] [1790983062.505975560] [collision_monitor]: [PolygonStop]: Creating Polygon
+[lifecycle_manager-7] [INFO] [1790983062.516841586] [lifecycle_manager_pilha]: [34m[1mActivating map_server[0m[0m
+[map_server-1] [INFO] [1790983062.517069187] [map_server]: Activating
+[map_server-1] [INFO] [1790983062.517538665] [map_server]: Creating bond (map_server) to lifecycle manager.
+[planner_server-2] [INFO] [1790983062.518125038] [global_costmap.global_costmap]: StaticLayer: Resizing costmap to 391 X 1158 at 0.050000 m/pix
+[amcl-6] [INFO] [1790983062.518805829] [amcl]: Received a 391 X 1158 map @ 0.050 m/pix
+[controller_server-4] [INFO] [1790983062.518864962] [local_costmap.local_costmap]: StaticLayer: Resizing static layer to 391 X 1158 at 0.050000 m/pix
+[lifecycle_manager-7] [INFO] [1790983062.626190056] [lifecycle_manager_pilha]: Server map_server connected with bond.
+[lifecycle_manager-7] [INFO] [1790983062.626227530] [lifecycle_manager_pilha]: [34m[1mActivating amcl[0m[0m
+[amcl-6] [INFO] [1790983062.626792927] [amcl]: Activating
+[amcl-6] [INFO] [1790983062.626816952] [amcl]: initialPoseReceived
+[amcl-6] [INFO] [1790983062.626887266] [amcl]: Setting pose (1790983062.626887): 0.000 0.000 0.000
+[amcl-6] [INFO] [1790983062.627533075] [amcl]: Creating bond (amcl) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790983062.735375598] [lifecycle_manager_pilha]: Server amcl connected with bond.
+[lifecycle_manager-7] [INFO] [1790983062.735408981] [lifecycle_manager_pilha]: [34m[1mActivating planner_server[0m[0m
+[planner_server-2] [INFO] [1790983062.735731973] [planner_server]: Activating
+[planner_server-2] [INFO] [1790983062.735755325] [global_costmap.global_costmap]: Activating
+[planner_server-2] [INFO] [1790983062.735763033] [global_costmap.global_costmap]: Checking transform
+[planner_server-2] [INFO] [1790983062.735775381] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
+[amcl-6] [INFO] [1790983063.004496798] [amcl]: createLaserObject
+[planner_server-2] [INFO] [1790983063.235850084] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Lookup would require extrapolation into the past.  Requested time 1790983063.169785 but the earliest data is at time 1790983063.369159, when looking up transform from frame [base_link] to frame [map]
+[amcl-6] [INFO] [1790983063.364201570] [amcl]: Message Filter dropping message: frame 'base_link' at time 1790983061.669 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[amcl-6] [INFO] [1790983063.553999351] [amcl]: Message Filter dropping message: frame 'base_link' at time 1790983061.769 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[amcl-6] [INFO] [1790983063.696035576] [amcl]: Message Filter dropping message: frame 'base_link' at time 1790983061.969 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[planner_server-2] [INFO] [1790983063.735936516] [global_costmap.global_costmap]: start
+[amcl-6] [INFO] [1790983063.820625569] [amcl]: Message Filter dropping message: frame 'base_link' at time 1790983062.169 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[amcl-6] [INFO] [1790983063.908339692] [amcl]: Message Filter dropping message: frame 'base_link' at time 1790983062.269 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[planner_server-2] [INFO] [1790983064.053670134] [global_costmap.global_costmap]: Message Filter dropping message: frame 'livox_frame' at time 1790983063.170 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[planner_server-2] [INFO] [1790983064.171395771] [global_costmap.global_costmap]: Message Filter dropping message: frame 'livox_frame' at time 1790983063.269 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[planner_server-2] [INFO] [1790983064.788158394] [planner_server]: Activating plugin GridBased of type SmacPlanner2D
+[planner_server-2] [INFO] [1790983064.793040156] [planner_server]: Creating bond (planner_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790983064.900234611] [lifecycle_manager_pilha]: Server planner_server connected with bond.
+[lifecycle_manager-7] [INFO] [1790983064.900269260] [lifecycle_manager_pilha]: [34m[1mActivating smoother_server[0m[0m
+[smoother_server-3] [INFO] [1790983064.900566594] [smoother_server]: Activating
+[smoother_server-3] [INFO] [1790983064.900586480] [smoother_server]: Activating smoother: suave of type nav2_constrained_smoother::ConstrainedSmoother
+[smoother_server-3] [INFO] [1790983064.900595894] [smoother_server]: Creating bond (smoother_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790983065.007357131] [lifecycle_manager_pilha]: Server smoother_server connected with bond.
+[lifecycle_manager-7] [INFO] [1790983065.007394074] [lifecycle_manager_pilha]: [34m[1mActivating controller_server[0m[0m
+[controller_server-4] [INFO] [1790983065.007775280] [controller_server]: Activating
+[controller_server-4] [INFO] [1790983065.007800162] [local_costmap.local_costmap]: Activating
+[controller_server-4] [INFO] [1790983065.007807957] [local_costmap.local_costmap]: Checking transform
+[controller_server-4] [INFO] [1790983065.007893556] [local_costmap.local_costmap]: start
+[controller_server-4] [INFO] [1790983065.259498477] [controller_server]: Activating controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[controller_server-4] [INFO] [1790983065.259531241] [controller_server]: Creating bond (controller_server) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790983065.365659295] [lifecycle_manager_pilha]: Server controller_server connected with bond.
+[lifecycle_manager-7] [INFO] [1790983065.365695115] [lifecycle_manager_pilha]: [34m[1mActivating bt_navigator[0m[0m
+[bt_navigator-5] [INFO] [1790983065.366080353] [bt_navigator]: Activating
+[bt_navigator-5] [INFO] [1790983065.409742505] [bt_navigator]: Creating bond (bt_navigator) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790983065.517785025] [lifecycle_manager_pilha]: Server bt_navigator connected with bond.
+[lifecycle_manager-7] [INFO] [1790983065.517816431] [lifecycle_manager_pilha]: [34m[1mActivating collision_monitor[0m[0m
+[collision_monitor-9] [INFO] [1790983065.518152319] [collision_monitor]: Activating
+[collision_monitor-9] [INFO] [1790983065.518194039] [collision_monitor]: Creating bond (collision_monitor) to lifecycle manager.
+[lifecycle_manager-7] [INFO] [1790983065.695762357] [lifecycle_manager_pilha]: Server collision_monitor connected with bond.
+[lifecycle_manager-7] [INFO] [1790983065.695797143] [lifecycle_manager_pilha]: [34m[1mManaged nodes are active[0m[0m
+[lifecycle_manager-7] [INFO] [1790983065.695810312] [lifecycle_manager_pilha]: [34m[1mCreating bond timer...[0m[0m
+[path_follower-11] [WARN] [1790983068.395731071] [path_follower]: AJUSTE AO VIVO: pedido linear do Nav2 em 1.00x
+[collision_monitor-9] [WARN] [1790983068.495316583] [collision_monitor]: [livox]: Latest source and current collision monitor node timestamps differ on 1.025896 seconds. Ignoring the source.
+[collision_monitor-9] [WARN] [1790983068.495380431] [collision_monitor]: Robot to stop due to invalid source. Either due to data not published yet, or to lack of new data received within the sensor timeout, or if impossible to transform data to base frame
+[collision_monitor-9] [INFO] [1790983068.605713211] [collision_monitor]: Robot to continue normal operation
+[heading_controller-8] [WARN] [1790983069.096722187] [heading_controller]: AJUSTE AO VIVO: pedido linear do Nav2 em 1.00x (teto 0.50 m/s)
+[heading_controller-8] [WARN] [1790983069.097680412] [heading_controller]: AJUSTE AO VIVO: força de curva do Nav2 em 1.00x (a_dec efetivo 5.832 rad/s²)
+[bt_navigator-5] [INFO] [1790983081.038866099] [bt_navigator]: Begin navigating from current location (0.00, 0.00) to (1.11, 18.73)
+[smoother_server-3] [INFO] [1790983081.111055316] [smoother_server]: Received a path to smooth.
+[path_follower-11] [WARN] [1790983081.129592321] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[controller_server-4] [INFO] [1790983081.140884202] [controller_server]: Received a goal, begin computing control effort.
+[controller_server-4] [WARN] [1790983081.140932693] [controller_server]: No goal checker was specified in parameter 'current_goal_checker'. Server will use only plugin loaded goal_checker goal_checker . This warning will appear once.
+[controller_server-4] [WARN] [1790983081.140950672] [controller_server]: No progress checker was specified in parameter 'current_progress_checker'. Server will use only plugin loaded progress_checker progress_checker . This warning will appear once.
+[path_follower-11] [INFO] [1790983085.923408468] [path_follower]: 96 amostras -> /home/bara/logs_robo2/seguidor_2026-10-02_201720.csv
+[smoother_server-3] [INFO] [1790983086.210137319] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983086.229932621] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983086.341138521] [controller_server]: Passing new path to controller.
+[smoother_server-3] [INFO] [1790983091.310275672] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983091.330367457] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[path_follower-11] [WARN] [1790983091.336572196] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[controller_server-4] [INFO] [1790983091.341173395] [controller_server]: Passing new path to controller.
+[smoother_server-3] [INFO] [1790983096.400389028] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983096.420364130] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983096.541176202] [controller_server]: Passing new path to controller.
+[smoother_server-3] [INFO] [1790983101.490320459] [smoother_server]: Received a path to smooth.
+[path_follower-11] [WARN] [1790983101.505249400] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[controller_server-4] [WARN] [1790983101.510199117] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983101.541196796] [controller_server]: Passing new path to controller.
+[smoother_server-3] [INFO] [1790983106.580177745] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983106.600322432] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983106.741138206] [controller_server]: Passing new path to controller.
+[collision_monitor-9] [INFO] [1790983111.392610507] [collision_monitor]: Robot to approach for 0.750000 seconds away from collision
+[smoother_server-3] [INFO] [1790983111.670404397] [smoother_server]: Received a path to smooth.
+[path_follower-11] [WARN] [1790983111.685070181] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[controller_server-4] [WARN] [1790983111.690093555] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983111.741140484] [controller_server]: Passing new path to controller.
+[collision_monitor-9] [INFO] [1790983113.091210662] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983114.297138642] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983114.501010833] [collision_monitor]: Robot to continue normal operation
+[path_follower-11] [INFO] [1790983115.927364153] [path_follower]: 696 amostras -> /home/bara/logs_robo2/seguidor_2026-10-02_201720.csv
+[smoother_server-3] [INFO] [1790983116.750308616] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983116.770173612] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983116.941141094] [controller_server]: Passing new path to controller.
+[smoother_server-3] [INFO] [1790983121.839819351] [smoother_server]: Received a path to smooth.
+[path_follower-11] [WARN] [1790983121.845889893] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[controller_server-4] [WARN] [1790983121.860297524] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983121.941141699] [controller_server]: Passing new path to controller.
+[smoother_server-3] [INFO] [1790983126.929999367] [smoother_server]: Received a path to smooth.
+[controller_server-4] [INFO] [1790983126.941147961] [controller_server]: Passing new path to controller.
+[controller_server-4] [INFO] [1790983127.141176291] [controller_server]: Passing new path to controller.
+[smoother_server-3] [INFO] [1790983132.019860298] [smoother_server]: Received a path to smooth.
+[path_follower-11] [WARN] [1790983132.022775316] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[controller_server-4] [WARN] [1790983132.039842518] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983132.141177301] [controller_server]: Passing new path to controller.
+[smoother_server-3] [INFO] [1790983137.100020276] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983137.119898619] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983137.141146223] [controller_server]: Passing new path to controller.
+[smoother_server-3] [INFO] [1790983142.180119157] [smoother_server]: Received a path to smooth.
+[path_follower-11] [WARN] [1790983142.184311741] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[controller_server-4] [WARN] [1790983142.199778778] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983142.341134547] [controller_server]: Passing new path to controller.
+[path_follower-11] [INFO] [1790983145.938994786] [path_follower]: 1296 amostras -> /home/bara/logs_robo2/seguidor_2026-10-02_201720.csv
+[smoother_server-3] [INFO] [1790983147.259930667] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983147.279958197] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983147.341139007] [controller_server]: Passing new path to controller.
+[smoother_server-3] [INFO] [1790983152.349967348] [smoother_server]: Received a path to smooth.
+[path_follower-11] [WARN] [1790983152.359583813] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[controller_server-4] [WARN] [1790983152.369956882] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983152.541144070] [controller_server]: Passing new path to controller.
+[smoother_server-3] [INFO] [1790983157.439859134] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983157.459954556] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983157.541179099] [controller_server]: Passing new path to controller.
+[path_follower-11] [WARN] [1790983162.528226383] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[smoother_server-3] [INFO] [1790983162.529776581] [smoother_server]: Received a path to smooth.
+[controller_server-4] [INFO] [1790983162.541175052] [controller_server]: Passing new path to controller.
+[controller_server-4] [INFO] [1790983162.741135640] [controller_server]: Passing new path to controller.
+[smoother_server-3] [INFO] [1790983167.609851760] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983167.629777609] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983167.741137179] [controller_server]: Passing new path to controller.
+[path_follower-11] [WARN] [1790983172.687967619] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[smoother_server-3] [INFO] [1790983172.690200595] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983172.709645592] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983172.741143938] [controller_server]: Passing new path to controller.
+[path_follower-11] [INFO] [1790983175.960429478] [path_follower]: 1896 amostras -> /home/bara/logs_robo2/seguidor_2026-10-02_201720.csv
+[smoother_server-3] [INFO] [1790983177.769772480] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983177.789701240] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983177.941144528] [controller_server]: Passing new path to controller.
+[path_follower-11] [WARN] [1790983182.846471072] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[smoother_server-3] [INFO] [1790983182.849748283] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983182.869685153] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983182.941162498] [controller_server]: Passing new path to controller.
+[smoother_server-3] [INFO] [1790983187.929836887] [smoother_server]: Received a path to smooth.
+[controller_server-4] [INFO] [1790983187.941176823] [controller_server]: Passing new path to controller.
+[controller_server-4] [INFO] [1790983188.141171530] [controller_server]: Passing new path to controller.
+[path_follower-11] [WARN] [1790983192.989689700] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[smoother_server-3] [INFO] [1790983192.990139422] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983193.009739402] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983193.141133970] [controller_server]: Passing new path to controller.
+[collision_monitor-9] [INFO] [1790983195.793057712] [collision_monitor]: Robot to approach for 0.750000 seconds away from collision
+[collision_monitor-9] [INFO] [1790983196.498396989] [collision_monitor]: Robot to continue normal operation
+[smoother_server-3] [INFO] [1790983198.069712504] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983198.089637951] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983198.141163675] [controller_server]: Passing new path to controller.
+[path_follower-11] [WARN] [1790983203.131444269] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[smoother_server-3] [INFO] [1790983203.139600550] [smoother_server]: Received a path to smooth.
+[controller_server-4] [INFO] [1790983203.141137402] [controller_server]: Passing new path to controller.
+[controller_server-4] [INFO] [1790983203.341172014] [controller_server]: Passing new path to controller.
+[smoother_server-3] [INFO] [1790983208.189739013] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983208.209626462] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983208.341142397] [controller_server]: Passing new path to controller.
+[path_follower-11] [INFO] [1790983210.959081659] [path_follower]: 2596 amostras -> /home/bara/logs_robo2/seguidor_2026-10-02_201720.csv
+[smoother_server-3] [INFO] [1790983213.239763661] [smoother_server]: Received a path to smooth.
+[path_follower-11] [WARN] [1790983213.251338104] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[controller_server-4] [WARN] [1790983213.259720697] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983213.341142226] [controller_server]: Passing new path to controller.
+[collision_monitor-9] [INFO] [1790983213.791786544] [collision_monitor]: Robot to approach for 0.750000 seconds away from collision
+[collision_monitor-9] [INFO] [1790983214.292966838] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983214.395026047] [collision_monitor]: Robot to approach for 0.750000 seconds away from collision
+[collision_monitor-9] [INFO] [1790983214.496898477] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983216.494390522] [collision_monitor]: Robot to approach for 0.750000 seconds away from collision
+[collision_monitor-9] [INFO] [1790983216.699684099] [collision_monitor]: Robot to continue normal operation
+[smoother_server-3] [INFO] [1790983218.291552731] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983218.299661138] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983218.341142128] [controller_server]: Passing new path to controller.
+[path_follower-11] [WARN] [1790983223.315625852] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[smoother_server-3] [INFO] [1790983223.329668021] [smoother_server]: Received a path to smooth.
+[controller_server-4] [INFO] [1790983223.341141593] [controller_server]: Passing new path to controller.
+[controller_server-4] [INFO] [1790983223.541174775] [controller_server]: Passing new path to controller.
+[smoother_server-3] [INFO] [1790983228.369644095] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983228.389523966] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983228.541146961] [controller_server]: Passing new path to controller.
+[collision_monitor-9] [INFO] [1790983232.603122402] [collision_monitor]: Robot to approach for 0.750000 seconds away from collision
+[collision_monitor-9] [INFO] [1790983232.982363703] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983233.186336576] [collision_monitor]: Robot to approach for 0.750000 seconds away from collision
+[collision_monitor-9] [INFO] [1790983233.288359238] [collision_monitor]: Robot to continue normal operation
+[path_follower-11] [WARN] [1790983233.404179920] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[smoother_server-3] [INFO] [1790983233.419611945] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983233.429488167] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983233.541173935] [controller_server]: Passing new path to controller.
+[smoother_server-3] [INFO] [1790983238.459635889] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983238.469586668] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[collision_monitor-9] [INFO] [1790983238.495715913] [collision_monitor]: Robot to approach for 0.750000 seconds away from collision
+[controller_server-4] [INFO] [1790983238.541133813] [controller_server]: Passing new path to controller.
+[collision_monitor-9] [INFO] [1790983238.588258033] [collision_monitor]: Robot to continue normal operation
+[path_follower-11] [INFO] [1790983240.964521050] [path_follower]: 3196 amostras -> /home/bara/logs_robo2/seguidor_2026-10-02_201720.csv
+[path_follower-11] [INFO] [1790983243.318281418] [path_follower]: parado (chegou)
+[path_follower-11] [WARN] [1790983243.481624628] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[smoother_server-3] [INFO] [1790983243.499536484] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983243.509411983] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983243.541160828] [controller_server]: Passing new path to controller.
+[controller_server-4] [INFO] [1790983244.141295080] [controller_server]: Reached the goal!
+[bt_navigator-5] [INFO] [1790983244.169287702] [bt_navigator]: Goal succeeded
+[heading_controller-8] [WARN] [1790983245.203190138] [heading_controller]: alvo de rumo venceu
+[bt_navigator-5] [INFO] [1790983245.674200169] [bt_navigator]: Begin navigating from current location (1.07, 18.91) to (1.90, 0.31)
+[planner_server-2] [WARN] [1790983245.676238378] [planner_server]: GridBased plugin failed to plan from (1.07, 18.91) to (1.90, 0.31): "no valid path found"
+[planner_server-2] [WARN] [1790983245.676295317] [planner_server]: [compute_path_to_pose] [ActionServer] Aborting handle.
+[planner_server-2] [INFO] [1790983245.694893844] [global_costmap.global_costmap]: Received request to clear entirely the global_costmap
+[smoother_server-3] [INFO] [1790983245.845479044] [smoother_server]: Received a path to smooth.
+[controller_server-4] [INFO] [1790983245.865765787] [controller_server]: Received a goal, begin computing control effort.
+[heading_controller-8] [INFO] [1790983245.903004326] [heading_controller]: PIVÔ: -111° de erro — parando para virar no eixo (arcar daria raio de ~0,8 m)
+[heading_controller-8] [ERROR] [1790983248.403061625] [heading_controller]: PIVÔ DESISTIU — 1 pulsos e ainda faltam 22° — o resíduo é menor que o pivô mínimo desta máquina?
+[collision_monitor-9] [INFO] [1790983250.094698842] [collision_monitor]: Robot to approach for 0.750000 seconds away from collision
+[collision_monitor-9] [INFO] [1790983250.890682929] [collision_monitor]: Robot to continue normal operation
+[smoother_server-3] [INFO] [1790983250.945500098] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983250.965529683] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983251.065941742] [controller_server]: Passing new path to controller.
+[smoother_server-3] [INFO] [1790983256.055491460] [smoother_server]: Received a path to smooth.
+[controller_server-4] [INFO] [1790983256.066131595] [controller_server]: Passing new path to controller.
+[path_follower-11] [WARN] [1790983256.068488388] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[controller_server-4] [INFO] [1790983256.266162291] [controller_server]: Passing new path to controller.
+[collision_monitor-9] [INFO] [1790983257.190012673] [collision_monitor]: Robot to approach for 0.750000 seconds away from collision
+[collision_monitor-9] [INFO] [1790983257.384121463] [collision_monitor]: Robot to continue normal operation
+[smoother_server-3] [INFO] [1790983261.175479514] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983261.195053774] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983261.265945905] [controller_server]: Passing new path to controller.
+[smoother_server-3] [INFO] [1790983266.275296256] [smoother_server]: Received a path to smooth.
+[path_follower-11] [WARN] [1790983266.283639435] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[controller_server-4] [WARN] [1790983266.295423355] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983266.465947503] [controller_server]: Passing new path to controller.
+[path_follower-11] [INFO] [1790983270.972276320] [path_follower]: 3745 amostras -> /home/bara/logs_robo2/seguidor_2026-10-02_201720.csv
+[smoother_server-3] [INFO] [1790983271.385770329] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983271.405182320] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983271.466252450] [controller_server]: Passing new path to controller.
+[collision_monitor-9] [INFO] [1790983275.288063316] [collision_monitor]: Robot to approach for 0.750000 seconds away from collision
+[collision_monitor-9] [INFO] [1790983275.390392628] [collision_monitor]: Robot to continue normal operation
+[smoother_server-3] [INFO] [1790983276.495316071] [smoother_server]: Received a path to smooth.
+[path_follower-11] [WARN] [1790983276.500532559] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[controller_server-4] [WARN] [1790983276.515499391] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983276.665965056] [controller_server]: Passing new path to controller.
+[collision_monitor-9] [INFO] [1790983278.299922166] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[heading_controller-8] [INFO] [1790983279.003451020] [heading_controller]: PIVÔ: -80° de erro — parando para virar no eixo (arcar daria raio de ~0,8 m)
+[collision_monitor-9] [INFO] [1790983279.504098653] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983279.586226404] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983279.688523530] [collision_monitor]: Robot to continue normal operation
+[path_follower-11] [WARN] [1790983281.319176829] [path_follower]: parede MAPEADA perto e frente livre: detector liberado em 2.0 s (genérico 4.0 s)
+[path_follower-11] [WARN] [1790983281.320281837] [path_follower]: EMPERRADO com frente livre (1.77 m) — escape RETO para frente de até 0.20 m, remedindo a cada ciclo
+[collision_monitor-9] [INFO] [1790983281.402356966] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983281.494302590] [collision_monitor]: Robot to continue normal operation
+[heading_controller-8] [INFO] [1790983281.603035115] [heading_controller]: pivô fechado, sobrou -1.1°
+[smoother_server-3] [INFO] [1790983281.797348295] [smoother_server]: Received a path to smooth.
+[controller_server-4] [INFO] [1790983281.865947149] [controller_server]: Passing new path to controller.
+[path_follower-11] [WARN] [1790983282.119472501] [path_follower]: fim do escape para frente: percorreu 0.12 m em 0.8 s
+[collision_monitor-9] [INFO] [1790983282.293954173] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983282.692295984] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983283.294226742] [collision_monitor]: Robot to approach for 0.750000 seconds away from collision
+[collision_monitor-9] [INFO] [1790983283.782781504] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[heading_controller-8] [ERROR] [1790983284.852968230] [heading_controller]: ROBÔ PARADO COM COMANDO SAINDO há 0.5 s — pedindo v=0.000 m/s, wz=0.725 rad/s e a pose não mexe. Suspeita: zona morta (parâmetro=0.0178 m/s, não medido). Rodar tools/banco/, ensaios de zona morta.
+[collision_monitor-9] [INFO] [1790983285.289320099] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983285.391211933] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[path_follower-11] [WARN] [1790983286.122390133] [path_follower]: EMPERRADO com frente livre (1.75 m) — escape RETO para frente de até 0.20 m, remedindo a cada ciclo
+[smoother_server-3] [INFO] [1790983287.076762066] [smoother_server]: Received a path to smooth.
+[path_follower-11] [WARN] [1790983287.131256757] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[controller_server-4] [INFO] [1790983287.265948571] [controller_server]: Passing new path to controller.
+[path_follower-11] [WARN] [1790983287.518891128] [path_follower]: fim do escape para frente: percorreu 0.20 m em 1.4 s
+[collision_monitor-9] [INFO] [1790983288.088760599] [collision_monitor]: Robot to continue normal operation
+[smoother_server-3] [INFO] [1790983292.386591670] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983292.426190310] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983292.466036878] [controller_server]: Passing new path to controller.
+[path_follower-11] [INFO] [1790983297.042178811] [path_follower]: parado (objetivo encerrado)
+[bt_navigator-5] [ERROR] [1790983297.064852083] [bt_navigator_navigate_to_pose_rclcpp_node]: Failed to get result for follow_path in node halt!
+[bt_navigator-5] [INFO] [1790983297.065164232] [bt_navigator]: [navigate_to_pose] [ActionServer] Client requested to cancel the goal. Cancelling.
+[bt_navigator-5] [INFO] [1790983297.065434022] [bt_navigator]: Goal canceled
+[controller_server-4] [INFO] [1790983297.065963337] [controller_server]: Cancellation was successful. Stopping the robot.
+[controller_server-4] [INFO] [1790983297.066005751] [controller_server]: [follow_path] [ActionServer] Client requested to cancel the goal. Cancelling.
+[collision_monitor-9] [INFO] [1790983297.896792103] [collision_monitor]: Robot to approach for 0.750000 seconds away from collision
+[heading_controller-8] [WARN] [1790983298.053445756] [heading_controller]: alvo de rumo venceu
+[collision_monitor-9] [INFO] [1790983298.192524900] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983298.294163057] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983298.487797749] [collision_monitor]: Robot to continue normal operation
+[path_follower-11] [INFO] [1790983301.001933437] [path_follower]: 4261 amostras -> /home/bara/logs_robo2/seguidor_2026-10-02_201720.csv
+[heading_controller-8] [WARN] [1790983303.103585647] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790983308.153283423] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790983313.202921086] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790983318.203362889] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790983323.252963767] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790983328.253061170] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790983333.253199163] [heading_controller]: alvo de rumo venceu
+[path_follower-11] [INFO] [1790983335.971676520] [path_follower]: 4261 amostras -> /home/bara/logs_robo2/seguidor_2026-10-02_201720.csv
+[bt_navigator-5] [INFO] [1790983337.458467572] [bt_navigator]: Begin navigating from current location (4.86, 20.77) to (1.62, 0.64)
+[path_follower-11] [WARN] [1790983337.537074548] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[smoother_server-3] [INFO] [1790983337.539746501] [smoother_server]: Received a path to smooth.
+[controller_server-4] [INFO] [1790983337.559536605] [controller_server]: Received a goal, begin computing control effort.
+[heading_controller-8] [INFO] [1790983337.603844812] [heading_controller]: PIVÔ: -153° de erro — parando para virar no eixo (arcar daria raio de ~0,8 m)
+[collision_monitor-9] [INFO] [1790983339.790123191] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983339.892474954] [collision_monitor]: Robot to continue normal operation
+[heading_controller-8] [INFO] [1790983340.503019951] [heading_controller]: pivô fechado, sobrou -0.2°
+[smoother_server-3] [INFO] [1790983342.649742246] [smoother_server]: Received a path to smooth.
+[controller_server-4] [INFO] [1790983342.759764380] [controller_server]: Passing new path to controller.
+[smoother_server-3] [INFO] [1790983347.729494836] [smoother_server]: Received a path to smooth.
+[path_follower-11] [WARN] [1790983347.736529491] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[controller_server-4] [INFO] [1790983347.759782850] [controller_server]: Passing new path to controller.
+[collision_monitor-9] [INFO] [1790983348.989451825] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983350.301946703] [collision_monitor]: Robot to approach for 0.750000 seconds away from collision
+[collision_monitor-9] [INFO] [1790983350.393403116] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983351.085953061] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983351.197636957] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983351.299891450] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983351.391292846] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983351.889943657] [collision_monitor]: Robot to continue normal operation
+[heading_controller-8] [ERROR] [1790983351.903035941] [heading_controller]: ROBÔ PARADO COM COMANDO SAINDO há 0.5 s — pedindo v=0.495 m/s, wz=-1.309 rad/s e a pose não mexe. Suspeita: zona morta (parâmetro=0.0178 m/s, não medido). Rodar tools/banco/, ensaios de zona morta.
+[collision_monitor-9] [INFO] [1790983351.991529882] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[path_follower-11] [WARN] [1790983352.468903063] [path_follower]: parede MAPEADA perto e frente livre: detector liberado em 2.0 s (genérico 4.0 s)
+[path_follower-11] [WARN] [1790983352.470597030] [path_follower]: EMPERRADO com frente livre (2.81 m) — escape RETO para frente de até 0.20 m, remedindo a cada ciclo
+[collision_monitor-9] [INFO] [1790983352.592557715] [collision_monitor]: Robot to continue normal operation
+[path_follower-11] [WARN] [1790983352.618862235] [path_follower]: fim do escape para frente: percorreu 0.01 m em 0.2 s
+[smoother_server-3] [INFO] [1790983352.819444705] [smoother_server]: Received a path to smooth.
+[collision_monitor-9] [INFO] [1790983352.899680178] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[controller_server-4] [INFO] [1790983352.959765026] [controller_server]: Passing new path to controller.
+[collision_monitor-9] [INFO] [1790983353.195048472] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983353.296945266] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983353.398734193] [collision_monitor]: Robot to continue normal operation
+[heading_controller-8] [ERROR] [1790983353.452928034] [heading_controller]: ROBÔ PARADO COM COMANDO SAINDO há 0.5 s — pedindo v=0.493 m/s, wz=-1.405 rad/s e a pose não mexe. Suspeita: zona morta (parâmetro=0.0178 m/s, não medido). Rodar tools/banco/, ensaios de zona morta.
+[collision_monitor-9] [INFO] [1790983353.500320400] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983353.592185953] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983353.795775404] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983354.488858062] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983354.611380684] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983354.785285200] [collision_monitor]: Robot to approach for 0.750000 seconds away from collision
+[heading_controller-8] [ERROR] [1790983354.853393113] [heading_controller]: ROBÔ PARADO COM COMANDO SAINDO há 0.5 s — pedindo v=0.495 m/s, wz=-1.282 rad/s e a pose não mexe. Suspeita: zona morta (parâmetro=0.0178 m/s, não medido). Rodar tools/banco/, ensaios de zona morta.
+[collision_monitor-9] [INFO] [1790983354.989038902] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983355.091209341] [collision_monitor]: Robot to approach for 0.750000 seconds away from collision
+[collision_monitor-9] [INFO] [1790983355.306217013] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983355.388651373] [collision_monitor]: Robot to approach for 0.750000 seconds away from collision
+[collision_monitor-9] [INFO] [1790983355.612610818] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983357.301331954] [collision_monitor]: Robot to approach for 0.750000 seconds away from collision
+[collision_monitor-9] [INFO] [1790983357.393584877] [collision_monitor]: Robot to continue normal operation
+[smoother_server-3] [INFO] [1790983357.879665890] [smoother_server]: Received a path to smooth.
+[path_follower-11] [WARN] [1790983357.882998456] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[controller_server-4] [WARN] [1790983357.899289010] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983357.959734331] [controller_server]: Passing new path to controller.
+[collision_monitor-9] [INFO] [1790983358.099996748] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983358.303714594] [collision_monitor]: Robot to continue normal operation
+[smoother_server-3] [INFO] [1790983362.939475329] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983362.959372167] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983362.959727820] [controller_server]: Passing new path to controller.
+[path_follower-11] [INFO] [1790983365.973365384] [path_follower]: 4828 amostras -> /home/bara/logs_robo2/seguidor_2026-10-02_201720.csv
+[smoother_server-3] [INFO] [1790983368.000142310] [smoother_server]: Received a path to smooth.
+[path_follower-11] [WARN] [1790983368.007109183] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[controller_server-4] [WARN] [1790983368.009557120] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983368.159765217] [controller_server]: Passing new path to controller.
+[smoother_server-3] [INFO] [1790983373.049321670] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983373.069430728] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983373.159755310] [controller_server]: Passing new path to controller.
+[path_follower-11] [WARN] [1790983378.107211937] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[smoother_server-3] [INFO] [1790983378.109513458] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983378.129461348] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983378.159728888] [controller_server]: Passing new path to controller.
+[smoother_server-3] [INFO] [1790983383.169618429] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983383.189492163] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983383.359734040] [controller_server]: Passing new path to controller.
+[smoother_server-3] [INFO] [1790983388.219412832] [smoother_server]: Received a path to smooth.
+[path_follower-11] [WARN] [1790983388.221215121] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[controller_server-4] [WARN] [1790983388.239358228] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983388.359736568] [controller_server]: Passing new path to controller.
+[smoother_server-3] [INFO] [1790983393.269366776] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983393.289393464] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983393.359951773] [controller_server]: Passing new path to controller.
+[path_follower-11] [INFO] [1790983395.984668902] [path_follower]: 5428 amostras -> /home/bara/logs_robo2/seguidor_2026-10-02_201720.csv
+[path_follower-11] [WARN] [1790983398.325905111] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[smoother_server-3] [INFO] [1790983398.329464530] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983398.349152209] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983398.359728306] [controller_server]: Passing new path to controller.
+[smoother_server-3] [INFO] [1790983403.369727929] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983403.389370974] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983403.559756421] [controller_server]: Passing new path to controller.
+[path_follower-11] [WARN] [1790983408.416538251] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[smoother_server-3] [INFO] [1790983408.419378758] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983408.439156791] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983408.559753999] [controller_server]: Passing new path to controller.
+[smoother_server-3] [INFO] [1790983413.469369732] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983413.489178004] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983413.559764299] [controller_server]: Passing new path to controller.
+[path_follower-11] [WARN] [1790983418.512143953] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[smoother_server-3] [INFO] [1790983418.519183212] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983418.539288079] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983418.559736026] [controller_server]: Passing new path to controller.
+[smoother_server-3] [INFO] [1790983423.569448181] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983423.589286629] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983423.759767400] [controller_server]: Passing new path to controller.
+[path_follower-11] [INFO] [1790983425.997510872] [path_follower]: 6026 amostras -> /home/bara/logs_robo2/seguidor_2026-10-02_201720.csv
+[path_follower-11] [WARN] [1790983428.615421589] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[smoother_server-3] [INFO] [1790983428.619245876] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983428.639186339] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983428.759768993] [controller_server]: Passing new path to controller.
+[smoother_server-3] [INFO] [1790983433.669213809] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983433.689187551] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983433.759730694] [controller_server]: Passing new path to controller.
+[path_follower-11] [WARN] [1790983438.709282178] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[smoother_server-3] [INFO] [1790983438.719161749] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983438.729114061] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983438.759745442] [controller_server]: Passing new path to controller.
+[collision_monitor-9] [INFO] [1790983443.694063802] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[smoother_server-3] [INFO] [1790983443.759253635] [smoother_server]: Received a path to smooth.
+[controller_server-4] [INFO] [1790983443.759728004] [controller_server]: Passing new path to controller.
+[collision_monitor-9] [INFO] [1790983443.797964863] [collision_monitor]: Robot to continue normal operation
+[controller_server-4] [INFO] [1790983443.959725545] [controller_server]: Passing new path to controller.
+[collision_monitor-9] [INFO] [1790983444.094326291] [collision_monitor]: Robot to approach for 0.750000 seconds away from collision
+[collision_monitor-9] [INFO] [1790983444.196732747] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983444.390017249] [collision_monitor]: Robot to approach for 0.750000 seconds away from collision
+[collision_monitor-9] [INFO] [1790983444.686382033] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983444.788048279] [collision_monitor]: Robot to approach for 0.750000 seconds away from collision
+[collision_monitor-9] [INFO] [1790983445.094762793] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[heading_controller-8] [ERROR] [1790983446.803591589] [heading_controller]: ROBÔ PARADO COM COMANDO SAINDO há 0.5 s — pedindo v=0.410 m/s, wz=-2.200 rad/s e a pose não mexe. Suspeita: zona morta (parâmetro=0.0178 m/s, não medido). Rodar tools/banco/, ensaios de zona morta.
+[collision_monitor-9] [INFO] [1790983447.894167762] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983447.996307243] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983448.200707157] [collision_monitor]: Robot to continue normal operation
+[path_follower-11] [WARN] [1790983448.776835999] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[smoother_server-3] [INFO] [1790983448.789504742] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983448.809153977] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983448.959761463] [controller_server]: Passing new path to controller.
+[collision_monitor-9] [INFO] [1790983449.788377047] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983449.891243417] [collision_monitor]: Robot to approach for 0.750000 seconds away from collision
+[collision_monitor-9] [INFO] [1790983450.003588471] [collision_monitor]: Robot to continue normal operation
+[smoother_server-3] [INFO] [1790983453.839108491] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983453.849131830] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983453.959765608] [controller_server]: Passing new path to controller.
+[path_follower-11] [INFO] [1790983456.064505090] [path_follower]: 6624 amostras -> /home/bara/logs_robo2/seguidor_2026-10-02_201720.csv
+[path_follower-11] [WARN] [1790983458.863148314] [path_follower]: plano CRU descartado — segurança exige /plan_smoothed; aguardando o suavizador
+[smoother_server-3] [INFO] [1790983458.879201493] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983458.889111266] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983458.959725179] [controller_server]: Passing new path to controller.
+[smoother_server-3] [INFO] [1790983463.919127827] [smoother_server]: Received a path to smooth.
+[controller_server-4] [WARN] [1790983463.929067661] [controller_server]: [follow_path] [ActionServer] Aborting handle.
+[controller_server-4] [INFO] [1790983463.959763849] [controller_server]: Passing new path to controller.
+[collision_monitor-9] [INFO] [1790983463.989493994] [collision_monitor]: Robot to approach for 0.750000 seconds away from collision
+[collision_monitor-9] [INFO] [1790983464.203448973] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983464.499898909] [collision_monitor]: Robot to approach for 0.750000 seconds away from collision
+[collision_monitor-9] [INFO] [1790983464.888302238] [collision_monitor]: Robot to continue normal operation
+[path_follower-11] [INFO] [1790983466.918305559] [path_follower]: parado (chegou)
+[controller_server-4] [INFO] [1790983466.959907683] [controller_server]: Reached the goal!
+[bt_navigator-5] [INFO] [1790983466.988815094] [bt_navigator]: Goal succeeded
+[heading_controller-8] [WARN] [1790983468.002970669] [heading_controller]: alvo de rumo venceu
+[collision_monitor-9] [INFO] [1790983472.702219895] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983472.794358375] [collision_monitor]: Robot to continue normal operation
+[heading_controller-8] [WARN] [1790983473.003506647] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790983478.053142698] [heading_controller]: alvo de rumo venceu
+[collision_monitor-9] [INFO] [1790983478.792105180] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983478.894055630] [collision_monitor]: Robot to continue normal operation
+[heading_controller-8] [WARN] [1790983483.103605126] [heading_controller]: alvo de rumo venceu
+[collision_monitor-9] [INFO] [1790983487.614289565] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983487.686484449] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983487.798211166] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[heading_controller-8] [WARN] [1790983488.153244859] [heading_controller]: alvo de rumo venceu
+[collision_monitor-9] [INFO] [1790983488.591415864] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983488.794918386] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983489.496416079] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983489.618524057] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983490.584574406] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983490.687535812] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983491.002677753] [collision_monitor]: Robot to continue normal operation
+[path_follower-11] [INFO] [1790983491.014304752] [path_follower]: 6840 amostras -> /home/bara/logs_robo2/seguidor_2026-10-02_201720.csv
+[collision_monitor-9] [INFO] [1790983491.094065185] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983492.892549235] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983493.096091263] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[heading_controller-8] [WARN] [1790983493.203191313] [heading_controller]: alvo de rumo venceu
+[collision_monitor-9] [INFO] [1790983494.590296680] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983494.702253201] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983495.701654863] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983495.793223136] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983495.895391795] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983495.997309571] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983497.095247451] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983497.197424812] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[heading_controller-8] [WARN] [1790983498.203499246] [heading_controller]: alvo de rumo venceu
+[collision_monitor-9] [INFO] [1790983498.286633187] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983498.388487430] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983502.001929188] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983502.186354423] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[heading_controller-8] [WARN] [1790983503.253955090] [heading_controller]: alvo de rumo venceu
+[collision_monitor-9] [INFO] [1790983503.486114715] [collision_monitor]: Robot to continue normal operation
+[heading_controller-8] [WARN] [1790983508.302898144] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790983513.303359593] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790983518.353026224] [heading_controller]: alvo de rumo venceu
+[path_follower-11] [INFO] [1790983521.017126304] [path_follower]: 6840 amostras -> /home/bara/logs_robo2/seguidor_2026-10-02_201720.csv
+[heading_controller-8] [WARN] [1790983523.353222051] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790983528.403270467] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790983533.452816514] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790983538.453117406] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790983543.503306436] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790983548.553139898] [heading_controller]: alvo de rumo venceu
+[path_follower-11] [INFO] [1790983551.057777990] [path_follower]: 6840 amostras -> /home/bara/logs_robo2/seguidor_2026-10-02_201720.csv
+[heading_controller-8] [WARN] [1790983553.604635986] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790983558.653252571] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790983563.703247911] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790983568.752992846] [heading_controller]: alvo de rumo venceu
+[collision_monitor-9] [INFO] [1790983571.785255489] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983571.887203214] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983571.999445118] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983572.193427070] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983573.102222135] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983573.490737157] [collision_monitor]: Robot to continue normal operation
+[heading_controller-8] [WARN] [1790983573.753100112] [heading_controller]: alvo de rumo venceu
+[collision_monitor-9] [INFO] [1790983574.102432693] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983574.194314521] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983574.298444758] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983574.890244744] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983575.492410005] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983575.597104076] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983576.302227563] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983576.587687603] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983576.689631879] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983576.791724933] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983576.893490806] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983576.986333710] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983577.794411160] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[heading_controller-8] [WARN] [1790983578.753171278] [heading_controller]: alvo de rumo venceu
+[collision_monitor-9] [INFO] [1790983578.894573731] [collision_monitor]: Robot to continue normal operation
+[heading_controller-8] [WARN] [1790983583.753275495] [heading_controller]: alvo de rumo venceu
+[path_follower-11] [INFO] [1790983586.027038980] [path_follower]: 6840 amostras -> /home/bara/logs_robo2/seguidor_2026-10-02_201720.csv
+[heading_controller-8] [WARN] [1790983588.802970405] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790983593.853113933] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790983598.902868501] [heading_controller]: alvo de rumo venceu
+[collision_monitor-9] [INFO] [1790983600.614951355] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983600.798443523] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983601.801635435] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983601.995168400] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983602.393861824] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983602.495843842] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983603.589556041] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983603.691699761] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983603.896963685] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[heading_controller-8] [WARN] [1790983603.903271951] [heading_controller]: alvo de rumo venceu
+[collision_monitor-9] [INFO] [1790983604.192719193] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983605.101347808] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983605.183637698] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983605.387722640] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983605.489653440] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983605.622518355] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983605.694689169] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983607.994175345] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983608.096128996] [collision_monitor]: Robot to continue normal operation
+[collision_monitor-9] [INFO] [1790983608.393540986] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983608.804625093] [collision_monitor]: Robot to continue normal operation
+[heading_controller-8] [WARN] [1790983608.903342311] [heading_controller]: alvo de rumo venceu
+[collision_monitor-9] [INFO] [1790983609.498940546] [collision_monitor]: Robot to stop due to PolygonStop polygon
+[collision_monitor-9] [INFO] [1790983609.886321231] [collision_monitor]: Robot to continue normal operation
+[heading_controller-8] [WARN] [1790983613.953296023] [heading_controller]: alvo de rumo venceu
+[heading_controller-8] [WARN] [1790983619.003024727] [heading_controller]: alvo de rumo venceu
+[path_follower-11] [INFO] [1790983620.998807267] [path_follower]: 6840 amostras -> /home/bara/logs_robo2/seguidor_2026-10-02_201720.csv

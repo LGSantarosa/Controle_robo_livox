@@ -1,0 +1,13 @@
+[INFO] [launch]: All log files can be found below /home/bara/.ros/log/2026-10-02-20-17-31-239805-bara-6931
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [launch.user]: [joystick] usando js0 — /dev/input/js0 anuncia 'Xbox Wireless Controller'
+[INFO] [launch.user]: [joystick] LB = homem-morto (segure para andar) · RB = turbo · analógico esquerdo dirige
+[INFO] [joy_node-1]: process started with pid [6935]
+[INFO] [teleop_node-2]: process started with pid [6936]
+[teleop_node-2] [INFO] [1790983051.437010821] [TeleopTwistJoy]: Teleop enable button 6.
+[teleop_node-2] [INFO] [1790983051.437062364] [TeleopTwistJoy]: Turbo on button 7.
+[teleop_node-2] [INFO] [1790983051.437070953] [TeleopTwistJoy]: Linear axis x on 1 at scale 0.300000.
+[teleop_node-2] [INFO] [1790983051.437080698] [TeleopTwistJoy]: Turbo for linear axis x is scale 0.500000.
+[teleop_node-2] [INFO] [1790983051.437088759] [TeleopTwistJoy]: Angular axis yaw on 0 at scale 1.250000.
+[teleop_node-2] [INFO] [1790983051.437096371] [TeleopTwistJoy]: Turbo for angular axis yaw is scale 1.250000.
+[joy_node-1] [INFO] [1790983051.566994019] [joy_node]: Opened joystick: Xbox One S Controller.  deadzone: 0.100000

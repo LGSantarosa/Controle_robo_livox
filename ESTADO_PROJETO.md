@@ -2,8 +2,9 @@
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
 > Versionado na `main`. Atualizado em **2026-10-02** (060 e 063 testadas no
-> robô 2; ré da 061 ainda não exercitada; 064 pronta no dev e ainda sem teste
-> no chão). O estado
+> robô 2; ré da 061 ainda não exercitada; 064 foi ao NUC, mas sua validação no
+> chão foi interrompida por falhas de pilha e localização; próxima prioridade:
+> localização global 3D). O estado
 > anterior continua sendo o de 24-09: Mid-360, FAST-LIO, `/scan` e TF do robô 3
 > provados com placa/motores desligados; a configuração que funcionou está só
 > no clone ignorado pelo git e ainda precisa virar solução por máquina.
@@ -14,6 +15,50 @@
 > Ritmo deliberadamente devagar: 1 mudança pequena por vez.
 
 ---
+
+## 🔴 02-10 NOITE — AMCL VIRA BASELINE; RETOMAR A ARQUITETURA 3D (001/003)
+
+Na última repetição real do dia, o robô perdeu a localização no corredor e
+entrou contra a parede. O dono também observou o marcador oscilar no mapa,
+dar pulos de posição e às vezes se perder — comportamento que já foi extinto
+há tempos no robô 1. O robô foi desligado. Não houve correção nem nova
+mudança de código depois da coleta.
+
+O AMCL **não foi descartado**: ele funciona muito bem na maior parte das rotas
+e seus defeitos aparecem em poucos pontos. O estado funcional atual fica
+preservado na branch `baseline-amcl-2d-2026-10-02`, como referência,
+comparação e caminho recuperável. O que foi reprovado é aceitar esses poucos
+saltos e perdas como solução final quando há um Mid-360 disponível.
+
+**Critério de aceite definido pelo dono:** a pose do robô 2 deve ser no mínimo
+tão estável quanto a do robô 1, sem oscilação parado, teleporte ou perda no
+corredor. Como o Mid-360 é muito superior ao lidar 2D do robô 1, a localização
+deve aproveitar a nuvem 3D completa; somente a representação para o humano
+continua 2D.
+
+Isso não é uma direção nova: reafirma a decisão 001 (interface 2D,
+localização 3D) e a decisão 003 (FAST-LIO como base). A cadeia atual é híbrida:
+o FAST-LIO fornece odometria 3D relativa, mas o `map → odom` global vem do
+AMCL, que casa apenas o `/scan` projetado contra uma grade 2D. Portanto o AMCL
+não usa a geometria 3D para confirmar onde o robô está. Ele não pode ser
+"ajustado para 3D": para cumprir o alvo, a correção global contra mapa precisa
+vir de um localizador 3D que substitua o AMCL no caminho ativo, sem apagar o
+baseline. A pose, o mapa de operação e os goals podem continuar projetados em
+2D para Nav2 e web. O `/scan` ainda pode permanecer como insumo de segurança,
+sem ser a fonte primária de localização.
+
+**Próxima sessão, antes de implementar:** usar a coleta de hoje para separar
+quem pulou — `/Odometry` do FAST-LIO ou `map → odom` do AMCL — e comparar a
+cadeia com o robô 1. Depois escolher, com literatura e uma decisão própria, o
+localizador/mapa 3D que substitui o AMCL. Não mexer no seguidor para compensar
+pose errada.
+
+Dados das duas tentativas em
+`docs/dados/2026-10-02-robo-localizacao-ruim/`. A primeira teve quatro perdas
+de heartbeat do `collision_monitor`, que reiniciaram a pilha; esse defeito é
+separado da localização. Na primeira tentativa a decisão 064 não disparou
+nenhuma recuperação. A tentativa final, iniciada às 20:17, é a coleta a usar
+para o episódio do corredor.
 
 ## 🟡 02-10 — EMPERRADO, RÉ, OMNI, COMPENSADOR E RESPOSTA MAPEADA (060–064)
 
