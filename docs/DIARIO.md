@@ -10938,3 +10938,27 @@ então as corridas foram curtas (4 s):
 | ré | −0,45 m | 0,0000 m | 0,000° | 0,000 1/m | 0,0000 (205 msgs) |
 
 O compensador não acrescentou giro. Gazebo encerrado e conferido limpo.
+
+### Plano velho no Gazebo: a trava confirmada, o sintoma não apareceu
+
+Pilha completa (`sim:=true`, `pista_obstaculos`, 060 ativa), sem mudança de
+código. Três objetivos pelo `corrida_nav.py`: A (7,2) pela porta, B (11,6)
+pelo aperto, C de volta a (2,5). Os três chegaram. Um gravador passivo
+(`grava_planos.py`, junto dos dados) registrou cada `/plan_smoothed` e cada
+`/path_follower/plano_aceito` com a pose. O seguidor usa relógio de simulação
+e o gravador, relógio de parede, então o cruzamento foi feito pela posição.
+
+- **Mecanismo confirmado:** 22 planos suavizados, **4 aceitos**. Os 18
+  recusados nasciam a ≤ 6 cm do robô, ou seja, eram planos novos a partir da
+  pose atual, todos descartados pela trava de rota de 20-08. Dos 4 aceitos, 3
+  são objetivo novo. O 4º veio logo depois do único escape da sessão:
+  na largada do C (alvo atrás do robô), ele girou 4 s sem avançar pelo plano,
+  o gatilho disparou um escape para frente de 0,22 m, e só então o replano
+  foi aceito.
+- **Sintoma NÃO reproduzido:** em "seguindo", |lat| p50 0,05, p90 0,11, máx
+  0,21 m. Com o Gazebo reto (062), o robô não sai do plano o bastante para
+  "seguir o plano velho" ficar visível. O dono via o sintoma no Gazebo antes
+  da 062; é possível que vinha do arco da boba simulada.
+- Os 118 s do C são tempo de parede: a simulação roda abaixo do tempo real.
+
+Dados: `docs/dados/2026-10-02-gazebo-plano-velho/`. Tudo encerrado no fim.

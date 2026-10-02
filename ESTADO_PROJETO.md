@@ -44,7 +44,13 @@ e o feedforward do compensador é zero com `sim:=true`. Corrida reta no Gazebo
 feita em 02-10, com o dono olhando: curvatura **0,000 1/m** de frente e de ré,
 |y| máx 0,0000 m em 2,45 m. Com a pilha completa (`sim:=true`), o compensador
 subiu com ff 0/0 e entregou |wz| 0,0000; frente e ré sem giro nem desvio. O
-próximo no Gazebo é o plano velho. ⚠️ No robô real o
+próximo no Gazebo é o plano velho.
+
+**Plano velho no Gazebo (02-10, só observação):** trava confirmada, 18 de 22
+planos novos (nascidos na pose atual) recusados. Replano só entra com objetivo
+novo ou depois de escape/ré. Mas o sintoma não apareceu: com o Gazebo reto,
+|lat| máx 0,21 m. Para ver o sintoma é preciso provocar desvio (empurrão ou
+obstáculo surpresa). Nenhum conserto implementado. ⚠️ No robô real o
 `bin/sobe-robo` ainda passa `CURV=-0.8365` (boba, 20-08). Conferir no chão se a
 omni precisa de feedforward zero.
 
