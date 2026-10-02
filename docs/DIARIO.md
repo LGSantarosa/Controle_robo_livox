@@ -10925,3 +10925,16 @@ Antes, a mesma placa impunha −0,817 1/m de frente (raio 1,22 m). Dados em
 `docs/dados/2026-10-02-gazebo-reto/`. ⚠️ Só a planta foi exercitada: o
 feedforward zero do compensador (`pilha.launch.py`, `sim:=true`) não entrou
 nesta corrida, porque o banco fala direto com o `diff_drive`.
+
+Depois, a pilha completa (`pilha.launch.py sim:=true`), a pedido do dono,
+para exercitar o compensador. Comando reto por `/key_vel` → `twist_mux` →
+compensador → `/cmd_vel_bruto` → placa. O log do compensador:
+`ff +0.000 1/m frente, +0.000 ré`. O `/scan` dava só 1,84 m livres à frente,
+então as corridas foram curtas (4 s):
+
+| corrida | dx | \|dy\| máx | \|dyaw\| máx | curvatura | \|wz\| na saída do compensador |
+|---|---|---|---|---|---|
+| frente | +0,44 m | 0,0000 m | 0,000° | 0,000 1/m | — |
+| ré | −0,45 m | 0,0000 m | 0,000° | 0,000 1/m | 0,0000 (205 msgs) |
+
+O compensador não acrescentou giro. Gazebo encerrado e conferido limpo.
