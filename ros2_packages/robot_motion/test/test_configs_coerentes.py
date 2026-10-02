@@ -1363,7 +1363,8 @@ def test_o_corredor_da_re_cobre_o_CORPO_e_nao_o_raio():
 def test_a_cegueira_do_scan_cabe_DENTRO_da_folga_da_re():
     """A invariante que torna a janela de `/scan` vencido aceitável.
 
-    Recuando a `v_piso`, uma janela vencida inteira é percorrida às cegas. Ela
+    Recuando a `re_v` (02-10; antes era o `v_piso`), uma janela vencida
+    inteira é percorrida às cegas. Ela
     só é segura porque a `folga` que o orçamento desconta do vão medido é
     maior que essa distância. Se alguém subir a janela (ou o piso de linear)
     sem mexer na folga, o robô passa a poder gastar margem que não existe —
@@ -1372,11 +1373,11 @@ def test_a_cegueira_do_scan_cabe_DENTRO_da_folga_da_re():
     Medido em 12-08: `/scan` a 7,7 Hz, p99 0,317 s, máx 0,513 s.
     """
     janela = _default_do_seguidor('re_scan_velho_s')
-    v_piso = _default_do_seguidor('v_piso')
+    re_v = _default_do_seguidor('re_v')
     folga = _default_do_seguidor('re_folga')
-    cego = janela * v_piso
+    cego = janela * re_v
     assert cego < folga, (
-        f'{janela} s de janela a {v_piso} m/s dão {cego:.3f} m às cegas, '
+        f'{janela} s de janela a {re_v} m/s dão {cego:.3f} m às cegas, '
         f'contra folga de {folga} m. A cegueira tem de caber na margem.')
     assert janela > 0.513, (
         f'janela de {janela} s abaixo do pior intervalo de /scan MEDIDO '

@@ -531,11 +531,17 @@ class PathFollower(Node):
             # falso alarme, e o sintoma seria um robô que se recusa a se
             # desencalhar — parecido demais com defeito de lógica.
             #
-            # E o teto vem de uma conta, não de gosto: recuando a `v_piso`, uma
-            # janela vencida inteira gasta 0,8 × 0,203 = 0,16 m às cegas, e a
+            # E o teto vem de uma conta, não de gosto: recuando a `re_v`, uma
+            # janela vencida inteira gasta 0,8 × 0,24 = 0,19 m às cegas, e a
             # `folga` que o orçamento já desconta do vão medido é 0,30 m. A
             # cegueira cabe DENTRO da margem. Há teste travando este par.
             ('re_scan_velho_s', 0.8),
+            # Velocidade da ré [m/s], própria desde 02-10. Antes era o `v_piso`,
+            # que subiu de 0,24 para 0,36 junto com o `wz_max` 2,2 (01-10), e a
+            # ré do corredor varreu a parede com a traseira. A ré anda reta:
+            # não precisa do piso que existe para caber o giro. O escape para
+            # frente continua no `v_piso`.
+            ('re_v', 0.24),
             # Folga entre o vão medido e o que a ré se permite gastar [m].
             # Explícita (era o default de `orcamento_de_re`) porque é ela que
             # cobre a janela de `/scan` vencido — e um número que sustenta uma
@@ -1637,7 +1643,8 @@ class PathFollower(Node):
         # movimentação recebe ZERO enquanto isso, para não haver duas fontes
         # disputando a mesma roda.
         self.publica(rumo, 0.0)
-        v_escape = sentido * self.par['v_piso']
+        v_escape = (-self.par['re_v'] if sentido < 0
+                    else self.par['v_piso'])
         self.publica_desencalhe(v_escape)
         self.registra(t, x, y, rumo, rumo, v_escape, dist, float('inf'))
 

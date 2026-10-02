@@ -10875,3 +10875,8 @@ detector. Testes primeiro: a curva de 01-10 reproduzida faz a métrica antiga
 disparar e a nova não, e a órbita continua disparando. Suíte: 461 passam e 18
 falham, todos no `test_pilha_robo` (precisam do ambiente ROS e já falhavam
 antes). Falta validar no chão.
+
+Na mesma sessão, o item 2: a ré ganhou velocidade própria, `re_v` 0,24 m/s
+(decisão 061), e o escape para frente continua no `v_piso`. Testes primeiro:
+com o `v_piso` em 0,36 ou 0,50, a ré publica −0,24. Mesmas 18 falhas antigas
+no `test_pilha_robo`, nenhuma nova. Também falta o chão.

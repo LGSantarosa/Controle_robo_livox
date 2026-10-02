@@ -205,6 +205,9 @@ herdados_provisorios:
 - parametro: path_follower:re_folga
   origem: 'robô 2: dinâmica e atuador do robô 2 (sintonia e medidas nele)'
   fecha: etapa 8
+- parametro: path_follower:re_v
+  origem: 'robô 2: velocidade da ré escolhida no robô 2 (02-10, era o v_piso de antes de 01-10)'
+  fecha: etapa 8
 - parametro: path_follower:re_avanco_min
   origem: 'robô 2: dinâmica e atuador do robô 2 (sintonia e medidas nele)'
   fecha: etapa 8

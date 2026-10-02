@@ -307,3 +307,29 @@ def test_terminada_a_re_o_seguidor_VOLTA_A_SEGUIR():
     assert seg.desencalhe[-1] == 0.0, (
         'sair da manobra sem zerar o canal deixa ré órfã até o timeout do mux')
     assert seg.progresso.reiniciado == 1
+
+
+def _meio_da_manobra(sentido, v_piso):
+    seg = SeguidorEmRe()
+    seg.par.update({'v_piso': v_piso, 're_v': 0.24,
+                    'desencalhe_frente_folga': 0.30})
+    seg.re_sentido = sentido
+    seg.re_orcamento_atual = 0.30
+    seg.vao_frente = lambda: 1.0
+    # recuou 0,10 m de 0,30: a manobra continua e publica velocidade
+    PathFollower.passo_de_re(seg, t=0.5, x=-0.10 * sentido, y=0.0, rumo=0.0,
+                             dist=2.0)
+    return seg.desencalhe[-1]
+
+
+def test_a_re_tem_velocidade_propria_e_nao_segue_o_v_piso():
+    """02-10: a ré andava no `v_piso`, que subiu de 0,24 para 0,36 m/s junto
+    com o `wz_max` 2,2 (01-10). Com a placa empurrando ~0,5 s depois do corte,
+    a ré do corredor varreu a parede com a traseira. A ré só anda reto: não
+    precisa do piso que existe para caber o giro."""
+    assert _meio_da_manobra(-1, v_piso=0.3648) == pytest.approx(-0.24)
+    assert _meio_da_manobra(-1, v_piso=0.50) == pytest.approx(-0.24)
+
+
+def test_o_escape_para_frente_continua_no_v_piso():
+    assert _meio_da_manobra(+1, v_piso=0.3648) == pytest.approx(0.3648)
