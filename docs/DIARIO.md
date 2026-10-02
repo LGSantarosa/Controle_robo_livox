@@ -10880,3 +10880,19 @@ Na mesma sessão, o item 2: a ré ganhou velocidade própria, `re_v` 0,24 m/s
 (decisão 061), e o escape para frente continua no `v_piso`. Testes primeiro:
 com o `v_piso` em 0,36 ou 0,50, a ré publica −0,24. Mesmas 18 falhas antigas
 no `test_pilha_robo`, nenhuma nova. Também falta o chão.
+
+### Plano velho, lido nos CSVs de 01-10 (sem código)
+
+Os CSVs do seguidor não registram a troca de plano. Ela aparece como queda do
+`desvio_lateral` de ~0,2–0,4 m para ~0 num tick. Nas corridas de 01-10 há
+dezenas de episódios em que o robô fica 0,2–0,38 m ao lado do plano por 3 a
+11 s, a 0,5 m/s. Eles terminam de dois jeitos: (a) o robô volta aos poucos
+para a rota VELHA; (b) o gatilho de 4 s dispara um escape ou uma ré, e só
+depois um plano novo é aceito a partir da pose atual (desvio vai a 0). Não há
+nenhum caso de plano novo aceito só porque o robô saiu da rota. A trava de rota
+(20-08) só abre por falta de progresso, e esse é o mecanismo do "plano velho".
+⚠️ A 060 pode piorar isso: andando ao lado da rota, o restante pelo plano
+continua caindo, então a falta de progresso fica ainda mais rara e a trava
+abre menos. O conserto do item 3 provavelmente precisa abrir a trava por
+desvio lateral persistente. A confirmação vai ser no Gazebo, onde o dono vê o
+mesmo sintoma.

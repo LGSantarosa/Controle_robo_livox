@@ -22,6 +22,23 @@ A ré ganhou velocidade própria, `re_v` 0,24 m/s (decisão 061), e o escape
 para frente fica no `v_piso`. **Nenhuma das duas foi ao NUC nem ao chão.**
 Próximo da lista de 01-10: o plano velho.
 
+**Roteiro curto do chão para a 060/061 (próxima ida ao lab, antes do item 3):**
+1. robô **ligado e quieto na marca** durante a partida (o FAST-LIO divergiu em
+   01-10 com o robô mexido);
+2. repetir a curva longa do corredor de 01-10: não pode haver escape nem ré;
+3. uma recuperação controlada com espaço livre atrás: a ré a ~0,24 m/s;
+4. puxar `pilha.log` + CSV do seguidor e conferir antes de mexer no plano
+   velho.
+
+O plano velho também aparece no Gazebo (dono, 02-10), então pode ser
+investigado lá sem o robô.
+
+**Plano velho — diagnóstico nos CSVs de 01-10 (diário de 02-10):** a trava
+de rota só abre por falta de progresso. O robô fica 0,2–0,4 m ao lado do plano
+por 3–11 s e ou volta para a rota velha, ou só pega plano novo depois de um
+escape/ré. ⚠️ A 060 tende a abrir a trava ainda menos. Candidato: abrir por
+desvio lateral persistente. Confirmar no Gazebo antes.
+
 ## 🟢 01-10 noite (NO ROBÔ 2) — CURVA FORTE APROVADA: "ELE FOI ÓTIMO"
 
 O que mudou no robô nesta sessão, nesta ordem, cada passo testado no chão
