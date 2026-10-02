@@ -40,8 +40,9 @@ escape/ré. ⚠️ A 060 tende a abrir a trava ainda menos. Candidato: abrir por
 desvio lateral persistente. Confirmar no Gazebo antes.
 
 **Gazebo reto (decisão 062):** a placa simulada não impõe mais o arco da boba,
-e o feedforward do compensador é zero com `sim:=true`. Falta uma corrida reta
-no Gazebo com o dono olhando, e só depois o plano velho lá. ⚠️ No robô real o
+e o feedforward do compensador é zero com `sim:=true`. Corrida reta no Gazebo
+feita em 02-10, com o dono olhando: curvatura **0,000 1/m** de frente e de ré,
+|y| máx 0,0000 m em 2,45 m. O próximo no Gazebo é o plano velho. ⚠️ No robô real o
 `bin/sobe-robo` ainda passa `CURV=-0.8365` (boba, 20-08). Conferir no chão se a
 omni precisa de feedforward zero.
 

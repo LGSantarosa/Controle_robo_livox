@@ -10909,3 +10909,19 @@ zero, e o robô real não foi tocado. Ficou anotado que o `CURV=-0.8365` do
 `sobe-robo` é da boba e precisa ser conferido no chão. Suíte: só as falhas
 antigas que dependem de ROS. Falta uma corrida reta no Gazebo com o dono
 olhando.
+
+### Gazebo reto conferido (dono olhando)
+
+Subi só o `sim.launch.py` (pista livre, placa `medido`). O log da placa já diz
+"o robô anda reto: curvatura 0 [...] (decisão 062)", com assimetria de 0,0%.
+Banco `ensaio.py --ensaio reta --wz 0`, 0,25 m/s, 12 s:
+
+| corrida | percorrido | giro | curvatura | \|y\| máx |
+|---|---|---|---|---|
+| frente | 2,45 m | 0,0° | 0,000 1/m | 0,0000 m |
+| ré | 2,45 m | 0,0° | 0,000 1/m | 0,0000 m |
+
+Antes, a mesma placa impunha −0,817 1/m de frente (raio 1,22 m). Dados em
+`docs/dados/2026-10-02-gazebo-reto/`. ⚠️ Só a planta foi exercitada: o
+feedforward zero do compensador (`pilha.launch.py`, `sim:=true`) não entrou
+nesta corrida, porque o banco fala direto com o `diff_drive`.
