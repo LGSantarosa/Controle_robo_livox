@@ -573,13 +573,25 @@ def generate_launch_description():
                         'em 13-08 e reproduzido no Gazebo em 14-08. Passe '
                         'false só na bancada, onde o seguidor é dirigido por '
                         '/plan cru e não existe ação do Nav2'),
+        # 🔄 02-10 (decisão 062): no SIMULADOR o feedforward é zero, porque
+        # a placa simulada nasce reta (roda omni). Deixar −0,817 aqui faria o
+        # Gazebo curvar para o lado OPOSTO. No robô real fica o de 04-08 até
+        # a curvatura da omni ser conferida no chão.
         DeclareLaunchArgument(
-            'curv_frente', default_value='-0.817',
+            'curv_frente',
+            default_value=PythonExpression(
+                ["'0.0' if '", LaunchConfiguration('sim'),
+                 "' == 'true' else '-0.817'"]),
             description='curvatura crua indo para a FRENTE [1/m], medida hoje '
-                        'sem compensador (medir.py --resumo curvatura)'),
+                        'sem compensador (medir.py --resumo curvatura). '
+                        'Zero com sim:=true (062)'),
         DeclareLaunchArgument(
-            'curv_re', default_value='-0.098',
-            description='idem, de ré. Muda menos e raramente se remede'),
+            'curv_re',
+            default_value=PythonExpression(
+                ["'0.0' if '", LaunchConfiguration('sim'),
+                 "' == 'true' else '-0.098'"]),
+            description='idem, de ré. Muda menos e raramente se remede. '
+                        'Zero com sim:=true (062)'),
         DeclareLaunchArgument(
             'curv_medido_em', default_value='HERDADO',
             description='a data da medida acima. Não entra na conta: entra no '

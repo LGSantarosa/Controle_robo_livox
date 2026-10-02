@@ -14,7 +14,7 @@
 
 ---
 
-## 🟡 02-10 dev — FALSO EMPERRADO E RÉ CORRIGIDOS NO CÓDIGO (060, 061)
+## 🟡 02-10 dev — FALSO EMPERRADO, RÉ E GAZEBO RETO NO CÓDIGO (060, 061, 062)
 
 O progresso agora é o que falta **pelo plano**, não a reta até o objetivo, e
 um plano aceito reinicia o detector. A órbita continua sendo pega (teste).
@@ -38,6 +38,12 @@ de rota só abre por falta de progresso. O robô fica 0,2–0,4 m ao lado do pla
 por 3–11 s e ou volta para a rota velha, ou só pega plano novo depois de um
 escape/ré. ⚠️ A 060 tende a abrir a trava ainda menos. Candidato: abrir por
 desvio lateral persistente. Confirmar no Gazebo antes.
+
+**Gazebo reto (decisão 062):** a placa simulada não impõe mais o arco da boba,
+e o feedforward do compensador é zero com `sim:=true`. Falta uma corrida reta
+no Gazebo com o dono olhando, e só depois o plano velho lá. ⚠️ No robô real o
+`bin/sobe-robo` ainda passa `CURV=-0.8365` (boba, 20-08). Conferir no chão se a
+omni precisa de feedforward zero.
 
 ## 🟢 01-10 noite (NO ROBÔ 2) — CURVA FORTE APROVADA: "ELE FOI ÓTIMO"
 

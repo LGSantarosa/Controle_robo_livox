@@ -183,17 +183,42 @@ def test_a_escala_real_do_firmware_nao_e_a_que_o_driver_supoe():
 
 # ------------------------------------------------------------- a assimetria
 
+BOBA = {'curvatura_frente': -0.817, 'curvatura_re': -0.098}   # 04-08
+
+
+def test_a_placa_nasce_reta_desde_a_roda_omni():
+    """02-10 (decisão 062): com a roda omni o robô 2 anda reto (observação do
+    dono em 30-09, ainda sem medida). O arco de 04-08 era da roda boba."""
+    p = Placa(rendimento_giro=1.0)
+    assert p.assimetria(1.0) == 0.0 and p.assimetria(-1.0) == 0.0
+    assert curvatura(p, 0.25) == pytest.approx(0.0, abs=1e-12)
+    assert curvatura(p, -0.25) == pytest.approx(0.0, abs=1e-12)
+
+
+def test_o_aviso_do_arco_nao_derruba_o_no_com_curvatura_zero():
+    """O aviso dividia frente por ré: com as duas em zero o nó caía."""
+    texto = placa_mod.PlacaSimulada.aviso_do_arco(Placa())
+    assert 'reto' in texto
+    assert 'ARCA' in placa_mod.PlacaSimulada.aviso_do_arco(Placa(**BOBA))
+    assert 'ARCA' in placa_mod.PlacaSimulada.aviso_do_arco(
+        Placa(curvatura_frente=-0.5, curvatura_re=0.0))
+
+
 def test_a_assimetria_e_dependente_de_sentido():
     """Derivada, não escrita: positiva de frente, NEGATIVA de ré. Os dois
     sinais juntos é que fazem o corpo girar para o mesmo lado nos dois
     sentidos, que foi o que o robô fez nas quatro corridas do par matched."""
-    p = Placa()
+    p = Placa(**BOBA)
     assert p.assimetria(1.0) > 0.0, 'de frente a esquerda entrega MAIS'
     assert p.assimetria(-1.0) < 0.0, 'de ré ela entrega MENOS — não é typo'
     assert abs(p.assimetria(1.0)) > abs(p.assimetria(-1.0))
 
 
 # ------------------------------------------- o arco do corpo medido em 04-08
+#
+# 02-10: HISTÓRICO da roda boba. O robô 2 anda reto com a roda omni (desde
+# 30-09), e a placa nasce reta (decisão 062). Estes testes passam os números
+# de 04-08 à mão e continuam travando a matemática do arco.
 #
 # `rendimento_giro=1.0` nestes: aqui se testa o MODELO contra o robô. A
 # compensação da derrapagem do Gazebo é outro assunto, com teste próprio
@@ -203,7 +228,7 @@ def test_o_arco_de_frente_bate_com_o_robo():
     """Alvo: −0,817 1/m (raio 1,22 m), n=2 matched com controle de piso.
     Recomputado do CSV cru dá −0,838; a diferença é de janela de amostras e
     cabe folgada na dispersão medida (21%, faixa −0,73 a −0,90)."""
-    p = Placa(rendimento_giro=1.0)
+    p = Placa(**BOBA, rendimento_giro=1.0)
     assert curvatura(p, 0.25) == pytest.approx(-0.817, abs=0.02)
 
 
@@ -211,7 +236,7 @@ def test_o_arco_de_re_bate_com_o_robo():
     """Alvo: −0,098 1/m (raio 10,19 m). A ré NÃO é reta — desvia 8,3x menos,
     e essa parcela sobrevive aos dois sentidos: é o que consertar a boba
     deixaria para trás, e o que o seguidor tem de fechar em malha fechada."""
-    p = Placa(rendimento_giro=1.0)
+    p = Placa(**BOBA, rendimento_giro=1.0)
     assert curvatura(p, -0.25) == pytest.approx(-0.098, abs=0.02)
 
 
@@ -219,7 +244,7 @@ def test_a_razao_frente_re_e_a_assinatura_da_boba():
     """O número que separa "robô que arca" de "robô torto": ~8x. Um desvio de
     motor ou placa fraca daria a MESMA curvatura nos dois sentidos (razão 1).
     Antes de 04-08 este modelo dava ré perfeitamente reta — razão infinita."""
-    p = Placa(rendimento_giro=1.0)
+    p = Placa(**BOBA, rendimento_giro=1.0)
     razao = curvatura(p, 0.25) / curvatura(p, -0.25)
     assert razao == pytest.approx(8.3, abs=1.0)
 
@@ -233,7 +258,7 @@ def test_o_arco_nao_troca_de_sinal_com_o_sentido():
     lá a ré saiu POSITIVA, e só a corrida no Gazebo denunciou.
     """
     for rend in (1.0, 0.80):
-        p = Placa(rendimento_giro=rend)
+        p = Placa(**BOBA, rendimento_giro=rend)
         assert curvatura(p, 0.25) < 0.0, f'frente, rendimento {rend}'
         assert curvatura(p, -0.25) < 0.0, f'ré, rendimento {rend}'
 
@@ -242,7 +267,7 @@ def test_o_arco_nao_depende_do_modulo_do_comando():
     """Consequência do patamar: dentro dele todo comando vira a mesma coisa na
     placa, então a curvatura também é a mesma. Bate com o robô, que arcou igual
     comandado a 0,25 m/s em corridas de comprimento diferente."""
-    p = Placa()
+    p = Placa(**BOBA)
     cs = [curvatura(p, v) for v in (0.05, 0.10, 0.25, 0.50, 0.80)]
     assert max(cs) - min(cs) < 1e-9, cs
 
@@ -252,7 +277,7 @@ def test_a_derrapagem_do_gazebo_e_compensada_pedindo_mais():
     o CORPO simulado sair no número do robô, a placa tem de pedir mais — e na
     proporção certa, senão o simulador fica parecido com o robô por acaso."""
     alvo, rend = -0.817, 0.80
-    pedido = curvatura(Placa(rendimento_giro=rend), 0.25)
+    pedido = curvatura(Placa(**BOBA, rendimento_giro=rend), 0.25)
     assert pedido == pytest.approx(alvo / rend, abs=0.02)
     assert abs(pedido) > abs(alvo), 'compensar é pedir MAIS, não menos'
 

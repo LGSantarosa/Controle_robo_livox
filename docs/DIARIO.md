@@ -10896,3 +10896,16 @@ continua caindo, então a falta de progresso fica ainda mais rara e a trava
 abre menos. O conserto do item 3 provavelmente precisa abrir a trava por
 desvio lateral persistente. A confirmação vai ser no Gazebo, onde o dono vê o
 mesmo sintoma.
+
+### O Gazebo passa a andar reto (decisão 062)
+
+O dono avisou que o Gazebo precisa mudar antes de qualquer teste lá. Desde a
+roda omni (30-09) o robô real anda reto, e a placa simulada ainda impunha o
+arco da boba de 04-08 (−0,817 1/m de frente). A revisão do Codex lembrou de
+duas coisas que precisavam ir junto: o feedforward do compensador com
+`sim:=true` (sozinho, faria o Gazebo curvar ao contrário) e o aviso de log
+que dividia por zero. As curvaturas da placa e o feedforward do sim agora são
+zero, e o robô real não foi tocado. Ficou anotado que o `CURV=-0.8365` do
+`sobe-robo` é da boba e precisa ser conferido no chão. Suíte: só as falhas
+antigas que dependem de ROS. Falta uma corrida reta no Gazebo com o dono
+olhando.

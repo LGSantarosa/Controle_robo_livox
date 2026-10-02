@@ -582,9 +582,13 @@ def test_o_default_da_launch_e_o_default_do_no():
             par = {ast.literal_eval(t.elts[0]): ast.literal_eval(t.elts[1])
                    for t in no.args[1].elts}
     _, texto = _launch_ast()
+    # 02-10 (decisão 062): o default do ROBÔ REAL continua sendo o do nó; com
+    # `sim:=true` ele é zero, porque a placa simulada nasce reta (roda omni).
     for chave in ('curv_frente', 'curv_re'):
-        assert f"default_value='{par[chave]}'" in texto, \
+        assert f"' == 'true' else '{par[chave]}'" in texto, \
             f'{chave}: launch e nó divergiram ({par[chave]} não está na launch)'
+    assert texto.count("[\"'0.0' if '\", LaunchConfiguration('sim'),") >= 2, \
+        'no simulador o feedforward tem de ser zero: a placa nasce reta (062)'
     assert f"default_value='{par['curv_medido_em']}'" in texto
 
 

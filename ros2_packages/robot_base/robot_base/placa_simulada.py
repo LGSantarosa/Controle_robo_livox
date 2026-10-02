@@ -160,8 +160,13 @@ class PlacaSimulada(Node):
             # DERIVADA (ver `assimetria`), e não escrita à mão, porque escrever
             # à mão foi o que errou o sinal da ré na primeira tentativa: na ré
             # as duas convenções de curvatura têm sinais opostos.
-            ('curvatura_frente', -0.817),   # raio  1,22 m   faixa -0,73 a -0,90
-            ('curvatura_re', -0.098),       # raio 10,19 m   faixa -0,08 a -0,12
+            #
+            # 🔄 02-10 (decisão 062): ZERO. Os números de 04-08 eram da roda
+            # BOBA (frente −0,817, raio 1,22 m; ré −0,098, raio 10,19 m). Com
+            # a roda omni (30-09) o robô 2 anda reto — observação do dono,
+            # ainda sem medida. Medida nova da omni entra aqui.
+            ('curvatura_frente', 0.0),
+            ('curvatura_re', 0.0),
             # Quanto do giro pedido o GAZEBO realiza. Não é do robô: é a
             # derrapagem do contato simulado, medida em 29-07 (79-86%) e
             # confirmada em 04-08 na corrida de aceitação. Sem isto o corpo
@@ -234,11 +239,7 @@ class PlacaSimulada(Node):
             f"comando zerar a placa CONTINUA empurrando (04-08, n=3). Num "
             f"pulso curto quase todo o movimento acontece aí — pivô de 0,2 s "
             f"gira 35,8° no robô, dos quais 35,4° com o comando já em zero.")
-        self.get_logger().warn(
-            f"o robô ARCA (04-08): curvatura {self.par['curvatura_frente']:+.3f} "
-            f"1/m de frente, {self.par['curvatura_re']:+.3f} de ré — "
-            f"{abs(self.par['curvatura_frente'] / self.par['curvatura_re']):.1f}x "
-            f"de assimetria. Não espere reta deste robô.")
+        self.get_logger().warn(self.aviso_do_arco())
         self.get_logger().warn(
             f"para isso a esquerda entrega "
             f"{100 * self.assimetria(1.0):+.1f}% de frente e "
@@ -255,6 +256,18 @@ class PlacaSimulada(Node):
     def unidades(self, v_borda):
         """m/s de borda de roda -> unidades de set_speed, como o driver faz."""
         return v_borda / self.par['raio'] / self.par['escala_driver']
+
+    def aviso_do_arco(self):
+        """O texto do arco no log. Com curvatura zero (roda omni, 062) o
+        robô é reto — e a razão frente/ré não pode dividir por zero."""
+        cf, cr = self.par['curvatura_frente'], self.par['curvatura_re']
+        if cf == 0.0 and cr == 0.0:
+            return ('o robô anda reto: curvatura 0 de frente e de ré (roda '
+                    'omni, decisão 062). Sem arco simulado.')
+        razao = (f"{abs(cf / cr):.1f}x de assimetria" if cr != 0.0
+                 else 'ré reta')
+        return (f"o robô ARCA: curvatura {cf:+.3f} 1/m de frente, "
+                f"{cr:+.3f} de ré — {razao}. Não espere reta deste robô.")
 
     def assimetria(self, sentido):
         """Fração a MAIS que a roda esquerda entrega, para arcar o pedido.
