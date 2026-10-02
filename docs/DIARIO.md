@@ -10963,7 +10963,7 @@ e o gravador, relógio de parede, então o cruzamento foi feito pela posição.
 
 Dados: `docs/dados/2026-10-02-gazebo-plano-velho/`. Tudo encerrado no fim.
 
-### Plano velho com empurrão pelo teclado: o sintoma não apareceu (rodada única)
+### Plano velho com empurrão pelo teclado: rodada INCONCLUSIVA (única)
 
 Mesma pilha, objetivo A (7,2). Um script (`empurra.py`, junto dos dados)
 publicou em `/key_vel` quando o robô passou de x=5,0: girar 70° à esquerda,
@@ -10986,3 +10986,9 @@ Dois registros desta rodada:
   observação; nada mudou.
 
 Tudo encerrado no fim.
+
+Fechamento do dono: a rodada é inconclusiva para o plano velho. O detector
+manter a marca depois de uma intervenção humana fica anotado como achado
+separado, fora do item 3. Próxima ida ao lab: validar 060/061 no chão, depois
+observar o plano velho no robô real e analisar os logs antes de propor
+correção.

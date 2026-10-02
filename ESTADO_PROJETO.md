@@ -51,11 +51,17 @@ planos novos (nascidos na pose atual) recusados. Replano só entra com objetivo
 novo ou depois de escape/ré. Mas o sintoma não apareceu: com o Gazebo reto,
 |lat| máx 0,21 m. Para ver o sintoma é preciso provocar desvio (empurrão ou
 obstáculo surpresa). Nenhum conserto implementado.
-Rodada única com empurrão pelo teclado: o empurrão virou recuo ao longo da
-rota (retenção da placa simulada) e o sintoma não apareceu (|lat| ≤ 0,19 m).
-**A validação do plano velho fica para o robô real.** Achado lateral: depois
-de intervenção humana que recua o robô, a 060 dispara escape porque a melhor
-marca é a de antes da intervenção. ⚠️ No robô real o
+Rodada única com empurrão pelo teclado: **inconclusiva** para o plano velho.
+O empurrão virou recuo ao longo da rota (retenção da placa simulada) e não
+houve desvio lateral (|lat| ≤ 0,19 m).
+
+**Achado separado (fora do item 3), só anotado:** depois de uma intervenção
+humana que recua o robô, o detector da 060 mantém a melhor marca de antes da
+intervenção e dispara escape (2 escapes nesta rodada).
+
+**Próxima ida ao lab, nesta ordem:** (1) validar 060/061 no chão pelo roteiro
+acima; (2) observar o plano velho no robô real e analisar os logs; (3) só
+então propor correção. ⚠️ No robô real o
 `bin/sobe-robo` ainda passa `CURV=-0.8365` (boba, 20-08). Conferir no chão se a
 omni precisa de feedforward zero.
 
