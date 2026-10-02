@@ -52,8 +52,10 @@ from robot_motion.lei_de_seguimento import (
     folga_radial,
     indice_mais_proximo,
     lookahead_de,
+    ocupacao_mapeada_perto,
     orcamento_de_re,
     passagens_estreitas,
+    prazo_de_emperramento,
     raio_de_chegada_minimo,
     re_esgotada,
     restante_pelo_plano,
@@ -561,8 +563,14 @@ class PathFollower(Node):
             # ré à toa" estando apontado certo.
             #
             # 4,0 s é maior que a manobra mais longa medida (2,8 s) mais o
-            # retorno (~1 s), com folga. Há teste travando o par.
+            # retorno (~1 s), com folga. Continua sendo o prazo genérico.
             ('re_parado_s', 4.0),
+            # Parede conhecida no mapa não precisa da mesma espera cautelosa
+            # de um obstáculo novo. Herda os 2,0 s usados pelo robô 1, mas só
+            # quando o /scan também confirma que o escape inteiro para frente
+            # cabe; caso contrário os 4,0 s acima continuam mandando.
+            ('re_parado_mapeado_s', 2.0),
+            ('re_mapeado_raio', 0.60),
             ('re_avanco_min', 0.05),
             ('re_orcamento_cego', 0.30),
             ('re_teto_s', 8.0),
@@ -947,6 +955,40 @@ class PathFollower(Node):
                 f'{len(self.passagens)} gargalo(s) fixado(s) no plano aceito: '
                 f'{larguras}')
 
+    def parede_mapeada_perto(self, i0):
+        """Parede estática perto da posição correspondente no plano aceito."""
+        if self.mapa is None or not (0 <= i0 < len(self.plano)):
+            return False
+        mapa_frame = self.mapa.header.frame_id.lstrip('/')
+        plano_frame = (self.plano_frame or '').lstrip('/')
+        if mapa_frame and plano_frame and mapa_frame != plano_frame:
+            self.get_logger().warn(
+                f'não encurto o detector: /map está em {mapa_frame} e o '
+                f'plano em {plano_frame}', throttle_duration_sec=10.0)
+            return False
+        o = self.mapa.info.origin
+        return ocupacao_mapeada_perto(
+            self.plano[i0], self.mapa.data,
+            self.mapa.info.width, self.mapa.info.height,
+            self.mapa.info.resolution, self.par['re_mapeado_raio'],
+            origem=(o.position.x, o.position.y, yaw_de(o.orientation)))
+
+    def prazo_emperramento(self, i0):
+        """Escolhe 2 s só no caso conhecido e seguro; senão conserva 4 s."""
+        parede = self.parede_mapeada_perto(i0)
+        frente = self.vao_frente() if parede else None
+        return prazo_de_emperramento(
+            self.par['re_parado_s'], self.par['re_parado_mapeado_s'],
+            parede, frente, self.par['desencalhe_frente_dist'],
+            self.par['desencalhe_frente_folga'])
+
+    def avisa_prazo_mapeado(self, prazo):
+        if prazo < self.par['re_parado_s']:
+            self.get_logger().warn(
+                f'parede MAPEADA perto e frente livre: detector liberado em '
+                f'{prazo:.1f} s (genérico {self.par["re_parado_s"]:.1f} s)',
+                throttle_duration_sec=5.0)
+
     @staticmethod
     def comprimentos_do_plano(plano):
         s = [0.0]
@@ -1286,7 +1328,9 @@ class PathFollower(Node):
             # recusou com `Start occupied`, o `bt_navigator` abortou o objetivo
             # e o seguidor parou PARA SEMPRE a 2,49 m do alvo — 87 s de CSV
             # com a pose imóvel na mesma casa decimal.
-            if self.progresso.atualiza(t, restante):
+            prazo = self.prazo_emperramento(i0)
+            if self.progresso.atualiza(t, restante, parado_s=prazo):
+                self.avisa_prazo_mapeado(prazo)
                 if (self.par['recuperacao_infinita_com_objetivo']
                         or self.res_sem_plano < self.par['re_max_sem_plano']):
                     self.entra_na_re(t, x, y, dist)
@@ -1372,7 +1416,9 @@ class PathFollower(Node):
             self.res_seguidas = 0
             self.dist_antes_da_re = dist
 
-        if self.progresso.atualiza(t, restante):
+        prazo = self.prazo_emperramento(i0)
+        if self.progresso.atualiza(t, restante, parado_s=prazo):
+            self.avisa_prazo_mapeado(prazo)
             self.entra_na_re(t, x, y, dist)
 
     def aponta(self, rumo):

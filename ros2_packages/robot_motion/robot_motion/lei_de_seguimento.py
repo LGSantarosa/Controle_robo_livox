@@ -54,6 +54,45 @@ def norm_ang(a):
     return math.atan2(math.sin(a), math.cos(a))
 
 
+def ocupacao_mapeada_perto(ponto, dados, largura_grade, altura_grade,
+                            resolucao, raio, origem=(0.0, 0.0, 0.0),
+                            ocupado_min=65):
+    """Diz se há célula ocupada do mapa estático a ``raio`` de ``ponto``.
+
+    Desconhecido e fora da grade não contam: sem confirmação no mapa, quem
+    chama conserva o comportamento cauteloso. A origem de ``OccupancyGrid``
+    pode estar girada.
+    """
+    if (resolucao <= 0.0 or raio < 0.0 or largura_grade <= 0
+            or altura_grade <= 0
+            or len(dados) != largura_grade * altura_grade):
+        return False
+
+    x, y = ponto
+    ox, oy, oyaw = origem
+    co, so = math.cos(oyaw), math.sin(oyaw)
+    dx, dy = x - ox, y - oy
+    gx = co * dx + so * dy
+    gy = -so * dx + co * dy
+    col0 = math.floor(gx / resolucao)
+    lin0 = math.floor(gy / resolucao)
+    alcance = math.ceil(raio / resolucao) + 1
+
+    for lin in range(lin0 - alcance, lin0 + alcance + 1):
+        for col in range(col0 - alcance, col0 + alcance + 1):
+            if not (0 <= col < largura_grade and 0 <= lin < altura_grade):
+                continue
+            if dados[lin * largura_grade + col] < ocupado_min:
+                continue
+            cgx = (col + 0.5) * resolucao
+            cgy = (lin + 0.5) * resolucao
+            cx = ox + co * cgx - so * cgy
+            cy = oy + so * cgx + co * cgy
+            if math.hypot(cx - x, cy - y) <= raio:
+                return True
+    return False
+
+
 def rumo_local_do_caminho(caminho, i, janela=0.10):
     """Tangente do caminho em ``i``, usando arco dos dois lados [rad].
 
@@ -840,16 +879,28 @@ class ProgressoDeAvanco:
         self.melhor = None
         self.desde = None
 
-    def atualiza(self, t, restante):
+    def atualiza(self, t, restante, parado_s=None):
         """Devolve True enquanto o robô estiver emperrado.
 
         `restante`: quanto falta até o objetivo [m], pelo plano.
+        `parado_s`: prazo contextual opcional; omitido preserva o configurado.
         """
         if self.melhor is None or restante <= self.melhor - self.avanco_min:
             self.melhor = restante
             self.desde = t
             return False
-        return (t - self.desde) > self.parado_s
+        prazo = self.parado_s if parado_s is None else parado_s
+        return (t - self.desde) > prazo
+
+
+def prazo_de_emperramento(parado_s, parado_mapeado_s, parede_mapeada,
+                          vao_frente, escape_dist, escape_folga):
+    """Encurta a espera só quando o mapa explica a parada e o escape cabe."""
+    escape_inteiro = escape_dist + escape_folga
+    if (parede_mapeada and vao_frente is not None
+            and vao_frente + 1e-9 >= escape_inteiro):
+        return min(parado_s, parado_mapeado_s)
+    return parado_s
 
 
 def vao_no_corredor_traseiro(distancias, angulo_min, incremento, largura,

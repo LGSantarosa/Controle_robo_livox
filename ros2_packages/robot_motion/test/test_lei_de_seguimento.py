@@ -25,8 +25,10 @@ from robot_motion.lei_de_seguimento import (
     indice_mais_proximo,
     lookahead_de,
     mudanca_de_rumo_adiante,
+    ocupacao_mapeada_perto,
     orcamento_de_re,
     passagens_estreitas,
+    prazo_de_emperramento,
     rumo_com_desvio,
     rumo_local_do_caminho,
     rumo_para,
@@ -159,6 +161,39 @@ def test_espaco_aberto_nao_inventa_porta():
     w, h, res = 120, 80, 0.05
     caminho = [(0.5 + 0.05 * i, 2.0) for i in range(101)]
     assert passagens_estreitas(caminho, [0] * (w * h), w, h, res) == []
+
+
+def test_parede_mapeada_perto_e_reconhecida_sem_contar_desconhecido():
+    w, h, res = 20, 20, 0.10
+    dados = [-1] * (w * h)
+    dados[10 * w + 12] = 100
+    assert ocupacao_mapeada_perto(
+        (1.05, 1.05), dados, w, h, res, raio=0.30)
+    assert not ocupacao_mapeada_perto(
+        (0.25, 0.25), dados, w, h, res, raio=0.30)
+
+
+def test_parede_mapeada_perto_respeita_origem_girada_da_grade():
+    w, h, res = 10, 10, 0.10
+    dados = [0] * (w * h)
+    dados[2 * w + 4] = 100
+    # Centro (0,45; 0,25) na grade, girado +90 graus e transladado.
+    assert ocupacao_mapeada_perto(
+        (1.75, 2.45), dados, w, h, res, raio=0.02,
+        origem=(2.0, 2.0, math.pi / 2.0))
+
+
+def test_prazo_curto_exige_parede_mapeada_e_escape_inteiro_livre():
+    args = dict(parado_s=4.0, parado_mapeado_s=2.0,
+                escape_dist=0.20, escape_folga=0.10)
+    assert prazo_de_emperramento(
+        parede_mapeada=True, vao_frente=0.30, **args) == 2.0
+    assert prazo_de_emperramento(
+        parede_mapeada=False, vao_frente=math.inf, **args) == 4.0
+    assert prazo_de_emperramento(
+        parede_mapeada=True, vao_frente=None, **args) == 4.0
+    assert prazo_de_emperramento(
+        parede_mapeada=True, vao_frente=0.29, **args) == 4.0
 
 
 def test_alvo_do_gargalo_primeiro_centraliza_se_o_atalho_nao_cabe():
@@ -712,6 +747,16 @@ def test_dispara_so_DEPOIS_de_parado_o_tempo_todo():
             primeiro = t
     assert primeiro == pytest.approx(1.55, abs=0.06), (
         f'disparou em {primeiro} s — o gatilho tem que ser tardio')
+
+
+def test_detector_aceita_prazo_contextual_sem_mudar_o_padrao():
+    contextual = ProgressoDeAvanco(parado_s=4.0, avanco_min=0.05)
+    padrao = ProgressoDeAvanco(parado_s=4.0, avanco_min=0.05)
+    assert not contextual.atualiza(0.0, 1.0)
+    assert not padrao.atualiza(0.0, 1.0)
+    assert contextual.atualiza(2.05, 1.0, parado_s=2.0)
+    assert not padrao.atualiza(2.05, 1.0)
+    assert padrao.atualiza(4.05, 1.0)
 
 
 def test_progresso_lento_mas_real_nao_dispara():

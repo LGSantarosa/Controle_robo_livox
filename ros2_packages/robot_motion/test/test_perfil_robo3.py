@@ -382,7 +382,8 @@ HERDADOS = {
         ('passagem_alinha_rumo_deg', 'etapa 10'),
         ('desencalhe_frente_dist', 'etapa 10'),
         ('desencalhe_frente_folga', 'etapa 10'),
-        ('re_bloqueio_frente_max', 'etapa 10'))},
+        ('re_bloqueio_frente_max', 'etapa 10'),
+        ('re_mapeado_raio', 'etapa 10'))},
 }
 
 INDEPENDENTES = {
@@ -416,8 +417,9 @@ INDEPENDENTES = {
     _CM + 'stop_pub_timeout',
     _CM + 'PolygonApproach.simulation_time_step',
     *{_PF + n for n in (
-        're_max_sem_plano', 're_parado_s', 're_teto_s', 'desencalhe_pivo_teto_s',
-        're_max_seguidas', 'taxa', 'timeout_plano', 'log_periodo_s')},
+        're_max_sem_plano', 're_parado_s', 're_parado_mapeado_s',
+        're_teto_s', 'desencalhe_pivo_teto_s', 're_max_seguidas', 'taxa',
+        'timeout_plano', 'log_periodo_s')},
 }
 
 

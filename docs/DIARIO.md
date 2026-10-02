@@ -11013,3 +11013,42 @@ A velocidade não mudou. A corrida de 01-10 pareceu boa e rápida, mas foi feita
 com esse viés; primeiro se repete no chão, puxa os logs e compara os dois
 sentidos de curva. Suíte completa, com o `install` deste repo carregado: **1320
 passam**. Não foi ao NUC nem ao robô.
+
+### Robô real sem compensador; a pausa da porta vira a decisão 064
+
+O `bb0a9f5` foi ao NUC e a pilha real subiu sem `compensador_rumo`. O dono fez
+várias repetições dos pontos 1 e 2 e depois uma rota longa. Retirar o
+compensador da boba **não regrediu** a navegação: os objetivos chegaram e o
+robô seguiu o plano com erro lateral baixo.
+
+| trecho longo | mediana de \|erro lateral\| | p90 | máximo |
+|---|---:|---:|---:|
+| ida | 0,026 m | 0,064 m | 0,128 m |
+| volta | 0,021 m | 0,053 m | 0,137 m |
+
+O balão visto em algumas saídas do ponto 1 estava no plano aceito: o robô o
+seguia com erro pequeno. Em outra repetição o plano veio direto e o balão não
+apareceu. Portanto não foi regressão determinística da retirada do
+compensador. A web mostra o `/plan` volátil, enquanto o seguidor dirige o
+`/path_follower/plano_aceito`; os dois podem divergir por causa da trava de
+replano.
+
+Na volta longa houve uma parada que o dono julgou correta, porém lenta. Os
+dados separam a causa:
+
+- `t=1790979417,340`: `PolygonStop` zerou a saída; `/auto_vel_raw` continuou
+  pedindo movimento, o erro lateral era de 0 a 1,5 cm e a frente tinha 2,49 m;
+- `t=1790979422,053`: depois de **4,71 s**, o detector liberou um escape reto;
+- o escape avançou 0,21 m e o seguimento normal voltou.
+
+A decisão 064 conserva os 4 s genéricos e usa 2 s apenas com parede estática a
+até 0,60 m do plano **e** `/scan` fresco deixando caber os 0,20 m completos
+mais 0,10 m de folga. Não muda o reflexo nem a manobra. Testes primeiro cobrem
+mapa desconhecido, origem girada, frente insuficiente e o prazo contextual.
+Suíte completa: **1324 passam**. Falta enviar esta mudança ao NUC e repetir
+exatamente a mesma rota.
+
+Uma segunda parada no corredor não veio da autonomia: `/joy_vel` publicou zero
+por 13,45 s e, por ter prioridade maior, suprimiu o comando automático. Quando
+o joystick calou e venceu seu timeout, o robô seguiu. O detector contar durante
+controle manual fica anotado como achado separado; não entrou na 064.

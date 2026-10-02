@@ -274,6 +274,9 @@ herdados_provisorios:
 - parametro: path_follower:re_bloqueio_frente_max
   origem: 'robô 2: distâncias de desencalhe sintonizadas no robô 2'
   fecha: etapa 10
+- parametro: path_follower:re_mapeado_raio
+  origem: 'robô 2: raio contextual de parede estática, herdado do robô 1 (decisão 064)'
+  fecha: etapa 10
 
 # Não depende do robô: fica igual sem precisar de medida.
 independentes_do_robo:
@@ -353,6 +356,8 @@ independentes_do_robo:
   motivo: contagem
 - parametro: path_follower:re_parado_s
   motivo: tempo de supervisão de progresso (política de software)
+- parametro: path_follower:re_parado_mapeado_s
+  motivo: tempo contextual para parede já conhecida no mapa (política de software)
 - parametro: path_follower:re_teto_s
   motivo: teto de tempo da manobra (política de software)
 - parametro: path_follower:desencalhe_pivo_teto_s

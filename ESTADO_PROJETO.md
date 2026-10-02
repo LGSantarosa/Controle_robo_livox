@@ -1,8 +1,9 @@
 # Estado do Projeto — Controle_robo_livox (PIBIT)
 
 > Documento vivo. Resumo do que está acontecendo, BOs abertos, avanços e o que falta.
-> Versionado na `main`. Atualizado em **2026-10-02** (ajustes 060–063 no dev,
-> ainda sem teste no chão). O estado
+> Versionado na `main`. Atualizado em **2026-10-02** (060 e 063 testadas no
+> robô 2; ré da 061 ainda não exercitada; 064 pronta no dev e ainda sem teste
+> no chão). O estado
 > anterior continua sendo o de 24-09: Mid-360, FAST-LIO, `/scan` e TF do robô 3
 > provados com placa/motores desligados; a configuração que funcionou está só
 > no clone ignorado pelo git e ainda precisa virar solução por máquina.
@@ -14,13 +15,14 @@
 
 ---
 
-## 🟡 02-10 dev — EMPERRADO, RÉ, OMNI E COMPENSADOR (060–063)
+## 🟡 02-10 — EMPERRADO, RÉ, OMNI, COMPENSADOR E RESPOSTA MAPEADA (060–064)
 
 O progresso agora é o que falta **pelo plano**, não a reta até o objetivo, e
 um plano aceito reinicia o detector. A órbita continua sendo pega (teste).
 A ré ganhou velocidade própria, `re_v` 0,24 m/s (decisão 061), e o escape
-para frente fica no `v_piso`. **Nenhuma das duas foi ao NUC nem ao chão.**
-O plano velho foi investigado no Gazebo abaixo; o sintoma fica para o robô.
+para frente fica no `v_piso`. A 060 foi exercitada no chão sem falso disparo
+nas rotas longas e liberou corretamente um escape na porta; a ré da 061 ainda
+não foi necessária no robô. O plano velho foi investigado no Gazebo abaixo.
 
 **Compensador fora do robô real (decisão 063):** a leitura anterior de que ele
 já estava desligado confundiu `segura_rumo: false` com nó inativo. O log de
@@ -28,18 +30,25 @@ já estava desligado confundiu `segura_rumo: false` com nó inativo. O log de
 0,30 m/s em toda curva. Agora, com `sim:=false`, o mux vai direto ao
 controlador no Nav2 e no mapeamento, e `bin/sobe-robo` não passa mais a
 curvatura da boba. O Gazebo conserva o nó somente para seu `ganho_wz=0,45`,
-com curvatura zero. **Ainda não foi ao NUC nem ao chão.** A velocidade não foi
-reduzida: primeiro repetir a corrida e ler os logs sem esse viés.
+com curvatura zero. **Foi ao NUC e ao chão:** várias repetições dos pontos 1 e
+2 e uma ida/volta longa chegaram sem regressão. Na rota longa, |erro lateral|
+teve p90 de 6,4 cm na ida e 5,3 cm na volta. A velocidade não foi reduzida.
 
-**Roteiro curto do chão para a 060/061/063 (próxima ida ao lab, antes do item 3):**
-1. robô **ligado e quieto na marca** durante a partida (o FAST-LIO divergiu em
-   01-10 com o robô mexido);
-2. conferir que `compensador_rumo` não subiu e repetir a curva longa do
-   corredor de 01-10: comparar os dois sentidos e não pode haver escape nem ré;
-3. uma recuperação controlada com espaço livre atrás: a ré a ~0,24 m/s;
-4. puxar `pilha.log`, `freeze_capture.csv` e o CSV do seguidor; decidir pelos
-   dados se a velocidade continua boa antes de mexer no plano
-   velho.
+**Resposta perto de parede conhecida (decisão 064, ainda só no PC):** na volta,
+o `PolygonStop` segurou o robô na porta por 4,71 s, apesar de ele estar sobre o
+plano e ter 2,49 m livres à frente. O escape de 0,21 m resolveu. O detector
+agora conserva 4 s no caso genérico e usa 2 s somente quando o mapa confirma
+parede a até 0,60 m e o `/scan` fresco deixa caber o escape inteiro de 0,20 m
+mais 0,10 m de folga. Reflexo, velocidade e manobra não mudam.
+
+**Próximo teste no chão:** enviar a 064 ao NUC, repetir a mesma rota longa e
+medir a parada da porta. Esperado: resposta após ~2 s mais a última marca de
+progresso, sem escape novo em espaço aberto. Depois ainda falta uma ré real
+com espaço livre atrás para validar os −0,24 m/s da 061.
+
+**Achado separado:** uma pausa de 13,45 s no meio do corredor foi `/joy_vel`
+zero, com prioridade sobre a autonomia. O detector continuou contando durante
+o comando manual; isso não foi misturado à 064.
 
 O plano velho também aparece no Gazebo (dono, 02-10), então pode ser
 investigado lá sem o robô.
@@ -70,10 +79,9 @@ houve desvio lateral (|lat| ≤ 0,19 m).
 humana que recua o robô, o detector da 060 mantém a melhor marca de antes da
 intervenção e dispara escape (2 escapes nesta rodada).
 
-**Próxima ida ao lab, nesta ordem:** (1) validar 063 e depois 060/061 no chão
-pelo roteiro acima, trazendo os logs; (2) observar o plano velho no robô real
-e analisar os dados; (3) só então propor correção. A velocidade permanece a
-de 01-10 até essa comparação.
+**Sequência:** (1) validar a 064 repetindo a rota longa; (2) validar a ré da
+061 quando houver uma situação controlada; (3) observar o plano velho se ele
+reaparecer e só então propor correção. A velocidade permanece a de 01-10.
 
 ## 🟢 01-10 noite (NO ROBÔ 2) — CURVA FORTE APROVADA: "ELE FOI ÓTIMO"
 
