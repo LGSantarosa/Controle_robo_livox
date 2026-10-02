@@ -10962,3 +10962,27 @@ e o gravador, relógio de parede, então o cruzamento foi feito pela posição.
 - Os 118 s do C são tempo de parede: a simulação roda abaixo do tempo real.
 
 Dados: `docs/dados/2026-10-02-gazebo-plano-velho/`. Tudo encerrado no fim.
+
+### Plano velho com empurrão pelo teclado: o sintoma não apareceu (rodada única)
+
+Mesma pilha, objetivo A (7,2). Um script (`empurra.py`, junto dos dados)
+publicou em `/key_vel` quando o robô passou de x=5,0: girar 70° à esquerda,
+andar até se afastar 0,30 m da linha, soltar com zero. **O empurrão não saiu
+como planejado.** A retenção da placa simulada (~0,5 s depois do corte) levou
+o giro para ~180°, e o "frente" fez o robô voltar ~1,2 m pela própria rota
+(5,22 → 3,98 em x), com o afastamento lateral em −0,08 m. O desvio lateral
+no seguidor ficou ≤ 0,19 m a corrida toda. Ele voltou, atravessou a porta
+outra vez e chegou a 0,03 m do alvo. **O sintoma do plano velho não
+apareceu**, e pela regra do dono não forcei outra rodada: a validação fica
+para o robô real.
+
+Dois registros desta rodada:
+- o gravador de planos perdeu os dados (o buffer não foi descarregado ao ser
+  interrompido); a aceitação de plano NÃO foi registrada aqui;
+- depois do empurrão houve **dois escapes para frente** ("EMPERRADO com
+  frente livre"). Com a 060, a melhor marca de "restante pelo plano" ficou a
+  de antes do empurrão. Recuado ~1,2 m pela mão humana, o robô precisou de
+  mais de 4 s (meia-volta + recuperar o trecho) para bater a marca. É só uma
+  observação; nada mudou.
+
+Tudo encerrado no fim.
